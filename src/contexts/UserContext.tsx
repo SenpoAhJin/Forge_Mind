@@ -49,17 +49,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const setUserAccount = (email: string, password: string, displayName: string) => {
-    setUser({
+    setUser((prev) => ({
+      // Merge onto whatever already exists (preserves roles from setUserRoles)
+      ...(prev ?? {
+        is_cosplayer: false,
+        is_organizer: false,
+        base_body_selection: 'male',
+        body_size_slider: 0.5,
+        is_holder_verified: false,
+        verification_status: 'pending',
+      }),
       email,
-      password_hash: password, // Plain for now - BE-1 will hash server-side
+      password_hash: password,
       display_name: displayName,
-      is_cosplayer: false,
-      is_organizer: false,
-      base_body_selection: 'male', // Default, will be set in body slider screen
-      body_size_slider: 0.5,       // Default, will be set in body slider screen
-      is_holder_verified: false,
-      verification_status: 'pending',
-    });
+    }));
   };
 
   const setUserBody = (baseBody: 'male' | 'female', bodySize: number) => {
