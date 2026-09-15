@@ -1,111 +1,216 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+/**
+ * ForgeMind - Character Browse Screen (FE-3)
+ * Searchable/browsable list of characters, each showing its available variants.
+ */
+
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { StandardCard, Tag, TextInputField } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { Character, MediaType } from '../../types/catalog';
+import { searchCharacters, getVariantsByCharacterId, characters } from '../../data';
 
-export const CharacterBrowseScreen: React.FC = () => {
+interface CharacterBrowseScreenProps {
+  onSelectCharacter: (characterId: string) => void;
+}
+
+const AVATAR_COLORS = [colors.primary, colors.secondary, '#2E7D32', '#E65100'];
+
+export const CharacterBrowseScreen: React.FC<CharacterBrowseScreenProps> = ({
+  onSelectCharacter,
+}) => {
+  const [query, setQuery] = useState('');
+  const [mediaFilter, setMediaFilter] = useState<'all' | MediaType>('all');
+
+  const availableMediaTypes = Array.from(new Set(characters.map((c) => c.media_type)));
+  const filtered = searchCharacters(query).filter(
+    (c) => mediaFilter === 'all' || c.media_type === mediaFilter
+  );
+
+  const renderCharacter = ({ item, index }: { item: Character; index: number }) => {
+    const variantCount = getVariantsByCharacterId(item.character_id).length;
+    const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
+    return (
+      <StandardCard style={styles.card} onPress={() => onSelectCharacter(item.character_id)}>
+        <View style={styles.row}>
+          <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
+            <Text style={styles.avatarText}>{item.character_name.charAt(0)}</Text>
+          </View>
+          <View style={styles.cardBody}>
+            <Text style={styles.characterName} numberOfLines={1}>
+              {item.character_name}
+            </Text>
+            <Text style={styles.mediaName} numberOfLines={1}>
+              {item.source_media}
+            </Text>
+            <View style={styles.tagsRow}>
+              <Tag type="category" label={item.media_type} />
+              <Text style={styles.variantCountText}>
+                {variantCount} {variantCount === 1 ? 'variant' : 'variants'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </StandardCard>
+    );
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.heroCard}>
-        <Ionicons name="people-outline" size={48} color={colors.primary} />
-        <Text style={styles.heroTitle}>Characters</Text>
-        <Text style={styles.heroSub}>
-          Browse characters from anime, games, movies and more.
-          Pick a variant and see how well your existing items match.
-        </Text>
-      </View>
+    <View style={styles.container}>
+      <TextInputField
+        label="Search characters"
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Try 'Gojo' or 'Jujutsu Kaisen'"
+      />
 
-      <View style={styles.featureList}>
-        <View style={styles.featureRow}>
-          <Ionicons name="search-outline" size={20} color={colors.primary} />
-          <Text style={styles.featureText}>Search by name or media</Text>
-        </View>
-        <View style={styles.featureRow}>
-          <Ionicons name="options-outline" size={20} color={colors.primary} />
-          <Text style={styles.featureText}>Filter by anime, game, movie, original</Text>
-        </View>
-        <View style={styles.featureRow}>
-          <Ionicons name="grid-outline" size={20} color={colors.primary} />
-          <Text style={styles.featureText}>View variants, components and difficulty</Text>
-        </View>
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+        contentContainerStyle={styles.filterContent}
+      >
+        <TouchableOpacity
+          style={[styles.filterChip, mediaFilter === 'all' && styles.filterChipActive]}
+          onPress={() => setMediaFilter('all')}
+        >
+          <Text style={[styles.filterChipText, mediaFilter === 'all' && styles.filterChipTextActive]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        {availableMediaTypes.map((mt) => (
+          <TouchableOpacity
+            key={mt}
+            style={[styles.filterChip, mediaFilter === mt && styles.filterChipActive]}
+            onPress={() => setMediaFilter(mt)}
+          >
+            <Text
+              style={[styles.filterChipText, mediaFilter === mt && styles.filterChipTextActive]}
+            >
+              {mt}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-      <View style={styles.infoBanner}>
-        <Ionicons name="information-circle" size={18} color={colors.info} />
-        <Text style={styles.infoText}>
-          Character browse, variant selection and match results will be built in FE-3.
-        </Text>
-      </View>
-    </ScrollView>
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.character_id}
+        renderItem={renderCharacter}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No characters found</Text>
+            <Text style={styles.emptyBody}>
+              No character matches your search or media filter. Try a different keyword.
+            </Text>
+          </View>
+        }
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
-  },
-  content: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  heroCard: {
     backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
+  },
+  card: {
+    marginBottom: spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: spacing.xl,
   },
-  heroTitle: {
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  avatarText: {
     ...typography.h2,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
+    color: colors.backgroundLight,
+    fontWeight: '700',
   },
-  heroSub: {
+  cardBody: {
+    flex: 1,
+  },
+  characterName: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  mediaName: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  variantCountText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  filterRow: {
+    marginTop: spacing.sm,
+  },
+  filterContent: {
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  filterChipTextActive: {
+    color: colors.backgroundLight,
+  },
+  listContent: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  emptyBody: {
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  featureList: {
-    backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  featureText: {
-    ...typography.body,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#EBF5FF',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  infoText: {
-    ...typography.caption,
-    color: colors.info,
-    flex: 1,
-    lineHeight: 18,
   },
 });

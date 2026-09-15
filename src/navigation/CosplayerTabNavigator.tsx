@@ -3,9 +3,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ProjectsScreen,
-  CharacterBrowseScreen,
   MarketplaceScreen,
 } from '../screens/cosplayer';
+import { CharacterStackNavigator } from './CharacterStackNavigator';
 import { ProfileScreen } from '../screens/shared';
 import { colors, typography } from '../theme';
 
@@ -55,8 +55,8 @@ export const CosplayerTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="CharacterBrowse"
-        component={CharacterBrowseScreen}
-        options={{ tabBarLabel: 'Characters', title: 'Characters' }}
+        component={CharacterStackNavigator}
+        options={{ tabBarLabel: 'Characters', title: 'Characters', headerShown: false }}
       />
       <Tab.Screen
         name="Marketplace"

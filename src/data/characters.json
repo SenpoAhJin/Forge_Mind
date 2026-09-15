@@ -1,0 +1,46 @@
+[
+  {
+    "character_id": "char-jujutsu-kaisen-gojo",
+    "character_name": "Gojo Satoru",
+    "source_media": "Jujutsu Kaisen",
+    "media_type": "anime",
+    "description": "The strongest modern sorcerer, recognizable by white hair, blue 'Six Eyes', and a blindfold or dark sunglasses.",
+    "reference_image_url": "",
+    "created_by_user_id": "seed-system",
+    "created_at": "2026-09-15T12:00:00Z",
+    "is_confirmed": true
+  },
+  {
+    "character_id": "char-chainsaw-man-makima",
+    "character_name": "Makima",
+    "source_media": "Chainsaw Man",
+    "media_type": "manga",
+    "description": "A Public Safety Devil Hunter with red-brown hair in a signature side braid and layered rings around her pupils.",
+    "reference_image_url": "",
+    "created_by_user_id": "seed-system",
+    "created_at": "2026-09-15T12:00:00Z",
+    "is_confirmed": true
+  },
+  {
+    "character_id": "char-zelda-botw-zelda",
+    "character_name": "Princess Zelda",
+    "source_media": "The Legend of Zelda: Breath of the Wild",
+    "media_type": "game",
+    "description": "The scholarly princess of Hyrule, most commonly seen in a flowing white and blue traveling dress.",
+    "reference_image_url": "",
+    "created_by_user_id": "seed-system",
+    "created_at": "2026-09-15T12:00:00Z",
+    "is_confirmed": true
+  },
+  {
+    "character_id": "char-original-veira",
+    "character_name": "Veyra",
+    "source_media": "Original",
+    "media_type": "original",
+    "description": "A community-created original character (OC), added to exercise the user-original variant pipeline outside licensed media.",
+    "reference_image_url": "",
+    "created_by_user_id": "user-oc-creator",
+    "created_at": "2026-09-15T12:00:00Z",
+    "is_confirmed": false
+  }
+]
