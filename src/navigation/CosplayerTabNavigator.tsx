@@ -1,68 +1,72 @@
-/**
- * ForgeMind Navigation - Cosplayer Tab Stack
- * Bottom tabs: Home (Projects), Character Browse, Marketplace, Profile
- */
-
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ProjectsScreen,
   CharacterBrowseScreen,
   MarketplaceScreen,
 } from '../screens/cosplayer';
 import { ProfileScreen } from '../screens/shared';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator();
+
+const ICON_SIZE = 22;
+
+const iconMap: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
+  Projects:       { focused: 'folder',       unfocused: 'folder-outline' },
+  CharacterBrowse:{ focused: 'people',       unfocused: 'people-outline' },
+  Marketplace:    { focused: 'cart',         unfocused: 'cart-outline' },
+  Profile:        { focused: 'person',       unfocused: 'person-outline' },
+};
 
 export const CosplayerTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarInactiveTintColor: colors.textDisabled,
         tabBarStyle: {
           backgroundColor: colors.backgroundLight,
           borderTopColor: colors.border,
+          paddingBottom: 6,
+          paddingTop: 4,
+          height: 60,
         },
-        headerStyle: {
-          backgroundColor: colors.primary,
+        tabBarLabelStyle: {
+          ...typography.caption,
+          fontWeight: '600',
+          fontSize: 11,
         },
+        headerStyle: { backgroundColor: colors.primary },
         headerTintColor: colors.backgroundLight,
-      }}
+        headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
+        tabBarIcon: ({ focused, color }) => {
+          const names = iconMap[route.name];
+          const iconName = focused ? names.focused : names.unfocused;
+          return <Ionicons name={iconName} size={ICON_SIZE} color={color} />;
+        },
+      })}
     >
       <Tab.Screen
         name="Projects"
         component={ProjectsScreen}
-        options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: () => <></>, // Icons will be added in FE-2+
-        }}
+        options={{ tabBarLabel: 'Home' }}
       />
       <Tab.Screen
         name="CharacterBrowse"
         component={CharacterBrowseScreen}
-        options={{
-          tabBarLabel: 'Characters',
-          title: 'Character Browse',
-          tabBarIcon: () => <></>,
-        }}
+        options={{ tabBarLabel: 'Characters', title: 'Characters' }}
       />
       <Tab.Screen
         name="Marketplace"
         component={MarketplaceScreen}
-        options={{
-          tabBarLabel: 'Marketplace',
-          tabBarIcon: () => <></>,
-        }}
+        options={{ tabBarLabel: 'Marketplace' }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: () => <></>,
-        }}
+        options={{ tabBarLabel: 'Profile' }}
       />
     </Tab.Navigator>
   );

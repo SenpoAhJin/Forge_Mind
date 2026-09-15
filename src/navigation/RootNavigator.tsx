@@ -1,12 +1,7 @@
-/**
- * ForgeMind Navigation - Root Navigator
- * Handles onboarding vs. main app flow
- * Shows onboarding if user not complete, otherwise shows role-based tabs
- */
-
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CosplayerTabNavigator } from './CosplayerTabNavigator';
 import { OrganizerTabNavigator } from './OrganizerTabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
@@ -17,7 +12,6 @@ export const RootNavigator: React.FC = () => {
   const { user, isOnboardingComplete } = useUser();
   const [activeRole, setActiveRole] = useState<'cosplayer' | 'organizer'>('cosplayer');
 
-  // Show onboarding if user hasn't completed setup
   if (!isOnboardingComplete) {
     return (
       <NavigationContainer>
@@ -26,89 +20,106 @@ export const RootNavigator: React.FC = () => {
     );
   }
 
-  // User completed onboarding - show main app
   const isCosplayer = user!.is_cosplayer;
   const isOrganizer = user!.is_organizer;
-
-  // If user has both roles, show role switcher
   const showRoleSwitcher = isCosplayer && isOrganizer;
 
   return (
     <NavigationContainer>
-      {showRoleSwitcher && (
-        <View style={styles.roleSwitcher}>
-          <TouchableOpacity
-            style={[
-              styles.roleButton,
-              activeRole === 'cosplayer' && styles.roleButtonActive,
-            ]}
-            onPress={() => setActiveRole('cosplayer')}
-          >
-            <Text
-              style={[
-                styles.roleButtonText,
-                activeRole === 'cosplayer' && styles.roleButtonTextActive,
-              ]}
-            >
-              Cosplayer
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.roleButton,
-              activeRole === 'organizer' && styles.roleButtonActive,
-            ]}
-            onPress={() => setActiveRole('organizer')}
-          >
-            <Text
-              style={[
-                styles.roleButtonText,
-                activeRole === 'organizer' && styles.roleButtonTextActive,
-              ]}
-            >
-              Organizer
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.root}>
+        {showRoleSwitcher && (
+          <SafeAreaView edges={['top']} style={styles.switcherSafe}>
+            <View style={styles.roleSwitcher}>
+              <Text style={styles.switcherLabel}>Viewing as:</Text>
+              <View style={styles.pillContainer}>
+                <TouchableOpacity
+                  style={[styles.pill, activeRole === 'cosplayer' && styles.pillActivePrimary]}
+                  onPress={() => setActiveRole('cosplayer')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.pillText, activeRole === 'cosplayer' && styles.pillTextActive]}>
+                    Cosplayer
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pill, activeRole === 'organizer' && styles.pillActiveSecondary]}
+                  onPress={() => setActiveRole('organizer')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.pillText, activeRole === 'organizer' && styles.pillTextActive]}>
+                    Organizer
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
+        )}
+        <View style={styles.navigator}>
+          {isCosplayer && isOrganizer ? (
+            activeRole === 'cosplayer' ? <CosplayerTabNavigator /> : <OrganizerTabNavigator />
+          ) : isCosplayer ? (
+            <CosplayerTabNavigator />
+          ) : (
+            <OrganizerTabNavigator />
+          )}
         </View>
-      )}
-      {/* Show appropriate navigator based on user's roles and active selection */}
-      {isCosplayer && isOrganizer ? (
-        activeRole === 'cosplayer' ? <CosplayerTabNavigator /> : <OrganizerTabNavigator />
-      ) : isCosplayer ? (
-        <CosplayerTabNavigator />
-      ) : (
-        <OrganizerTabNavigator />
-      )}
+      </View>
     </NavigationContainer>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.backgroundLight,
+  },
+  switcherSafe: {
+    backgroundColor: colors.surface,
+  },
   roleSwitcher: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    padding: spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingTop: spacing.xl + 20, // Account for status bar
+    backgroundColor: colors.surface,
   },
-  roleButton: {
+  switcherLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginRight: spacing.sm,
+  },
+  pillContainer: {
+    flexDirection: 'row',
     flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    marginHorizontal: spacing.xs,
-    alignItems: 'center',
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.full,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  roleButtonActive: {
+  pill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.full,
+  },
+  pillActivePrimary: {
     backgroundColor: colors.primary,
   },
-  roleButtonText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontWeight: '600',
+  pillActiveSecondary: {
+    backgroundColor: colors.secondary,
   },
-  roleButtonTextActive: {
+  pillText: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  pillTextActive: {
     color: colors.backgroundLight,
+  },
+  navigator: {
+    flex: 1,
   },
 });

@@ -32,6 +32,7 @@ interface UserContextType {
   setUserAccount: (email: string, password: string, displayName: string) => void;
   setUserBody: (baseBody: 'male' | 'female', bodySize: number) => void;
   isOnboardingComplete: boolean;
+  resetOnboarding: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -69,12 +70,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
-  const isOnboardingComplete = user !== null && 
-    user.email !== '' && 
+  const isOnboardingComplete = user !== null &&
+    user.email !== '' &&
     (user.is_cosplayer || user.is_organizer);
 
+  const resetOnboarding = () => setUser(null);
+
   return (
-    <UserContext.Provider value={{ user, setUserRoles, setUserAccount, setUserBody, isOnboardingComplete }}>
+    <UserContext.Provider value={{ user, setUserRoles, setUserAccount, setUserBody, isOnboardingComplete, resetOnboarding }}>
       {children}
     </UserContext.Provider>
   );
