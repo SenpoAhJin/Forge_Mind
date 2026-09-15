@@ -1,0 +1,31 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, typography, spacing } from '../../theme';
+
+export const CharacterBrowseScreen: React.FC = () => {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Character Browse</Text>
+      <Text style={styles.subtitle}>Search and select characters</Text>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.backgroundLight,
+    padding: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    ...typography.h1,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+});
