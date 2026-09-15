@@ -24,10 +24,9 @@ The app currently has a complete **design foundation** (a consistent look-and-fe
 
 ---
 
-## 3. Changelog of Every Change
+## 3. Session History
 
-### Change 1 — Project setup & design foundation (Phase "FE-1")
-**When:** Completed before this session (already part of the repo).
+## Session — FE-1 (project setup & design foundation)
 
 What we did:
 - Created the app shell using Expo + TypeScript (typed JavaScript for safety).
@@ -38,8 +37,10 @@ What we did:
 - Set up **role-based navigation**: cosplayers see Home, Characters, Marketplace, Profile. Organizers see Events, Logistics, Meetups, Profile. Users who are both get a switcher to flip between the two views.
 - Added placeholder pages for every main screen so the shell could be navigated end-to-end.
 
-### Change 2 — Welcome / setup screens (Phase "FE-2")
-**When:** Completed before this session (already pushed to GitHub).
+### Commits
+- `01659ea` — Initial commit (project scaffold) (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/01659ea)
+
+## Session — FE-2 (onboarding flow)
 
 What we did:
 - Built the **4-step onboarding flow**:
@@ -50,17 +51,18 @@ What we did:
 - Added a small **state manager** (records the user's choices) that uses the exact same field names as the planned database — so wiring up a real server later won't require renaming anything.
 - After setup, the app shows the right tabs based on which roles were picked.
 
-### Change 3 — Make it testable on a laptop (this session)
-**When:** Today.
+### Commits
+- `c53ba56` — `FE-2: onboarding screens` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/c53ba56)
 
+## Session — Sept 15, 2026 (FE-2.1: navigation & UI improvements)
+
+### Make it testable on a laptop
 What we did:
 - Installed the pieces Expo needs to also run in a web browser (`react-dom`, `react-native-web`).
 - Started the development server and confirmed the app compiles with zero errors (TypeScript check passes).
 - Built a **phone-frame preview**: a mock phone device on the screen (bezel, notch, side buttons) that displays the app at a phone-sized viewport inside your browser — so testing on a laptop feels like using a phone. You can switch device sizes (iPhone 14/15, Android, etc.) and reload.
 
-### Change 4 — Navigation & user-friendliness improvements (this session)
-**When:** Today.
-
+### Navigation & user-friendliness improvements
 What we did:
 - **Added proper icons to the bottom tab bar** (previously the tabs had no icons at all). Now Home shows a folder, Characters a group of people, Marketplace a cart, Events a calendar, Logistics a car, Meetups a map, Profile a person. Icons highlight when selected.
 - **Redesigned the role switcher** (for people who are both cosplayer and organizer) into a clean pill-style toggle with a "Viewing as:" label instead of the old plain buttons.
@@ -70,12 +72,13 @@ What we did:
   - and a small blue note saying which future stage will build it.
 - **Made the Profile screen real.** It now shows the user's avatar (initials), display name, email, role badges (Cosplayer/Organizer), body type + size, verification status, and app info — plus a "Reset Onboarding" button that clears the demo data and returns to the Welcome screen (with a confirm popup first).
 
-### Change 5 — Test dependencies & housekeeping (this session)
-**When:** Today.
-
+### Test dependencies & housekeeping
 What we did:
 - Installed the icon library (`@expo/vector-icons`) so the tab icons work.
-- Left small testing files in the project: a log file for the dev server and the testing instructions. These are not part of the shipped app.
+- Left small testing files in the project: a log file for the dev server, the testing instructions, and the phone-frame preview. These are not part of the shipped app.
+
+### Commits
+- `a9c3407` — `FE-2.1: tab icons, role switcher, placeholder screens, profile screen` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/a9c3407)
 
 ---
 
@@ -128,7 +131,7 @@ The `setUserAccount` function in `src/contexts/UserContext.tsx` was rewritten to
 ### Tech notes (for the developers)
 - **Stack:** Expo SDK 57, React Native 0.86, TypeScript 6.0, React Navigation 7.
 - **Folder layout:** `src/theme` (design tokens), `src/components` (building blocks), `src/navigation` (onboarding + tab navigators), `src/screens` (cosplayer / organizer / shared / onboarding), `src/contexts` (demo user state).
-- **Git:** committed and pushed to GitHub (`SenpoAhJin/Forge_Mind`, branch `master`, commit `c53ba56` for FE-2; today's UI improvements are not yet committed).
+- **Git:** everything is committed and pushed to GitHub (`SenpoAhJin/Forge_Mind`, branch `master`). Commit history: `01659ea` (scaffold) → `c53ba56` (FE-2) → `a9c3407` (FE-2.1) → `a09c8a5` (FE-2.2) → `7fc5a0d` (changelog).
 
 ---
 
