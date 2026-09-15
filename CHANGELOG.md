@@ -20,7 +20,7 @@ It is being built **mobile-first** (a phone app) using Expo (a tool that lets on
 
 ## 2. Current Status (one paragraph)
 
-The app currently has a complete **design foundation** (a consistent look-and-feel across every screen) and a fully working **4-step welcome/setup flow**. After setup, the app opens into the main screen, where tabs now have proper icons and readable, informative placeholder pages for everything that comes in later stages. Everything still uses **demo (mock) data** — there is no real account system or server yet, by design.
+The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, and a **working character browser**: after setup, cosplayers can search characters, browse each character's costume variants, and see a preview of matching them against owned items. The remaining tabs (Home, Marketplace, Events, Logistics, Meetups) are readable placeholder pages, and Profile is real. Everything still uses **demo (mock) data** — there is no real account system, server, or AI yet, by design.
 
 ---
 
@@ -105,6 +105,33 @@ The `setUserAccount` function in `src/contexts/UserContext.tsx` was rewritten to
 
 ---
 
+## Session — Sept 15, 2026, 21:25 (FE-3: character browse & variant selection)
+
+### What we did
+
+**20:25 — Built the character & variant browser (demo data).** Cosplayers now land on a working **Characters** tab instead of a "coming soon" page:
+- **Character Browse** — a searchable list of characters (try "Gojo" or "Jujutsu Kaisen"), with filter chips for media type (anime, manga, game, original). Each character card shows its source media and how many variants it has.
+- **Variant List** — tapping a character opens all its variants. Each variant shows a name, an origin tag (canon / fan-art-inspired / user-original), a build difficulty rating out of 5, a short description, and a "candidate" badge when it hasn't been confirmed yet. Tapping a variant stores it as your current selection.
+- **Match Results (preview)** — opens right after selecting a variant. It shows a clearly labeled **preview** of "match against your owned items": sample rows with colored match badges (Exact / Close / Loose) plus a notice that real AI matching arrives with the backend. Purely mock/static for now.
+
+**21:25 — Made it ready for real data later.** The mock dataset lives on its own in `src/data/characters.json` and `src/data/variants.json`, formatted as **two separate, normalized tables** — each character in its own record, each variant in its own record pointing to a character by ID (no flattened or duplicated data). Every field name and type matches the Character and Variant tables in the foundation spec, so a real CSV/JSON dump can be dropped in later as a **file replacement, not a code rewrite**.
+
+**21:26 — Verified and shipped.** TypeScript type-check passes with zero errors (re-confirmed at 21:26), and the app rebuilt cleanly in the browser test frame with the new screens and dataset confirmed inside the bundle. Committed and pushed as `8f76817`.
+
+### Few notes/assumptions made this phase
+- The real Character/Variant schema doc was not handed over this phase, so the mock data uses the **Character and Variant field names from the project's foundation spec** (`ForgeMind_Phase0_Foundation.md`, v0.2.1). If the real dataset uses different names, only the JSON files plus the two type definitions in `src/types/catalog.ts` need touching.
+- The spec says IDs are database-generated UUIDs; the demo uses readable stand-in IDs (e.g. `char-jujutsu-kaisen-gojo`) so humans can follow the data.
+- Reference images are intentionally left empty in the demo, so pages show initials avatars instead of relying on internet images.
+
+### New screens/flow added
+- **Characters (tab)** now hosts a three-screen flow: Character Browse → Variant List → Match Results. The selected variant is stored in a small in-memory store (fresh on reload) that later stages (attire matching, 3D viewer) will consume.
+- Character Browse, Variant List, and Match Results reuse existing design-system parts (cards, tags, buttons, text field). No shared components were modified.
+
+### Commits
+- `8f76817` — `FE-3: character browse & variant selection` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/8f76817)
+
+---
+
 ## 4. What's In the System Right Now (Contents Summary)
 
 ### The screens
@@ -115,7 +142,9 @@ The `setUserAccount` function in `src/contexts/UserContext.tsx` was rewritten to
 | Account Creation | Name, email, password with validation |
 | Body Slider | Base body + size slider for 3D preview |
 | Home (Projects) | Greeting + "no projects yet" empty state |
-| Characters | Explains future browse/select features |
+| Characters | Searchable list of characters, filter by media type |
+| Character Variants | Pick a character's costume variant (origin tag, difficulty, description) |
+| Match Results | Preview of "match against owned items" (mock until AI backend) |
 | Marketplace | Explains future buy/sell/trade features |
 | Events | Explains future organizer event features |
 | Logistics | Explains future guest/performance tracking |
@@ -130,8 +159,8 @@ The `setUserAccount` function in `src/contexts/UserContext.tsx` was rewritten to
 
 ### Tech notes (for the developers)
 - **Stack:** Expo SDK 57, React Native 0.86, TypeScript 6.0, React Navigation 7.
-- **Folder layout:** `src/theme` (design tokens), `src/components` (building blocks), `src/navigation` (onboarding + tab navigators), `src/screens` (cosplayer / organizer / shared / onboarding), `src/contexts` (demo user state).
-- **Git:** everything is committed and pushed to GitHub (`SenpoAhJin/Forge_Mind`, branch `master`). Commit history: `01659ea` (scaffold) → `c53ba56` (FE-2) → `a9c3407` (FE-2.1) → `a09c8a5` (FE-2.2) → `7fc5a0d` (changelog).
+- **Folder layout:** `src/theme` (design tokens), `src/components` (building blocks), `src/navigation` (onboarding + tab + character-stack navigators), `src/screens` (cosplayer / organizer / shared / onboarding), `src/contexts` (demo user + demo selected-variant state), `src/data` (mock character/variant dataset, import-ready), `src/types` (schema-shaped type definitions).
+- **Git:** everything is committed and pushed to GitHub (`SenpoAhJin/Forge_Mind`, branch `master`). Commit history: `01659ea` (scaffold) → `c53ba56` (FE-2) → `a9c3407` (FE-2.1) → `a09c8a5` (FE-2.2) → `7fc5a0d` (changelog) → `edd44d5` (changelog) → `8f76817` (FE-3).
 
 ---
 
@@ -139,14 +168,14 @@ The `setUserAccount` function in `src/contexts/UserContext.tsx` was rewritten to
 
 - **No real accounts/login** — everything is demo data stored in the app's memory. Reloading the app resets the setup flow.
 - **No server yet** — no real database, AI, photo upload, or payments.
-- **No 3D preview, character data, or marketplace listings yet** — those come in the next stages.
+- **No 3D preview, real matching, or marketplace listings yet** — character browsing works on demo data, but matching is only a preview and the 3D viewer/marketplace come in later stages.
 - Tab icons and layout are now done; the remaining "coming soon" areas are all planned future stages.
 
 ---
 
 ## 6. What's Planned Next (Roadmap)
 
-1. **FE-3 — Character Browse & Variant Selection:** searching characters, choosing a variant, seeing match results against your owned items.
+1. ~~**FE-3 — Character Browse & Variant Selection**~~ **(done — Sept 15, 2026)**: searching characters, choosing a variant, seeing match results against your owned items.
 2. **FE-4 — Project Dashboard & Readiness:** creating projects, task lists, budgets, readiness score, 3D preview.
 3. **FE-5 — Owned-Item Logging:** photo/text/voice input with AI categorization.
 4. **FE-6 — Marketplace:** browse, list items, screening, condition, prices, trades, commissions, chat.
