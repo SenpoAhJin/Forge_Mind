@@ -227,7 +227,7 @@ The mapping matched the files (a full-color in-app mark vs. a transparent icon-s
 So **role-based navigation is implemented** (tab sets + the Both-roles pill), but **holder state has no behavioral effect anywhere yet** — Profile is the only reader (the `Verification` card). This matches the build plan: holder verification is **FE-8, a separate web app**, not a mobile feature. Verified live on the render path + TypeScript passes + Android bundle builds clean.
 
 ### Commits
-- `<sha>` — `dev: add Test Mode persona switcher to Profile (Part C)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/<sha>)
+- `585c4a9` — `dev: add Test Mode persona switcher to Profile (Part C)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/585c4a9)
 
 ---
 
