@@ -6,7 +6,7 @@ import { useUser, DemoPersona } from '../../contexts/UserContext';
 import { Button } from '../../components';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, resetOnboarding, applyDemoPersona } = useUser();
+  const { user, logout, resetOnboarding, applyDemoPersona, updateVerification } = useUser();
 
   const initials = (user?.display_name ?? 'U')
     .split(' ')
@@ -32,13 +32,34 @@ export const ProfileScreen: React.FC = () => {
     return cos && org;
   };
 
+  const handlePersonaChange = async (persona: DemoPersona) => {
+    // For holder-verified, use updateVerification to persist across logout/login
+    if (persona === 'holder-verified') {
+      await updateVerification(true, 'verified');
+    } else {
+      // For role changes, use applyDemoPersona (in-memory only, for demo purposes)
+      applyDemoPersona(persona);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
-      'Reset Onboarding',
-      'This will return you to the Welcome screen. All demo data will be cleared.',
+      'Log Out',
+      'This will log you out and return you to the login screen. Your account will be saved.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: resetOnboarding },
+        { text: 'Log Out', style: 'destructive', onPress: logout },
+      ],
+    );
+  };
+
+  const handleResetOnboarding = () => {
+    Alert.alert(
+      'Reset Onboarding',
+      'This will DELETE ALL ACCOUNTS and return you to the Welcome screen. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete All', style: 'destructive', onPress: resetOnboarding },
       ],
     );
   };
@@ -115,7 +136,7 @@ export const ProfileScreen: React.FC = () => {
                 <TouchableOpacity
                   key={key}
                   style={[styles.personaChip, active && styles.personaChipActive]}
-                  onPress={() => applyDemoPersona(key)}
+                  onPress={() => handlePersonaChange(key)}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.personaChipText, active && styles.personaChipTextActive]}>
@@ -127,8 +148,8 @@ export const ProfileScreen: React.FC = () => {
           </View>
           <Text style={styles.testHint}>
             {user?.is_holder_verified
-              ? 'Holder-verified is set. Today it only changes the Verification status above — no other UI reads it yet.'
-              : 'Holder-verified currently only reflects on the Verification status above; nothing else in the UI branches on it yet.'}
+              ? 'Holder-verified is PERSISTED — survives logout/login. Role switches are in-memory only for demo.'
+              : 'Tap "Verified Holder" to persist verification status across logout/login. Role switches are in-memory only.'}
           </Text>
         </View>
       )}
@@ -151,11 +172,19 @@ export const ProfileScreen: React.FC = () => {
       {/* Logout */}
       <View style={styles.logoutWrap}>
         <Button
-          title="Reset Onboarding"
-          variant="destructive"
+          title="Log Out"
+          variant="secondary"
           onPress={handleLogout}
           fullWidth
         />
+        {__DEV__ && (
+          <Button
+            title="Reset Onboarding (Delete All Accounts)"
+            variant="destructive"
+            onPress={handleResetOnboarding}
+            fullWidth
+          />
+        )}
       </View>
     </ScrollView>
   );
@@ -288,5 +317,6 @@ const styles = StyleSheet.create({
   },
   logoutWrap: {
     marginTop: spacing.xl,
+    gap: spacing.sm,
   },
 });

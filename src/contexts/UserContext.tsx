@@ -1,12 +1,14 @@
 /**
  * ForgeMind User Context
- * Mock/local state for onboarding - matches v0.2.1 schema field names/types exactly
+ * FE-4.5: Persisted auth with AsyncStorage - matches v0.2.1 schema field names/types exactly
+ * Supports multi-account storage, login/logout, and Test Mode persona switcher
  * Will be replaced with real API calls in BE-1
  */
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { AuthService, StoredAccount } from '../services/AuthService';
 
-// User entity from v0.2.1 schema - only fields needed for onboarding
+// User entity from v0.2.1 schema
 interface User {
   // Account fields
   email: string;                        // User.email (String(255), required)
@@ -31,19 +33,123 @@ export type DemoPersona = 'cosplayer' | 'organizer' | 'both' | 'holder-verified'
 
 interface UserContextType {
   user: User | null;
+  isLoading: boolean;
+  
+  // Auth operations (FE-4.5)
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+    isCosplayer: boolean,
+    isOrganizer: boolean,
+    baseBody: 'male' | 'female',
+    bodySize: number
+  ) => Promise<{ success: boolean; error?: string }>;
+  
+  // Onboarding helpers (for existing flow - kept for backward compat)
   setUserRoles: (isCosplayer: boolean, isOrganizer: boolean) => void;
   setUserAccount: (email: string, password: string, displayName: string) => void;
   setUserBody: (baseBody: 'male' | 'female', bodySize: number) => void;
+  
+  // Holder verification (FE-4.5 - persists across logout/login)
+  updateVerification: (isVerified: boolean, status: User['verification_status']) => Promise<void>;
+  
+  // Test Mode (dev only - kept working alongside real login)
   applyDemoPersona: (persona: DemoPersona) => void;
+  
   isOnboardingComplete: boolean;
-  resetOnboarding: () => void;
+  resetOnboarding: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load active session on mount
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const session = await AuthService.getActiveSession();
+        if (session) {
+          setUser(session);
+        }
+      } catch (error) {
+        console.error('[UserContext] Failed to load session:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSession();
+  }, []);
+
+  // Login with persisted storage
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const result = await AuthService.login(email, password);
+    if (result.success && result.account) {
+      setUser(result.account);
+      await AuthService.setActiveSession(result.account);
+    }
+    return { success: result.success, error: result.error };
+  };
+
+  // Logout - clears active session, keeps account in storage
+  const logout = async (): Promise<void> => {
+    await AuthService.logout();
+    setUser(null);
+  };
+
+  // Register with persisted storage
+  const register = async (
+    email: string,
+    password: string,
+    displayName: string,
+    isCosplayer: boolean,
+    isOrganizer: boolean,
+    baseBody: 'male' | 'female',
+    bodySize: number
+  ): Promise<{ success: boolean; error?: string }> => {
+    const result = await AuthService.register(
+      email,
+      password,
+      displayName,
+      isCosplayer,
+      isOrganizer,
+      baseBody,
+      bodySize
+    );
+    
+    if (result.success && result.account) {
+      // Auto-login on successful registration
+      setUser(result.account);
+      await AuthService.setActiveSession(result.account);
+    }
+    
+    return { success: result.success, error: result.error };
+  };
+
+  // Update verification status (persists across logout/login)
+  const updateVerification = async (
+    isVerified: boolean,
+    status: User['verification_status']
+  ): Promise<void> => {
+    if (!user) return;
+    
+    const updated: StoredAccount = {
+      ...user,
+      is_holder_verified: isVerified,
+      verification_status: status,
+    };
+    
+    await AuthService.updateUser(updated);
+    setUser(updated);
+  };
+
+  // Onboarding helpers (for existing flow - kept for backward compat during onboarding)
+  // These operate on in-memory state until register() is called
   const setUserRoles = (isCosplayer: boolean, isOrganizer: boolean) => {
     setUser((prev) => ({
       ...prev!,
@@ -78,7 +184,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Dev/test-only: instantly switch the demo user between role contexts.
-  // Not real authentication — reuses the same local state as onboarding.
+  // Test Mode — kept working alongside real login (dev builds only)
   const applyDemoPersona = (persona: DemoPersona) => {
     setUser((prev) => {
       const current = prev ?? {
@@ -117,11 +223,28 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user.email !== '' &&
     (user.is_cosplayer || user.is_organizer);
 
-  const resetOnboarding = () => setUser(null);
+  // Reset Onboarding - clears ALL accounts and active session
+  const resetOnboarding = async () => {
+    await AuthService.resetAll();
+    setUser(null);
+  };
 
   return (
     <UserContext.Provider
-      value={{ user, setUserRoles, setUserAccount, setUserBody, applyDemoPersona, isOnboardingComplete, resetOnboarding }}
+      value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        register,
+        updateVerification,
+        setUserRoles,
+        setUserAccount,
+        setUserBody,
+        applyDemoPersona,
+        isOnboardingComplete,
+        resetOnboarding,
+      }}
     >
       {children}
     </UserContext.Provider>

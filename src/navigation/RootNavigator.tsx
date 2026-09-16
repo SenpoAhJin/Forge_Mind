@@ -1,17 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CosplayerTabNavigator } from './CosplayerTabNavigator';
 import { OrganizerTabNavigator } from './OrganizerTabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
+import { AuthNavigator } from './AuthNavigator';
 import { useUser } from '../contexts/UserContext';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
 export const RootNavigator: React.FC = () => {
-  const { user, isOnboardingComplete } = useUser();
+  const { user, isOnboardingComplete, isLoading } = useUser();
   const [activeRole, setActiveRole] = useState<'cosplayer' | 'organizer'>('cosplayer');
 
+  // Show loading spinner while checking for active session
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // No active session - show auth (login/register)
+  if (!user) {
+    return (
+      <NavigationContainer>
+        <AuthNavigator onAuthSuccess={() => {}} />
+      </NavigationContainer>
+    );
+  }
+
+  // Active session but onboarding not complete - show onboarding
+  // (This handles body slider setup for newly registered accounts)
   if (!isOnboardingComplete) {
     return (
       <NavigationContainer>
@@ -20,6 +42,7 @@ export const RootNavigator: React.FC = () => {
     );
   }
 
+  // Logged in and onboarding complete - show main app
   const isCosplayer = user!.is_cosplayer;
   const isOrganizer = user!.is_organizer;
   const showRoleSwitcher = isCosplayer && isOrganizer;
@@ -69,6 +92,17 @@ export const RootNavigator: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundLight,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
   root: {
     flex: 1,
     backgroundColor: colors.backgroundLight,
