@@ -201,6 +201,36 @@ The mapping matched the files (a full-color in-app mark vs. a transparent icon-s
 
 ---
 
+## Session — Wednesday, Sept 16, 2026, 12:50 (Test Mode role switcher + header overlap audit)
+
+### What we did
+
+**12:01 — Part A, raw output on record.** Ran the four check commands against `origin/master`: `1218957` shows no CHANGELOG stat (logo commit didn't touch it), `10d142b` adds the 52 changelog lines (both logo + FE-4 sessions), `b740507` fills the commit links, and `git show origin/master:CHANGELOG.md | tail -100` confirms both newest session entries are live. No new changelog commit needed.
+
+**12:10 — Part B, audit on the real test path.** This machine has **no Android SDK/emulator/device**, so a literal Expo Go screenshot couldn't be captured here — that part needs the starter's phone. What was confirmed from code + all versions:
+- The reported **gear icon does not exist** anywhere (no settings icon in any screen or history).
+- There is **no circular avatar image** anywhere. Avatars are text-initial circles (Profile, character list); the only `<Image>`s are the Welcome logo and marketplace card photos.
+- On the web render path (all phone sizes) the search input + filter chips sit cleanly below the purple header with no clipping.
+- That combination (a gear + circular avatar floating over the pill row) matches a **screen-recording/overlay widget**, not app UI. No in-app bug confirmed → no Part B fix commit (per gate rules, until the phone screenshots show an app-layer overlap).
+
+**12:40 — Test Mode role switcher (Part C).** `UserContext` gained `applyDemoPersona` (cosplayer / organizer / both / holder-verified) built on the same local demo-state pattern as onboarding — no parallel auth system. The Profile screen now shows a **"Test Mode — dev only"** card (hidden in release builds via `__DEV__`) with four persona buttons and an honest note about holder fields.
+
+**12:50 — Role-based access audit (what each role actually sees today).**
+
+| Persona | Tabs | Role-switch pill | Holder-driven UI |
+|---|---|---|---|
+| Cosplayer only | Home • Characters • Marketplace • Profile | none | — |
+| Organizer only | Events • Logistics • Meetups • Profile | none | — |
+| Both | either set | pill appears, flips between sets | — |
+| Holder-verified | kept role's set | unchanged | Profile → Verification → Status shows "Verified"; nothing else |
+
+So **role-based navigation is implemented** (tab sets + the Both-roles pill), but **holder state has no behavioral effect anywhere yet** — Profile is the only reader (the `Verification` card). This matches the build plan: holder verification is **FE-8, a separate web app**, not a mobile feature. Verified live on the render path + TypeScript passes + Android bundle builds clean.
+
+### Commits
+- `<sha>` — `dev: add Test Mode persona switcher to Profile (Part C)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/<sha>)
+
+---
+
 ## 4. What's In the System Right Now (Contents Summary)
 
 ### The screens

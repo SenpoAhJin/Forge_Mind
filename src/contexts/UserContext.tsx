@@ -26,11 +26,15 @@ interface User {
   verification_status: 'pending' | 'verified' | 'rejected' | 'revoked'; // User.verification_status (Enum)
 }
 
+// Test-only persona presets for the role switcher (dev builds only, not real auth)
+export type DemoPersona = 'cosplayer' | 'organizer' | 'both' | 'holder-verified';
+
 interface UserContextType {
   user: User | null;
   setUserRoles: (isCosplayer: boolean, isOrganizer: boolean) => void;
   setUserAccount: (email: string, password: string, displayName: string) => void;
   setUserBody: (baseBody: 'male' | 'female', bodySize: number) => void;
+  applyDemoPersona: (persona: DemoPersona) => void;
   isOnboardingComplete: boolean;
   resetOnboarding: () => void;
 }
@@ -73,6 +77,42 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
+  // Dev/test-only: instantly switch the demo user between role contexts.
+  // Not real authentication — reuses the same local state as onboarding.
+  const applyDemoPersona = (persona: DemoPersona) => {
+    setUser((prev) => {
+      const current = prev ?? {
+        email: 'demo@forgemind.app',
+        password_hash: '',
+        display_name: 'Demo User',
+        is_cosplayer: false,
+        is_organizer: false,
+        base_body_selection: 'male' as const,
+        body_size_slider: 0.5,
+        is_holder_verified: false,
+        verification_status: 'pending' as const,
+      };
+
+      if (persona === 'holder-verified') {
+        return {
+          ...current,
+          is_holder_verified: true,
+          verification_status: 'verified' as const,
+        };
+      }
+
+      const isCosplayer = persona === 'cosplayer' || persona === 'both';
+      const isOrganizer = persona === 'organizer' || persona === 'both';
+      return {
+        ...current,
+        is_cosplayer: isCosplayer,
+        is_organizer: isOrganizer,
+        is_holder_verified: false,
+        verification_status: 'pending' as const,
+      };
+    });
+  };
+
   const isOnboardingComplete = user !== null &&
     user.email !== '' &&
     (user.is_cosplayer || user.is_organizer);
@@ -80,7 +120,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const resetOnboarding = () => setUser(null);
 
   return (
-    <UserContext.Provider value={{ user, setUserRoles, setUserAccount, setUserBody, isOnboardingComplete, resetOnboarding }}>
+    <UserContext.Provider
+      value={{ user, setUserRoles, setUserAccount, setUserBody, applyDemoPersona, isOnboardingComplete, resetOnboarding }}
+    >
       {children}
     </UserContext.Provider>
   );

@@ -1,18 +1,36 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { useUser } from '../../contexts/UserContext';
+import { useUser, DemoPersona } from '../../contexts/UserContext';
 import { Button } from '../../components';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, resetOnboarding } = useUser();
+  const { user, resetOnboarding, applyDemoPersona } = useUser();
 
   const initials = (user?.display_name ?? 'U')
     .split(' ')
     .map(s => s.charAt(0).toUpperCase())
     .slice(0, 2)
     .join('');
+
+  const personaChips: { key: DemoPersona; label: string }[] = [
+    { key: 'cosplayer', label: 'Cosplayer only' },
+    { key: 'organizer', label: 'Organizer only' },
+    { key: 'both', label: 'Both roles' },
+    { key: 'holder-verified', label: 'Verified Holder' },
+  ];
+
+  const isActivePersona = (key: DemoPersona): boolean => {
+    if (key === 'holder-verified') {
+      return user?.is_holder_verified === true;
+    }
+    const cos = user?.is_cosplayer === true;
+    const org = user?.is_organizer === true;
+    if (key === 'cosplayer') return cos && !org;
+    if (key === 'organizer') return org && !cos;
+    return cos && org;
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -83,13 +101,45 @@ export const ProfileScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Test Mode — dev only */}
+      {__DEV__ && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Test Mode — dev only</Text>
+          <Text style={styles.testNote}>
+            Not real authentication. Instantly preview each role context to check what it sees.
+          </Text>
+          <View style={styles.personaRow}>
+            {personaChips.map(({ key, label }) => {
+              const active = isActivePersona(key);
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.personaChip, active && styles.personaChipActive]}
+                  onPress={() => applyDemoPersona(key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.personaChipText, active && styles.personaChipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.testHint}>
+            {user?.is_holder_verified
+              ? 'Holder-verified is set. Today it only changes the Verification status above — no other UI reads it yet.'
+              : 'Holder-verified currently only reflects on the Verification status above; nothing else in the UI branches on it yet.'}
+          </Text>
+        </View>
+      )}
+
       {/* App info */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>App Info</Text>
         <View style={styles.detailRow}>
           <Ionicons name="code-outline" size={18} color={colors.textSecondary} />
           <Text style={styles.detailLabel}>Version</Text>
-          <Text style={styles.detailValue}>FE-2 (Onboarding)</Text>
+          <Text style={styles.detailValue}>FE-4 (Projects + Dashboard)</Text>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="flask-outline" size={18} color={colors.textSecondary} />
@@ -199,6 +249,42 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  testNote: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  personaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  personaChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  personaChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  personaChipText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  personaChipTextActive: {
+    color: colors.backgroundLight,
+  },
+  testHint: {
+    ...typography.caption,
+    color: colors.warning,
+    fontStyle: 'italic',
   },
   logoutWrap: {
     marginTop: spacing.xl,
