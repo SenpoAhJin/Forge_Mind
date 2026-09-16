@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider } from './src/contexts/UserContext';
 import { SelectionProvider } from './src/contexts/SelectionContext';
 import { ProjectsProvider } from './src/contexts/ProjectsContext';
+import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 
@@ -20,8 +21,10 @@ export default function App() {
       <UserProvider>
         <SelectionProvider>
           <ProjectsProvider>
-            <RootNavigator />
-            <StatusBar style="auto" />
+            <OwnedAttireProvider>
+              <RootNavigator />
+              <StatusBar style="auto" />
+            </OwnedAttireProvider>
           </ProjectsProvider>
         </SelectionProvider>
       </UserProvider>

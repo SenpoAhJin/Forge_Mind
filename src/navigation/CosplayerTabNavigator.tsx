@@ -6,6 +6,7 @@ import {
 } from '../screens/cosplayer';
 import { CharacterStackNavigator } from './CharacterStackNavigator';
 import { ProjectStackNavigator } from './ProjectStackNavigator';
+import { OwnedItemStackNavigator } from './OwnedItemStackNavigator';
 import { ProfileScreen } from '../screens/shared';
 import { colors, typography } from '../theme';
 
@@ -16,6 +17,7 @@ const ICON_SIZE = 22;
 const iconMap: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
   Projects:       { focused: 'folder',       unfocused: 'folder-outline' },
   CharacterBrowse:{ focused: 'people',       unfocused: 'people-outline' },
+  OwnedItems:     { focused: 'shirt',        unfocused: 'shirt-outline' },
   Marketplace:    { focused: 'cart',         unfocused: 'cart-outline' },
   Profile:        { focused: 'person',       unfocused: 'person-outline' },
 };
@@ -57,6 +59,11 @@ export const CosplayerTabNavigator: React.FC = () => {
         name="CharacterBrowse"
         component={CharacterStackNavigator}
         options={{ tabBarLabel: 'Characters', title: 'Characters', headerShown: false }}
+      />
+      <Tab.Screen
+        name="OwnedItems"
+        component={OwnedItemStackNavigator}
+        options={{ tabBarLabel: 'My Items', title: 'My Items', headerShown: false }}
       />
       <Tab.Screen
         name="Marketplace"

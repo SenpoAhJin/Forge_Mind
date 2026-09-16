@@ -22,6 +22,7 @@ interface TextInputFieldProps {
   placeholder?: string;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
 }
 
@@ -32,6 +33,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
   placeholder,
   secureTextEntry,
   keyboardType = 'default',
+  autoCapitalize,
   error,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -51,6 +53,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
         placeholderTextColor={colors.textDisabled}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
