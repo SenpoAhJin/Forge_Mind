@@ -73,6 +73,13 @@ export class AuthService {
     try {
       const accounts = await this.getAccounts();
       
+      console.log('[AuthService DEBUG] Registration attempt:');
+      console.log('  Email:', email);
+      console.log('  Password:', password);
+      console.log('  Display Name:', displayName);
+      console.log('  Roles:', { isCosplayer, isOrganizer });
+      console.log('  Existing accounts before save:', JSON.stringify(accounts, null, 2));
+      
       // Check if email already exists
       const existing = accounts.find(acc => acc.email.toLowerCase() === email.toLowerCase());
       if (existing) {
@@ -94,6 +101,10 @@ export class AuthService {
 
       accounts.push(newAccount);
       await this.saveAccounts(accounts);
+      
+      console.log('[AuthService DEBUG] Registration successful');
+      console.log('  New account:', JSON.stringify(newAccount, null, 2));
+      console.log('  All accounts after save:', JSON.stringify(accounts, null, 2));
 
       return { success: true, account: newAccount };
     } catch (error) {
@@ -113,15 +124,31 @@ export class AuthService {
     try {
       const accounts = await this.getAccounts();
       
+      // DEBUG: Log what we're comparing
+      console.log('[AuthService DEBUG] Login attempt:');
+      console.log('  Input email:', email);
+      console.log('  Input password:', password);
+      console.log('  Stored accounts:', JSON.stringify(accounts, null, 2));
+      
       // Find matching account (case-insensitive email)
       const account = accounts.find(
         acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password_hash === password
       );
 
       if (!account) {
+        console.log('[AuthService DEBUG] No matching account found');
+        console.log('  Email matches:', accounts.map(a => ({
+          stored: a.email,
+          match: a.email.toLowerCase() === email.toLowerCase()
+        })));
+        console.log('  Password matches:', accounts.map(a => ({
+          stored: a.password_hash,
+          match: a.password_hash === password
+        })));
         return { success: false, error: 'Invalid email or password' };
       }
 
+      console.log('[AuthService DEBUG] Login successful');
       return { success: true, account };
     } catch (error) {
       console.error('[AuthService] Login failed:', error);

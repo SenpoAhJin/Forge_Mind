@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, TextInputField } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
@@ -40,6 +41,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Body representation - defaults
   const [baseBody, setBaseBody] = useState<'male' | 'female'>('male');
@@ -261,30 +264,56 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             error={emailError}
           />
 
-          <TextInputField
-            label="Password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (passwordError) validatePassword(text);
-              if (confirmPassword) validateConfirmPassword(confirmPassword);
-            }}
-            placeholder="Minimum 8 characters"
-            secureTextEntry
-            error={passwordError}
-          />
+          <View>
+            <TextInputField
+              label="Password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (passwordError) validatePassword(text);
+                if (confirmPassword) validateConfirmPassword(confirmPassword);
+              }}
+              placeholder="Minimum 8 characters"
+              secureTextEntry={!showPassword}
+              error={passwordError}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={24}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
 
-          <TextInputField
-            label="Confirm Password"
-            value={confirmPassword}
-            onChangeText={(text) => {
-              setConfirmPassword(text);
-              if (confirmPasswordError) validateConfirmPassword(text);
-            }}
-            placeholder="Re-enter your password"
-            secureTextEntry
-            error={confirmPasswordError}
-          />
+          <View>
+            <TextInputField
+              label="Confirm Password"
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (confirmPasswordError) validateConfirmPassword(text);
+              }}
+              placeholder="Re-enter your password"
+              secureTextEntry={!showConfirmPassword}
+              error={confirmPasswordError}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={24}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.note}>
             Note: Body representation can be customized after registration
@@ -450,5 +479,10 @@ const styles = StyleSheet.create({
   switchLink: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: spacing.md,
+    top: 38, // Position below label, aligned with input
   },
 });

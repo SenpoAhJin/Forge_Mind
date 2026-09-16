@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, TextInputField } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
@@ -32,6 +33,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -115,18 +117,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             error={emailError}
           />
 
-          <TextInputField
-            label="Password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (passwordError) validatePassword(text);
-              if (loginError) setLoginError('');
-            }}
-            placeholder="Enter your password"
-            secureTextEntry
-            error={passwordError}
-          />
+          <View>
+            <TextInputField
+              label="Password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (passwordError) validatePassword(text);
+                if (loginError) setLoginError('');
+              }}
+              placeholder="Enter your password"
+              secureTextEntry={!showPassword}
+              error={passwordError}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={24}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
 
           {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
         </View>
@@ -220,5 +235,10 @@ const styles = StyleSheet.create({
   switchLink: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: spacing.md,
+    top: 38, // Position below label, aligned with input
   },
 });
