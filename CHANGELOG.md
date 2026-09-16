@@ -197,7 +197,7 @@ The mapping matched the files (a full-color in-app mark vs. a transparent icon-s
 **11:54 — Verified.** TypeScript passes, the web bundle renders the rounded + shadowed logo, and the Android bundle rebuilds clean.
 
 ### Commits
-- `<sha>` — `Welcome logo: rounded corners + soft shadow` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/<sha>)
+- `26357ca` — `Welcome logo: rounded corners + soft shadow` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/26357ca)
 
 ---
 
