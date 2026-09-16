@@ -1,6 +1,6 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 15, 2026
+**Last updated:** September 16, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
 
 ---
@@ -20,7 +20,7 @@ It is being built **mobile-first** (a phone app) using Expo (a tool that lets on
 
 ## 2. Current Status (one paragraph)
 
-The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, and a **working character browser**: after setup, cosplayers can search characters, browse each character's costume variants, and see a preview of matching them against owned items. The remaining tabs (Home, Marketplace, Events, Logistics, Meetups) are readable placeholder pages, and Profile is real. Everything still uses **demo (mock) data** — there is no real account system, server, or AI yet, by design.
+The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), and — newest — **owned-item logging**: users can add each piece of attire they own by **photo, typed description, or voice**, review and fix the AI-categorized details, and manage their whole inventory with filters. Everything still uses **demo (mock) data** — there is no real server or AI yet, by design.
 
 ---
 
@@ -240,15 +240,22 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 | Role Selection | Pick Cosplayer / Organizer / Both |
 | Account Creation | Name, email, password with validation |
 | Body Slider | Base body + size slider for 3D preview |
-| Home (Projects) | Greeting + "no projects yet" empty state |
+| Home (Projects) | Project cards with readiness bars + start-a-project flow |
 | Characters | Searchable list of characters, filter by media type |
 | Character Variants | Pick a character's costume variant (origin tag, difficulty, description) |
 | Match Results | Preview of "match against owned items" (mock until AI backend) |
+| My Items | Owned-attire inventory with filters (status/type/color) |
+| Log an Item | Pick Photo / Text / Voice entry method |
+| Photo Entry | Pick a photo → mock AI type/color/style guess |
+| Text Entry | Describe the item in English/Taglish → keyword categorization |
+| Voice Entry | Mock recorder → mocked transcript → categorization |
+| Confirm Item | Edit AI guesses + flexibility, condition, date, cost, notes → save |
+| Item Details | Full fields, condition history, edit/delete, commit to a project |
 | Marketplace | Explains future buy/sell/trade features |
 | Events | Explains future organizer event features |
 | Logistics | Explains future guest/performance tracking |
 | Meetups | Explains future group-meetup planning |
-| Profile | Shows real demo user data + reset button |
+| Profile | Shows real demo user data, logout, Test Mode persona switcher |
 
 ### The design system (reusable parts)
 - **Colors:** 17 fixed tokens matching the official design spec.
@@ -258,25 +265,26 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 
 ### Tech notes (for the developers)
 - **Stack:** Expo SDK 57, React Native 0.86, TypeScript 6.0, React Navigation 7.
-- **Folder layout:** `src/theme` (design tokens), `src/components` (building blocks), `src/navigation` (onboarding + tab + character-stack navigators), `src/screens` (cosplayer / organizer / shared / onboarding), `src/contexts` (demo user + demo selected-variant state), `src/data` (mock character/variant dataset, import-ready), `src/types` (schema-shaped type definitions).
-- **Git:** everything is committed and pushed to GitHub (`SenpoAhJin/Forge_Mind`, branch `master`). Commit history: `01659ea` (scaffold) → `c53ba56` (FE-2) → `a9c3407` (FE-2.1) → `a09c8a5` (FE-2.2) → `7fc5a0d` (changelog) → `edd44d5` (changelog) → `8f76817` (FE-3).
+- **Folder layout:** `src/theme` (design tokens), `src/components` (building blocks), `src/navigation` (onboarding + tab navigators + feature stacks), `src/screens` (cosplayer / organizer / shared / onboarding / auth), `src/contexts` (user, selection, projects, owned-attire state), `src/data` (mock datasets, import-ready), `src/types` (schema-shaped type definitions), `src/utils` (readiness math, mock catalog helpers).
+- **Persistence:** AsyncStorage keys `@forgemind:accounts`, `@forgemind:active_session` (auth) and `@forgemind:owned_attire` (inventory). Web and device storage are separate contexts.
+- **Git:** everything is committed and pushed to GitHub (`SenpoAhJin/Forge_Mind`, branch `master`).
 
 ---
 
 ## 5. Known Limits (by design, not bugs)
 
-- **No real accounts/login** — everything is demo data stored in the app's memory. Reloading the app resets the setup flow.
-- **No server yet** — no real database, AI, photo upload, or payments.
-- **No 3D preview, real matching, or marketplace listings yet** — character browsing works on demo data, but matching is only a preview and the 3D viewer/marketplace come in later stages.
-- Tab icons and layout are now done; the remaining "coming soon" areas are all planned future stages.
+- **Accounts and inventory are local only** — they persist on the device (or browser) via AsyncStorage, but there's **no server**, so nothing syncs between phone and web, and there's no real login security (passwords are hashed locally as a placeholder until the backend).
+- **AI is mocked** — photo categorization is randomized and voice transcription is generated; real image classification and speech-to-text arrive with the backend.
+- **No 3D preview, real matching, or marketplace listings yet** — character browsing and matching are previews; 3D viewer and marketplace come in later stages.
+- The remaining "coming soon" areas are all planned future stages.
 
 ---
 
 ## 6. What's Planned Next (Roadmap)
 
 1. ~~**FE-3 — Character Browse & Variant Selection**~~ **(done — Sept 15, 2026)**: searching characters, choosing a variant, seeing match results against your owned items.
-2. **FE-4 — Project Dashboard & Readiness:** creating projects, task lists, budgets, readiness score, 3D preview.
-3. **FE-5 — Owned-Item Logging:** photo/text/voice input with AI categorization.
+2. ~~**FE-4 — Project Dashboard & Readiness**~~ **(done — Sept 16, 2026)**: creating projects, task lists, budgets, readiness score, 3D preview.
+3. ~~**FE-5 — Owned-Item Logging**~~ **(done — Sept 16, 2026)**: photo/text/voice input with AI categorization.
 4. **FE-6 — Marketplace:** browse, list items, screening, condition, prices, trades, commissions, chat.
 5. **FE-7 — Organizer tools:** events, logistics tracker, contest tier suggestions, group meetups.
 6. **FE-8 — Holder verification surface:** a separate web app for vetting sellers and moderating listings.
@@ -397,7 +405,7 @@ Fixed in:
 
 ### Commits
 - `5c0e25b` — `fix: phone-frame rebuild, web render error fix, storage-context test prep` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/5c0e25b)
-- `[pending]` — `fix: logout button accessibility + changelog update`
+- `d7f1e43` — `fix: logout button accessibility + comprehensive changelog update` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/d7f1e43)
 
 ### What's Verified
 ✅ Phone frame component rebuilt and deployed  
@@ -430,4 +438,47 @@ Fixed in:
 
 ---
 
-*Last updated: September 16, 2026, 21:00*
+## Session — Wednesday, Sept 16, 2026, evening (FE-5: owned-item logging)
+
+### What we did
+
+**Built the owned-item inventory from scratch** — cosplayers can now log each piece of attire they own, using any of three methods, and see/manage their whole wardrobe.
+
+**Entry Method screen** — after tapping "Log an Owned Item", three big choices appear: **Take Photo**, **Type Description**, or **Voice Input**. The choice is remembered as each item's `entry_method`.
+
+**Photo entry** — taps into the device photo library (expo-image-picker). After picking a photo, a short "Categorizing photo…" spinner runs and a **mocked AI result card** shows the guessed type / color / style. Real image classification is a backend feature, not this phase.
+
+**Text entry** — a text area to "describe the item (color, type, style, condition)" with an **English ↔ Taglish toggle** (the placeholder text and hints switch language). Keywords in the description are auto-extracted into a type/color guess (e.g. "black wig spiky" → type: wig, color: black) — a lightweight mock.
+
+**Voice entry** — a mock recorder with a pulsing mic, a red "recording" pin + timer while recording, and a stop button. After stopping, a "Transcribing…" spinner runs and a **mocked transcript** appears. (Real speech-to-text is backend.) English/Taglish toggle included.
+
+**Item Confirmation screen** — every method funnels here. All the AI guesses are **editable**: type (chip picker), color, style, flexibility tag (restyle-willing / dye-willing / as-is-only), condition slider (1–5), plus acquired date (native date picker), acquisition cost (₱), and notes. **Save** writes the item to the persisted inventory.
+
+**My Items dashboard** — a new "My Items" tab (between Characters and Marketplace) lists every owned item with its entry method tag, condition, and a status dot (free/committed). It's **filterable by availability, type, and color**, with counts and a "Clear Filters" shortcut. Tapping an item opens the detail screen.
+
+**Owned-Attire Detail** — shows every field, the original input text (if any), and a **condition history** timeline. Edit mode lets you change everything (and condition updates append to the history). **Commit to Project** picks an existing project and marks the item "committed" (or releases it back to "free"). **Delete** asks for confirmation.
+
+**Persistence — same pattern as accounts.** The inventory is stored on AsyncStorage under `@forgemind:owned_attire`, so items survive reload. Schema field names exactly mirror the OwnedAttire table in `ForgeMind_Phase0_Foundation.md` (v0.2.1). Three demo items ship as seed data so the dashboard isn't empty on first open.
+
+### Notes/assumptions
+- Photo categorization is **random mock**; text/voice use **keyword extraction** (so the guess "lands correctly" with matching type/color in the dashboard).
+- Voice input is a **UI illusion without a real microphone** — recording uses a timer, transcription is generated mock text. Real mic + STT is BE-1.
+- Photo picking opens the **photo library** (gallery) since a browser can't reliably launch a phone camera; editing/cropping is on.
+- Added `expo-image-picker` (SDK 57) and fixed two pre-existing TypeScript errors by adding an `autoCapitalize` prop to the shared text input.
+
+### Commits
+- `806f223` — `FE-5: owned-item logging` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/806f223)
+
+### What's Verified
+✅ TypeScript type-check passes with zero errors  
+✅ Web bundle builds clean at http://localhost:8081  
+✅ Committed and pushed (`806f223`)
+
+### What Needs User Verification
+⏳ Walk each of the 3 entry methods → each item lands on the dashboard with correct mock categorization  
+⏳ Edit + save an item → detail reflects it  
+⏳ Commit/release and delete behaviors
+
+---
+
+*Last updated: September 16, 2026, evening*
