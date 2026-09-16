@@ -264,7 +264,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             error={emailError}
           />
 
-          <View>
+          <View style={styles.passwordContainer}>
             <TextInputField
               label="Password"
               value={password}
@@ -276,21 +276,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               placeholder="Minimum 8 characters"
               secureTextEntry={!showPassword}
               error={passwordError}
-            />
-            <TouchableOpacity
+            /><TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
+            ><Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
                 color={colors.textSecondary}
-              />
-            </TouchableOpacity>
+              /></TouchableOpacity>
           </View>
 
-          <View>
+          <View style={styles.passwordContainer}>
             <TextInputField
               label="Confirm Password"
               value={confirmPassword}
@@ -301,18 +298,15 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               placeholder="Re-enter your password"
               secureTextEntry={!showConfirmPassword}
               error={confirmPasswordError}
-            />
-            <TouchableOpacity
+            /><TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
+            ><Ionicons
                 name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
                 color={colors.textSecondary}
-              />
-            </TouchableOpacity>
+              /></TouchableOpacity>
           </View>
 
           <Text style={styles.note}>
@@ -479,6 +473,9 @@ const styles = StyleSheet.create({
   switchLink: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  passwordContainer: {
+    position: 'relative',
   },
   eyeIcon: {
     position: 'absolute',

@@ -117,7 +117,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             error={emailError}
           />
 
-          <View>
+          <View style={styles.passwordContainer}>
             <TextInputField
               label="Password"
               value={password}
@@ -129,18 +129,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               placeholder="Enter your password"
               secureTextEntry={!showPassword}
               error={passwordError}
-            />
-            <TouchableOpacity
+            /><TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
+            ><Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
                 color={colors.textSecondary}
-              />
-            </TouchableOpacity>
+              /></TouchableOpacity>
           </View>
 
           {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
@@ -205,6 +202,9 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.sm,
     marginBottom: spacing.xl,
+  },
+  passwordContainer: {
+    position: 'relative',
   },
   errorText: {
     ...typography.body,

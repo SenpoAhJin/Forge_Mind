@@ -5,15 +5,17 @@
  */
 
 import React from 'react';
+import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider } from './src/contexts/UserContext';
 import { SelectionProvider } from './src/contexts/SelectionContext';
 import { ProjectsProvider } from './src/contexts/ProjectsContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { PhoneFrame } from './src/components/testing/PhoneFrame';
 
 export default function App() {
-  return (
+  const appContent = (
     <SafeAreaProvider>
       <UserProvider>
         <SelectionProvider>
@@ -25,4 +27,11 @@ export default function App() {
       </UserProvider>
     </SafeAreaProvider>
   );
+
+  // Wrap in phone frame on web for testing
+  if (Platform.OS === 'web') {
+    return <PhoneFrame>{appContent}</PhoneFrame>;
+  }
+
+  return appContent;
 }

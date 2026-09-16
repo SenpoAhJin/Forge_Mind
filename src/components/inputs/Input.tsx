@@ -38,7 +38,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         style={[
           styles.textInput,
@@ -54,7 +54,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -81,7 +81,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         style={[
           styles.textArea,
@@ -98,7 +98,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -121,7 +121,7 @@ export const DropdownField: React.FC<DropdownFieldProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TouchableOpacity
         style={[styles.dropdown, error && styles.textInputError]}
         onPress={onPress}
@@ -131,7 +131,7 @@ export const DropdownField: React.FC<DropdownFieldProps> = ({
         </Text>
         <Text style={styles.chevron}>▼</Text>
       </TouchableOpacity>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -150,7 +150,7 @@ export const PhotoUploadField: React.FC<PhotoUploadFieldProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TouchableOpacity style={styles.photoUpload} onPress={onPress}>
         <Text style={styles.uploadIcon}>📷</Text>
         <Text style={styles.uploadText}>
