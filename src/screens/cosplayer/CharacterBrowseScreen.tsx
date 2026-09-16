@@ -168,10 +168,13 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     marginTop: spacing.sm,
+    marginHorizontal: -spacing.lg, // Extend to screen edges
   },
   filterContent: {
     gap: spacing.sm,
     paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg, // Proper padding inside scroll
+    paddingRight: spacing.xl, // Extra padding on right so last chip is fully visible
   },
   filterChip: {
     paddingHorizontal: spacing.md,

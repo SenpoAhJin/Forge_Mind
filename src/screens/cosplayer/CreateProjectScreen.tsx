@@ -5,8 +5,9 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { StandardCard, Button, TextInputField, Tag } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useSelection } from '../../contexts/SelectionContext';
@@ -29,8 +30,10 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
   );
   const [skillLevel, setSkillLevel] = useState<SkillLevel>('beginner');
   const [statedBudget, setStatedBudget] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [targetDate, setTargetDate] = useState('');
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [targetDate, setTargetDate] = useState<Date | null>(null);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showTargetPicker, setShowTargetPicker] = useState(false);
   const [optedIn, setOptedIn] = useState(false);
 
   if (!selection) {
@@ -57,11 +60,30 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
       project_name: name,
       stated_budget: statedBudget.trim() ? parseFloat(statedBudget) : null,
       stated_skill_level: skillLevel,
-      start_date: startDate.trim() || new Date().toISOString().slice(0, 10),
-      target_completion_date: targetDate.trim() || null,
+      start_date: startDate.toISOString().slice(0, 10),
+      target_completion_date: targetDate ? targetDate.toISOString().slice(0, 10) : null,
       opted_in_readiness_sharing: optedIn,
     });
     onCreated(project.project_id);
+  };
+
+  const formatDate = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toISOString().slice(0, 10);
+  };
+
+  const onStartDateChange = (event: any, selectedDate?: Date) => {
+    setShowStartPicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setStartDate(selectedDate);
+    }
+  };
+
+  const onTargetDateChange = (event: any, selectedDate?: Date) => {
+    setShowTargetPicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setTargetDate(selectedDate);
+    }
   };
 
   return (
@@ -109,18 +131,45 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
         placeholder="e.g. 3500.00"
         keyboardType="numeric"
       />
-      <TextInputField
-        label="Start date"
-        value={startDate}
-        onChangeText={setStartDate}
-        placeholder="YYYY-MM-DD"
-      />
-      <TextInputField
-        label="Target completion date"
-        value={targetDate}
-        onChangeText={setTargetDate}
-        placeholder="YYYY-MM-DD (optional)"
-      />
+
+      {/* Start Date Picker */}
+      <Text style={styles.fieldLabel}>Start date</Text>
+      <TouchableOpacity
+        style={styles.dateButton}
+        onPress={() => setShowStartPicker(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
+        <Text style={styles.dateButtonText}>{formatDate(startDate) || 'Select date'}</Text>
+      </TouchableOpacity>
+      {showStartPicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onStartDateChange}
+        />
+      )}
+
+      {/* Target Date Picker */}
+      <Text style={styles.fieldLabel}>Target completion date (optional)</Text>
+      <TouchableOpacity
+        style={styles.dateButton}
+        onPress={() => setShowTargetPicker(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
+        <Text style={styles.dateButtonText}>{targetDate ? formatDate(targetDate) : 'Select date (optional)'}</Text>
+      </TouchableOpacity>
+      {showTargetPicker && (
+        <DateTimePicker
+          value={targetDate || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onTargetDateChange}
+          minimumDate={startDate}
+        />
+      )}
 
       <TouchableOpacity style={styles.optInRow} onPress={() => setOptedIn(!optedIn)} activeOpacity={0.7}>
         <Ionicons
@@ -258,5 +307,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundLight,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  dateButtonText: {
+    ...typography.body,
+    color: colors.textPrimary,
   },
 });
