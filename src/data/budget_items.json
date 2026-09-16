@@ -1,0 +1,72 @@
+[
+  {
+    "budget_line_item_id": "budget-gojo-1",
+    "project_id": "proj-gojo-s2-uniform",
+    "item_name": "Black high-collar jacket",
+    "category": "material",
+    "planned_amount": 1800.00,
+    "actual_amount": 1995.00,
+    "created_at": "2026-09-10T09:00:00Z",
+    "updated_at": "2026-09-15T10:00:00Z"
+  },
+  {
+    "budget_line_item_id": "budget-gojo-2",
+    "project_id": "proj-gojo-s2-uniform",
+    "item_name": "Alteration thread & supplies",
+    "category": "material",
+    "planned_amount": 300.00,
+    "actual_amount": 0.00,
+    "created_at": "2026-09-10T09:00:00Z",
+    "updated_at": "2026-09-10T09:00:00Z"
+  },
+  {
+    "budget_line_item_id": "budget-gojo-3",
+    "project_id": "proj-gojo-s2-uniform",
+    "item_name": "White/silver wig",
+    "category": "material",
+    "planned_amount": 900.00,
+    "actual_amount": 0.00,
+    "created_at": "2026-09-10T09:00:00Z",
+    "updated_at": "2026-09-10T09:00:00Z"
+  },
+  {
+    "budget_line_item_id": "budget-gojo-4",
+    "project_id": "proj-gojo-s2-uniform",
+    "item_name": "Blindfold fabric & foam",
+    "category": "material",
+    "planned_amount": 500.00,
+    "actual_amount": 0.00,
+    "created_at": "2026-09-10T09:00:00Z",
+    "updated_at": "2026-09-10T09:00:00Z"
+  },
+  {
+    "budget_line_item_id": "budget-makima-1",
+    "project_id": "proj-makima-suit",
+    "item_name": "Wine-red blouse",
+    "category": "material",
+    "planned_amount": 1200.00,
+    "actual_amount": 0.00,
+    "created_at": "2026-09-15T14:00:00Z",
+    "updated_at": "2026-09-15T14:00:00Z"
+  },
+  {
+    "budget_line_item_id": "budget-makima-2",
+    "project_id": "proj-makima-suit",
+    "item_name": "Black slacks",
+    "category": "material",
+    "planned_amount": 800.00,
+    "actual_amount": 0.00,
+    "created_at": "2026-09-15T14:00:00Z",
+    "updated_at": "2026-09-15T14:00:00Z"
+  },
+  {
+    "budget_line_item_id": "budget-makima-3",
+    "project_id": "proj-makima-suit",
+    "item_name": "Neck-tie & rings",
+    "category": "material",
+    "planned_amount": 500.00,
+    "actual_amount": 0.00,
+    "created_at": "2026-09-15T14:00:00Z",
+    "updated_at": "2026-09-15T14:00:00Z"
+  }
+]

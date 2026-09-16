@@ -2,10 +2,10 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  ProjectsScreen,
   MarketplaceScreen,
 } from '../screens/cosplayer';
 import { CharacterStackNavigator } from './CharacterStackNavigator';
+import { ProjectStackNavigator } from './ProjectStackNavigator';
 import { ProfileScreen } from '../screens/shared';
 import { colors, typography } from '../theme';
 
@@ -50,8 +50,8 @@ export const CosplayerTabNavigator: React.FC = () => {
     >
       <Tab.Screen
         name="Projects"
-        component={ProjectsScreen}
-        options={{ tabBarLabel: 'Home' }}
+        component={ProjectStackNavigator}
+        options={{ tabBarLabel: 'Home', headerShown: false }}
       />
       <Tab.Screen
         name="CharacterBrowse"

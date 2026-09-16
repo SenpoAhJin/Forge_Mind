@@ -1,11 +1,57 @@
+/**
+ * ForgeMind - Projects List (Home) Screen (FE-4)
+ * Lists the user's projects (character + variant from FE-3), readiness score and status.
+ * "Start New Project" flows from the FE-3-selected variant or by browsing characters.
+ */
+
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StandardCard, Button, StatusBadge } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { useSelection } from '../../contexts/SelectionContext';
+import { useProjects } from '../../contexts/ProjectsContext';
+import { getCharacterById, getVariantById } from '../../data';
+import { computeReadiness } from '../../utils/readiness';
+import { Project, ProjectStatus } from '../../types/projects';
 
-export const ProjectsScreen: React.FC = () => {
+interface ProjectsScreenProps {
+  onStartProject: () => void;
+  onBrowseCharacters: () => void;
+  onOpenProject: (projectId: string) => void;
+}
+
+const badgeStatusFor = (status: ProjectStatus): 'pending' | 'active' | 'completed' | 'cancelled' => {
+  switch (status) {
+    case 'planning':
+      return 'pending';
+    case 'in-progress':
+      return 'active';
+    case 'completed':
+      return 'completed';
+    case 'abandoned':
+      return 'cancelled';
+    default:
+      return 'pending';
+  }
+};
+
+export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
+  onStartProject,
+  onBrowseCharacters,
+  onOpenProject,
+}) => {
   const { user } = useUser();
+  const { selection } = useSelection();
+  const { projects, getTasksForProject, getBudgetForProject } = useProjects();
+
+  const readinessFor = (project: Project) =>
+    computeReadiness({
+      project,
+      projectTasks: getTasksForProject(project.project_id),
+      projectBudget: getBudgetForProject(project.project_id),
+    });
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -14,28 +60,84 @@ export const ProjectsScreen: React.FC = () => {
         <Text style={styles.nameText}>{user?.display_name ?? 'Cosplayer'}</Text>
       </View>
 
-      <View style={styles.heroCard}>
-        <Ionicons name="folder-open-outline" size={48} color={colors.primary} />
-        <Text style={styles.heroTitle}>Your Projects</Text>
-        <Text style={styles.heroSub}>
-          Track your cosplay builds from planning to completion.
-        </Text>
+      {selection ? (
+        <StandardCard style={styles.startCard}>
+          <View style={styles.startHeader}>
+            <View style={styles.startIconWrap}>
+              <Ionicons name="sparkles" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.startTextWrap}>
+              <Text style={styles.startLabel}>START FROM SELECTED VARIANT</Text>
+              <Text style={styles.startCharacter}>{selection.character.character_name}</Text>
+              <Text style={styles.startVariant}>{selection.variant.variant_name}</Text>
+            </View>
+          </View>
+          <Button title="Create Project" variant="primary" fullWidth onPress={onStartProject} />
+        </StandardCard>
+      ) : (
+        <StandardCard style={styles.startCard}>
+          <View style={styles.startEmptyWrap}>
+            <Ionicons name="add-circle-outline" size={32} color={colors.primary} />
+            <Text style={styles.startEmptyTitle}>Start a new project</Text>
+            <Text style={styles.startEmptySub}>
+              Pick a character and variant first — it becomes your project.
+            </Text>
+          </View>
+          <Button title="Browse Characters" variant="secondary" fullWidth onPress={onBrowseCharacters} />
+        </StandardCard>
+      )}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>My Projects</Text>
+        <Text style={styles.sectionCount}>{projects.length}</Text>
       </View>
 
-      <View style={styles.emptyState}>
-        <Ionicons name="add-circle-outline" size={36} color={colors.textDisabled} />
-        <Text style={styles.emptyTitle}>No projects yet</Text>
-        <Text style={styles.emptySub}>
-          Browse characters and start your first cosplay project.
-        </Text>
-      </View>
+      {projects.length === 0 && (
+        <View style={styles.emptyState}>
+          <Ionicons name="folder-open-outline" size={36} color={colors.textDisabled} />
+          <Text style={styles.emptyTitle}>No projects yet</Text>
+          <Text style={styles.emptySub}>
+            Your projects will appear here after you start one.
+          </Text>
+        </View>
+      )}
 
-      <View style={styles.infoBanner}>
-        <Ionicons name="information-circle" size={18} color={colors.info} />
-        <Text style={styles.infoText}>
-          Project creation, task tracking and 3D preview will be available in FE-4.
-        </Text>
-      </View>
+      {projects.map((project) => {
+        const character = getCharacterById(project.character_id);
+        const variant = getVariantById(project.variant_id);
+        const readiness = readinessFor(project).readiness_score;
+        const pct = Math.round(readiness * 100);
+
+        return (
+          <StandardCard key={project.project_id} style={styles.projectCard} onPress={() => onOpenProject(project.project_id)}>
+            <View style={styles.projectHeader}>
+              <View style={styles.projectMeta}>
+                <Text style={styles.projectName} numberOfLines={1}>
+                  {project.project_name}
+                </Text>
+                <Text style={styles.projectSub} numberOfLines={1}>
+                  {character?.character_name ?? 'Unknown character'}
+                  {variant ? ` · ${variant.variant_name}` : ''}
+                </Text>
+              </View>
+              <StatusBadge status={badgeStatusFor(project.status)} label={project.status} />
+            </View>
+
+            <View style={styles.readinessRow}>
+              <Text style={styles.readinessLabel}>Readiness</Text>
+              <Text style={styles.readinessValue}>{pct}%</Text>
+            </View>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: readiness >= 0.6 ? colors.success : readiness >= 0.3 ? colors.warning : colors.error }]} />
+            </View>
+
+            <View style={styles.projectFooter}>
+              <Text style={styles.viewHint}>Open dashboard</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+            </View>
+          </StandardCard>
+        );
+      })}
     </ScrollView>
   );
 };
@@ -43,7 +145,7 @@ export const ProjectsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundLight,
   },
   content: {
     padding: spacing.lg,
@@ -61,32 +163,75 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.xs,
   },
-  heroCard: {
-    backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+  startCard: {
     marginBottom: spacing.xl,
   },
-  heroTitle: {
-    ...typography.h2,
+  startHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  startIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  startTextWrap: {
+    flex: 1,
+  },
+  startLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  startCharacter: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
+  },
+  startVariant: {
+    ...typography.body,
+    color: colors.primary,
+    marginTop: 2,
+  },
+  startEmptyWrap: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  startEmptyTitle: {
+    ...typography.h3,
     color: colors.textPrimary,
     marginTop: spacing.md,
   },
-  heroSub: {
+  startEmptySub: {
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  sectionCount: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.xl,
   },
   emptyTitle: {
     ...typography.h3,
@@ -98,21 +243,62 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
-    paddingHorizontal: spacing.xl,
   },
-  infoBanner: {
+  projectCard: {
+    marginBottom: spacing.md,
+  },
+  projectHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    backgroundColor: '#EBF5FF',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.xl,
     gap: spacing.sm,
   },
-  infoText: {
-    ...typography.caption,
-    color: colors.info,
+  projectMeta: {
     flex: 1,
-    lineHeight: 18,
+  },
+  projectName: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  projectSub: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  readinessRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  readinessLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  readinessValue: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  barTrack: {
+    height: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: borderRadius.full,
+  },
+  projectFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  viewHint: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

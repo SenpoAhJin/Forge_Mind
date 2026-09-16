@@ -132,6 +132,58 @@ The `setUserAccount` function in `src/contexts/UserContext.tsx` was rewritten to
 
 ---
 
+## Session — Wednesday, Sept 16, 2026, 11:02 (logo integration: in-app + outer-app)
+
+### What we did
+
+**11:01 — Located and brought in the two real logo files.** They were found at `forgemind-mobile/image_assets_logo/`:
+- `in-app_logo.png` — 1254×1254, solid dark-navy/indigo artwork. This is the **in-app logo**: shown inside app screens.
+- `outer-app_logo.png` — 564×564, transparent background with a light blue-white glyph. This is the **outer-app logo**: the app icon, splash image, and Android adaptive icon.
+
+The mapping matched the files (a full-color in-app mark vs. a transparent icon-style mark), so the assumption was confirmed, not corrected.
+
+**11:01 — Applied the logos.**
+- `src/assets/in-app_logo.png` added. The Welcome screen's placeholder (purple circle with "ForgeMind" text) was replaced with the real image at 160×160 — it's the only in-app placeholder logo from FE-1/FE-2.
+- The outer-app logo was derived into the Expo asset slots: `assets/icon.png` (1024×1024), `assets/splash-icon.png` (1024×1024), `assets/android-icon-foreground.png` (1024×1024), `assets/android-icon-monochrome.png` (grayscale 1024×1024), and `assets/favicon.png` (48×48).
+- `app.json` now points `icon`, `splash`, and the Android `adaptiveIcon` (foreground + monochrome) at those files.
+
+**11:02 — Verified.** TypeScript passes. The app icon renders as the dark-navy logo on a transparent background; the Welcome screen shows the full-color logo on the light background.
+
+### Commits
+- (hash filled after push — `Add app logos (in-app + outer-app)`)
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 11:22 (FE-4: project dashboard & readiness)
+
+### What we did
+
+**11:05 — Built the project data layer, schema-aligned.** Created `src/types/projects.ts` with `Project` and `Task` matching the foundation spec **verbatim** (from `ForgeMind_Phase0_Foundation.md`, section D — quote in the FE-4 report). `BudgetLineItem` is flagged as an **assumed** structure — no Budget table exists in the foundation spec yet. Mock data lives in three normalized files under `src/data/`: `projects.json`, `tasks.json`, `budget_items.json`, plus `match_components.json` (reuses FE-3's mock match items).
+
+**11:10 — Readiness engine written as explicit math, not a black box.** `src/utils/readiness.ts` derives the `ProjectReadiness` value: 40% task completion (completed=1, in-progress=0.5), 30% owned-item match (exact=1, close=0.5, loose=0.25), 30% budget health (1 − spent/stated budget). Also emits matched/missing components, budget utilization, and skill-gap details.
+
+**11:14 — Projects state store.** `src/contexts/ProjectsContext.tsx` seeds from the mock data and supports creating projects, adding tasks, advancing task status, and adding budget line items (in-memory, fresh on reload — same standard as FE-3's selection store).
+
+**11:22 — Three screens built.**
+- **Home / Projects list** — replaces the FE-2 empty state: project cards show character/variant, readiness bar, status; a start-card turns the FE-3-selected variant into a project.
+- **Project Dashboard** — task list (add / Start / Complete / Reopen), budget tracker (stated vs planned vs spent, running total, add line items), computed readiness with breakdown, and a **clearly-labeled static 3D preview slot** ("coming in a later stage" — no real 3D, per the Phase 2 scope note).
+- **Create Project** — form mirroring Project schema field names (name, skill level, budget, dates, readiness opt-in).
+
+**11:24 — Navigation.** New `ProjectStackNavigator` hosts Projects → Dashboard → Create on the Home tab (mirrors the FE-3 characters stack). Match Results (FE-3 screen) gained a "Start Project with This Variant" button that jumps to Home. Two FE-1/FE-3 shell files were modified to wire this (flagged in the FE-4 report).
+
+**11:25 — Verified and shipped.** TypeScript type-check passes with zero errors; the Android bundle rebuilds clean in the dev server. Committed and pushed.
+
+### Few notes/assumptions made this phase
+- Real Project/Task schema **exists** in `ForgeMind_Phase0_Foundation.md` (section D) — used verbatim, quoted in the report.
+- No Budget table exists in the spec; `BudgetLineItem` field names/types are an **assumption**, flagged for backend mapping.
+- Readiness is mock math (explained above); AI-driven readiness forecasting is a later backend phase.
+- App uses lasting demo IDs (e.g. `proj-gojo-s2-uniform`) just like FE-3's readable stand-ins; the schema says UUIDs.
+
+### Commits
+- (hash filled after push — `FE-4: project dashboard & readiness`)
+
+---
+
 ## 4. What's In the System Right Now (Contents Summary)
 
 ### The screens

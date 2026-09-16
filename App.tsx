@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider } from './src/contexts/UserContext';
 import { SelectionProvider } from './src/contexts/SelectionContext';
+import { ProjectsProvider } from './src/contexts/ProjectsContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 export default function App() {
@@ -16,8 +17,10 @@ export default function App() {
     <SafeAreaProvider>
       <UserProvider>
         <SelectionProvider>
-          <RootNavigator />
-          <StatusBar style="auto" />
+          <ProjectsProvider>
+            <RootNavigator />
+            <StatusBar style="auto" />
+          </ProjectsProvider>
         </SelectionProvider>
       </UserProvider>
     </SafeAreaProvider>

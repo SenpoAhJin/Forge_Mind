@@ -64,7 +64,10 @@ export const CharacterStackNavigator: React.FC = () => {
 
       <Stack.Screen name="MatchResults" options={{ title: 'Match Results' }}>
         {({ navigation }) => (
-          <MatchResultsScreen onBackToBrowse={() => navigation.navigate('CharacterBrowse')} />
+          <MatchResultsScreen
+            onBackToBrowse={() => navigation.navigate('CharacterBrowse')}
+            onStartProject={() => navigation.getParent()?.navigate('Projects')}
+          />
         )}
       </Stack.Screen>
     </Stack.Navigator>

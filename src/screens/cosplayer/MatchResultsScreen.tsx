@@ -12,6 +12,7 @@ import { useSelection } from '../../contexts/SelectionContext';
 
 interface MatchResultsScreenProps {
   onBackToBrowse: () => void;
+  onStartProject: () => void;
 }
 
 type MatchRating = 'exact' | 'close' | 'loose';
@@ -40,7 +41,7 @@ const MOCK_MATCH_RESULTS: MockMatchResult[] = [
   },
 ];
 
-export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackToBrowse }) => {
+export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackToBrowse, onStartProject }) => {
   const { selection } = useSelection();
 
   if (!selection) {
@@ -97,7 +98,10 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
         </Text>
       </View>
 
-      <Button title="Back to Variants" variant="secondary" onPress={onBackToBrowse} fullWidth />
+      <View style={styles.footer}>
+        <Button title="Start Project with This Variant" onPress={onStartProject} fullWidth />
+        <Button title="Back to Variants" variant="secondary" onPress={onBackToBrowse} fullWidth />
+      </View>
     </ScrollView>
   );
 };
@@ -185,6 +189,10 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     lineHeight: 18,
+  },
+  footer: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   emptyTitle: {
     ...typography.h2,

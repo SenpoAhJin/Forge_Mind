@@ -1,0 +1,20 @@
+[
+  {
+    "component_id": "comp-gojo-wig",
+    "component_label": "Wig — white/silver",
+    "match_quality": "exact",
+    "note": "Defining hair feature identified in variant reference."
+  },
+  {
+    "component_id": "comp-gojo-blindfold",
+    "component_label": "Blindfold / eye cover — black",
+    "match_quality": "close",
+    "note": "Color matches; material or prop detailing may need adjusting."
+  },
+  {
+    "component_id": "comp-gojo-shoes",
+    "component_label": "Shoes — black",
+    "match_quality": "loose",
+    "note": "Generic coverage only; no exact reference in your catalog yet."
+  }
+]
