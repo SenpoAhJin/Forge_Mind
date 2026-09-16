@@ -150,7 +150,7 @@ The mapping matched the files (a full-color in-app mark vs. a transparent icon-s
 **11:02 — Verified.** TypeScript passes. The app icon renders as the dark-navy logo on a transparent background; the Welcome screen shows the full-color logo on the light background.
 
 ### Commits
-- (hash filled after push — `Add app logos (in-app + outer-app)`)
+- `1218957` — `Add app logos (in-app + outer-app)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/1218957)
 
 ---
 
@@ -180,7 +180,7 @@ The mapping matched the files (a full-color in-app mark vs. a transparent icon-s
 - App uses lasting demo IDs (e.g. `proj-gojo-s2-uniform`) just like FE-3's readable stand-ins; the schema says UUIDs.
 
 ### Commits
-- (hash filled after push — `FE-4: project dashboard & readiness`)
+- `10d142b` — `FE-4: project dashboard & readiness` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/10d142b)
 
 ---
 
