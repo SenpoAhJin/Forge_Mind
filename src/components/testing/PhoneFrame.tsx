@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   appContent: {
     flex: 1,
     backgroundColor: '#fff',
-    overflow: 'hidden',
+    overflow: 'scroll',
   },
   homeIndicator: {
     width: 134,

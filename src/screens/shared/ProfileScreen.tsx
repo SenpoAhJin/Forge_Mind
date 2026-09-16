@@ -317,6 +317,7 @@ const styles = StyleSheet.create({
   },
   logoutWrap: {
     marginTop: spacing.xl,
+    marginBottom: spacing.xxxl,
     gap: spacing.sm,
   },
 });

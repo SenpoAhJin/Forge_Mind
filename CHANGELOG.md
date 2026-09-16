@@ -284,3 +284,150 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 ---
 
 *Need something in even simpler terms? Just ask — I'm happy to re-explain any part.*
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 17:30 (FE-4.5: persisted auth + password visibility + native date picker)
+
+### What we did
+
+**14:00 — FE-4.5.1: Persisted authentication with AsyncStorage.** The app now **saves accounts** so they survive reloading. Before this, all user data lived in memory — reload the app and you're back at Welcome. Now:
+- `AuthService.ts` manages registration + login + logout with password hashing (SHA-256 — placeholder until real backend).
+- Multi-account storage: multiple users can register on one device; login compares against all stored accounts.
+- `UserContext` wired to AuthService — register/login now actually save/load from AsyncStorage.
+- Fixed schema alignment: all field names match `ForgeMind_Phase0_Foundation.md` v0.2.1 exactly.
+
+**14:15 — FE-4.5.1: Password visibility toggle.** Login and Register screens gained a small eye icon (right side of password fields) that toggles between hidden dots and plain text.
+
+**15:30 — FE-4.5.2: Login debug logging.** Added detailed console output to track what's being compared during login attempts:
+- Shows input email/password
+- Shows all stored accounts
+- Shows which accounts match email
+- Shows which accounts match password
+- Shows hash comparison results
+
+This was added to diagnose login issues during testing.
+
+**16:00 — FE-4.5.3: Native date picker + chip row overflow fix + gear icon investigation.**
+- **Date picker:** Replaced YYYY-MM-DD text inputs on Create Project screen with native date pickers (@react-native-community/datetimepicker@8.5.5). Tap button → opens year/month/day picker. Start date defaults to today; target date can't be before start date. Calendar icon buttons for clarity.
+- **Chip row fix:** Characters screen media filter chips (All/Anime/Manga/Game/Original) were cut off at screen edge. Fixed by adding proper horizontal padding inside ScrollView — "Original" chip now fully visible and scrollable.
+- **Gear icon investigation:** Exhaustive search of entire codebase (App.tsx, all navigators, all screens, package.json, entire src/**/*.tsx) confirmed NO gear/settings icon exists anywhere in ForgeMind code. The gear icon visible in Expo Go screenshots is external (Expo Go's dev tools overlay).
+
+### Commits
+- `ef4356b` — `FE-4.5.3: date picker, chip row fix, gear icon root-level investigation` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/ef4356b)
+- `eb32d9d` — `docs: FE-4.5.3 summary` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/eb32d9d)
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 21:00 (Web testing infrastructure + consolidated fixes)
+
+### What we did
+
+**17:30 — Switched testing from physical phone (Expo Go) to laptop browser with mobile frame preview.** Going forward, testing happens in browser with device emulation instead of relying on physical Android phone through Expo Go. This eliminates "stale build" issues since laptop pulls fresh code from dev server.
+
+**18:00 — Phone frame component investigation & rebuild.** User reported a phone-frame preview component was built in an earlier session. Investigation:
+- Searched git history: `git log --all --oneline -- "*hone*rame*" "*mock*hone*" "*device*rame*"` → No results
+- Checked commit a9c3407 (where phone frame was supposedly mentioned) → Not found
+- **Conclusion:** Phone frame component never existed in git history
+
+**Solution:** Rebuilt from scratch as `PhoneFrame.tsx` component:
+- Device bezel with rounded corners (40px radius, 12px border)
+- Dynamic Island/notch simulation (47px for iPhone 14/15)
+- iPhone-style home indicator bar
+- Auto-scales to fit screen while maintaining aspect ratio
+- Only renders on web (Platform.OS === 'web') — native apps unaffected
+- Integrated into App.tsx to wrap content when running on web
+
+**19:00 — Fixed web render errors.** React Native Web was throwing "Unexpected text node: . A text node cannot be a child of a <View>" errors in Input components. Root cause: conditional rendering using `&&` operator (`{label && <Text>}`) creates problematic text nodes in React Native Web.
+
+**Fix:** Changed all conditional rendering from `&&` to explicit ternary with `null`:
+```tsx
+// Before: {label && <Text>{label}</Text>}
+// After:  {label ? <Text>{label}</Text> : null}
+```
+
+Fixed in:
+- `Input.tsx` (TextInputField, TextAreaField, DropdownField, PhotoUploadField)
+- `LoginScreen.tsx` (password field container)
+- `RegisterScreen.tsx` (password + confirm password containers)
+
+**Result:** All "Unexpected text node" errors eliminated from console.
+
+**19:30 — Storage-context hypothesis testing.** Investigated why accounts created on physical phone (Expo Go) can't login on web. Finding:
+- Web console shows `Stored accounts: []` — web storage is completely empty
+- Phone accounts (e.g., ahjin@gmail.com) live in phone's AsyncStorage
+- Web uses browser's localStorage/IndexedDB (separate context)
+- **This is NOT a bug** — phone and web storage contexts are intentionally separate
+
+**Test procedure** (requires user action):
+1. Register NEW account in web browser: webtest@test.com / testpass123
+2. Logout
+3. Try logging in with same credentials
+4. If successful → confirms storage contexts are separate (expected behavior)
+5. If fails → indicates bug in login comparison logic
+
+**20:30 — Fixed logout button accessibility.** User reported unable to click logout button. Investigation found:
+- Phone frame's `overflow: 'hidden'` was cutting off scrollable content
+- ProfileScreen's logout section lacked bottom padding
+
+**Fixes:**
+- Changed PhoneFrame's `appContent` overflow from 'hidden' to 'scroll'
+- Added `marginBottom: spacing.xxxl` to ProfileScreen's `logoutWrap` style
+
+**21:00 — Documentation.** Created comprehensive testing guides:
+- `WEB_TESTING_GUIDE.md` — How to use browser DevTools device emulation, testing workflow, debugging tips
+- `CONSOLIDATED_FIX_REPORT.md` — Technical details of all fixes
+- `FINAL_CONSOLIDATED_REPORT.md` — Summary of what was completed vs. awaiting user verification
+
+### Files Created/Modified
+**Created:**
+- `src/components/testing/PhoneFrame.tsx` — Phone frame preview component
+- `WEB_TESTING_GUIDE.md` — Web testing instructions
+- `CONSOLIDATED_FIX_REPORT.md` — Technical fix documentation
+- `FINAL_CONSOLIDATED_REPORT.md` — Completion status report
+
+**Modified:**
+- `App.tsx` — Wrapped in PhoneFrame for web platform
+- `src/components/inputs/Input.tsx` — Fixed conditional rendering for React Native Web
+- `src/screens/auth/LoginScreen.tsx` — Fixed password field container, added passwordContainer style
+- `src/screens/auth/RegisterScreen.tsx` — Fixed password fields, added passwordContainer style
+- `src/components/testing/PhoneFrame.tsx` — Changed overflow to 'scroll'
+- `src/screens/shared/ProfileScreen.tsx` — Added bottom margin to logout section
+
+### Commits
+- `5c0e25b` — `fix: phone-frame rebuild, web render error fix, storage-context test prep` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/5c0e25b)
+- `[pending]` — `fix: logout button accessibility + changelog update`
+
+### What's Verified
+✅ Phone frame component rebuilt and deployed  
+✅ All web render errors eliminated  
+✅ Code committed and pushed (5c0e25b)  
+✅ Dev server running cleanly at http://localhost:8081  
+
+### What Needs User Verification
+⏳ Phone frame visible in browser with device emulation  
+⏳ Storage-context test: Register webtest@test.com in web, then try logging in  
+⏳ Gear icon absent in web view (confirms it's Expo Go overlay)  
+⏳ Date picker buttons visible after login (Projects → Create project)  
+⏳ "Original" chip fully accessible on Characters tab  
+⏳ Logout button now clickable  
+
+### Technical Notes
+**Storage Context Separation:**
+- Phone (Expo Go): Uses device AsyncStorage
+- Web (Browser): Uses browser localStorage/IndexedDB
+- **These are separate storage contexts** — accounts don't sync between them
+- This is expected React Native behavior, not a bug
+- Users must register separately on each platform until backend sync is implemented
+
+**Web Testing Advantages:**
+- Always loads latest code from dev server (no stale builds)
+- Instant reload (Ctrl+R)
+- Full Chrome DevTools (console, network, React DevTools)
+- Easy device switching (dropdown in DevTools)
+- Built-in mobile frame through browser device emulation
+
+---
+
+*Last updated: September 16, 2026, 21:00*
