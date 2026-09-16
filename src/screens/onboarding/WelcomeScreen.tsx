@@ -8,7 +8,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Button } from '../../components';
-import { colors, typography, spacing } from '../../theme';
+import { colors, typography, spacing, borderRadius } from '../../theme';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -18,12 +18,16 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Image
-          source={require('../../assets/in-app_logo.png')}
-          style={styles.logoImage}
-          resizeMode="contain"
-          accessibilityLabel="ForgeMind logo"
-        />
+        <View style={styles.logoShadow}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/in-app_logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+              accessibilityLabel="ForgeMind logo"
+            />
+          </View>
+        </View>
         
         <Text style={styles.tagline}>
           AI-Assisted Cosplay{'\n'}Project Planning
@@ -59,10 +63,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
-  logoImage: {
+  logoShadow: {
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.backgroundLight,
+    shadowColor: colors.textPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: spacing.xxl,
+  },
+  logoContainer: {
     width: 160,
     height: 160,
-    marginBottom: spacing.xxl,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   tagline: {
     ...typography.h1,

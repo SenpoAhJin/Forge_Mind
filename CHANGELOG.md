@@ -184,6 +184,23 @@ The mapping matched the files (a full-color in-app mark vs. a transparent icon-s
 
 ---
 
+## Session — Wednesday, Sept 16, 2026, 11:54 (Welcome-screen logo presentation polish)
+
+### What we did
+
+**11:50 — Double-checked that the logo + FE-4 changelog entries are live on GitHub.** Ran the four check commands against `origin/master`: both newest changelog sessions (11:02 logo integration and 11:22 FE-4) are committed (`10d142b`, 52 lines added) and their commit links were filled in (`b740507`). No extra changelog commit was needed.
+
+**11:51 — Investigated a reported "purple header overlapping the Characters search area."** Reproduced the app live in a headless phone-sized browser (390×844 and 492×839, role switcher on) and measured the layout: the pill row sits at the top, the purple header sits below it in normal flow, and the search input + filter chips sit below that with clear space — no overlap. The report also mentions an "avatar + gear icon" header, but nothing like that exists in the code from any version. This part is held for user confirmation rather than shipping a no-op "fix."
+
+**11:52 — Welcome logo: rounded corners + soft shadow.** The dark-navy in-app logo on the Welcome screen is now rounded (`borderRadius.lg` = 12, corners clipped via an `overflow: hidden` container) and floats in a soft shadow (`colors.textPrimary` at 12% alpha, 4px down, 12px blur, elevation 6) — all from design-system tokens.
+
+**11:54 — Verified.** TypeScript passes, the web bundle renders the rounded + shadowed logo, and the Android bundle rebuilds clean.
+
+### Commits
+- `<sha>` — `Welcome logo: rounded corners + soft shadow` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/<sha>)
+
+---
+
 ## 4. What's In the System Right Now (Contents Summary)
 
 ### The screens
