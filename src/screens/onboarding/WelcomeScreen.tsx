@@ -18,10 +18,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {/* Logo placeholder - replace with actual logo in assets */}
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>ForgeMind</Text>
-        </View>
+        <Image
+          source={require('../../assets/in-app_logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+          accessibilityLabel="ForgeMind logo"
+        />
         
         <Text style={styles.tagline}>
           AI-Assisted Cosplay{'\n'}Project Planning
@@ -57,19 +59,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoImage: {
+    width: 160,
+    height: 160,
     marginBottom: spacing.xxl,
-  },
-  logoText: {
-    ...typography.h1,
-    color: colors.backgroundLight,
-    fontSize: 24,
   },
   tagline: {
     ...typography.h1,
