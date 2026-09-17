@@ -1,13 +1,13 @@
 /**
  * ForgeMind Onboarding - Role Selection Screen
- * "I'm a Cosplayer" / "I'm an Event Organizer" / "Both"
- * Maps to User.is_cosplayer and User.is_organizer (both booleans)
- * Store locally for now; becomes real API call in BE-1
+ * FE-5.5: SIMPLIFIED - "I'm a Cosplayer" only
+ * Organizer access must be requested separately after registration (no public signup)
+ * Maps to User.is_cosplayer (boolean)
  * Transitions to Account Creation
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Button } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 
@@ -20,77 +20,47 @@ export const RoleSelectionScreen: React.FC<RoleSelectionScreenProps> = ({
   onContinue,
   onBack,
 }) => {
-  const [isCosplayer, setIsCosplayer] = useState(false);
-  const [isOrganizer, setIsOrganizer] = useState(false);
-
+  // FE-5.5: Every new account starts as cosplayer-only
+  // Organizer access requires separate request flow (not part of signup)
   const handleContinue = () => {
-    // Validation: at least one role must be selected
-    if (!isCosplayer && !isOrganizer) {
-      return; // Could show error message here
-    }
-    onContinue(isCosplayer, isOrganizer);
+    onContinue(true, false); // isCosplayer=true, isOrganizer=false
   };
-
-  const isValid = isCosplayer || isOrganizer;
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>I'm a...</Text>
         <Text style={styles.subtitle}>
-          Select all that apply. You can be both a cosplayer and an event organizer.
+          Welcome to ForgeMind! All new accounts start as Cosplayers. You can request Event Organizer access later from your Profile.
         </Text>
 
-        {/* Cosplayer Role */}
-        <TouchableOpacity
-          style={[styles.roleCard, isCosplayer && styles.roleCardSelected]}
-          onPress={() => setIsCosplayer(!isCosplayer)}
-          activeOpacity={0.7}
-        >
+        {/* Cosplayer Role - Auto-selected, non-interactive */}
+        <View style={[styles.roleCard, styles.roleCardSelected]}>
           <View style={styles.roleHeader}>
-            <Text style={[styles.roleTitle, isCosplayer && styles.roleTextSelected]}>
+            <Text style={[styles.roleTitle, styles.roleTextSelected]}>
               Cosplayer
             </Text>
-            <View style={[styles.checkbox, isCosplayer && styles.checkboxSelected]}>
-              {isCosplayer && <Text style={styles.checkmark}>✓</Text>}
+            <View style={[styles.checkbox, styles.checkboxSelected]}>
+              <Text style={styles.checkmark}>✓</Text>
             </View>
           </View>
-          <Text style={[styles.roleDescription, isCosplayer && styles.roleTextSelected]}>
+          <Text style={[styles.roleDescription, styles.roleDescriptionSelected]}>
             Build cosplay projects, track items, shop the marketplace, and connect with the
             community
           </Text>
-        </TouchableOpacity>
+        </View>
 
-        {/* Organizer Role */}
-        <TouchableOpacity
-          style={[styles.roleCard, isOrganizer && styles.roleCardSelected]}
-          onPress={() => setIsOrganizer(!isOrganizer)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.roleHeader}>
-            <Text style={[styles.roleTitle, isOrganizer && styles.roleTextSelected]}>
-              Event Organizer
-            </Text>
-            <View style={[styles.checkbox, isOrganizer && styles.checkboxSelected]}>
-              {isOrganizer && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-          </View>
-          <Text style={[styles.roleDescription, isOrganizer && styles.roleTextSelected]}>
-            Manage events, coordinate logistics, plan meetups, and view attendee readiness
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.note}>
+          Want to organize events? You can request Event Organizer access from your Profile after creating your account.
+        </Text>
       </View>
 
       <View style={styles.footer}>
-        {!isValid && (
-          <Text style={styles.errorText}>Please select at least one role</Text>
-        )}
         <Button
           title="Continue"
           onPress={handleContinue}
           variant="primary"
           fullWidth
-          disabled={!isValid}
         />
         <Button title="Back" onPress={onBack} variant="tertiary" fullWidth />
       </View>
@@ -150,6 +120,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 20,
   },
+  roleDescriptionSelected: {
+    ...typography.body,
+    color: colors.primary,
+    lineHeight: 20,
+  },
   checkbox: {
     width: 28,
     height: 28,
@@ -168,15 +143,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  note: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginTop: spacing.sm,
+    lineHeight: 18,
+  },
   footer: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
     gap: spacing.sm,
-  },
-  errorText: {
-    ...typography.caption,
-    color: colors.error,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
   },
 });

@@ -29,6 +29,7 @@ export interface StoredAccount {
   body_size_slider: number;             // User.body_size_slider (Float, required) - 0.0-1.0
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
   verification_status: 'pending' | 'verified' | 'rejected' | 'revoked'; // User.verification_status (Enum)
+  organizer_role: 'head' | 'staff' | null; // User.organizer_role (FE-5.5 - Enum, nullable)
 }
 
 export class AuthService {
@@ -97,6 +98,7 @@ export class AuthService {
         body_size_slider: bodySize,
         is_holder_verified: false,
         verification_status: 'pending',
+        organizer_role: null, // FE-5.5: Always starts as null, must request access
       };
 
       accounts.push(newAccount);
@@ -225,6 +227,38 @@ export class AuthService {
     } catch (error) {
       console.error('[AuthService] Reset failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Update user's organizer_role (FE-5.5)
+   * Called when access request is approved (→ 'head') or staff invite is accepted (→ 'staff')
+   */
+  static async updateOrganizerRole(
+    email: string,
+    role: 'head' | 'staff' | null
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const accounts = await this.getAccounts();
+      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
+
+      if (index === -1) {
+        return { success: false, error: 'Account not found' };
+      }
+
+      accounts[index].organizer_role = role;
+      await this.saveAccounts(accounts);
+
+      // Update active session if this is the current user
+      const session = await this.getActiveSession();
+      if (session && session.email.toLowerCase() === email.toLowerCase()) {
+        await this.setActiveSession({ ...session, organizer_role: role });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthService] Failed to update organizer_role:', error);
+      return { success: false, error: 'Failed to update role' };
     }
   }
 }

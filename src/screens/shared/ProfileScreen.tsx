@@ -105,7 +105,7 @@ export const ProfileScreen: React.FC = () => {
           <View style={[styles.badge, { backgroundColor: '#FFE8EF' }]}>
             <Ionicons name="people-outline" size={14} color={colors.secondary} />
             <Text style={[styles.badgeText, { color: colors.secondary }]}>
-              Staff — {user?.organizer_department || 'General'}
+              Staff Organizer
             </Text>
           </View>
         )}
@@ -136,7 +136,7 @@ export const ProfileScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Organizer Access — ORGANIZER ONLY (split from Marketplace Verification) */}
+      {/* Organizer Access - ALL ORGANIZERS (shows request status) */}
       {user?.is_organizer && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Organizer Access</Text>
@@ -145,21 +145,23 @@ export const ProfileScreen: React.FC = () => {
             <Text style={styles.detailLabel}>Status</Text>
             <Text style={[
               styles.detailValue,
-              user?.organizer_access_status === 'approved' && { color: colors.success },
-              user?.organizer_access_status === 'pending' && { color: colors.warning },
-              user?.organizer_access_status === 'rejected' && { color: colors.error },
+              user?.organizer_role === 'head' && { color: colors.success },
+              user?.organizer_role === 'staff' && { color: colors.success },
+              !user?.organizer_role && { color: colors.warning },
             ]}>
-              {user?.organizer_access_status
-                ? user.organizer_access_status.charAt(0).toUpperCase() + user.organizer_access_status.slice(1)
-                : 'Pending'}
+              {user?.organizer_role === 'head'
+                ? 'Head Organizer'
+                : user?.organizer_role === 'staff'
+                ? 'Staff Member'
+                : 'Request Access'}
             </Text>
           </View>
           <Text style={styles.cardNote}>
-            {user?.organizer_access_status === 'approved'
+            {user?.organizer_role === 'head'
               ? 'You have access to create and manage events.'
-              : user?.organizer_access_status === 'rejected'
-              ? 'Your access request was not approved. Contact support for more info.'
-              : 'Your access request is being reviewed by our team.'}
+              : user?.organizer_role === 'staff'
+              ? 'You are a staff member for an event.'
+              : 'Submit a request to become an Event Organizer.'}
           </Text>
         </View>
       )}
@@ -246,44 +248,12 @@ export const ProfileScreen: React.FC = () => {
 
       {user?.is_organizer && user?.organizer_role === 'staff' && (
         <>
-          {/* Staff Assignment Info */}
+          {/* Staff Assignment Info - PLACEHOLDER FOR NOW */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Assignment</Text>
-            <View style={styles.detailRow}>
-              <Ionicons name="person-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Invited by</Text>
-              <Text style={styles.detailValue}>{user?.organizer_head_name || 'Unknown'}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Event</Text>
-              <Text style={styles.detailValue}>{user?.organizer_event_name || 'Unassigned'}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="briefcase-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Department</Text>
-              <Text style={styles.detailValue}>{user?.organizer_department || 'General'}</Text>
-            </View>
-          </View>
-
-          {/* Logistics Preview (Department-scoped) */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Logistics — {user?.organizer_department || 'Your Department'}</Text>
             <Text style={styles.cardNote}>
-              Track tasks and logistics specific to your department.
+              Staff assignment details will appear here once you accept an invite.
             </Text>
-            <View style={styles.logisticsRow}>
-              <View style={styles.logisticsStat}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.textSecondary} />
-                <Text style={styles.logisticsLabel}>Tasks</Text>
-                <Text style={styles.logisticsValue}>—</Text>
-              </View>
-              <View style={styles.logisticsStat}>
-                <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
-                <Text style={styles.logisticsLabel}>Due Soon</Text>
-                <Text style={styles.logisticsValue}>—</Text>
-              </View>
-            </View>
           </View>
         </>
       )}
