@@ -1,38 +1,72 @@
 # How to Test ForgeMind Mobile App
 
-**Current Build:** FE-5 (Owned-Item Logging)  
+**Last Updated:** Sept 16, 2026  
+**Current Build:** FE-4.5.3 (Persisted Auth + Date Picker + Web Testing)  
 **Status:** ✅ Ready to test
+
+---
+
+## ⚠️ IMPORTANT: You Must Be in the Right Folder!
+
+**The app is inside `forgemind-mobile` folder, NOT the root folder!**
+
+### Common Error:
+```
+npm error path C:\Users\...\CosForge_System - Copy\package.json
+npm error enoent Could not read package.json
+```
+
+**Solution:** You're in the wrong folder. Navigate to `forgemind-mobile` first!
 
 ---
 
 ## Quick Start (3 Steps)
 
-### 1. Install Dependencies (if not done yet)
+### 1. Navigate to the App Folder ⚠️
 ```powershell
+# From CosForge_System - Copy folder:
 cd forgemind-mobile
+
+# Verify you're in the right place (should show package.json):
+dir package.json
+```
+
+### 2. Install Dependencies (First Time Only)
+```powershell
 npm install
 ```
 
-### 2. Start the Development Server
+### 3. Start the Development Server
 ```powershell
 npm start
 ```
 
+Or use the shortcut for web testing:
+```powershell
+npm run web
+```
+
 This will open Expo DevTools in your browser and show a QR code.
 
-### 3. Choose Your Testing Method
+### 4. Choose Your Testing Method
 
-**Option A: iOS Simulator (macOS only)**
+**Option A: Web Browser (✅ RECOMMENDED for this session)**
+- Press `w` in the terminal OR just open http://localhost:8081
+- App opens with **phone frame** (device bezel, notch, rounded corners)
+- Use Chrome DevTools (`F12` or `Ctrl+Shift+I`) for debugging
+- **This is what we've been working on today!**
+
+**Option B: Physical Device (Expo Go)**
+- Install "Expo Go" app from Play Store / App Store
+- Scan the QR code in the terminal
+- Note: Phone and web use **separate storage** (accounts don't sync)
+
+**Option C: Android Emulator**
+- Make sure Android Studio emulator is running
+- Press `a` in the terminal
+
+**Option D: iOS Simulator (macOS only)**
 - Press `i` in the terminal — iOS Simulator launches automatically
-
-**Option B: Android Emulator**
-- Make sure Android Studio emulator is running, press `a` in the terminal
-
-**Option C: Web Browser (Recommended — rewrapping via PhoneFrame)**
-- Press `w` in the terminal — app opens in your default browser inside a phone shell
-
-**Option D: Physical Device (Expo Go)**
-- Install "Expo Go" and scan the QR code in the terminal
 
 > **Note:** Web and physical devices use separate AsyncStorage. Accounts and
 > owned items logged on web will NOT appear in Expo Go on a phone (and vice versa).
@@ -40,109 +74,171 @@ This will open Expo DevTools in your browser and show a QR code.
 
 ---
 
-## Regression Check (Run First)
+## 🧪 What to Test Today (Sept 16, 2026)
 
-Before new-feature testing, confirm auth still works:
+### 1. Phone Frame (Web Only)
+- [ ] Open http://localhost:8081 in browser
+- [ ] You should see the app inside a **phone-shaped frame** with:
+  - Dark rounded bezel (border around the edges)
+  - Notch/Dynamic Island at the top
+  - Home indicator bar at the bottom
+- [ ] Screenshot: Does it look like a real phone?
 
-1. Log out from Profile (if logged in)
-2. Register a new account
-3. Log out
-4. Log back in with that account
+### 2. Logout Button
+- [ ] Login with any account
+- [ ] Go to Profile tab
+- [ ] Scroll to bottom
+- [ ] Click **"Log Out"** button
+- [ ] Should work now (was broken earlier today)
+
+### 3. Storage Context Test
+- [ ] In web browser, register NEW account:
+  - Email: `webtest@test.com`
+  - Password: `testpass123`
+  - Name: Whatever you want
+  - Role: Cosplayer
+- [ ] Complete registration
+- [ ] Click "Log Out"
+- [ ] Try logging in with `webtest@test.com` / `testpass123`
+- [ ] **Should work!** This proves storage is fine
+
+### 4. Gear Icon Check
+- [ ] Look at Login screen (top-right corner)
+- [ ] In **web browser**: Should be NO gear icon
+- [ ] In **Expo Go on phone**: Gear icon appears (it's Expo Go's overlay)
+- [ ] This confirms gear icon is NOT part of our app
+
+### 5. Date Picker (FE-4.5.3)
+- [ ] After login, go to Projects tab (Home)
+- [ ] Tap **"Start New Project"** or **"+"**
+- [ ] Scroll to date fields
+- [ ] Should see **calendar icon buttons** next to dates
+- [ ] Tap button → native date picker opens
+- [ ] Select a date → appears in the field
+
+### 6. Chip Row Fix (FE-4.5.3)
+- [ ] Go to Characters tab
+- [ ] Look at media filter chips: All / Anime / Manga / Game / Original
+- [ ] Scroll horizontally to the right
+- [ ] **"Original" chip should be fully visible** (not cut off)
+- [ ] Should have space to scroll past the last chip
 
 ---
 
-## FE-5 — Owned-Item Logging Test
+## Regression Check (Basic Auth)
 
-1. Log in, then open the **"My Items"** tab (label may show "My Items").
-2. You should see 3 seeded demo items. Verify:
-   - [ ] Items list with entry-method tag (photo/text/voice), condition, status dot
-   - [ ] Filter chips: All / Free / Committed, plus type and color filters
-   - [ ] Strong "Clear filters" appears only when a filter is active
-3. Tap **"Log an Owned Item"** → Entry Method screen shows 3 options.
+Before detailed testing, confirm auth still works:
 
-### Photo Entry
-- [ ] Tap **Take Photo** → tap the dashed box → pick an image
-- [ ] Mock "Categorizing photo…" spinner appears, then a result card (type/color/style)
-- [ ] Continue to Confirmation
-
-### Text Entry
-- [ ] Go back, tap **Type Description** → type e.g. "black wig spiky anime style"
-- [ ] Toggle language **English ↔ Taglish** (placeholder text changes)
-- [ ] See keyword-extracted type/color in the confirmation screen
-
-### Voice Entry
-- [ ] Go back, tap **Voice Input** → tap the mic
-- [ ] Red pulsing ring + timer appear; tap again to stop
-- [ ] "Transcribing…" then a mocked transcript appears
-- [ ] Continue to Confirmation
-
-### Confirmation Screen (all methods)
-- [ ] Type / color / style are editable (chips + text inputs)
-- [ ] Flexibility tag chips (restyle-willing / dye-willing / as-is-only)
-- [ ] Condition slider 1-5
-- [ ] Acquired date opens native date picker
-- [ ] Acquisition cost (₱) and Notes fields
-- [ ] Save → lands you on the **Item Detail** screen for the new item
-
-### Dashboard & Detail
-- [ ] New item appears in the dashboard with correct entry tag
-- [ ] Filters narrow the list (status, type, color)
-- [ ] Tap item → detail shows all fields + condition history
-- [ ] **Edit** → change color/condition → Save → detail reflects change, condition history grows
-- [ ] **Commit to Project** (only when free) → picks a project → status becomes "Committed"
-- [ ] Release (make free) works
-- [ ] **Delete** → confirm → item is removed
-
-### Persistence
-- [ ] Refresh the browser page → owned items + session survive (AsyncStorage)
+1. [ ] Register a new account (any email/password)
+2. [ ] Complete onboarding
+3. [ ] Log out from Profile
+4. [ ] Log back in with same credentials
+5. [ ] Should work without errors
 
 ---
 
 ## Known Issues / Limitations (Expected)
 
-1. **Mock AI** — photo categorization and voice transcription are mocked, not real (BE-1)
-2. **No persistence across web/device** — separate AsyncStorage (expected in mock mode)
-3. **Marketplace placeholder** — FE-6
-4. **Organizer screens placeholders** — FE-7
-5. **System fonts** — Inter font loading deferred
+1. **Web vs. Phone Storage Separate** — Accounts registered on web won't appear in Expo Go on your phone (and vice versa). This is expected React Native behavior. Each platform has its own AsyncStorage.
+2. **Phone Frame Only on Web** — The phone bezel/notch frame only appears when running in browser. Expo Go and native builds don't show it.
+3. **Mock AI** — Photo categorization and voice transcription are mocked, not real (waiting for backend)
+4. **Marketplace placeholder** — Coming in FE-6
+5. **Organizer screens placeholders** — Coming in FE-7
 
 ---
 
-## Troubleshooting
+## Common Problems & Solutions
 
-### "npm install" fails
+### Error: "Could not read package.json"
+**Problem:** You're in the wrong folder (root instead of forgemind-mobile)
+
+**Solution:**
 ```powershell
-npm cache clean --force
-rm -rf node_modules
-rm package-lock.json
-npm install
+cd forgemind-mobile
+npm start
 ```
 
-### Expo server won't start / port in use
+### Error: "Port 8081 already in use"
+**Problem:** Previous dev server still running
+
+**Solution:**
 ```powershell
+# Kill all Node processes:
 taskkill /F /IM node.exe
+
+# Or change the port:
 npm start -- --port 19001
 ```
 
-### Stale Metro bundle (erratic behavior after code changes)
+### Stale/Cached Build (weird errors after code changes)
+**Solution:**
 ```powershell
 npm start -- --clear
 ```
+
+### "npm install" fails
+**Solution:**
+```powershell
+npm cache clean --force
+Remove-Item -Recurse -Force node_modules
+Remove-Item package-lock.json
+npm install
+```
+
+### Web bundle won't reload
+**Solution:**
+- Press `Ctrl+R` in the browser to reload
+- Or press `r` in the terminal to reload all platforms
 
 ---
 
 ## Quick Commands Reference
 
 ```powershell
-npm start               # Start development server
-npm run web             # Web Browser (recommended)
-npm run android         # Android emulator
-npm run ios             # iOS Simulator (macOS only)
-npm start -- --clear    # Clear cache & restart
+# Navigate to app folder (ALWAYS do this first!)
+cd forgemind-mobile
+
+# Start dev server
+npm start
+
+# Start web only (fastest for testing today's changes)
+npm run web
+
+# Clear cache and restart
+npm start -- --clear
+
+# Check if you're in the right folder
+dir package.json   # Should show the file
 ```
+
+---
+
+## Testing Priority (Today's Session)
+
+**High Priority:**
+1. ✅ Phone frame visible in web browser
+2. ✅ Logout button works
+3. ✅ Storage test: Register webtest@test.com in web, then login
+
+**Medium Priority:**
+4. ✅ Gear icon absent in web (present in Expo Go)
+5. ✅ Date picker buttons on Create Project screen
+6. ✅ "Original" chip fully visible on Characters
+
+**Low Priority:**
+- General navigation
+- Profile data display
+- Character search
 
 ---
 
 **Ready to Test!** 🚀
 
-Run `npm start` (or `npm run web`) in `forgemind-mobile` and work through the FE-5 checklist above.
+**Remember:** 
+1. **Navigate to `forgemind-mobile` folder first!**
+2. Run `npm start` or `npm run web`
+3. Open http://localhost:8081 in browser
+4. Test the 6 items in the "What to Test Today" section
+
+**Server URL:** http://localhost:8081  
+**Test Account:** ahjin@gmail.com / potanginamo123 (or create new one)
