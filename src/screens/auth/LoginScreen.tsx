@@ -25,11 +25,15 @@ import { useUser } from '../../contexts/UserContext';
 interface LoginScreenProps {
   onSuccess: () => void;
   onSwitchToRegister: () => void;
+  onSwitchToHeadRegistration?: () => void;
+  onSwitchToStaffRegistration?: () => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onSuccess,
   onSwitchToRegister,
+  onSwitchToHeadRegistration = () => {},
+  onSwitchToStaffRegistration = () => {},
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,6 +65,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleLogin = async () => {
     setLoginError('');
+
+    // DEV-ONLY: Hidden registration shortcuts
+    if (__DEV__) {
+      const trimmedEmail = email.trim().toLowerCase();
+      
+      if (trimmedEmail === 'holder') {
+        // Navigate to Head Organizer registration screen
+        onSwitchToHeadRegistration();
+        return;
+      }
+      
+      if (trimmedEmail === 'staff') {
+        // Navigate to Staff registration screen
+        onSwitchToStaffRegistration();
+        return;
+      }
+    }
 
     // Validate inputs
     const isEmailValid = validateEmail(email);

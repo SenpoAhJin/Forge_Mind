@@ -4,7 +4,7 @@
  * Phase 0 v0.2.1 Design System + Onboarding Flow
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,8 +14,26 @@ import { ProjectsProvider } from './src/contexts/ProjectsContext';
 import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
+import { DebugLogger } from './src/utils/debugLogger';
 
 export default function App() {
+  // Expose DebugLogger to browser console for FE-5.5 verification
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).DebugLogger = DebugLogger;
+      console.log('═══════════════════════════════════════');
+      console.log('DEBUG LOGGER AVAILABLE');
+      console.log('═══════════════════════════════════════');
+      console.log('Available commands in browser console:');
+      console.log('- await DebugLogger.logAllAccounts()');
+      console.log('- await DebugLogger.logActiveSession()');
+      console.log('- await DebugLogger.logAccountByEmail("email")');
+      console.log('- await DebugLogger.logAllAccessRequests()');
+      console.log('- await DebugLogger.logAccessRequestByUser("email")');
+      console.log('- await DebugLogger.clearAllStorage()');
+      console.log('═══════════════════════════════════════');
+    }
+  }, []);
   const appContent = (
     <SafeAreaProvider>
       <UserProvider>

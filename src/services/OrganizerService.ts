@@ -315,4 +315,35 @@ export class OrganizerService {
       return [];
     }
   }
+
+  /**
+   * DEV-ONLY: Create staff member record (bypasses invite flow)
+   */
+  static async createDevStaffMember(
+    staffUserId: string,
+    headUserId: string,
+    eventId: string,
+    department: 'logistics' | 'programs' | 'sponsorship' | 'secretariat' | 'technical_production' | 'marketing'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const staffMember: EventStaffMember = {
+        staff_member_id: `staff-${Date.now()}-${staffUserId.slice(0, 8)}`,
+        event_id: eventId,
+        head_user_id: headUserId,
+        staff_user_id: staffUserId,
+        department,
+        invite_status: 'accepted',
+        invited_at: new Date(),
+        responded_at: new Date(),
+      };
+
+      const members = await this.getAllStaffInvites();
+      members.push(staffMember);
+      await AsyncStorage.setItem(STORAGE_KEY_STAFF_MEMBERS, JSON.stringify(members));
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
 }
