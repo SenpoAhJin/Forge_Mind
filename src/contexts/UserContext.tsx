@@ -26,10 +26,17 @@ interface User {
   // Status fields (set to defaults for mock)
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
   verification_status: 'pending' | 'verified' | 'rejected' | 'revoked'; // User.verification_status (Enum)
+  
+  // MOCK FIELDS (placeholder for FE-5.5 organizer hierarchy - will be replaced with real schema)
+  organizer_access_status?: 'pending' | 'approved' | 'rejected';  // Mock for OrganizerAccessRequest
+  organizer_role?: 'head' | 'staff';     // Mock for Head vs Staff
+  organizer_department?: string;          // Mock for Staff department
+  organizer_head_name?: string;           // Mock for Staff's inviting Head
+  organizer_event_name?: string;          // Mock for Staff's assigned event
 }
 
 // Test-only persona presets for the role switcher (dev builds only, not real auth)
-export type DemoPersona = 'cosplayer' | 'organizer' | 'both' | 'holder-verified';
+export type DemoPersona = 'cosplayer' | 'organizer' | 'both' | 'holder-verified' | 'organizer-head' | 'organizer-staff';
 
 interface UserContextType {
   user: User | null;
@@ -207,6 +214,36 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
 
+      if (persona === 'organizer-head') {
+        return {
+          ...current,
+          is_cosplayer: false,
+          is_organizer: true,
+          is_holder_verified: false,
+          verification_status: 'pending' as const,
+          organizer_access_status: 'approved' as const,
+          organizer_role: 'head' as const,
+          organizer_department: undefined,
+          organizer_head_name: undefined,
+          organizer_event_name: undefined,
+        };
+      }
+
+      if (persona === 'organizer-staff') {
+        return {
+          ...current,
+          is_cosplayer: false,
+          is_organizer: true,
+          is_holder_verified: false,
+          verification_status: 'pending' as const,
+          organizer_access_status: 'approved' as const,
+          organizer_role: 'staff' as const,
+          organizer_department: 'Logistics',
+          organizer_head_name: 'Maria Santos',
+          organizer_event_name: 'CosplayMNL 2026',
+        };
+      }
+
       const isCosplayer = persona === 'cosplayer' || persona === 'both';
       const isOrganizer = persona === 'organizer' || persona === 'both';
       return {
@@ -215,6 +252,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         is_organizer: isOrganizer,
         is_holder_verified: false,
         verification_status: 'pending' as const,
+        // Clear organizer hierarchy fields when switching to basic roles
+        organizer_access_status: isOrganizer ? ('pending' as const) : undefined,
+        organizer_role: undefined,
+        organizer_department: undefined,
+        organizer_head_name: undefined,
+        organizer_event_name: undefined,
       };
     });
   };
