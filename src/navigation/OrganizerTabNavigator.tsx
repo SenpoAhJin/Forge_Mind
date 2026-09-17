@@ -6,7 +6,7 @@ import {
   LogisticsScreen,
   MeetupsScreen,
 } from '../screens/organizer';
-import { ProfileScreen } from '../screens/shared';
+import { ProfileStackNavigator } from './ProfileStackNavigator';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -65,8 +65,8 @@ export const OrganizerTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile' }}
+        component={ProfileStackNavigator}
+        options={{ tabBarLabel: 'Profile', headerShown: false }}
       />
     </Tab.Navigator>
   );

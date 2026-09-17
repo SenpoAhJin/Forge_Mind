@@ -1,12 +1,41 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser, DemoPersona } from '../../contexts/UserContext';
 import { Button } from '../../components';
+import { OrganizerService } from '../../services/OrganizerService';
+import { OrganizerAccessRequest } from '../../types/organizer';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, resetOnboarding, applyDemoPersona, updateVerification } = useUser();
+  const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
+  const [accessRequest, setAccessRequest] = useState<OrganizerAccessRequest | null>(null);
+  const [loadingRequest, setLoadingRequest] = useState(false);
+
+  // Load access request when screen is focused
+  useEffect(() => {
+    if (user?.is_organizer && !user?.organizer_role && isFocused) {
+      loadAccessRequest();
+    }
+  }, [user?.is_organizer, user?.organizer_role, isFocused]);
+
+  const loadAccessRequest = async () => {
+    if (!user?.email) return;
+    
+    setLoadingRequest(true);
+    try {
+      const request = await OrganizerService.getAccessRequestByUserId(user.email);
+      setAccessRequest(request);
+    } catch (error) {
+      // No request is fine
+      setAccessRequest(null);
+    } finally {
+      setLoadingRequest(false);
+    }
+  };
 
   const initials = (user?.display_name ?? 'U')
     .split(' ')
@@ -140,29 +169,83 @@ export const ProfileScreen: React.FC = () => {
       {user?.is_organizer && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Organizer Access</Text>
-          <View style={styles.detailRow}>
-            <Ionicons name="shield-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.detailLabel}>Status</Text>
-            <Text style={[
-              styles.detailValue,
-              user?.organizer_role === 'head' && { color: colors.success },
-              user?.organizer_role === 'staff' && { color: colors.success },
-              !user?.organizer_role && { color: colors.warning },
-            ]}>
-              {user?.organizer_role === 'head'
-                ? 'Head Organizer'
-                : user?.organizer_role === 'staff'
-                ? 'Staff Member'
-                : 'Request Access'}
-            </Text>
-          </View>
-          <Text style={styles.cardNote}>
-            {user?.organizer_role === 'head'
-              ? 'You have access to create and manage events.'
-              : user?.organizer_role === 'staff'
-              ? 'You are a staff member for an event.'
-              : 'Submit a request to become an Event Organizer.'}
-          </Text>
+          
+          {user?.organizer_role ? (
+            <>
+              <View style={styles.detailRow}>
+                <Ionicons name="shield-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>Status</Text>
+                <Text style={[styles.detailValue, { color: colors.success }]}>
+                  {user?.organizer_role === 'head' ? 'Head Organizer' : 'Staff Member'}
+                </Text>
+              </View>
+              <Text style={styles.cardNote}>
+                {user?.organizer_role === 'head'
+                  ? 'You have access to create and manage events.'
+                  : 'You are a staff member for an event.'}
+              </Text>
+            </>
+          ) : loadingRequest ? (
+            <View style={{ padding: spacing.md, alignItems: 'center' }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : accessRequest ? (
+            <>
+              <View style={styles.detailRow}>
+                <Ionicons 
+                  name={
+                    accessRequest.status === 'pending' ? 'time-outline' :
+                    accessRequest.status === 'approved' ? 'checkmark-circle-outline' :
+                    'close-circle-outline'
+                  }
+                  size={18} 
+                  color={
+                    accessRequest.status === 'pending' ? colors.warning :
+                    accessRequest.status === 'approved' ? colors.success :
+                    colors.error
+                  } 
+                />
+                <Text style={styles.detailLabel}>Request Status</Text>
+                <Text style={[
+                  styles.detailValue,
+                  { 
+                    color: accessRequest.status === 'pending' ? colors.warning :
+                           accessRequest.status === 'approved' ? colors.success :
+                           colors.error
+                  }
+                ]}>
+                  {accessRequest.status.charAt(0).toUpperCase() + accessRequest.status.slice(1)}
+                </Text>
+              </View>
+              <Text style={styles.cardNote}>
+                {accessRequest.status === 'pending' && 'Your request is being reviewed by our team.'}
+                {accessRequest.status === 'approved' && 'Your request was approved!'}
+                {accessRequest.status === 'rejected' && 'Your request was not approved. Contact support for more info.'}
+              </Text>
+              <TouchableOpacity
+                style={styles.cardButton}
+                onPress={() => navigation.navigate('RequestOrganizerAccess')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cardButtonText}>View Details</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.cardNote}>
+                Submit a request to become an Event Organizer and create your own events.
+              </Text>
+              <TouchableOpacity
+                style={styles.cardButton}
+                onPress={() => navigation.navigate('RequestOrganizerAccess')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cardButtonText}>Request Access</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       )}
 
@@ -188,6 +271,18 @@ export const ProfileScreen: React.FC = () => {
             ? 'You can list items for sale and trade in the marketplace.'
             : 'Verification required to sell or trade items.'}
         </Text>
+        
+        {/* Holder-only: Review Queue button */}
+        {user?.is_holder_verified && (
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => navigation.navigate('HolderReviewQueue')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardButtonText}>Review Organizer Requests</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Organizer-specific content */}
@@ -510,6 +605,21 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.warning,
     fontStyle: 'italic',
+  },
+  cardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: `${colors.primary}10`,
+    borderRadius: borderRadius.md,
+  },
+  cardButtonText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
   },
   logoutWrap: {
     marginTop: spacing.xl,

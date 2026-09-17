@@ -7,7 +7,7 @@ import {
 import { CharacterStackNavigator } from './CharacterStackNavigator';
 import { ProjectStackNavigator } from './ProjectStackNavigator';
 import { OwnedItemStackNavigator } from './OwnedItemStackNavigator';
-import { ProfileScreen } from '../screens/shared';
+import { ProfileStackNavigator } from './ProfileStackNavigator';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -72,8 +72,8 @@ export const CosplayerTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile' }}
+        component={ProfileStackNavigator}
+        options={{ tabBarLabel: 'Profile', headerShown: false }}
       />
     </Tab.Navigator>
   );
