@@ -5,6 +5,15 @@ The app differentiates between two types of organizers:
 1. **Head Organizers** - Full event management capabilities
 2. **Staff Members** - Limited, department-specific capabilities
 
+### Multiple Head Organizers (Role-Based Authority)
+**Important:** Head Organizer is a **role**, not a unique identity. Multiple accounts can simultaneously hold the Head Organizer role, and each has equal, independent authority. This is intentional redundancy:
+- If one Head Organizer is unavailable, others can still approve verification requests
+- All Head Organizers see the same verification queue
+- Any Head Organizer can approve/reject/revoke marketplace access
+- No hierarchy exists between Head Organizers - they have identical permissions
+
+**Terminology:** "Head Organizer" and "Holder" refer to the same role for marketplace verification purposes. The terms are used interchangeably in the codebase.
+
 ---
 
 ## Head Organizer Permissions
