@@ -52,8 +52,8 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
       // Register with organizer_role='head' directly (dev shortcut)
       const result = await AuthService.register(
         email.trim().toLowerCase(),
-        displayName.trim(),
-        password,
+        password,            // ← FIX: password in correct position
+        displayName.trim(),  // ← FIX: displayName in correct position
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)

@@ -1,9 +1,10 @@
 /**
  * ForgeMind Register Screen
  * FE-4.5: Persisted Register/Login (Mock Auth)
+ * FE-5.5: Simplified to Cosplayer-only registration
  * 
- * Combines Role Selection + Account Creation fields
- * Saves to persisted storage (not just onboarding state)
+ * All new accounts start as Cosplayer (is_cosplayer=true, is_organizer=false)
+ * Organizer access must be requested separately after registration
  * Auto-login on success, continue to body slider if needed
  */
 
@@ -19,7 +20,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, TextInputField } from '../../components';
+import { Button, TextInputField, RegistrationSuccessModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 
@@ -32,10 +33,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onSuccess,
   onSwitchToLogin,
 }) => {
-  // Role selection
-  const [isCosplayer, setIsCosplayer] = useState(false);
-  const [isOrganizer, setIsOrganizer] = useState(false);
-
   // Account fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,12 +41,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Body representation - defaults
-  const [baseBody, setBaseBody] = useState<'male' | 'female'>('male');
-  const [bodySize, setBodySize] = useState(0.5);
+  // Body representation - defaults (not used for organizers, but required by register function)
+  const [baseBody] = useState<'male' | 'female'>('male');
+  const [bodySize] = useState(0.5);
 
   // Validation errors
-  const [roleError, setRoleError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -57,18 +53,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [registerError, setRegisterError] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { register } = useUser();
 
   // Validation functions
-  const validateRoles = (): boolean => {
-    if (!isCosplayer && !isOrganizer) {
-      setRoleError('Please select at least one role');
-      return false;
-    }
-    setRoleError('');
-    return true;
-  };
-
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
@@ -126,14 +114,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     setRegisterError('');
 
     // Validate all fields
-    const isRolesValid = validateRoles();
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
     const isConfirmPasswordValid = validateConfirmPassword(confirmPassword);
     const isDisplayNameValid = validateDisplayName(displayName);
 
     if (
-      !isRolesValid ||
       !isEmailValid ||
       !isPasswordValid ||
       !isConfirmPasswordValid ||
@@ -145,19 +131,20 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     setIsLoading(true);
 
     try {
+      // FE-5.5: All new accounts are cosplayer-only (is_cosplayer=true, is_organizer=false)
       const result = await register(
         email,
         password,
         displayName,
-        isCosplayer,
-        isOrganizer,
+        true,  // is_cosplayer (always true)
+        false, // is_organizer (always false - must request separately)
         baseBody,
         bodySize
       );
 
       if (result.success) {
-        // Auto-login on success
-        onSuccess();
+        // Show success modal, then redirect to login (no auto-login)
+        setShowSuccessModal(true);
       } else {
         setRegisterError(result.error || 'Registration failed. Please try again.');
       }
@@ -187,53 +174,28 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         {/* Role Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>I'm a...</Text>
-          <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+          <Text style={styles.sectionSubtitle}>
+            Welcome to ForgeMind! All new accounts start as Cosplayers. You can request Event Organizer access later from your Profile.
+          </Text>
 
-          <TouchableOpacity
-            style={[styles.roleCard, isCosplayer && styles.roleCardSelected]}
-            onPress={() => {
-              setIsCosplayer(!isCosplayer);
-              if (roleError) validateRoles();
-            }}
-            activeOpacity={0.7}
-          >
+          {/* Cosplayer Role - Auto-selected, non-interactive */}
+          <View style={[styles.roleCard, styles.roleCardSelected]}>
             <View style={styles.roleHeader}>
-              <Text style={[styles.roleTitle, isCosplayer && styles.roleTextSelected]}>
+              <Text style={[styles.roleTitle, styles.roleTextSelected]}>
                 Cosplayer
               </Text>
-              <View style={[styles.checkbox, isCosplayer && styles.checkboxSelected]}>
-                {isCosplayer && <Text style={styles.checkmark}>✓</Text>}
+              <View style={[styles.checkbox, styles.checkboxSelected]}>
+                <Text style={styles.checkmark}>✓</Text>
               </View>
             </View>
-            <Text style={[styles.roleDescription, isCosplayer && styles.roleDescriptionSelected]}>
+            <Text style={[styles.roleDescription, styles.roleDescriptionSelected]}>
               Build projects, track items, shop marketplace
             </Text>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={[styles.roleCard, isOrganizer && styles.roleCardSelected]}
-            onPress={() => {
-              setIsOrganizer(!isOrganizer);
-              if (roleError) validateRoles();
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.roleHeader}>
-              <Text style={[styles.roleTitle, isOrganizer && styles.roleTextSelected]}>
-                Event Organizer
-              </Text>
-              <View style={[styles.checkbox, isOrganizer && styles.checkboxSelected]}>
-                {isOrganizer && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-            </View>
-            <Text
-              style={[styles.roleDescription, isOrganizer && styles.roleDescriptionSelected]}
-            >
-              Manage events, coordinate logistics, view readiness
-            </Text>
-          </TouchableOpacity>
-
-          {roleError ? <Text style={styles.errorText}>{roleError}</Text> : null}
+          <Text style={styles.note}>
+            Want to organize events? You can request Event Organizer access from your Profile after creating your account.
+          </Text>
         </View>
 
         {/* Account Fields */}
@@ -338,6 +300,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Success Modal */}
+      <RegistrationSuccessModal
+        visible={showSuccessModal}
+        displayName={displayName}
+        email={email}
+        onContinue={onSwitchToLogin}
+      />
     </KeyboardAvoidingView>
   );
 };

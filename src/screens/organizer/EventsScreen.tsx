@@ -2,10 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { useUser } from '../../contexts/UserContext';
 
 export const EventsScreen: React.FC = () => {
+  const { user } = useUser();
+  const isStaff = user?.organizer_role === 'staff';
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Staff permission notice */}
+      {isStaff && (
+        <View style={styles.permissionBanner}>
+          <Ionicons name="information-circle" size={20} color={colors.warning} />
+          <Text style={styles.permissionText}>
+            As a Staff Member, you can view events you're assigned to. Creating and editing events requires Head Organizer permissions.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.heroCard}>
         <Ionicons name="calendar-outline" size={48} color={colors.secondary} />
         <Text style={styles.heroTitle}>Events</Text>
@@ -56,6 +70,18 @@ const styles = StyleSheet.create({
   },
   heroTitle: { ...typography.h2, color: colors.textPrimary, marginTop: spacing.md },
   heroSub: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm },
+  permissionBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.warning + '15',
+    borderRadius: borderRadius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  permissionText: { ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 20 },
   featureList: {
     backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,

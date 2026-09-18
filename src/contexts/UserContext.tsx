@@ -31,9 +31,6 @@ interface User {
   organizer_role: 'head' | 'staff' | null;  // User.organizer_role (Enum, nullable)
 }
 
-// Test-only persona presets for the role switcher (dev builds only, not real auth)
-export type DemoPersona = 'cosplayer' | 'organizer' | 'both' | 'holder-verified' | 'organizer-head' | 'organizer-staff';
-
 interface UserContextType {
   user: User | null;
   isLoading: boolean;
@@ -58,9 +55,6 @@ interface UserContextType {
   
   // Holder verification (FE-4.5 - persists across logout/login)
   updateVerification: (isVerified: boolean, status: User['verification_status']) => Promise<void>;
-  
-  // Test Mode (dev only - kept working alongside real login)
-  applyDemoPersona: (persona: DemoPersona) => void;
   
   isOnboardingComplete: boolean;
   resetOnboarding: () => Promise<void>;
@@ -125,11 +119,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       bodySize
     );
     
-    if (result.success && result.account) {
-      // Auto-login on successful registration
-      setUser(result.account);
-      await AuthService.setActiveSession(result.account);
-    }
+    // FE-5.5+: No auto-login on registration - user must log in manually
+    // This allows showing a success modal and redirecting to login screen
     
     return { success: result.success, error: result.error };
   };
@@ -187,66 +178,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
-  // Dev/test-only: instantly switch the demo user between role contexts.
-  // Test Mode — kept working alongside real login (dev builds only)
-  const applyDemoPersona = (persona: DemoPersona) => {
-    setUser((prev) => {
-      const current = prev ?? {
-        email: 'demo@forgemind.app',
-        password_hash: '',
-        display_name: 'Demo User',
-        is_cosplayer: false,
-        is_organizer: false,
-        base_body_selection: 'male' as const,
-        body_size_slider: 0.5,
-        is_holder_verified: false,
-        verification_status: 'pending' as const,
-        organizer_role: null,
-      };
-
-      if (persona === 'holder-verified') {
-        return {
-          ...current,
-          is_holder_verified: true,
-          verification_status: 'verified' as const,
-        };
-      }
-
-      if (persona === 'organizer-head') {
-        return {
-          ...current,
-          is_cosplayer: false,
-          is_organizer: true,
-          is_holder_verified: false,
-          verification_status: 'pending' as const,
-          organizer_role: 'head' as const,
-        };
-      }
-
-      if (persona === 'organizer-staff') {
-        return {
-          ...current,
-          is_cosplayer: false,
-          is_organizer: true,
-          is_holder_verified: false,
-          verification_status: 'pending' as const,
-          organizer_role: 'staff' as const,
-        };
-      }
-
-      const isCosplayer = persona === 'cosplayer' || persona === 'both';
-      const isOrganizer = persona === 'organizer' || persona === 'both';
-      return {
-        ...current,
-        is_cosplayer: isCosplayer,
-        is_organizer: isOrganizer,
-        is_holder_verified: false,
-        verification_status: 'pending' as const,
-        organizer_role: null,
-      };
-    });
-  };
-
   const isOnboardingComplete = user !== null &&
     user.email !== '' &&
     (user.is_cosplayer || user.is_organizer);
@@ -269,7 +200,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUserRoles,
         setUserAccount,
         setUserBody,
-        applyDemoPersona,
         isOnboardingComplete,
         resetOnboarding,
       }}

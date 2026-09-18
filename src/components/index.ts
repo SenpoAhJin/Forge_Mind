@@ -10,3 +10,4 @@ export * from './sliders';
 export * from './chat';
 export * from './badges';
 export * from './inputs';
+export * from './RegistrationSuccessModal';

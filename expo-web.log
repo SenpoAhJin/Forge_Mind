@@ -5,4 +5,4 @@ Waiting on http://localhost:8081
 
 3 packages may need updating. Run npx expo install --check for details.
 Logs for your project will appear below.
-Web Bundled 1657ms index.ts (727 modules)
+Web Bundled 2097ms index.ts (735 modules)

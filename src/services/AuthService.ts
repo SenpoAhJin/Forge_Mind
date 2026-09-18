@@ -97,7 +97,7 @@ export class AuthService {
         base_body_selection: baseBody,
         body_size_slider: bodySize,
         is_holder_verified: false,
-        verification_status: 'pending',
+        verification_status: 'pending', // Note: Only Head Organizers can verify users for marketplace
         organizer_role: null, // FE-5.5: Always starts as null, must request access
       };
 
@@ -259,6 +259,41 @@ export class AuthService {
     } catch (error) {
       console.error('[AuthService] Failed to update organizer_role:', error);
       return { success: false, error: 'Failed to update role' };
+    }
+  }
+
+  /**
+   * Update user's marketplace verification status
+   * Called by Head Organizers to verify/reject cosplayers for marketplace access
+   */
+  static async updateVerificationStatus(
+    email: string,
+    status: 'pending' | 'verified' | 'rejected' | 'revoked'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const accounts = await this.getAccounts();
+      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
+
+      if (index === -1) {
+        return { success: false, error: 'Account not found' };
+      }
+
+      accounts[index].verification_status = status;
+      accounts[index].is_holder_verified = status === 'verified';
+      await this.saveAccounts(accounts);
+
+      // Update active session if this is the current user
+      const activeSession = await this.getActiveSession();
+      if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
+        activeSession.verification_status = status;
+        activeSession.is_holder_verified = status === 'verified';
+        await this.setActiveSession(activeSession);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthService] Update verification status failed:', error);
+      return { success: false, error: 'Failed to update verification status' };
     }
   }
 }

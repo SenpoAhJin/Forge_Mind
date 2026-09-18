@@ -1,5 +1,9 @@
 # How to Run the ForgeMind Development Server
 
+⚠️ **IMPORTANT:** When testing interactive features (login, logout, buttons), always use **Expo Go on your phone**, not the web browser. Some buttons (like logout) don't work on desktop/web. See [Known Issues](#known-issues--workarounds) for details.
+
+---
+
 ## Quick Start
 
 ### 1. Open Terminal in Project Directory
@@ -107,6 +111,51 @@ While the server is running, you can press:
 | `m` | Toggle menu |
 | `?` | Show all commands |
 | `Ctrl+C` | Stop the server |
+
+---
+
+## Known Issues & Workarounds
+
+### Logout Button Not Working on Desktop/Web
+
+**Issue:**
+- When testing on web browser (press `w` in terminal), the Logout button in ProfileScreen is not clickable
+- The button appears but clicks don't register
+- **This is a web-only issue** - works perfectly on mobile devices (Expo Go)
+
+**Why:**
+- React Native components sometimes have different touch/click behavior on web
+- The `TouchableOpacity` may not be properly triggering click events in web environment
+- This is a known limitation when testing React Native apps in browser
+
+**Workaround for Testing:**
+1. **Use Physical Device** (Recommended)
+   - Press `Ctrl+C` to stop server
+   - Run `npm start`
+   - Scan QR with Expo Go on your phone
+   - Logout button works perfectly on mobile
+
+2. **Use Android Emulator** (if available)
+   - Press `a` in terminal to open Android emulator
+   - Logout button should work
+
+3. **Use iOS Simulator** (Mac only)
+   - Press `i` in terminal to open iOS simulator
+   - Logout button should work
+
+4. **Test on Web with DevTools**
+   - Open browser console (F12)
+   - Click on the button container in Elements tab
+   - Trigger click event manually (for debugging only)
+
+**Important Notes:**
+- ✅ **Logout works on mobile** (actual target platform)
+- ⚠️ **Web testing is for UI preview only** - not recommended for interactive features
+- 🎯 **Always test authentication on physical device**
+
+**Bottom Line:**
+- If you're testing logout/authentication features, **use Expo Go on your phone**
+- Desktop/web preview is mainly for checking layouts, not interactive features
 
 ---
 
@@ -250,29 +299,49 @@ When the server is running:
 
 ## Tips for Testing
 
+### ⚠️ Important: Test on Mobile Device, Not Web
+
+**For interactive features (login, logout, navigation, buttons):**
+- ✅ **DO:** Use Expo Go on physical phone
+- ❌ **DON'T:** Use web browser (press `w`)
+
+**Why:**
+- React Native apps are built for mobile, not web
+- Some buttons (like logout) may not work properly on desktop browsers
+- Touch interactions behave differently on web vs mobile
+- Web preview is mainly for checking UI layouts, not functionality
+
+**How to Test Properly:**
+1. Run `npm start` in terminal
+2. Open Expo Go app on your phone
+3. Scan the QR code
+4. Test all features on the actual mobile app
+
 ### Testing Authentication Features (FE-4.5)
 1. Start server: `npm start`
-2. Open Expo Go and scan QR
-3. Register a new account
-4. **Check terminal for debug logs:**
+2. **Open Expo Go on your phone** (not web browser)
+3. Scan QR code
+4. Register a new account
+5. **Check terminal for debug logs:**
    ```
    [AuthService DEBUG] Registration attempt:
      Email: alice@test.com
      Password: password123
      ...
    ```
-5. Logout and login
-6. **Check terminal for login debug logs**
+6. Test logout button (works on mobile)
+7. Login again with same account
+8. **Check terminal for login debug logs**
 
 ### Testing Multiple Accounts
-1. Register account 1 (e.g., Cosplayer)
+1. Register account 1 (e.g., Cosplayer) **on mobile**
 2. Logout
-3. Register account 2 (e.g., Organizer)
+3. Register account 2 (e.g., Organizer via dev shortcut: type "holder" in email)
 4. Logout
 5. Switch between accounts by logging in
 
 ### Testing Persistence
-1. Register and login
+1. Register and login **on mobile**
 2. Force-quit Expo Go app
 3. Reopen Expo Go
 4. App should auto-login with last account

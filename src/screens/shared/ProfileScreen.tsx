@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { useUser, DemoPersona } from '../../contexts/UserContext';
+import { useUser } from '../../contexts/UserContext';
 import { Button } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
 import { OrganizerAccessRequest } from '../../types/organizer';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, logout, resetOnboarding, applyDemoPersona, updateVerification } = useUser();
+  const { user, logout, resetOnboarding, updateVerification } = useUser();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const [accessRequest, setAccessRequest] = useState<OrganizerAccessRequest | null>(null);
@@ -42,42 +42,6 @@ export const ProfileScreen: React.FC = () => {
     .map(s => s.charAt(0).toUpperCase())
     .slice(0, 2)
     .join('');
-
-  const personaChips: { key: DemoPersona; label: string }[] = [
-    { key: 'cosplayer', label: 'Cosplayer only' },
-    { key: 'organizer', label: 'Organizer only' },
-    { key: 'both', label: 'Both roles' },
-    { key: 'holder-verified', label: 'Verified Holder' },
-    { key: 'organizer-head', label: 'Organizer (Head)' },
-    { key: 'organizer-staff', label: 'Organizer (Staff)' },
-  ];
-
-  const isActivePersona = (key: DemoPersona): boolean => {
-    if (key === 'holder-verified') {
-      return user?.is_holder_verified === true;
-    }
-    if (key === 'organizer-head') {
-      return user?.is_organizer === true && user?.organizer_role === 'head';
-    }
-    if (key === 'organizer-staff') {
-      return user?.is_organizer === true && user?.organizer_role === 'staff';
-    }
-    const cos = user?.is_cosplayer === true;
-    const org = user?.is_organizer === true;
-    if (key === 'cosplayer') return cos && !org;
-    if (key === 'organizer') return org && !cos && !user?.organizer_role;
-    return cos && org;
-  };
-
-  const handlePersonaChange = async (persona: DemoPersona) => {
-    // For holder-verified, use updateVerification to persist across logout/login
-    if (persona === 'holder-verified') {
-      await updateVerification(true, 'verified');
-    } else {
-      // For role changes, use applyDemoPersona (in-memory only, for demo purposes)
-      applyDemoPersona(persona);
-    }
-  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -249,41 +213,45 @@ export const ProfileScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Marketplace Verification — ALL USERS (split from Organizer Access) */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Marketplace Verification</Text>
-        <View style={styles.detailRow}>
-          <Ionicons name="shield-checkmark-outline" size={18} color={colors.textSecondary} />
-          <Text style={styles.detailLabel}>Holder Status</Text>
-          <Text style={[
-            styles.detailValue,
-            user?.verification_status === 'verified' && { color: colors.success },
-            user?.verification_status === 'pending' && { color: colors.warning },
-            (user?.verification_status === 'rejected' || user?.verification_status === 'revoked') && { color: colors.error },
-          ]}>
-            {user?.verification_status
-              ? user.verification_status.charAt(0).toUpperCase() + user.verification_status.slice(1)
-              : 'Pending'}
+      {/* Marketplace Verification — Head Organizers can verify cosplayers */}
+      {(user?.organizer_role === 'head' || user?.verification_status === 'verified') && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Marketplace Access</Text>
+          <View style={styles.detailRow}>
+            <Ionicons name="shield-checkmark-outline" size={18} color={colors.textSecondary} />
+            <Text style={styles.detailLabel}>Verification Status</Text>
+            <Text style={[
+              styles.detailValue,
+              user?.verification_status === 'verified' && { color: colors.success },
+              user?.verification_status === 'pending' && { color: colors.warning },
+              (user?.verification_status === 'rejected' || user?.verification_status === 'revoked') && { color: colors.error },
+            ]}>
+              {user?.verification_status
+                ? user.verification_status.charAt(0).toUpperCase() + user.verification_status.slice(1)
+                : 'Pending'}
+            </Text>
+          </View>
+          <Text style={styles.cardNote}>
+            {user?.verification_status === 'verified'
+              ? 'You can list items for sale and trade in the marketplace.'
+              : user?.organizer_role === 'head'
+              ? 'As a Head Organizer, you can verify cosplayers for marketplace access.'
+              : 'Verification required to sell or trade items.'}
           </Text>
+          
+          {/* Head Organizer: Verify Users button */}
+          {user?.organizer_role === 'head' && (
+            <TouchableOpacity
+              style={styles.cardButton}
+              onPress={() => navigation.navigate('VerifyCosplayers')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cardButtonText}>Verify Cosplayers for Marketplace</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
-        <Text style={styles.cardNote}>
-          {user?.verification_status === 'verified'
-            ? 'You can list items for sale and trade in the marketplace.'
-            : 'Verification required to sell or trade items.'}
-        </Text>
-        
-        {/* Holder-only: Review Queue button */}
-        {user?.is_holder_verified && (
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => navigation.navigate('HolderReviewQueue')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cardButtonText}>Review Organizer Requests</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-          </TouchableOpacity>
-        )}
-      </View>
+      )}
 
       {/* Organizer-specific content */}
       {user?.is_organizer && user?.organizer_role === 'head' && (
@@ -343,46 +311,49 @@ export const ProfileScreen: React.FC = () => {
 
       {user?.is_organizer && user?.organizer_role === 'staff' && (
         <>
-          {/* Staff Assignment Info - PLACEHOLDER FOR NOW */}
+          {/* Staff Assignment Info */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Assignment</Text>
+            <Text style={styles.cardTitle}>Your Assignment</Text>
+            <View style={styles.detailRow}>
+              <Ionicons name="briefcase-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Department</Text>
+              <Text style={styles.detailValue}>To be assigned</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Event</Text>
+              <Text style={styles.detailValue}>Waiting for invite</Text>
+            </View>
             <Text style={styles.cardNote}>
-              Staff assignment details will appear here once you accept an invite.
+              Staff members have department-specific access to event logistics. You'll see your assignment details here once a Head Organizer invites you to an event.
             </Text>
           </View>
-        </>
-      )}
 
-      {/* Test Mode — dev only */}
-      {__DEV__ && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Test Mode — dev only</Text>
-          <Text style={styles.testNote}>
-            Not real authentication. Instantly preview each role context to check what it sees.
-          </Text>
-          <View style={styles.personaRow}>
-            {personaChips.map(({ key, label }) => {
-              const active = isActivePersona(key);
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.personaChip, active && styles.personaChipActive]}
-                  onPress={() => handlePersonaChange(key)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.personaChipText, active && styles.personaChipTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Staff Capabilities */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>What You Can Do</Text>
+            <View style={styles.capabilityRow}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={styles.capabilityText}>View events you're assigned to</Text>
+            </View>
+            <View style={styles.capabilityRow}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={styles.capabilityText}>Manage department-specific logistics</Text>
+            </View>
+            <View style={styles.capabilityRow}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={styles.capabilityText}>View and RSVP to meetups</Text>
+            </View>
+            <View style={styles.capabilityRow}>
+              <Ionicons name="close-circle" size={18} color={colors.textDisabled} />
+              <Text style={[styles.capabilityText, { color: colors.textDisabled }]}>Create or edit events (Head Organizer only)</Text>
+            </View>
+            <View style={styles.capabilityRow}>
+              <Ionicons name="close-circle" size={18} color={colors.textDisabled} />
+              <Text style={[styles.capabilityText, { color: colors.textDisabled }]}>Verify marketplace users (Head Organizer only)</Text>
+            </View>
           </View>
-          <Text style={styles.testHint}>
-            {user?.is_holder_verified
-              ? 'Holder-verified is PERSISTED — survives logout/login. Role switches are in-memory only for demo.'
-              : 'Tap "Verified Holder" to persist verification status across logout/login. Role switches are in-memory only.'}
-          </Text>
-        </View>
+        </>
       )}
 
       {/* App info */}
@@ -620,6 +591,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: '600',
+  },
+  capabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  capabilityText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    flex: 1,
   },
   logoutWrap: {
     marginTop: spacing.xl,

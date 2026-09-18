@@ -3,12 +3,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProfileScreen } from '../screens/shared';
 import RequestOrganizerAccessScreen from '../screens/organizer/RequestOrganizerAccessScreen';
 import HolderReviewQueueScreen from '../screens/holder/HolderReviewQueueScreen';
+import { VerifyCosplayersScreen } from '../screens/organizer';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   RequestOrganizerAccess: undefined;
   HolderReviewQueue: undefined;
+  VerifyCosplayers: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -38,6 +40,11 @@ export const ProfileStackNavigator: React.FC = () => {
         name="HolderReviewQueue"
         component={HolderReviewQueueScreen}
         options={{ title: 'Review Queue' }}
+      />
+      <Stack.Screen
+        name="VerifyCosplayers"
+        component={VerifyCosplayersScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

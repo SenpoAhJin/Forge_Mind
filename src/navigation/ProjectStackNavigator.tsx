@@ -36,7 +36,7 @@ export const ProjectStackNavigator: React.FC = () => {
         {({ navigation }) => (
           <ProjectsScreen
             onStartProject={() => navigation.navigate('CreateProject')}
-            onBrowseCharacters={() => navigation.getParent()?.navigate('CharacterBrowse')}
+            onBrowseCharacters={() => navigation.getParent()?.navigate('Characters')}
             onOpenProject={(projectId) => navigation.navigate('ProjectDashboard', { projectId })}
           />
         )}
@@ -57,7 +57,7 @@ export const ProjectStackNavigator: React.FC = () => {
             onCreated={(projectId) =>
               navigation.replace('ProjectDashboard', { projectId })
             }
-            onBrowseCharacters={() => navigation.getParent()?.navigate('CharacterBrowse')}
+            onBrowseCharacters={() => navigation.getParent()?.navigate('Characters')}
           />
         )}
       </Stack.Screen>

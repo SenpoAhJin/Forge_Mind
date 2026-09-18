@@ -15,11 +15,11 @@ const Tab = createBottomTabNavigator();
 const ICON_SIZE = 22;
 
 const iconMap: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
-  Projects:       { focused: 'folder',       unfocused: 'folder-outline' },
-  CharacterBrowse:{ focused: 'people',       unfocused: 'people-outline' },
-  OwnedItems:     { focused: 'shirt',        unfocused: 'shirt-outline' },
-  Marketplace:    { focused: 'cart',         unfocused: 'cart-outline' },
-  Profile:        { focused: 'person',       unfocused: 'person-outline' },
+  Projects:   { focused: 'folder',       unfocused: 'folder-outline' },
+  Characters: { focused: 'people',       unfocused: 'people-outline' },
+  OwnedItems: { focused: 'shirt',        unfocused: 'shirt-outline' },
+  Marketplace:{ focused: 'cart',         unfocused: 'cart-outline' },
+  Profile:    { focused: 'person',       unfocused: 'person-outline' },
 };
 
 export const CosplayerTabNavigator: React.FC = () => {
@@ -56,7 +56,7 @@ export const CosplayerTabNavigator: React.FC = () => {
         options={{ tabBarLabel: 'Home', headerShown: false }}
       />
       <Tab.Screen
-        name="CharacterBrowse"
+        name="Characters"
         component={CharacterStackNavigator}
         options={{ tabBarLabel: 'Characters', title: 'Characters', headerShown: false }}
       />

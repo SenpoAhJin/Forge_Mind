@@ -1,0 +1,124 @@
+Starting project at C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile
+Starting Metro Bundler
+
+Waiting on http://localhost:8081
+
+An update for expo is available: 57.0.22 → ~57.0.23
+3 other packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below.
+Web Bundled 6460ms index.ts (776 modules)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
+Web  WARN  Found screens with the same name nested inside one another. Check:
+
+CharacterBrowse, CharacterBrowse > CharacterBrowse
+
+This can cause confusing behavior during navigation. Consider using unique names for each screen instead.
+Android Bundled 3999ms index.ts (1 module)
+ LOG  [AuthService DEBUG] Login attempt:
+ LOG    Input email: ahjin@gmail.com
+ LOG    Input password: potanginamo123
+ LOG    Stored accounts: [
+  {
+    "email": "ahjin@gmail.com",
+    "password_hash": "potanginamo123",
+    "display_name": "Ah Jin",
+    "is_cosplayer": true,
+    "is_organizer": false,
+    "base_body_selection": "male",
+    "body_size_slider": 0.5,
+    "is_holder_verified": false,
+    "verification_status": "pending"
+  }
+]
+ LOG  [AuthService DEBUG] Login successful
+Web Bundled 128ms index.ts (1 module)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Android Bundled 3283ms index.ts (1 module)
+Android Bundled 63ms index.ts (1 module)
+ LOG  [AuthService DEBUG] Login attempt:
+ LOG    Input email: ahjin@gmail.com
+ LOG    Input password: potanginamo123
+ LOG    Stored accounts: [
+  {
+    "email": "ahjin@gmail.com",
+    "password_hash": "potanginamo123",
+    "display_name": "Ah Jin",
+    "is_cosplayer": true,
+    "is_organizer": false,
+    "base_body_selection": "male",
+    "body_size_slider": 0.5,
+    "is_holder_verified": false,
+    "verification_status": "pending"
+  }
+]
+ LOG  [AuthService DEBUG] Login successful
+ WARN  Found screens with the same name nested inside one another. Check:
+
+CharacterBrowse, CharacterBrowse > CharacterBrowse
+
+This can cause confusing behavior during navigation. Consider using unique names for each screen instead.
+ LOG  [AuthService DEBUG] Registration attempt:
+ LOG    Email: ahrey@gmail.com
+ LOG    Password: potanginaka123
+ LOG    Display Name: Ah Rey
+ LOG    Roles: {"isCosplayer": false, "isOrganizer": true}
+ LOG    Existing accounts before save: [
+  {
+    "email": "ahjin@gmail.com",
+    "password_hash": "potanginamo123",
+    "display_name": "Ah Jin",
+    "is_cosplayer": true,
+    "is_organizer": false,
+    "base_body_selection": "male",
+    "body_size_slider": 0.5,
+    "is_holder_verified": false,
+    "verification_status": "pending"
+  }
+]
+ LOG  [AuthService DEBUG] Registration successful
+ LOG    New account: {
+  "email": "ahrey@gmail.com",
+  "password_hash": "potanginaka123",
+  "display_name": "Ah Rey",
+  "is_cosplayer": false,
+  "is_organizer": true,
+  "base_body_selection": "male",
+  "body_size_slider": 0.5,
+  "is_holder_verified": false,
+  "verification_status": "pending"
+}
+ LOG    All accounts after save: [
+  {
+    "email": "ahjin@gmail.com",
+    "password_hash": "potanginamo123",
+    "display_name": "Ah Jin",
+    "is_cosplayer": true,
+    "is_organizer": false,
+    "base_body_selection": "male",
+    "body_size_slider": 0.5,
+    "is_holder_verified": false,
+    "verification_status": "pending"
+  },
+  {
+    "email": "ahrey@gmail.com",
+    "password_hash": "potanginaka123",
+    "display_name": "Ah Rey",
+    "is_cosplayer": false,
+    "is_organizer": true,
+    "base_body_selection": "male",
+    "body_size_slider": 0.5,
+    "is_holder_verified": false,
+    "verification_status": "pending"
+  }
+]
