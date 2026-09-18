@@ -15,7 +15,7 @@ import { getCharacterById } from '../data';
 import { colors, typography } from '../theme';
 
 export type CharacterStackParamList = {
-  CharacterBrowse: undefined;
+  BrowseCharacters: undefined;
   VariantList: { characterId: string };
   MatchResults: undefined;
 };
@@ -35,7 +35,7 @@ export const CharacterStackNavigator: React.FC = () => {
         contentStyle: { backgroundColor: colors.backgroundLight },
       }}
     >
-      <Stack.Screen name="CharacterBrowse" options={{ title: 'Characters' }}>
+      <Stack.Screen name="BrowseCharacters" options={{ title: 'Characters' }}>
         {({ navigation }) => (
           <CharacterBrowseScreen
             onSelectCharacter={(characterId) =>
@@ -65,7 +65,7 @@ export const CharacterStackNavigator: React.FC = () => {
       <Stack.Screen name="MatchResults" options={{ title: 'Match Results' }}>
         {({ navigation }) => (
           <MatchResultsScreen
-            onBackToBrowse={() => navigation.navigate('CharacterBrowse')}
+            onBackToBrowse={() => navigation.navigate('BrowseCharacters')}
             onStartProject={() => navigation.getParent()?.navigate('Projects')}
           />
         )}
