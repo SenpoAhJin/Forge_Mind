@@ -25,10 +25,21 @@ interface User {
   
   // Status fields (set to defaults for mock)
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
-  verification_status: 'pending' | 'verified' | 'rejected' | 'revoked'; // User.verification_status (Enum)
+  verification_status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'; // User.verification_status (Enum)
   
   // Organizer hierarchy (FE-5.5 - real schema, replaces mock fields)
   organizer_role: 'head' | 'staff' | null;  // User.organizer_role (Enum, nullable)
+  
+  // Marketplace registration (ASSUMPTIONS - not in Foundation spec)
+  marketplace_registration?: {
+    seller_display_name: string;
+    contact_email: string;
+    contact_phone?: string;
+    payout_method_label: string;
+    payout_method_number: string;
+    agreed_to_marketplace_terms: boolean;
+    submitted_at: string;
+  };
 }
 
 interface UserContextType {

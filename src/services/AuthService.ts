@@ -28,8 +28,21 @@ export interface StoredAccount {
   base_body_selection: 'male' | 'female'; // User.base_body_selection (Enum, required)
   body_size_slider: number;             // User.body_size_slider (Float, required) - 0.0-1.0
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
-  verification_status: 'pending' | 'verified' | 'rejected' | 'revoked'; // User.verification_status (Enum)
+  verification_status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'; // User.verification_status (Enum)
   organizer_role: 'head' | 'staff' | null; // User.organizer_role (FE-5.5 - Enum, nullable)
+  
+  // MARKETPLACE REGISTRATION (ASSUMPTIONS - not in Foundation spec v0.2.1)
+  // Only populated when user submits marketplace registration form
+  // Feeds existing verification pipeline (verification_status field above)
+  marketplace_registration?: {
+    seller_display_name: string;          // ASSUMPTION: defaults to display_name, editable
+    contact_email: string;                 // ASSUMPTION: defaults to email, editable, validated
+    contact_phone?: string;                // ASSUMPTION: optional
+    payout_method_label: string;           // ASSUMPTION: MOCK FIELD (e.g., "GCash", "Bank Transfer") — NOT ENCRYPTED
+    payout_method_number: string;          // ASSUMPTION: MOCK FIELD (account number) — NOT ENCRYPTED, DEMO ONLY
+    agreed_to_marketplace_terms: boolean;  // ASSUMPTION: separate from account T&C, must be true
+    submitted_at: string;                  // ASSUMPTION: ISO timestamp when form submitted
+  };
 }
 
 export class AuthService {
@@ -97,7 +110,7 @@ export class AuthService {
         base_body_selection: baseBody,
         body_size_slider: bodySize,
         is_holder_verified: false,
-        verification_status: 'pending', // Note: Only Head Organizers can verify users for marketplace
+        verification_status: 'not_submitted', // Changed: Only becomes 'pending' after marketplace registration submission
         organizer_role: null, // FE-5.5: Always starts as null, must request access
       };
 
@@ -268,7 +281,7 @@ export class AuthService {
    */
   static async updateVerificationStatus(
     email: string,
-    status: 'pending' | 'verified' | 'rejected' | 'revoked'
+    status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const accounts = await this.getAccounts();
@@ -294,6 +307,55 @@ export class AuthService {
     } catch (error) {
       console.error('[AuthService] Update verification status failed:', error);
       return { success: false, error: 'Failed to update verification status' };
+    }
+  }
+
+  /**
+   * Submit marketplace registration (NEW)
+   * Sets marketplace_registration data and changes verification_status from 'not_submitted' to 'pending'
+   */
+  static async submitMarketplaceRegistration(
+    email: string,
+    registrationData: {
+      seller_display_name: string;
+      contact_email: string;
+      contact_phone?: string;
+      payout_method_label: string;
+      payout_method_number: string;
+      agreed_to_marketplace_terms: boolean;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const accounts = await this.getAccounts();
+      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
+
+      if (index === -1) {
+        return { success: false, error: 'Account not found' };
+      }
+
+      // Set marketplace registration data
+      accounts[index].marketplace_registration = {
+        ...registrationData,
+        submitted_at: new Date().toISOString(),
+      };
+
+      // Change status from 'not_submitted' to 'pending'
+      accounts[index].verification_status = 'pending';
+
+      await this.saveAccounts(accounts);
+
+      // Update active session if this is the current user
+      const activeSession = await this.getActiveSession();
+      if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
+        activeSession.marketplace_registration = accounts[index].marketplace_registration;
+        activeSession.verification_status = 'pending';
+        await this.setActiveSession(activeSession);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthService] Submit marketplace registration failed:', error);
+      return { success: false, error: 'Failed to submit marketplace registration' };
     }
   }
 }
