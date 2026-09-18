@@ -1,12 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  MarketplaceScreen,
-} from '../screens/cosplayer';
 import { CharacterStackNavigator } from './CharacterStackNavigator';
 import { ProjectStackNavigator } from './ProjectStackNavigator';
 import { OwnedItemStackNavigator } from './OwnedItemStackNavigator';
+import { MarketplaceStackNavigator } from './MarketplaceStackNavigator';
 import { ProfileStackNavigator } from './ProfileStackNavigator';
 import { colors, typography } from '../theme';
 
@@ -67,8 +65,8 @@ export const CosplayerTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Marketplace"
-        component={MarketplaceScreen}
-        options={{ tabBarLabel: 'Marketplace' }}
+        component={MarketplaceStackNavigator}
+        options={{ tabBarLabel: 'Marketplace', headerShown: false }}
       />
       <Tab.Screen
         name="Profile"

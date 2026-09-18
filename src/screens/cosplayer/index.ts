@@ -3,6 +3,7 @@ export * from './CharacterBrowseScreen';
 export * from './VariantListScreen';
 export * from './MatchResultsScreen';
 export * from './MarketplaceScreen';
+export * from './MarketplaceRegistrationScreen';
 export * from './ProjectDashboardScreen';
 export * from './CreateProjectScreen';
 export * from './EntryMethodScreen';
