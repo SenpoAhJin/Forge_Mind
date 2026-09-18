@@ -482,3 +482,31 @@ Fixed in:
 ---
 
 *Last updated: September 16, 2026, evening*
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 22:15 (React Navigation duplicate screen name warning fix)
+
+### What we did
+
+**22:10 — Fixed React Navigation warning about duplicate nested screen names.** The app was showing this warning in console:
+```
+WARN  Found screens with the same name nested inside one another. Check:
+CharacterBrowse, CharacterBrowse > CharacterBrowse
+This can cause confusing behavior during navigation. Consider using unique names for each screen instead.
+```
+
+**Root cause:** The Tab.Screen in `CosplayerTabNavigator` was named `"Characters"` and the nested Stack.Screen inside `CharacterStackNavigator` was named `"CharacterBrowse"` with `title: "Characters"`. React Navigation detected potential naming conflicts between parent and child navigators.
+
+**Fix:** Renamed the Stack.Screen from `"CharacterBrowse"` to `"BrowseCharacters"` to ensure unique internal navigation names while keeping the displayed title as "Characters" for users.
+
+**Changes made:**
+- Updated `CharacterStackParamList` type: `CharacterBrowse` → `BrowseCharacters`
+- Updated Stack.Screen name: `<Stack.Screen name="BrowseCharacters">`
+- Updated navigation call in MatchResultsScreen: `navigation.navigate('BrowseCharacters')`
+
+**Result:** Navigation warning eliminated. Screen still displays as "Characters" to users (via `title` option) but uses unique internal name `BrowseCharacters` to avoid conflicts with parent `Characters` tab.
+
+### Commits
+- `1631d9c` — `Fix React Navigation warning: rename CharacterBrowse to BrowseCharacters to avoid nested duplicate screen names` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/1631d9c)
