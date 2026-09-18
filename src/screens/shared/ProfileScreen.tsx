@@ -272,7 +272,14 @@ export const ProfileScreen: React.FC = () => {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Team Management</Text>
-              <TouchableOpacity style={styles.manageButton}>
+              <TouchableOpacity
+                style={styles.manageButton}
+                onPress={() => Alert.alert(
+                  'Coming Soon',
+                  'Staff management features will be available in FE-7. You will be able to invite staff members, assign departments, and track their tasks.'
+                )}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.manageButtonText}>Manage Staff</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />
               </TouchableOpacity>

@@ -40,6 +40,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Body representation - defaults (not used for organizers, but required by register function)
   const [baseBody] = useState<'male' | 'female'>('male');
@@ -125,6 +126,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       !isConfirmPasswordValid ||
       !isDisplayNameValid
     ) {
+      return;
+    }
+
+    // Check Terms & Conditions agreement
+    if (!agreedToTerms) {
+      setRegisterError('You must agree to the Terms & Conditions to create an account');
       return;
     }
 
@@ -275,6 +282,24 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             Note: Body representation can be customized after registration
           </Text>
         </View>
+
+        {/* Terms & Conditions */}
+        <TouchableOpacity
+          style={styles.termsContainer}
+          onPress={() => setAgreedToTerms(!agreedToTerms)}
+          activeOpacity={0.7}
+          disabled={isLoading}
+        >
+          <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked]}>
+            {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
+          </View>
+          <Text style={styles.termsText}>
+            I agree to the{' '}
+            <Text style={styles.termsLink}>Terms & Conditions</Text>
+            {' '}and{' '}
+            <Text style={styles.termsLink}>Privacy Policy</Text>
+          </Text>
+        </TouchableOpacity>
 
         {registerError ? <Text style={styles.globalError}>{registerError}</Text> : null}
       </ScrollView>
@@ -451,5 +476,36 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.md,
     top: 38, // Position below label, aligned with input
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xs,
+  },
+  termsCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: borderRadius.sm,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+    marginTop: 2,
+  },
+  termsCheckboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  termsText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    flex: 1,
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 });
