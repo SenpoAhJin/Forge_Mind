@@ -19,6 +19,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -48,7 +49,10 @@ export const VerifyCosplayersScreen: React.FC = () => {
 
     // Filter by verification status
     if (filter === 'pending') {
-      filtered = filtered.filter(c => c.verification_status === 'pending');
+      // Only show cosplayers who have submitted marketplace registration
+      filtered = filtered.filter(c => 
+        c.verification_status === 'pending' && c.marketplace_registration
+      );
     } else if (filter === 'verified') {
       filtered = filtered.filter(c => c.verification_status === 'verified');
     }
@@ -139,6 +143,8 @@ export const VerifyCosplayersScreen: React.FC = () => {
     const isPending = cosplayer.verification_status === 'pending';
     const isVerified = cosplayer.verification_status === 'verified';
     const isRejected = cosplayer.verification_status === 'rejected';
+    const marketplaceReg = cosplayer.marketplace_registration;
+    const [showPayoutNumber, setShowPayoutNumber] = useState(false);
 
     return (
       <View key={cosplayer.email} style={styles.card}>
@@ -169,6 +175,66 @@ export const VerifyCosplayersScreen: React.FC = () => {
             </Text>
           </View>
         </View>
+
+        {/* Marketplace Registration Details (if submitted) */}
+        {marketplaceReg && (
+          <View style={styles.registrationDetails}>
+            <View style={styles.detailRow}>
+              <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Seller Name:</Text>
+              <Text style={styles.detailValue}>{marketplaceReg.seller_display_name}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Contact:</Text>
+              <Text style={styles.detailValue}>{marketplaceReg.contact_email}</Text>
+            </View>
+            {marketplaceReg.contact_phone && (
+              <View style={styles.detailRow}>
+                <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>Phone:</Text>
+                <Text style={styles.detailValue}>{marketplaceReg.contact_phone}</Text>
+              </View>
+            )}
+            <View style={styles.detailRow}>
+              <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Payout:</Text>
+              <Text style={styles.detailValue}>{marketplaceReg.payout_method_label}</Text>
+            </View>
+            {/* Payout number: hidden by default, tap to reveal */}
+            <TouchableOpacity
+              style={styles.revealButton}
+              onPress={() => setShowPayoutNumber(!showPayoutNumber)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={showPayoutNumber ? 'eye-off-outline' : 'eye-outline'}
+                size={16}
+                color={colors.primary}
+              />
+              <Text style={styles.revealButtonText}>
+                {showPayoutNumber ? 'Hide' : 'Show'} Payout Number
+              </Text>
+            </TouchableOpacity>
+            {showPayoutNumber && (
+              <View style={styles.payoutNumberBox}>
+                <Text style={styles.payoutNumberText}>{marketplaceReg.payout_method_number}</Text>
+                <Text style={styles.mockWarning}>⚠️ MOCK FIELD (not encrypted)</Text>
+              </View>
+            )}
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Submitted:</Text>
+              <Text style={styles.detailValue}>
+                {new Date(marketplaceReg.submitted_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {isPending && (
           <View style={styles.actionRow}>
@@ -514,5 +580,57 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  registrationDetails: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.xs,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  detailLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  detailValue: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  revealButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  revealButtonText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  payoutNumberBox: {
+    backgroundColor: colors.surface,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.xs,
+  },
+  payoutNumberText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  mockWarning: {
+    ...typography.caption,
+    color: colors.warning,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
 });
