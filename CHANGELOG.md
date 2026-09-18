@@ -510,3 +510,70 @@ This can cause confusing behavior during navigation. Consider using unique names
 
 ### Commits
 - `1631d9c` — `Fix React Navigation warning: rename CharacterBrowse to BrowseCharacters to avoid nested duplicate screen names` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/1631d9c)
+
+
+---
+
+## Session — Friday, Sept 18, 2026, 23:15 (Button audit + success modal parity + T&C consent)
+
+### What we did
+
+**22:30 — Comprehensive button audit (Head Organizer + Staff).** Cataloged every interactive button across all Head Organizer and Staff screens, verified handlers, navigation targets, and state changes. Created `BUTTON_AUDIT_REPORT.md` with detailed tables showing:
+- **Head Organizer:** 17 buttons across HeadOrganizerRegistrationScreen, ProfileScreen, RequestOrganizerAccessScreen, VerifyCosplayersScreen, plus placeholder screens (Events/Logistics/Meetups)
+- **Staff:** 8 buttons across StaffRegistrationScreen, ProfileScreen, RequestOrganizerAccessScreen, plus placeholder screens with permission banners
+
+**Findings:**
+- **1 broken button found:** ProfileScreen → "Manage Staff" button (Head Organizer only) had no `onPress` handler — clicking did nothing.
+- **Fixed immediately:** Added Alert with "Coming Soon" message explaining feature arrives in FE-7.
+- **Final status:** 17/17 Head buttons working (100%), 8/8 Staff buttons working (100%).
+
+**State changes verified:** Tested Approve/Reject/Revoke in VerifyCosplayersScreen by checking `verification_status` before/after each action. Confirmed filter tabs update list, search clears correctly, and department chips highlight on selection.
+
+---
+
+**23:00 — Success modal parity: ported to Head/Staff registration.** The real Cosplayer `RegisterScreen` shows an animated `RegistrationSuccessModal` on successful account creation (green checkmark with rotation, account details card, "Continue to Login" button). The two dev-only screens (Head Organizer and Staff) were still using plain `Alert.alert()` static popups.
+
+**Fix:** Imported and wired `RegistrationSuccessModal` to both dev screens:
+- Replaced `Alert.alert('Success', ...)` with `setShowSuccessModal(true)` in success handler
+- Added `handleSuccessModalContinue()` callback to dismiss modal and call `onSuccess()`
+- Modal shows display name + email (role-agnostic copy — no hardcoded "Cosplayer" text)
+- Same animation sequence as Cosplayer screen: fade in backdrop → scale modal → spin checkmark
+
+**Result:** All three registration flows (Cosplayer, Head Organizer, Staff) now have identical success UX.
+
+---
+
+**23:10 — T&C consent: added required checkbox to Cosplayer registration.** `RegisterScreen` previously had no Terms & Conditions agreement requirement — users could create accounts without consenting to any terms.
+
+**Added:**
+- New `agreedToTerms` state (default `false`)
+- Checkbox UI above "Create Account" button:
+  - Tappable row with custom checkbox (empty square → filled with checkmark when tapped)
+  - Text: "I agree to the Terms & Conditions and Privacy Policy" (blue links styled)
+  - Disabled during loading state
+- Validation check in `handleRegister()`: if `!agreedToTerms`, blocks submission and shows error: "You must agree to the Terms & Conditions to create an account"
+
+**UI placement:** Between account fields section and footer with "Create Account" button  
+**Styling:** Matches design system (20×20px checkbox with primary color, body text with caption styling, aligned with form margins)
+
+**Result:** Cosplayer registration now requires explicit T&C consent before account creation.
+
+---
+
+**23:15 — TypeScript verified, committed, pushed.**  
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+
+**Files changed:**
+- `src/screens/shared/ProfileScreen.tsx` — Fixed "Manage Staff" button
+- `src/screens/dev/HeadOrganizerRegistrationScreen.tsx` — Added success modal
+- `src/screens/dev/StaffRegistrationScreen.tsx` — Added success modal
+- `src/screens/auth/RegisterScreen.tsx` — Added T&C consent checkbox
+- `BUTTON_AUDIT_REPORT.md` — New file (comprehensive button audit tables + fixes summary)
+
+---
+
+### Commits
+- `84994d4` — `Button audit + success modal parity + T&C consent` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/84994d4)
