@@ -428,7 +428,6 @@ export const VerifyStaffScreen: React.FC = () => {
         title="Success"
         message={successMessage}
         confirmText="OK"
-        cancelText=""
         onConfirm={() => setShowSuccessModal(false)}
         onCancel={() => setShowSuccessModal(false)}
       />

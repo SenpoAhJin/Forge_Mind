@@ -463,7 +463,6 @@ export const VerifyCosplayersScreen: React.FC = () => {
         title={successMessage.startsWith('Error') ? 'Error' : 'Success'}
         message={successMessage}
         confirmText="OK"
-        cancelText=""
         onConfirm={() => setShowSuccessModal(false)}
         onCancel={() => setShowSuccessModal(false)}
       />

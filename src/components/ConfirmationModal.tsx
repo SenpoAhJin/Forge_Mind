@@ -59,13 +59,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
             {/* Actions */}
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onCancel}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cancelButtonText}>{cancelText}</Text>
-              </TouchableOpacity>
+              {/* Only render cancel button if cancelText is provided */}
+              {cancelText && (
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={onCancel}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.cancelButtonText}>{cancelText}</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[

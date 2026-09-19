@@ -20,7 +20,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, TextInputField, RegistrationSuccessModal } from '../../components';
+import { Button, TextInputField, RegistrationSuccessModal, TermsModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 
@@ -41,6 +41,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // Body representation - defaults (not used for organizers, but required by register function)
   const [baseBody] = useState<'male' | 'female'>('male');
@@ -284,22 +285,34 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         </View>
 
         {/* Terms & Conditions */}
-        <TouchableOpacity
-          style={styles.termsContainer}
-          onPress={() => setAgreedToTerms(!agreedToTerms)}
-          activeOpacity={0.7}
-          disabled={isLoading}
-        >
-          <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked]}>
-            {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
-          </View>
+        <View style={styles.termsRow}>
+          <TouchableOpacity
+            style={styles.termsCheckboxContainer}
+            onPress={() => setAgreedToTerms(!agreedToTerms)}
+            activeOpacity={0.7}
+            disabled={isLoading}
+          >
+            <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked]}>
+              {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
+            </View>
+          </TouchableOpacity>
           <Text style={styles.termsText}>
             I agree to the{' '}
-            <Text style={styles.termsLink}>Terms & Conditions</Text>
+            <Text
+              style={styles.termsLink}
+              onPress={() => setShowTermsModal(true)}
+            >
+              Terms & Conditions
+            </Text>
             {' '}and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
+            <Text
+              style={styles.termsLink}
+              onPress={() => setShowTermsModal(true)}
+            >
+              Privacy Policy
+            </Text>
           </Text>
-        </TouchableOpacity>
+        </View>
 
         {registerError ? <Text style={styles.globalError}>{registerError}</Text> : null}
       </ScrollView>
@@ -332,6 +345,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         displayName={displayName}
         email={email}
         onContinue={onSwitchToLogin}
+      />
+
+      {/* Terms & Conditions Modal */}
+      <TermsModal
+        visible={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        type="account"
       />
     </KeyboardAvoidingView>
   );
@@ -477,11 +497,14 @@ const styles = StyleSheet.create({
     right: spacing.md,
     top: 38, // Position below label, aligned with input
   },
-  termsContainer: {
+  termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginTop: spacing.lg,
     paddingHorizontal: spacing.xs,
+  },
+  termsCheckboxContainer: {
+    padding: spacing.xs,
   },
   termsCheckbox: {
     width: 20,
@@ -491,8 +514,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
-    marginTop: 2,
   },
   termsCheckboxChecked: {
     backgroundColor: colors.primary,
@@ -503,6 +524,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     flex: 1,
     lineHeight: 20,
+    marginTop: spacing.xs,
   },
   termsLink: {
     color: colors.primary,

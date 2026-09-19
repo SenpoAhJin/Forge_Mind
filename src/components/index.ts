@@ -14,3 +14,4 @@ export * from './RegistrationSuccessModal';
 export * from './RejectionReasonModal';
 export * from './MarketplaceRegistrationSuccessModal';
 export * from './ConfirmationModal';
+export * from './TermsModal';

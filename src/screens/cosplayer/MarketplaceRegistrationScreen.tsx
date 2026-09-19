@@ -21,7 +21,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TextInputField, MarketplaceRegistrationSuccessModal } from '../../components';
+import { TextInputField, MarketplaceRegistrationSuccessModal, TermsModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { AuthService } from '../../services/AuthService';
@@ -49,6 +49,7 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
   const [payoutMethodLabel, setPayoutMethodLabel] = useState('');
   const [payoutMethodNumber, setPayoutMethodNumber] = useState('');
   const [agreedToMarketplaceTerms, setAgreedToMarketplaceTerms] = useState(false);
+  const [showMarketplaceTermsModal, setShowMarketplaceTermsModal] = useState(false);
 
   // Validation errors
   const [sellerDisplayNameError, setSellerDisplayNameError] = useState('');
@@ -350,21 +351,28 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
         )}
 
         {/* Marketplace Terms */}
-        <TouchableOpacity
-          style={styles.termsContainer}
-          onPress={() => setAgreedToMarketplaceTerms(!agreedToMarketplaceTerms)}
-          activeOpacity={0.7}
-          disabled={isLoading}
-        >
-          <View style={[styles.termsCheckbox, agreedToMarketplaceTerms && styles.termsCheckboxChecked]}>
-            {agreedToMarketplaceTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
-          </View>
+        <View style={styles.termsRow}>
+          <TouchableOpacity
+            style={styles.termsCheckboxContainer}
+            onPress={() => setAgreedToMarketplaceTerms(!agreedToMarketplaceTerms)}
+            activeOpacity={0.7}
+            disabled={isLoading}
+          >
+            <View style={[styles.termsCheckbox, agreedToMarketplaceTerms && styles.termsCheckboxChecked]}>
+              {agreedToMarketplaceTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
+            </View>
+          </TouchableOpacity>
           <Text style={styles.termsText}>
             I agree to the{' '}
-            <Text style={styles.termsLink}>Marketplace Terms & Conditions</Text>
+            <Text
+              style={styles.termsLink}
+              onPress={() => setShowMarketplaceTermsModal(true)}
+            >
+              Marketplace Terms & Conditions
+            </Text>
             {' '}(seller rules, fees, dispute resolution)
           </Text>
-        </TouchableOpacity>
+        </View>
 
         <Text style={styles.termsNote}>
           Separate from account-level terms. Covers selling rules, commission guidelines, and dispute basics.
@@ -400,6 +408,13 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
         payoutMethodLabel={payoutMethodLabel || undefined}
         onBackToMarketplace={handleSuccessModalContinue}
         onEditSubmission={handleEditSubmission}
+      />
+
+      {/* Marketplace Terms & Conditions Modal */}
+      <TermsModal
+        visible={showMarketplaceTermsModal}
+        onClose={() => setShowMarketplaceTermsModal(false)}
+        type="marketplace"
       />
     </KeyboardAvoidingView>
   );
@@ -514,11 +529,14 @@ const styles = StyleSheet.create({
     color: colors.warning,
     flex: 1,
   },
-  termsContainer: {
+  termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginTop: spacing.lg,
     paddingHorizontal: spacing.xs,
+  },
+  termsCheckboxContainer: {
+    padding: spacing.xs,
   },
   termsCheckbox: {
     width: 20,
@@ -528,8 +546,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
-    marginTop: 2,
   },
   termsCheckboxChecked: {
     backgroundColor: colors.primary,
@@ -540,6 +556,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     flex: 1,
     lineHeight: 20,
+    marginTop: spacing.xs,
   },
   termsLink: {
     color: colors.primary,
