@@ -613,3 +613,38 @@ Previously, a Staff account simply self-declared a department (e.g., "Secretaria
 
 ### Commits
 - `cfd7c55` — `Add staff department verification scoped to selected department` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/cfd7c55)
+
+
+---
+
+## Session — Saturday, Sept 19, 2026, 09:58 (fix: Hooks crash in VerifyCosplayersScreen)
+
+### What we did
+
+**Fixed the "Rendered more hooks than during the previous render" crash in the Verify Cosplayers screen.**
+
+**Root cause:** each cosplayer card was created by a per-card render function call, and that function called its own `useState` for the payout-number reveal:
+
+```js
+const renderCosplayerCard = (cosplayer) => {
+  const [showPayoutNumber, setShowPayoutNumber] = useState(false); // inside the list loop — wrong
+  ...
+};
+```
+
+`renderCosplayerCard` is invoked inside `filteredCosplayers.map(...)`, so the number of `useState` calls grew and shrank as the list re-rendered (e.g., switching the Pending/Verified/All filter, which changes how many cards render). React counts hooks per component render and threw "Rendered more hooks than during the previous render" as soon as the card count changed. We reproduced the exact error against React 19 + the real list-render pattern to confirm it before fixing.
+
+**The fix:** one piece of state at the top of the component tracks which single cosplayer's payout number is revealed, keyed by email:
+
+```js
+const [revealedPayoutFor, setRevealedPayoutFor] = useState<string | null>(null);
+```
+
+Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.email` and toggles it (on press: `setRevealedPayoutFor(payoutRevealed ? null : cosplayer.email)`). Same behavior — tap one card to reveal only its payout number, tap again to hide — but zero hooks in the loop. Bonus: revealing one card now hides any other revealed card automatically (single-reveal behavior, which matched the previous UX).
+
+**Verify Staff screen check:** the new Verify Staff screen from the earlier session was audited for the same mistake. Its `renderStaffCard` (also called inside `.map()`) contains **no hooks** — all its `useState`/`useEffect` calls live at the top of the component. So it never had the bug and needed no change.
+
+**Verified (React Test Renderer, no device needed):** mounted a replica of the buggy pattern with the list filter changing the rendered card count 1 → 2 — it produced the exact "Rendered more hooks than during the previous render" error with the hook-order diff table. The same run with the fixed pattern passed with no warning: filter toggled 1↔2 cards safely, tapping reveal on one card showed **only that card's** payout number, and toggling back caused no error. Also confirmed the project typechecks clean.
+
+### Commits
+- *(added on push)* — `Fix Hooks crash in VerifyCosplayersScreen (per-item useState in loop)`

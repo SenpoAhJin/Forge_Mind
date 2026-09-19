@@ -37,6 +37,7 @@ export const VerifyCosplayersScreen: React.FC = () => {
   const [filter, setFilter] = useState<VerificationFilter>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [revealedPayoutFor, setRevealedPayoutFor] = useState<string | null>(null);
 
   // Load cosplayers
   useEffect(() => {
@@ -144,7 +145,7 @@ export const VerifyCosplayersScreen: React.FC = () => {
     const isVerified = cosplayer.verification_status === 'verified';
     const isRejected = cosplayer.verification_status === 'rejected';
     const marketplaceReg = cosplayer.marketplace_registration;
-    const [showPayoutNumber, setShowPayoutNumber] = useState(false);
+    const payoutRevealed = revealedPayoutFor === cosplayer.email;
 
     return (
       <View key={cosplayer.email} style={styles.card}>
@@ -204,19 +205,21 @@ export const VerifyCosplayersScreen: React.FC = () => {
             {/* Payout number: hidden by default, tap to reveal */}
             <TouchableOpacity
               style={styles.revealButton}
-              onPress={() => setShowPayoutNumber(!showPayoutNumber)}
+              onPress={() =>
+                setRevealedPayoutFor(payoutRevealed ? null : cosplayer.email)
+              }
               activeOpacity={0.7}
             >
               <Ionicons
-                name={showPayoutNumber ? 'eye-off-outline' : 'eye-outline'}
+                name={payoutRevealed ? 'eye-off-outline' : 'eye-outline'}
                 size={16}
                 color={colors.primary}
               />
               <Text style={styles.revealButtonText}>
-                {showPayoutNumber ? 'Hide' : 'Show'} Payout Number
+                {payoutRevealed ? 'Hide' : 'Show'} Payout Number
               </Text>
             </TouchableOpacity>
-            {showPayoutNumber && (
+            {payoutRevealed && (
               <View style={styles.payoutNumberBox}>
                 <Text style={styles.payoutNumberText}>{marketplaceReg.payout_method_number}</Text>
                 <Text style={styles.mockWarning}>⚠️ MOCK FIELD (not encrypted)</Text>
