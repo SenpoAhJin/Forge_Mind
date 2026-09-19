@@ -647,4 +647,4 @@ Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.ema
 **Verified (React Test Renderer, no device needed):** mounted a replica of the buggy pattern with the list filter changing the rendered card count 1 → 2 — it produced the exact "Rendered more hooks than during the previous render" error with the hook-order diff table. The same run with the fixed pattern passed with no warning: filter toggled 1↔2 cards safely, tapping reveal on one card showed **only that card's** payout number, and toggling back caused no error. Also confirmed the project typechecks clean.
 
 ### Commits
-- *(added on push)* — `Fix Hooks crash in VerifyCosplayersScreen (per-item useState in loop)`
+- `bc8b0d5` — `Fix Hooks crash in VerifyCosplayersScreen (per-item useState in loop)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/bc8b0d5)
