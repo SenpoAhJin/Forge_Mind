@@ -15,3 +15,4 @@ export * from './RejectionReasonModal';
 export * from './MarketplaceRegistrationSuccessModal';
 export * from './ConfirmationModal';
 export * from './TermsModal';
+export * from './StatusNotificationModal';

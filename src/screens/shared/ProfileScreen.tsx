@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
-import { Button, ConfirmationModal } from '../../components';
+import { Button, ConfirmationModal, StatusNotificationModal } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
 import { OrganizerAccessRequest, DEPARTMENT_LABELS } from '../../types/organizer';
 import { formatVerificationStatus, formatDepartmentVerificationStatus } from '../../utils/formatStatus';
@@ -20,6 +20,12 @@ export const ProfileScreen: React.FC = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  
+  // Status notification states
+  const [showMarketplaceNotification, setShowMarketplaceNotification] = useState(false);
+  const [showStaffNotification, setShowStaffNotification] = useState(false);
+  const [hasShownMarketplaceNotification, setHasShownMarketplaceNotification] = useState(false);
+  const [hasShownStaffNotification, setHasShownStaffNotification] = useState(false);
 
   // Load access request when screen is focused
   useEffect(() => {
@@ -27,6 +33,30 @@ export const ProfileScreen: React.FC = () => {
       loadAccessRequest();
     }
   }, [user?.is_organizer, user?.organizer_role, isFocused]);
+
+  // Check for marketplace verification status changes
+  useEffect(() => {
+    if (isFocused && user?.marketplace_registration && !hasShownMarketplaceNotification) {
+      const status = user.verification_status;
+      // Show notification for verified or rejected status
+      if (status === 'verified' || status === 'rejected') {
+        setShowMarketplaceNotification(true);
+        setHasShownMarketplaceNotification(true);
+      }
+    }
+  }, [isFocused, user?.verification_status, user?.marketplace_registration, hasShownMarketplaceNotification]);
+
+  // Check for staff verification status changes
+  useEffect(() => {
+    if (isFocused && user?.is_organizer && user?.organizer_role === 'staff' && !hasShownStaffNotification) {
+      const status = user.department_verification_status;
+      // Show notification for approved or rejected status
+      if (status === 'approved' || status === 'rejected') {
+        setShowStaffNotification(true);
+        setHasShownStaffNotification(true);
+      }
+    }
+  }, [isFocused, user?.department_verification_status, user?.is_organizer, user?.organizer_role, hasShownStaffNotification]);
 
   const loadAccessRequest = async () => {
     if (!user?.email) return;
@@ -65,6 +95,18 @@ export const ProfileScreen: React.FC = () => {
   const confirmReset = () => {
     setShowResetModal(false);
     resetOnboarding();
+  };
+
+  const handleMarketplaceAppeal = () => {
+    setShowMarketplaceNotification(false);
+    // Navigate to marketplace registration to resubmit
+    navigation.navigate('MarketplaceRegistration');
+  };
+
+  const handleStaffAppeal = () => {
+    setShowStaffNotification(false);
+    // Navigate to staff registration to resubmit
+    navigation.navigate('StaffRegistration');
   };
 
   // Determine if user is viewing as organizer
@@ -240,6 +282,19 @@ export const ProfileScreen: React.FC = () => {
               ? 'As a Head Organizer, you can verify cosplayers for marketplace access.'
               : 'Verification required to sell or trade items.'}
           </Text>
+
+          {/* Show rejection reason if rejected */}
+          {user?.verification_status === 'rejected' && user?.marketplace_registration?.rejection_reason && (
+            <View style={styles.rejectionBox}>
+              <View style={styles.rejectionHeader}>
+                <Ionicons name="alert-circle" size={16} color={colors.error} />
+                <Text style={styles.rejectionTitle}>Reason for rejection:</Text>
+              </View>
+              <Text style={styles.rejectionText}>
+                {user.marketplace_registration.rejection_reason}
+              </Text>
+            </View>
+          )}
           
           {/* Head Organizer: Verify Users button */}
           {user?.organizer_role === 'head' && (
@@ -353,6 +408,19 @@ export const ProfileScreen: React.FC = () => {
             <Text style={styles.cardNote}>
               Your department assignment and verification status. Head Organizers verify staff members for specific departments.
             </Text>
+
+            {/* Show rejection reason if rejected */}
+            {user.department_verification_status === 'rejected' && user.department_rejection_reason && (
+              <View style={styles.rejectionBox}>
+                <View style={styles.rejectionHeader}>
+                  <Ionicons name="alert-circle" size={16} color={colors.error} />
+                  <Text style={styles.rejectionTitle}>Reason for rejection:</Text>
+                </View>
+                <Text style={styles.rejectionText}>
+                  {user.department_rejection_reason}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Staff Capabilities */}
@@ -446,6 +514,30 @@ export const ProfileScreen: React.FC = () => {
         onConfirm={() => setShowComingSoonModal(false)}
         onCancel={() => setShowComingSoonModal(false)}
       />
+
+      {/* Marketplace Status Notification */}
+      {user?.marketplace_registration && (
+        <StatusNotificationModal
+          visible={showMarketplaceNotification}
+          onClose={() => setShowMarketplaceNotification(false)}
+          status={user.verification_status === 'verified' ? 'approved' : 'rejected'}
+          type="marketplace"
+          rejectionReason={user.marketplace_registration.rejection_reason}
+          onAppeal={user.verification_status === 'rejected' ? handleMarketplaceAppeal : undefined}
+        />
+      )}
+
+      {/* Staff Status Notification */}
+      {user?.is_organizer && user?.organizer_role === 'staff' && (
+        <StatusNotificationModal
+          visible={showStaffNotification}
+          onClose={() => setShowStaffNotification(false)}
+          status={user.department_verification_status === 'approved' ? 'approved' : 'rejected'}
+          type="staff"
+          rejectionReason={user.department_rejection_reason}
+          onAppeal={user.department_verification_status === 'rejected' ? handleStaffAppeal : undefined}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -534,6 +626,32 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     lineHeight: 18,
+  },
+  rejectionBox: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.error + '10',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.error,
+    borderRadius: borderRadius.md,
+  },
+  rejectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  rejectionTitle: {
+    ...typography.caption,
+    color: colors.error,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rejectionText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    lineHeight: 20,
   },
   detailRow: {
     flexDirection: 'row',
