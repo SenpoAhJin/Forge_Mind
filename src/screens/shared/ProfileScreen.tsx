@@ -7,6 +7,7 @@ import { useUser } from '../../contexts/UserContext';
 import { Button } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
 import { OrganizerAccessRequest } from '../../types/organizer';
+import { formatVerificationStatus } from '../../utils/formatStatus';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, resetOnboarding, updateVerification } = useUser();
@@ -227,7 +228,7 @@ export const ProfileScreen: React.FC = () => {
               (user?.verification_status === 'rejected' || user?.verification_status === 'revoked') && { color: colors.error },
             ]}>
               {user?.verification_status
-                ? user.verification_status.charAt(0).toUpperCase() + user.verification_status.slice(1)
+                ? formatVerificationStatus(user.verification_status)
                 : 'Pending'}
             </Text>
           </View>

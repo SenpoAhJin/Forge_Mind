@@ -30,6 +30,7 @@ import {
   StaffDepartment,
   DepartmentVerificationStatus,
 } from '../../types/organizer';
+import { formatDepartmentVerificationStatus } from '../../utils/formatStatus';
 
 type StatusFilter = 'pending' | 'approved' | 'rejected' | 'all';
 type DepartmentFilter = 'all' | StaffDepartment;
@@ -147,7 +148,7 @@ export const VerifyStaffScreen: React.FC = () => {
           s === 'pending' && styles.badgeTextWarning,
           s === 'rejected' && styles.badgeTextError,
         ]}>
-          {s.charAt(0).toUpperCase() + s.slice(1)}
+          {formatDepartmentVerificationStatus(s)}
         </Text>
       </View>
     );

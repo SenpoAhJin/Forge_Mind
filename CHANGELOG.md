@@ -648,3 +648,30 @@ Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.ema
 
 ### Commits
 - `bc8b0d5` — `Fix Hooks crash in VerifyCosplayersScreen (per-item useState in loop)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/bc8b0d5)
+
+
+---
+
+## Session — Saturday, Sept 19, 2026, 10:45 (verification status displayed as human labels, not raw enums)
+
+### What we did
+
+**Fixed onboarding/Profile/Verification screens showing the raw stored enum instead of a display-friendly label** (e.g. `Not_submitted` instead of "Not Submitted", `pending` vs "Pending", `not_submitted` for marketplace).
+
+**Root cause:** the stored value on the account is a snake_case enum (`verification_status`, `department_verification_status`), and some screens rendered it verbatim or with only a naive `charAt(0)` title-casing — which produced "Not_submitted" and similar raw text in the UI.
+
+**The fix — display-layer only, stored value NEVER changed:**
+- New shared helper `src/utils/formatStatus.ts`:
+  - `formatVerificationStatus(status)` → "Not Submitted" / "Pending" / "Verified" / "Rejected" / "Revoked" (marketplace verification badge).
+  - `formatDepartmentVerificationStatus(status)` → "Pending" / "Approved" / "Rejected" (staff department badge).
+  - Both fall back to a title-cased version of unknown values so raw snake_case never leaks to the screen.
+- Applied it at **every location that displayed either status**:
+  - `ProfileScreen` (marketplace verification badge),
+  - `VerifyCosplayersScreen` (per-cosplayer verification badge),
+  - `VerifyStaffScreen` (staff department badge).
+- Left **deliberately unchanged**: `accessRequest.status` in ProfileScreen is a *different* single-word enum (`pending`/`approved`/`rejected`) that already renders correctly (no raw snake_case), and MarketplaceScreen already maps statuses to explicit labels.
+
+**Verified:** `npx tsc --noEmit` → clean. Repo-wide grep confirms no remaining screen renders the raw snake_case enum text.
+
+### Commits
+- `(added on push)` — `Format verification status labels for display (no raw enums)`

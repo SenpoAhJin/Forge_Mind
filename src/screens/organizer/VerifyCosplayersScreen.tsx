@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { formatVerificationStatus } from '../../utils/formatStatus';
 import { AuthService, StoredAccount } from '../../services/AuthService';
 
 type VerificationFilter = 'pending' | 'verified' | 'all';
@@ -171,8 +172,7 @@ export const VerifyCosplayersScreen: React.FC = () => {
               isPending && styles.badgeTextWarning,
               isRejected && styles.badgeTextError,
             ]}>
-              {cosplayer.verification_status.charAt(0).toUpperCase() + 
-               cosplayer.verification_status.slice(1)}
+              {formatVerificationStatus(cosplayer.verification_status)}
             </Text>
           </View>
         </View>
