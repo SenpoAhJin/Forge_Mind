@@ -707,3 +707,38 @@ What we did:
 
 ### Commits
 - (in progress - commit right after this entry)
+
+
+## Session — Saturday, September 19, 2026, 16:09 (Marketplace: buyer/seller/both registration role)
+
+**Goal:** Add buyer/seller/both role differentiation to marketplace registration with conditional payout fields (Step 2 only).
+
+**What landed:**
+1. ✅ **marketplace_role field added to data model** — StoredAccount.marketplace_registration now includes `marketplace_role: 'buyer' | 'seller' | 'both'` as the first field
+2. ✅ **Role selection UI** — MarketplaceRegistrationScreen now shows three role buttons (Buyer / Seller / Both) before any other fields, with icons and contextual help text
+3. ✅ **Conditional payout section** — Payout Information (payout_method_label, payout_method_number) only appears when role is 'seller' or 'both'; hidden entirely for 'buyer'
+4. ✅ **Conditional validation** — Payout fields are only validated and required when the role requires them (seller/both); buyer-only registrations skip payout validation
+5. ✅ **AuthService.submitMarketplaceRegistration updated** — Method signature and payload now include marketplace_role field
+6. ✅ **Role tag in VerifyCosplayersScreen** — Each pending application card now shows a small colored tag ("Buyer" / "Seller" / "Buyer & Seller") at the top of registration details
+7. ✅ **Conditional payout display for organizers** — Head Organizers only see payout fields in verification cards for seller/both roles; buyer-only applications hide payout section
+8. ✅ **Role-agnostic copy** — MarketplaceScreen feature list updated to remove seller-specific language ("Chat with other participants" instead of "Chat with buyers and sellers")
+9. ✅ **TypeScript clean** — All changes passed `npx tsc --noEmit` with zero errors
+
+**What changed:**
+- `src/services/AuthService.ts`: Added marketplace_role field to StoredAccount type and submitMarketplaceRegistration signature
+- `src/screens/cosplayer/MarketplaceRegistrationScreen.tsx`: Added role selection state and UI, made payout section conditional, updated validation logic
+- `src/screens/organizer/VerifyCosplayersScreen.tsx`: Added role tag display, made payout fields conditional for reviewers
+- `src/screens/cosplayer/MarketplaceScreen.tsx`: Updated feature list copy to be role-agnostic
+- `src/contexts/UserContext.tsx`: Added type assertion to preserve marketplace_registration type integrity during updates
+
+**Git:**
+- Commit: `7f13ad2` — "Marketplace: add buyer/seller/both role selection with conditional payout requirement"
+- Pushed to: `origin/master`
+
+**Testing required (user to perform):**
+1. Register for Marketplace, choose **Buyer** → confirm Payout Information section never appears and submission succeeds without it
+2. Register choosing **Seller** or **Both** → confirm Payout Information is required and blocks submission if left blank
+3. As Head Organizer, open Verify Cosplayers → confirm each pending application shows the correct "Buyer" / "Seller" / "Buyer & Seller" tag
+4. As a verified Buyer-only account, check the Marketplace tab → confirm no seller-oriented copy appears
+
+**Next:** User testing with real device taps and screenshots to confirm all four scenarios work correctly.
