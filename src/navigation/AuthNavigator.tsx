@@ -51,6 +51,7 @@ export const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onAuthSuccess }) =
       {__DEV__ && mode === 'head-registration' && HeadOrganizerRegistrationScreen && (
         <HeadOrganizerRegistrationScreen
           onSuccess={onAuthSuccess}
+          onSwitchToLogin={() => setMode('login')}
           onBack={() => setMode('login')}
         />
       )}
@@ -58,6 +59,7 @@ export const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onAuthSuccess }) =
       {__DEV__ && mode === 'staff-registration' && StaffRegistrationScreen && (
         <StaffRegistrationScreen
           onSuccess={onAuthSuccess}
+          onSwitchToLogin={() => setMode('login')}
           onBack={() => setMode('login')}
         />
       )}

@@ -29,6 +29,7 @@ import {
 
 interface StaffRegistrationScreenProps {
   onSuccess: () => void;
+  onSwitchToLogin: () => void;
   onBack: () => void;
 }
 
@@ -43,6 +44,7 @@ const DEPARTMENTS = [
 
 export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = ({
   onSuccess,
+  onSwitchToLogin,
   onBack,
 }) => {
   const [displayName, setDisplayName] = useState('');
@@ -152,7 +154,7 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
 
   const handleSuccessModalContinue = () => {
     setShowSuccessModal(false);
-    onSuccess();
+    onSwitchToLogin();
   };
 
   return (

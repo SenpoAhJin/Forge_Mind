@@ -29,11 +29,13 @@ import {
 
 interface HeadOrganizerRegistrationScreenProps {
   onSuccess: () => void;
+  onSwitchToLogin: () => void;
   onBack: () => void;
 }
 
 export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistrationScreenProps> = ({
   onSuccess,
+  onSwitchToLogin,
   onBack,
 }) => {
   const [displayName, setDisplayName] = useState('');
@@ -144,7 +146,7 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
 
   const handleSuccessModalContinue = () => {
     setShowSuccessModal(false);
-    onSuccess();
+    onSwitchToLogin();
   };
 
   return (
