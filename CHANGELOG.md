@@ -1050,3 +1050,85 @@ Entire T&C section wrapped in single TouchableOpacity with `onPress={() => setAg
 6. Confirm checkbox validation still works: try submitting without checking T&C box on Register and Marketplace Registration screens → confirm error "You must agree to..."
 
 **Next:** User testing with real device to confirm blank button resolved, confirmation step visible, T&C modals functional on Register and Marketplace Registration screens.
+
+
+---
+
+## Session — Saturday, September 19, 2026, 21:56 (Fix logout button on web + add approval/rejection notifications)
+
+### Part 1: Fix logout button not working on web
+
+**Issue:** User reported logout button not clickable when testing on desktop browser at `http://localhost:8081`. Mobile worked fine via Expo Go.
+
+**Root cause:** ProfileScreen used `Alert.alert()` for logout, reset onboarding, and "coming soon" confirmations. Alert.alert does NOT work on React Native Web (same issue as the approve/reject buttons fixed earlier in session).
+
+**Fix applied:**
+- Replaced all `Alert.alert()` calls in ProfileScreen with `ConfirmationModal` component
+- Added modal states: `showLogoutModal`, `showResetModal`, `showComingSoonModal`
+- Removed Alert import
+- Now all confirmation dialogs work on both web and mobile
+
+**Files modified:**
+- `src/screens/shared/ProfileScreen.tsx` (replace Alert.alert with ConfirmationModal for logout, reset, coming soon)
+
+**Git:**
+- Commit: `58207a6` — "Fix logout button not working on web (replace Alert.alert with ConfirmationModal)"
+- Pushed to: `origin/master`
+
+---
+
+### Part 2: Add minimalist approval/rejection notification pop-ups
+
+**User request:** "there is still no pop-up message when being approve by the head organizer, I want it to have its own design pop-up make it minimalist but casual design pop-up when being approve, also when the head organizer reject, it should also pop-up a reason why a certain registration in the marketplace or staff is rejected. it will also pop-up the message of the reason in the side of the cosplayer/user and the staff. making sure they can still appeal of what needed to be change"
+
+**What was built:**
+
+**1. StatusNotificationModal component (NEW):**
+- Minimalist, casual design with rounded corners, soft shadows
+- **Approval state:** Green checkmark circle (80x80), success title "[Marketplace/Staff] Access Approved!", encouraging message, single "Got it!" button
+- **Rejection state:** Red X circle (80x80), rejection title, scrollable reason box (max 120px height), appeal hint text, two buttons: "Update & Resubmit" (purple) and "Close" (primary)
+- Separate messages for marketplace vs staff applications
+- Clean typography, ample spacing, accessible color contrast
+
+**2. Automatic notification triggers (ProfileScreen):**
+- **When:** User opens Profile screen and screen gains focus (via `useIsFocused()`)
+- **Marketplace:** Shows notification if `verification_status` is `verified` or `rejected` (and has `marketplace_registration`)
+- **Staff:** Shows notification if `department_verification_status` is `approved` or `rejected` (and is staff)
+- **Once only:** Uses state flags (`hasShownMarketplaceNotification`, `hasShownStaffNotification`) to avoid repeated notifications on subsequent visits
+
+**3. Appeal/resubmit flow:**
+- **Rejection notification:** "Update & Resubmit" button navigates to original registration form (MarketplaceRegistration or StaffRegistration) so user can fix issues and reapply
+- **Approval notification:** "Got it!" button simply closes modal
+
+**4. Persistent rejection reason display on Profile:**
+- **Marketplace Access section:** Red-bordered box shows `marketplace_registration.rejection_reason` when status is `rejected`
+- **Your Assignment section (staff):** Red-bordered box shows `department_rejection_reason` when status is `rejected`
+- **Design:** Light red background (`colors.error + '10'`), red left border (3px), warning icon, "REASON FOR REJECTION:" label, reason text
+
+**How notification flow works:**
+1. Head Organizer approves/rejects application on VerifyCosplayersScreen or VerifyStaffScreen
+2. Status and rejection_reason are saved to user account via AuthService
+3. Next time user opens Profile screen → `useEffect` detects status change → shows StatusNotificationModal
+4. Modal remains visible until user taps button (approval: "Got it!", rejection: "Update & Resubmit" or "Close")
+5. If rejected, rejection reason remains permanently visible in Profile card for reference
+6. "Update & Resubmit" navigates to registration form so user can fix issues and try again
+
+**Files modified:**
+- `src/components/StatusNotificationModal.tsx` (NEW — minimalist notification modal)
+- `src/components/index.ts` (export StatusNotificationModal)
+- `src/screens/shared/ProfileScreen.tsx` (add notification triggers, rejection reason display, appeal handlers)
+
+**Git:**
+- Commit: `c1b1b41` — "Add minimalist approval/rejection notification pop-ups with rejection reasons and appeal option"
+- Pushed to: `origin/master`
+- TypeScript compilation: ✅ PASSED (`npx tsc --noEmit` exit code 0)
+
+**Testing required (user to perform):**
+1. **Marketplace rejection:** As Head Organizer, reject pending cosplayer with reason "Incomplete seller information" → As cosplayer, open Profile → confirm pop-up appears with reason and "Update & Resubmit" button → tap button → confirm navigates to Marketplace Registration
+2. **Marketplace approval:** As Head Organizer, approve pending cosplayer → As cosplayer, open Profile → confirm green success pop-up appears with "Got it!" button
+3. **Staff rejection:** As Head Organizer, reject pending staff with reason "Need more experience in this department" → As staff, open Profile → confirm pop-up appears → check "Your Assignment" section → confirm red box shows reason
+4. **Staff approval:** As Head Organizer, approve pending staff → As staff, open Profile → confirm green success pop-up appears
+5. **Web compatibility:** Test all above flows on desktop browser (`http://localhost:8081`) → confirm all pop-ups work correctly (no blank buttons, no missing modals)
+6. **Persistent display:** After closing notification, scroll to Marketplace/Staff section in Profile → confirm rejection reason still visible in red box for future reference
+
+**Next:** User testing with real device + desktop browser to confirm notifications appear correctly and appeal flow works.
