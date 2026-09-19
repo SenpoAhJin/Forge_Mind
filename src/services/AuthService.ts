@@ -44,6 +44,7 @@ export interface StoredAccount {
     payout_method_number: string;          // ASSUMPTION: MOCK FIELD (account number) — NOT ENCRYPTED, DEMO ONLY
     agreed_to_marketplace_terms: boolean;  // ASSUMPTION: separate from account T&C, must be true
     submitted_at: string;                  // ASSUMPTION: ISO timestamp when form submitted
+    rejection_reason?: string;             // NEW: organizer's reason for rejecting (shown to cosplayer)
   };
 
   // STAFF DEPARTMENT VERIFICATION (FE-*: single-department scoping)
@@ -53,6 +54,7 @@ export interface StoredAccount {
   // three-value pattern already established for Marketplace.
   department?: StaffDepartment | null;                 // The ONE department selected at registration
   department_verification_status?: DepartmentVerificationStatus; // pending | approved | rejected
+  department_rejection_reason?: string;                // NEW: organizer's reason for rejecting department access
 }
 
 export class AuthService {
@@ -291,7 +293,8 @@ export class AuthService {
    */
   static async updateVerificationStatus(
     email: string,
-    status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'
+    status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted',
+    rejectionReason?: string  // NEW: required when status is 'rejected'
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const accounts = await this.getAccounts();
@@ -303,6 +306,12 @@ export class AuthService {
 
       accounts[index].verification_status = status;
       accounts[index].is_holder_verified = status === 'verified';
+      
+      // Store rejection reason if provided
+      if (status === 'rejected' && rejectionReason && accounts[index].marketplace_registration) {
+        accounts[index].marketplace_registration!.rejection_reason = rejectionReason;
+      }
+      
       await this.saveAccounts(accounts);
 
       // Update active session if this is the current user
@@ -310,6 +319,9 @@ export class AuthService {
       if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
         activeSession.verification_status = status;
         activeSession.is_holder_verified = status === 'verified';
+        if (status === 'rejected' && rejectionReason && activeSession.marketplace_registration) {
+          activeSession.marketplace_registration.rejection_reason = rejectionReason;
+        }
         await this.setActiveSession(activeSession);
       }
 
@@ -370,7 +382,8 @@ export class AuthService {
    */
   static async updateDepartmentVerificationStatus(
     email: string,
-    status: Extract<DepartmentVerificationStatus, 'approved' | 'rejected'>
+    status: Extract<DepartmentVerificationStatus, 'approved' | 'rejected'>,
+    rejectionReason?: string  // NEW: required when status is 'rejected'
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const accounts = await this.getAccounts();
@@ -387,12 +400,21 @@ export class AuthService {
       }
 
       accounts[index].department_verification_status = status;
+      
+      // Store rejection reason if provided
+      if (status === 'rejected' && rejectionReason) {
+        accounts[index].department_rejection_reason = rejectionReason;
+      }
+      
       await this.saveAccounts(accounts);
 
       // Update active session if this is the current user
       const activeSession = await this.getActiveSession();
       if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
         activeSession.department_verification_status = status;
+        if (status === 'rejected' && rejectionReason) {
+          activeSession.department_rejection_reason = rejectionReason;
+        }
         await this.setActiveSession(activeSession);
       }
 

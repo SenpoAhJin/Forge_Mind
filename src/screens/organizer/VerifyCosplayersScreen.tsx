@@ -27,6 +27,8 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { formatVerificationStatus } from '../../utils/formatStatus';
 import { AuthService, StoredAccount } from '../../services/AuthService';
+import { RejectionReasonModal } from '../../components';
+
 
 type VerificationFilter = 'pending' | 'verified' | 'all';
 
@@ -39,6 +41,10 @@ export const VerifyCosplayersScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [revealedPayoutFor, setRevealedPayoutFor] = useState<string | null>(null);
+  
+  // Rejection modal state
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [cosplayerToReject, setCosplayerToReject] = useState<StoredAccount | null>(null);
 
   // Load cosplayers
   useEffect(() => {
@@ -89,33 +95,56 @@ export const VerifyCosplayersScreen: React.FC = () => {
   };
 
   const handleVerify = async (cosplayer: StoredAccount, approve: boolean) => {
-    const action = approve ? 'approve' : 'reject';
-    Alert.alert(
-      `${approve ? 'Approve' : 'Reject'} Verification`,
-      `Are you sure you want to ${action} marketplace access for ${cosplayer.display_name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: approve ? 'Approve' : 'Reject',
-          style: approve ? 'default' : 'destructive',
-          onPress: async () => {
-            try {
-              await AuthService.updateVerificationStatus(
-                cosplayer.email,
-                approve ? 'verified' : 'rejected'
-              );
-              Alert.alert(
-                'Success',
-                `${cosplayer.display_name} has been ${approve ? 'approved' : 'rejected'} for marketplace access.`
-              );
-              loadCosplayers(); // Refresh list
-            } catch (error) {
-              Alert.alert('Error', 'Failed to update verification status.');
-            }
+    if (approve) {
+      // Approve: show confirmation first
+      Alert.alert(
+        'Approve Application',
+        `Approve this application? ${cosplayer.display_name} will gain Marketplace access.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Approve',
+            style: 'default',
+            onPress: async () => {
+              try {
+                await AuthService.updateVerificationStatus(cosplayer.email, 'verified');
+                Alert.alert('Success', `${cosplayer.display_name} approved`);
+                loadCosplayers(); // Refresh list
+              } catch (error) {
+                Alert.alert('Error', 'Failed to approve application.');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } else {
+      // Reject: show modal for required reason
+      setCosplayerToReject(cosplayer);
+      setShowRejectionModal(true);
+    }
+  };
+
+  const handleRejectSubmit = async (reason: string) => {
+    if (!cosplayerToReject) return;
+
+    try {
+      await AuthService.updateVerificationStatus(
+        cosplayerToReject.email,
+        'rejected',
+        reason
+      );
+      Alert.alert('Rejected', `${cosplayerToReject.display_name}'s application was rejected`);
+      setShowRejectionModal(false);
+      setCosplayerToReject(null);
+      loadCosplayers(); // Refresh list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to reject application.');
+    }
+  };
+
+  const handleRejectCancel = () => {
+    setShowRejectionModal(false);
+    setCosplayerToReject(null);
   };
 
   const handleRevoke = async (cosplayer: StoredAccount) => {
@@ -385,6 +414,14 @@ export const VerifyCosplayersScreen: React.FC = () => {
           {filteredCosplayers.map(renderCosplayerCard)}
         </ScrollView>
       )}
+
+      {/* Rejection Reason Modal */}
+      <RejectionReasonModal
+        visible={showRejectionModal}
+        applicantName={cosplayerToReject?.display_name || ''}
+        onCancel={handleRejectCancel}
+        onSubmit={handleRejectSubmit}
+      />
     </View>
   );
 };

@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthService, StoredAccount } from '../services/AuthService';
+import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
 
 // User entity from v0.2.1 schema
 interface User {
@@ -32,6 +33,7 @@ interface User {
   
   // Marketplace registration (ASSUMPTIONS - not in Foundation spec)
   marketplace_registration?: {
+    marketplace_role: 'buyer' | 'seller' | 'both';  // STEP 2: buyer/seller differentiation
     seller_display_name: string;
     contact_email: string;
     contact_phone?: string;
@@ -39,7 +41,13 @@ interface User {
     payout_method_number: string;
     agreed_to_marketplace_terms: boolean;
     submitted_at: string;
+    rejection_reason?: string;             // NEW: organizer's reason for rejecting (shown to cosplayer)
   };
+  
+  // STAFF DEPARTMENT VERIFICATION
+  department?: StaffDepartment | null;                 // The ONE department selected at registration
+  department_verification_status?: DepartmentVerificationStatus; // pending | approved | rejected
+  department_rejection_reason?: string;                // NEW: organizer's reason for rejecting department access
 }
 
 interface UserContextType {

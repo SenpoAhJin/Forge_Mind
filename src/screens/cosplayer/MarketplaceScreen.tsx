@@ -151,6 +151,7 @@ export const MarketplaceScreen: React.FC = () => {
   if (verificationStatus === 'rejected' || verificationStatus === 'revoked') {
     const statusText = verificationStatus === 'rejected' ? 'Rejected' : 'Revoked';
     const statusColor = colors.error;
+    const rejectionReason = user?.marketplace_registration?.rejection_reason;
 
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -164,6 +165,14 @@ export const MarketplaceScreen: React.FC = () => {
               ? 'Your marketplace registration was not approved. You can update your information and resubmit for review.'
               : 'Your marketplace access has been revoked. If you believe this was a mistake, please update your information and resubmit.'}
           </Text>
+
+          {/* Show rejection reason if available */}
+          {rejectionReason && (
+            <View style={styles.reasonBox}>
+              <Text style={styles.reasonLabel}>Reason:</Text>
+              <Text style={styles.reasonText}>{rejectionReason}</Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.ctaButton, { backgroundColor: statusColor }]}
@@ -252,6 +261,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,
+  },
+  reasonBox: {
+    width: '100%',
+    backgroundColor: colors.error + '10',
+    borderWidth: 1,
+    borderColor: colors.error + '30',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  reasonLabel: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.error,
+    marginBottom: spacing.xs,
+  },
+  reasonText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    lineHeight: 20,
   },
   featureList: {
     width: '100%',
