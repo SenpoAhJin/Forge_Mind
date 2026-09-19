@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
-import { Button } from '../../components';
+import { Button, ConfirmationModal } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
 import { OrganizerAccessRequest, DEPARTMENT_LABELS } from '../../types/organizer';
 import { formatVerificationStatus, formatDepartmentVerificationStatus } from '../../utils/formatStatus';
@@ -15,6 +15,11 @@ export const ProfileScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const [accessRequest, setAccessRequest] = useState<OrganizerAccessRequest | null>(null);
   const [loadingRequest, setLoadingRequest] = useState(false);
+  
+  // Modal states
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   // Load access request when screen is focused
   useEffect(() => {
@@ -45,25 +50,21 @@ export const ProfileScreen: React.FC = () => {
     .join('');
 
   const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'This will log you out and return you to the login screen. Your account will be saved.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: logout },
-      ],
-    );
+    setShowLogoutModal(true);
+  };
+  
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
+    logout();
   };
 
   const handleResetOnboarding = () => {
-    Alert.alert(
-      'Reset Onboarding',
-      'This will DELETE ALL ACCOUNTS and return you to the Welcome screen. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete All', style: 'destructive', onPress: resetOnboarding },
-      ],
-    );
+    setShowResetModal(true);
+  };
+  
+  const confirmReset = () => {
+    setShowResetModal(false);
+    resetOnboarding();
   };
 
   // Determine if user is viewing as organizer
@@ -275,10 +276,7 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.cardTitle}>Team Management</Text>
               <TouchableOpacity
                 style={styles.manageButton}
-                onPress={() => Alert.alert(
-                  'Coming Soon',
-                  'Staff management features will be available in FE-7. You will be able to invite staff members, assign departments, and track their tasks.'
-                )}
+                onPress={() => setShowComingSoonModal(true)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.manageButtonText}>Manage Staff</Text>
@@ -416,6 +414,38 @@ export const ProfileScreen: React.FC = () => {
           />
         )}
       </View>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        visible={showLogoutModal}
+        title="Log Out"
+        message="This will log you out and return you to the login screen. Your account will be saved."
+        confirmText="Log Out"
+        confirmStyle="destructive"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
+
+      {/* Reset Onboarding Confirmation Modal */}
+      <ConfirmationModal
+        visible={showResetModal}
+        title="Reset Onboarding"
+        message="This will DELETE ALL ACCOUNTS and return you to the Welcome screen. This cannot be undone."
+        confirmText="Delete All"
+        confirmStyle="destructive"
+        onConfirm={confirmReset}
+        onCancel={() => setShowResetModal(false)}
+      />
+
+      {/* Coming Soon Modal */}
+      <ConfirmationModal
+        visible={showComingSoonModal}
+        title="Coming Soon"
+        message="Staff management features will be available in FE-7. You will be able to invite staff members, assign departments, and track their tasks."
+        confirmText="OK"
+        onConfirm={() => setShowComingSoonModal(false)}
+        onCancel={() => setShowComingSoonModal(false)}
+      />
     </ScrollView>
   );
 };
