@@ -675,3 +675,25 @@ Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.ema
 
 ### Commits
 - `0152d4e` — `Format verification status labels for display (no raw enums)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/0152d4e)
+
+
+---
+
+## Session — Saturday, September 19, 2026, 10:55 (Marketplace: remove duplicate-screen-name warning)
+
+### What we did
+
+**Fixed the React Navigation warning "Found screens with the same name nested inside one another" on the Marketplace flow.**
+
+**Root cause:** the same screen-name collision we'd already fixed once for the Characters tab (the `Characters`/`CharacterBrowse` → `BrowseCharacters` rename). The cosplayer tab registered a screen named **"Marketplace"** (`CosplayerTabNavigator.tsx`), and the Marketplace stack's **root** screen was *also* named **"Marketplace"** (`MarketplaceStackNavigator.tsx`, `name="Marketplace"`). Nested navigators both carrying `Marketplace` triggered the duplicate-name warning on every visit to the Marketplace tab.
+
+**The fix (same pattern as `BrowseCharacters`):** the inner stack root is the screen that really owns the trip into the stack, so it gets the unique internal route name while the user-facing title stays exactly "Marketplace".
+
+- Renamed the stack root screen **`Marketplace` → `MarketplaceHome`** in `MarketplaceStackNavigator.tsx` (and its `MarketplaceStackParamList` key), keeping `options={{ title: 'Marketplace' }}` so the header/display title is unchanged.
+- Because the MarketplaceScreen already navigates with `MarketplaceRegistration` (registration flow), the only navigation targeting the old inner name was the registration-complete callback — updated `navigation.navigate('Marketplace')` → `navigation.navigate('MarketplaceHome')`.
+- The **tab** keeps its "Marketplace" name (it's the outer layer and doesn't collide with the nested stack anymore). After this rename, no `navigate('Marketplace')` call remains anywhere in the app — grep-verified.
+
+**Verified:** `npx tsc --noEmit` passes clean; `git grep "navigate('Marketplace')"` returns zero hits (only the tab registration + `MarketplaceRegistration` route names remain, which are unique).
+
+### Commits
+- `(added on push)` — `Remove duplicate Marketplace screen name nested inside one another (Marketplace → MarketplaceHome)`

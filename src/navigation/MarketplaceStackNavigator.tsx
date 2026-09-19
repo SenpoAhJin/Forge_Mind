@@ -12,7 +12,7 @@ import {
 import { colors, typography } from '../theme';
 
 export type MarketplaceStackParamList = {
-  Marketplace: undefined;
+  MarketplaceHome: undefined;
   MarketplaceRegistration: undefined;
 };
 
@@ -29,7 +29,7 @@ export const MarketplaceStackNavigator: React.FC = () => (
     }}
   >
     <Stack.Screen
-      name="Marketplace"
+      name="MarketplaceHome"
       component={MarketplaceScreen}
       options={{ title: 'Marketplace' }}
     />
@@ -39,7 +39,7 @@ export const MarketplaceStackNavigator: React.FC = () => (
     >
       {({ navigation }) => (
         <MarketplaceRegistrationScreen
-          onSuccess={() => navigation.navigate('Marketplace')}
+          onSuccess={() => navigation.navigate('MarketplaceHome')}
         />
       )}
     </Stack.Screen>
