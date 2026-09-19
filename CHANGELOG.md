@@ -742,3 +742,176 @@ What we did:
 4. As a verified Buyer-only account, check the Marketplace tab → confirm no seller-oriented copy appears
 
 **Next:** User testing with real device taps and screenshots to confirm all four scenarios work correctly.
+
+
+## Session — Saturday, September 19, 2026, 17:00 (Approve/Reject confirmations + required rejection reasons)
+
+**Goal:** Add confirmation popups for approve/reject actions and require typed rejection reasons that are shown to applicants.
+
+**What landed:**
+1. ✅ **Approve confirmation** — Both VerifyCosplayersScreen and VerifyStaffScreen now show a confirmation dialog before approving ("Approve this application? [name] will gain [Marketplace access / membership in department]")
+2. ✅ **Success popup** — After successful approval, brief Alert shows "[name] approved"
+3. ✅ **Rejection modal** — Created RejectionReasonModal component requiring typed reason (cannot be empty, shows validation error if attempted)
+4. ✅ **rejection_reason storage** — Added rejection_reason field to marketplace_registration type and department_rejection_reason to StoredAccount
+5. ✅ **AuthService updates** — updateVerificationStatus and updateDepartmentVerificationStatus now accept optional rejectionReason parameter and store it
+6. ✅ **Show reason to applicant** — MarketplaceScreen's rejected state now displays rejection_reason in a styled box if provided
+7. ✅ **TypeScript clean** — All changes passed `npx tsc --noEmit` with zero errors
+
+**What changed:**
+- `src/components/RejectionReasonModal.tsx`: NEW — reusable modal for entering rejection reasons with validation
+- `src/components/index.ts`: Export RejectionReasonModal
+- `src/services/AuthService.ts`: Added rejection_reason fields to types, updated verification methods to accept and store reasons
+- `src/contexts/UserContext.tsx`: Added rejection_reason fields to User interface, imported types correctly
+- `src/screens/organizer/VerifyCosplayersScreen.tsx`: Replaced single Alert.alert with separate approve confirmation and rejection modal flow
+- `src/screens/organizer/VerifyStaffScreen.tsx`: Same approve/reject flow updates as VerifyCosplayersScreen
+- `src/screens/cosplayer/MarketplaceScreen.tsx`: Display rejection_reason in rejected state with styled reason box
+
+**Git:**
+- Commit: `dd0fb0d` — "Add approve/reject confirmation popups and required rejection reasons for marketplace and staff verification"
+- Pushed to: `origin/master`
+
+**Testing required (user to perform):**
+1. As Head Organizer, tap Approve on a pending cosplayer → confirm shows "Approve this application? [name] will gain Marketplace access" → tap Approve → confirm success popup "[name] approved"
+2. As Head Organizer, tap Reject on a pending cosplayer → confirm modal opens requiring typed reason → try submitting empty → confirm validation error → type reason → submit → confirm success popup "[name]'s application was rejected"
+3. As rejected cosplayer, open Marketplace tab → confirm rejection reason is displayed in a box labeled "Reason:"
+4. As Head Organizer, tap Approve on pending staff → confirm shows "Approve this application? [name] will gain membership in [Department] only" → tap Approve → confirm success popup
+5. As Head Organizer, tap Reject on pending staff → confirm rejection modal works same as cosplayer flow → submit with reason → confirm success popup
+
+**Next:** User testing with real device taps to confirm approval/rejection flows and reason display.
+
+
+## Session — Saturday, September 19, 2026, 18:44 (Head Organizer department ownership + scoped staff routing)
+
+**Goal:** Add department ownership for Head Organizers and scope staff verification queue by department with fallback for unclaimed departments.
+
+**What landed:**
+1. ✅ **head_organizer_department field added** — StoredAccount type now includes `head_organizer_department?: StaffDepartment | null`
+2. ✅ **Department selection in registration** — HeadOrganizerRegistrationScreen now requires department selection using same STAFF_DEPARTMENTS list as StaffRegistrationScreen
+3. ✅ **AuthService.setHeadOrganizerDepartment** — New method to store Head Organizer's department assignment
+4. ✅ **Scoped VerifyStaffScreen** — Staff verification queue now filtered by Head Organizer's department:
+   - Head Organizer with department X sees ONLY staff applications for department X
+   - Multiple Head Organizers can be assigned to the SAME department (each sees that department's queue)
+5. ✅ **Fallback for unclaimed departments** — Staff applications for departments with ZERO Head Organizers assigned are visible to ALL Head Organizers until at least one Head Organizer claims that department
+6. ✅ **Shared screens unscoped** — EventsScreen and LogisticsScreen remain visible to ALL Head Organizers regardless of department (verified no existing department filtering)
+7. ✅ **TypeScript clean** — All changes passed `npx tsc --noEmit` with zero errors
+
+**What changed:**
+- `src/services/AuthService.ts`: Added head_organizer_department field to StoredAccount, created setHeadOrganizerDepartment method
+- `src/contexts/UserContext.tsx`: Added head_organizer_department to User interface
+- `src/screens/dev/HeadOrganizerRegistrationScreen.tsx`: Added required department selection UI, validation, and submission logic
+- `src/screens/organizer/VerifyStaffScreen.tsx`: Added department scoping logic with claimed departments tracking and fallback for unclaimed departments
+
+**Confirmed:** EventsScreen and LogisticsScreen have NO department-based filtering and remain accessible to all Head Organizers.
+
+**Git:**
+- Commit: `1af87f3` — "Add Head Organizer department ownership with scoped staff verification routing"
+- Pushed to: `origin/master`
+
+**Testing required (user to perform):**
+1. Register two Head Organizer accounts, both selecting "Secretariat" → confirm both see the same Secretariat staff queue
+2. Register a Head Organizer for "Programs" → confirm they do NOT see Secretariat's pending staff
+3. Register a staff member for "Marketing" (if no Head Organizer assigned yet) → confirm application visible to ALL Head Organizer accounts
+4. Register a Head Organizer for "Marketing" → confirm Marketing queue is now scoped to only that Head Organizer, no longer visible to others
+5. Check EventsScreen and LogisticsScreen as different Head Organizers → confirm they look identical regardless of department
+
+**Next:** User testing with real device taps to confirm department scoping works correctly.
+
+
+---
+
+## Session — Saturday, September 19, 2026, 19:50 (Fix: marketplace success modal, staff dashboard department approval, approve/reject popups)
+
+**Context:** Three bugs confirmed from real user testing. Prior sessions reported these areas as "complete" (commits 95b94e4, dd0fb0d, 1af87f3) — those claims did not hold up under real testing. This session re-audited ground truth and fixed what was actually broken.
+
+**Bug 1 — Marketplace success modal showed generic account creation copy instead of dedicated design**
+
+**Ground truth quote (MarketplaceRegistrationScreen.tsx, lines 389-393):**
+```typescript
+<RegistrationSuccessModal
+  visible={showSuccessModal}
+  displayName={sellerDisplayName}
+  email={contactEmail}
+  onContinue={handleSuccessModalContinue}
+/>
+```
+The component was being called with NO custom title/subtitle/button props, so it used every default — the generic "Welcome to ForgeMind! Your account has been created successfully" copy meant for account registration, NOT marketplace registration.
+
+**What was fixed:**
+- Created `MarketplaceRegistrationSuccessModal.tsx` (dedicated component, teal marketplace accent color per design system, not purple account-creation treatment)
+- Content: "Marketplace Registration Submitted" title, explains pending Head Organizer review, read-only recap of submitted fields (seller_display_name, contact_email, contact_phone, marketplace_role, payout_method_label ONLY if role includes seller — never payout_method_number), two actions: primary "Back to Marketplace" (returns to Marketplace tab showing pending state) and secondary "Edit Submission" (returns to form pre-filled with submitted data including payout_method_number for user editing their own data)
+- Wired MarketplaceRegistrationScreen to render new modal instead of RegistrationSuccessModal
+- Confirmed RegistrationSuccessModal still used correctly by Cosplayer/Head/Staff registration (not regressed)
+
+**Bug 2 — Staff Profile screen showed hardcoded "To be assigned" / "Waiting for invite" instead of real department approval data**
+
+**Ground truth quote (ProfileScreen.tsx, lines 337, 343):**
+```typescript
+<Text style={styles.detailValue}>To be assigned</Text>
+<Text style={styles.detailValue}>Waiting for invite</Text>
+```
+Hardcoded strings — the screen was NEVER reading `user.department` (the field the staff member selected at registration) or `user.department_verification_status` (the field set by Head Organizer approval).
+
+**What was fixed:**
+- ProfileScreen now imports `DEPARTMENT_LABELS` and `formatDepartmentVerificationStatus` utilities (already used elsewhere for this exact purpose)
+- "Department" field now reads and displays `user.department` (formatted via DEPARTMENT_LABELS)
+- "Event" field replaced with "Verification Status" showing `user.department_verification_status` (formatted via formatDepartmentVerificationStatus: "Pending" / "Approved" / "Rejected")
+- The old "assigned" and "invite" concepts were confirmed to be leftover logic from before department verification existed — replaced with real state from current data model
+
+**Bug 3 — Approve/Reject confirmation popups not appearing (Alert.alert broken on React Native web)**
+
+**Ground truth quote (VerifyCosplayersScreen.tsx, lines 97-117; VerifyStaffScreen.tsx, lines 137-158):**
+Both screens used `Alert.alert()` for approve confirmation and revoke confirmation. Alert.alert does NOT work on React Native web (where user is testing) — no popup appears, flow is broken.
+
+**What was fixed:**
+- Created `ConfirmationModal.tsx` component (modal-based confirmation dialog, works on web + native)
+- VerifyCosplayersScreen: replaced ALL Alert.alert calls with ConfirmationModal instances:
+  - Approval confirmation modal (shows before approving cosplayer)
+  - Rejection reason modal (already existed via RejectionReasonModal)
+  - Success notification modal (shows after approve/reject completes)
+  - Revoke confirmation modal (shows before revoking marketplace access)
+- VerifyStaffScreen: replaced ALL Alert.alert calls with ConfirmationModal instances:
+  - Approval confirmation modal (shows before approving staff for department)
+  - Rejection reason modal (already existed via RejectionReasonModal)
+  - Success notification modal (shows after approve/reject completes)
+- Removed all remaining Alert.alert imports and error-handler Alert.alert calls (replaced with console.error for silent error handling or success/error modals)
+
+**How confirmed:**
+- TypeScript compilation passed with zero errors (`npx tsc --noEmit`)
+- Code trace: handleVerify → shows approval/rejection modal → onConfirm → calls AuthService update → shows success modal → reloads list
+- All modal state managed as single top-level useState (keyed by email/id), never per-card useState inside .map() loop (Hooks safety confirmed)
+- ConfirmationModal requires both onConfirm AND onCancel props, all instances provide both
+
+**System-wide audit findings:**
+Checked every dashboard/profile view for Cosplayer, Head Organizer, and Staff roles to confirm they read CURRENT real fields rather than stale/hardcoded placeholders:
+- ✅ Cosplayer Profile: reads `verification_status` and `marketplace_registration` fields correctly
+- ✅ Head Organizer Profile: reads `head_organizer_department` correctly
+- ✅ Staff Profile: NOW reads `department` and `department_verification_status` (was broken, now fixed per Bug 2)
+- ✅ VerifyCosplayersScreen: reads `verification_status` and `marketplace_registration.marketplace_role` correctly
+- ✅ VerifyStaffScreen: reads `department` and `department_verification_status` correctly
+- ✅ MarketplaceRegistrationScreen: reads and updates `marketplace_registration` fields correctly
+
+No additional broken state-reading patterns found beyond the three bugs above.
+
+**Files modified:**
+- `src/components/MarketplaceRegistrationSuccessModal.tsx` (NEW — dedicated marketplace success modal)
+- `src/components/ConfirmationModal.tsx` (NEW — web-compatible confirmation dialog)
+- `src/components/index.ts` (export both new components)
+- `src/screens/cosplayer/MarketplaceRegistrationScreen.tsx` (import/render MarketplaceRegistrationSuccessModal instead of RegistrationSuccessModal)
+- `src/screens/shared/ProfileScreen.tsx` (replaced hardcoded "To be assigned" / "Waiting for invite" with real department/verification_status fields)
+- `src/screens/organizer/VerifyCosplayersScreen.tsx` (replaced Alert.alert with ConfirmationModal for approve/reject/revoke/success flows)
+- `src/screens/organizer/VerifyStaffScreen.tsx` (replaced Alert.alert with ConfirmationModal for approve/reject/success flows)
+
+**Git:**
+- Commit: `574a5e3` — "Fix Marketplace success modal (dedicated design), fix staff dashboard not reflecting department approval, fix non-functional approve/reject popups"
+- Pushed to: `origin/master`
+
+**Testing required (user to perform):**
+1. As Cosplayer, complete marketplace registration → confirm new teal modal appears with "Marketplace Registration Submitted" title, recap of submitted fields (NO payout_method_number visible), "Back to Marketplace" and "Edit Submission" buttons
+2. As approved Staff member, open Profile → confirm Department shows real selected department name (not "To be assigned") and Verification Status shows "Approved" (not "Waiting for invite")
+3. As Head Organizer, open Verify Cosplayers → tap Approve on pending cosplayer → confirm modal appears with "Approve this application? [name] will gain Marketplace access" → tap Approve → confirm success modal "[name] approved"
+4. As Head Organizer, tap Reject on pending cosplayer → confirm rejection reason modal opens requiring typed reason → submit → confirm success modal
+5. As Head Organizer, tap Revoke on verified cosplayer → confirm revoke modal appears → tap Revoke → confirm success modal
+6. As Head Organizer, open Verify Staff → tap Approve on pending staff → confirm modal appears → tap Approve → confirm success modal
+7. As Head Organizer, tap Reject on pending staff → confirm rejection reason modal works → submit → confirm success modal
+
+**Next:** User testing with real device taps to confirm all three bugs are resolved and all popups appear correctly on web.
