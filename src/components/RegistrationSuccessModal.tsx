@@ -22,6 +22,18 @@ interface RegistrationSuccessModalProps {
   displayName: string;
   email: string;
   onContinue: () => void;
+  /**
+   * Optional marketplace-specific overrides (STEP 3 - Marketplace success recap).
+   * Defaults preserve the legacy account-creation copy so Cosplayer, Head,
+   * and Staff registration callers are unaffected.
+   */
+  title?: string;
+  subtitle?: string;
+  primaryButtonLabel?: string;
+  secondaryButtonLabel?: string;
+  onSecondary?: () => void;
+  /** Read-only recap rows shown in the details card (label → value) */
+  recapFields?: { label: string; value: string; icon?: keyof typeof Ionicons.glyphMap }[];
 }
 
 const { width } = Dimensions.get('window');
@@ -31,6 +43,13 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
   displayName,
   email,
   onContinue,
+  // Optional marketplace-specific overrides (STEP 3). Undefined → legacy defaults.
+  title,
+  subtitle,
+  primaryButtonLabel,
+  secondaryButtonLabel,
+  onSecondary,
+  recapFields,
 }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -122,8 +141,8 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
           </Animated.View>
 
           {/* Success Message */}
-          <Text style={styles.title}>Welcome to ForgeMind!</Text>
-          <Text style={styles.subtitle}>Your account has been created successfully</Text>
+          <Text style={styles.title}>{title ?? 'Welcome to ForgeMind!'}</Text>
+          <Text style={styles.subtitle}>{subtitle ?? 'Your account has been created successfully'}</Text>
 
           {/* Account Details */}
           <View style={styles.detailsCard}>
@@ -138,6 +157,22 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
               <Text style={styles.detailLabel}>Email</Text>
             </View>
             <Text style={styles.detailValue}>{email}</Text>
+
+            {/* Optional recap rows (STEP 3 - e.g. marketplace submission recap). 
+                Each iteration is wrapped in a Fragment so rows render as one parent unit. */}
+            {recapFields?.map((field, idx) => (
+              <React.Fragment key={idx}>
+                <View style={[styles.detailRow, { marginTop: spacing.md }]}>
+                  <Ionicons
+                    name={field.icon ?? 'information-circle-outline'}
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.detailLabel}>{field.label}</Text>
+                </View>
+                <Text style={styles.detailValue}>{field.value}</Text>
+              </React.Fragment>
+            ))}
           </View>
 
           {/* Info Note */}
@@ -154,7 +189,7 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
             onPress={onContinue}
             activeOpacity={0.8}
           >
-            <Text style={styles.continueButtonText}>Continue to Login</Text>
+            <Text style={styles.continueButtonText}>{primaryButtonLabel ?? 'Continue to Login'}</Text>
             <Ionicons name="arrow-forward" size={20} color={colors.backgroundLight} />
           </TouchableOpacity>
         </Animated.View>

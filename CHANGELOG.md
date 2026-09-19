@@ -697,3 +697,13 @@ Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.ema
 
 ### Commits
 - `887823d` — `Remove duplicate Marketplace screen name nested inside one another (Marketplace → MarketplaceHome)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/887823d)
+
+## Session - Saturday, September 19, 2026, 14:17 (Marketplace registration: success-modal refactor)
+
+What we did:
+- Reworked the shared registration success modal so the marketplace screen can drive its own title, subtitle, button label, and recap rows, instead of always showing the generic New-Account copy.
+- Kept the existing account-creation screen fully working (it just keeps using the default text).
+- Wired the modal to accept optional recap/review fields for highlighting what the cosplayer submitted.
+
+### Commits
+- (in progress - commit right after this entry)
