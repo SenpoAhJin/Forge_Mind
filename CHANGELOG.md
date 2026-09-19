@@ -612,4 +612,4 @@ Previously, a Staff account simply self-declared a department (e.g., "Secretaria
 **Verified (against real service code, in-memory storage):** Registered a new staff account → appears only under its selected department with `pending` → approved → `department_verification_status` flips to `approved` (and Marketplace/role fields untouched). Confirmed a department-less registration creates no pending entry. (UI tap-through to be confirmed in Expo Go.)
 
 ### Commits
-- *(added on push)* — `Add staff department verification scoped to selected department`
+- `cfd7c55` — `Add staff department verification scoped to selected department` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/cfd7c55)
