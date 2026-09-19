@@ -4,6 +4,7 @@ import { ProfileScreen } from '../screens/shared';
 import RequestOrganizerAccessScreen from '../screens/organizer/RequestOrganizerAccessScreen';
 import HolderReviewQueueScreen from '../screens/holder/HolderReviewQueueScreen';
 import { VerifyCosplayersScreen } from '../screens/organizer';
+import { VerifyStaffScreen } from '../screens/organizer';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -11,6 +12,7 @@ export type ProfileStackParamList = {
   RequestOrganizerAccess: undefined;
   HolderReviewQueue: undefined;
   VerifyCosplayers: undefined;
+  VerifyStaff: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -44,6 +46,11 @@ export const ProfileStackNavigator: React.FC = () => {
       <Stack.Screen
         name="VerifyCosplayers"
         component={VerifyCosplayersScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="VerifyStaff"
+        component={VerifyStaffScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

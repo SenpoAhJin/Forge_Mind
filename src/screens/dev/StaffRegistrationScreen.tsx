@@ -18,6 +18,7 @@ import {
 import { colors, spacing, typography, borderRadius } from '../../theme';
 import { AuthService } from '../../services/AuthService';
 import { OrganizerService } from '../../services/OrganizerService';
+import { StaffDepartment } from '../../types/organizer';
 import { Ionicons } from '@expo/vector-icons';
 import { TextInputField, RegistrationSuccessModal } from '../../components';
 import {
@@ -33,7 +34,7 @@ interface StaffRegistrationScreenProps {
   onBack: () => void;
 }
 
-const DEPARTMENTS = [
+const DEPARTMENTS: { value: StaffDepartment; label: string }[] = [
   { value: 'logistics', label: 'Logistics' },
   { value: 'programs', label: 'Programs' },
   { value: 'sponsorship', label: 'Sponsorship' },
@@ -51,7 +52,7 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [department, setDepartment] = useState('logistics');
+  const [department, setDepartment] = useState<StaffDepartment>('logistics');
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -126,12 +127,16 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
         // Set organizer_role to 'staff' directly (bypassing EventStaffMember invite)
         await AuthService.updateOrganizerRole(email.trim().toLowerCase(), 'staff');
 
+        // Event-trigger: department selected at registration → create a pending
+        // department verification. If department is blank/skipped, no entry is made.
+        await AuthService.setStaffDepartment(email.trim().toLowerCase(), department);
+
         // Create dev-only EventStaffMember record
         await OrganizerService.createDevStaffMember(
           email.trim().toLowerCase(),
           'dev-mock-head@test.com', // Mock head_user_id
           'dev-test-event',
-          department as any
+          department
         );
 
         // Log in immediately

@@ -287,6 +287,15 @@ export const ProfileScreen: React.FC = () => {
             <Text style={styles.cardNote}>
               Invite staff members to help organize your events. Assign them to departments and track their tasks.
             </Text>
+            {/* Verify Staff — single-department scope */}
+            <TouchableOpacity
+              style={styles.cardButton}
+              onPress={() => navigation.navigate('VerifyStaff')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cardButtonText}>Verify Staff by Department</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
 
           {/* Logistics Preview */}

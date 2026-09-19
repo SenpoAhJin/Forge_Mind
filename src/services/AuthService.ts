@@ -11,6 +11,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -43,6 +44,14 @@ export interface StoredAccount {
     agreed_to_marketplace_terms: boolean;  // ASSUMPTION: separate from account T&C, must be true
     submitted_at: string;                  // ASSUMPTION: ISO timestamp when form submitted
   };
+
+  // STAFF DEPARTMENT VERIFICATION (FE-*: single-department scoping)
+  // Only populated when staff registers with a department selected.
+  // department is the ONE department this staff account is verified for.
+  // department_verification_status reuses the pending/approved/rejected
+  // three-value pattern already established for Marketplace.
+  department?: StaffDepartment | null;                 // The ONE department selected at registration
+  department_verification_status?: DepartmentVerificationStatus; // pending | approved | rejected
 }
 
 export class AuthService {
@@ -307,6 +316,89 @@ export class AuthService {
     } catch (error) {
       console.error('[AuthService] Update verification status failed:', error);
       return { success: false, error: 'Failed to update verification status' };
+    }
+  }
+
+  /**
+   * Record a staff member's department and start it as "pending".
+   * Same event-trigger pattern as Marketplace (submitMarketplaceRegistration):
+   * it only becomes 'pending' because the staff registered with a department
+   * selected. If the department is somehow blank/skipped, NO pending entry
+   * is created at all.
+   */
+  static async setStaffDepartment(
+    email: string,
+    department: StaffDepartment | null | undefined
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!department) {
+      // Department blank/skipped — deliberately create no pending entry.
+      return { success: true };
+    }
+
+    try {
+      const accounts = await this.getAccounts();
+      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
+
+      if (index === -1) {
+        return { success: false, error: 'Account not found' };
+      }
+
+      accounts[index].department = department;
+      accounts[index].department_verification_status = 'pending';
+      await this.saveAccounts(accounts);
+
+      // Update active session if this is the current user
+      const activeSession = await this.getActiveSession();
+      if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
+        activeSession.department = department;
+        activeSession.department_verification_status = 'pending';
+        await this.setActiveSession(activeSession);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthService] Failed to set staff department:', error);
+      return { success: false, error: 'Failed to set staff department' };
+    }
+  }
+
+  /**
+   * Approve or reject a staff account's department verification.
+   * Scoped strictly to the ONE department that account selected — this does
+   * NOT grant any other department, nor Head Organizer/Marketplace access.
+   */
+  static async updateDepartmentVerificationStatus(
+    email: string,
+    status: Extract<DepartmentVerificationStatus, 'approved' | 'rejected'>
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const accounts = await this.getAccounts();
+      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
+
+      if (index === -1) {
+        return { success: false, error: 'Account not found' };
+      }
+
+      // Only update if the account has a department selected (their ONE department).
+      // Approving a department-less account would grant nothing meaningful.
+      if (!accounts[index].department) {
+        return { success: false, error: 'This staff account has no department selected' };
+      }
+
+      accounts[index].department_verification_status = status;
+      await this.saveAccounts(accounts);
+
+      // Update active session if this is the current user
+      const activeSession = await this.getActiveSession();
+      if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
+        activeSession.department_verification_status = status;
+        await this.setActiveSession(activeSession);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthService] Failed to update department verification status:', error);
+      return { success: false, error: 'Failed to update department verification status' };
     }
   }
 

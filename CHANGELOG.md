@@ -577,3 +577,39 @@ Exit Code: 0
 
 ### Commits
 - `84994d4` — `Button audit + success modal parity + T&C consent` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/84994d4)
+
+
+---
+
+## Session — Saturday, Sept 19, 2026, 09:51 (staff department verification)
+
+### What we did
+
+**Added department verification for staff accounts — scoped to the ONE department they picked at registration.**
+
+Previously, a Staff account simply self-declared a department (e.g., "Secretariat") with no check. Registering for a department instantly made you look like that department's staff with nothing reviewed. We added a verification step so a Head Organizer has to confirm each staff member for that specific department only.
+
+**New data field — `department_verification_status`:**
+- Lives on the staff account record, next to the department they selected (`department`).
+- Uses the same three-value pattern as Marketplace verification: **pending** / **approved** / **rejected**.
+- Starts as **pending** at registration — but only when a department is actually selected. If the department is somehow blank or skipped, no pending entry is created at all (same event-trigger style as Marketplace: the status only appears because the staff registered with a department chosen).
+
+**New Head Organizer screen — "Verify Staff":**
+- Reachable from Profile → Team Management → **Verify Staff by Department**.
+- Lists staff accounts that registered with a department, showing their **display name**, **email**, and **the ONE department they selected**.
+- Filterable/grouped by department (chips + department-grouped list) and by status (Pending / Approved / Rejected / All).
+- Approve / Reject buttons reuse the existing shared `Button` component (no rebuild).
+- The screen makes the scope explicit: approving confirms membership in that ONE department only.
+
+**Scope is strictly single-department — no bleed into other permissions:**
+- Approving sets `department_verification_status = 'approved'` for that staff account and that department only.
+- It does **not** grant any other department, does **not** make them Head Organizer, and does **not** touch Marketplace access (`verification_status` / `is_holder_verified` stay untouched).
+
+**Audit of "has a department = is staff in that department" elsewhere:**
+- Found `OrganizerService.getStaffForEvent` returning anyone with an accepted invite — and the dev shortcut auto-accepted invites at registration, so picking a department was treated as "is staff." Changed it to only return staff whose account has `department_verification_status === 'approved'` for that department.
+- `EventsScreen`/`LogisticsScreen`/`ProfileScreen` only check the `staff` role for informational banners, not department membership — no change needed there.
+
+**Verified (against real service code, in-memory storage):** Registered a new staff account → appears only under its selected department with `pending` → approved → `department_verification_status` flips to `approved` (and Marketplace/role fields untouched). Confirmed a department-less registration creates no pending entry. (UI tap-through to be confirmed in Expo Go.)
+
+### Commits
+- *(added on push)* — `Add staff department verification scoped to selected department`

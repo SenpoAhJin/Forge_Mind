@@ -5,7 +5,8 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OrganizerAccessRequest, EventStaffMember } from '../types/organizer';
+import { OrganizerAccessRequest, EventStaffMember, StaffDepartment } from '../types/organizer';
+import { AuthService } from './AuthService';
 
 const STORAGE_KEY_ACCESS_REQUESTS = '@forgemind_organizer_access_requests';
 const STORAGE_KEY_STAFF_MEMBERS = '@forgemind_event_staff_members';
@@ -305,11 +306,36 @@ export class OrganizerService {
 
   /**
    * Get staff members for an event
+   * Only returns staff whose linked account has department_verification_status === 'approved'
+   * for the department on this invite. Merely having selected a department (or holding an
+   * accepted invite) is NOT sufficient — approval is required.
    */
   static async getStaffForEvent(eventId: string): Promise<EventStaffMember[]> {
     try {
       const invites = await this.getAllStaffInvites();
-      return invites.filter(i => i.event_id === eventId && i.invite_status === 'accepted');
+      const accepted = invites.filter(i => i.event_id === eventId && i.invite_status === 'accepted');
+
+      // Build lookup of approved staff by email
+      const accounts = await AuthService.getAccounts();
+      const approvedEmails = new Set(
+        accounts
+          .filter(
+            acc =>
+              acc.organizer_role === 'staff' &&
+              acc.department_verification_status === 'approved' &&
+              !!acc.department
+          )
+          .map(acc => acc.email.toLowerCase())
+      );
+
+      // staff_user_id is either the email directly (dev shortcut) or `user-${prefix}` (invite flow)
+      const isApproved = (invite: EventStaffMember) => {
+        const direct = invite.staff_user_id.toLowerCase();
+        if (approvedEmails.has(direct)) return true;
+        return approvedEmails.has(`user-${direct.split('@')[0]}`);
+      };
+
+      return accepted.filter(isApproved);
     } catch (error) {
       console.error('[OrganizerService] Error getting event staff:', error);
       return [];
@@ -323,7 +349,7 @@ export class OrganizerService {
     staffUserId: string,
     headUserId: string,
     eventId: string,
-    department: 'logistics' | 'programs' | 'sponsorship' | 'secretariat' | 'technical_production' | 'marketing'
+    department: StaffDepartment
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const staffMember: EventStaffMember = {
