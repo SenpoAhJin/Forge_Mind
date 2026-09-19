@@ -21,7 +21,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TextInputField, RegistrationSuccessModal } from '../../components';
+import { TextInputField, MarketplaceRegistrationSuccessModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { AuthService } from '../../services/AuthService';
@@ -156,6 +156,11 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
   const handleSuccessModalContinue = () => {
     setShowSuccessModal(false);
     onSuccess();
+  };
+
+  const handleEditSubmission = () => {
+    // Just close modal - form is already pre-filled with current values
+    setShowSuccessModal(false);
   };
 
   return (
@@ -386,11 +391,15 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
       </View>
 
       {/* Success Modal */}
-      <RegistrationSuccessModal
+      <MarketplaceRegistrationSuccessModal
         visible={showSuccessModal}
-        displayName={sellerDisplayName}
-        email={contactEmail}
-        onContinue={handleSuccessModalContinue}
+        marketplaceRole={marketplaceRole!}
+        sellerDisplayName={sellerDisplayName}
+        contactEmail={contactEmail}
+        contactPhone={contactPhone || undefined}
+        payoutMethodLabel={payoutMethodLabel || undefined}
+        onBackToMarketplace={handleSuccessModalContinue}
+        onEditSubmission={handleEditSubmission}
       />
     </KeyboardAvoidingView>
   );

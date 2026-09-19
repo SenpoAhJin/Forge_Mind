@@ -16,7 +16,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   TextInput,
   Platform,
@@ -27,7 +26,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { formatVerificationStatus } from '../../utils/formatStatus';
 import { AuthService, StoredAccount } from '../../services/AuthService';
-import { RejectionReasonModal } from '../../components';
+import { RejectionReasonModal, ConfirmationModal } from '../../components';
 
 
 type VerificationFilter = 'pending' | 'verified' | 'all';
@@ -45,6 +44,18 @@ export const VerifyCosplayersScreen: React.FC = () => {
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [cosplayerToReject, setCosplayerToReject] = useState<StoredAccount | null>(null);
+  
+  // NEW: Approval confirmation modal state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [cosplayerToApprove, setCosplayerToApprove] = useState<StoredAccount | null>(null);
+  
+  // NEW: Success notification modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // NEW: Revoke confirmation modal state
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [cosplayerToRevoke, setCosplayerToRevoke] = useState<StoredAccount | null>(null);
 
   // Load cosplayers
   useEffect(() => {
@@ -88,7 +99,7 @@ export const VerifyCosplayersScreen: React.FC = () => {
       setCosplayers(cosplayerAccounts);
     } catch (error) {
       console.error('[VerifyCosplayers] Failed to load cosplayers:', error);
-      Alert.alert('Error', 'Failed to load cosplayers. Please try again.');
+      // Error handling: User will see empty state if load fails
     } finally {
       setLoading(false);
     }
@@ -96,32 +107,36 @@ export const VerifyCosplayersScreen: React.FC = () => {
 
   const handleVerify = async (cosplayer: StoredAccount, approve: boolean) => {
     if (approve) {
-      // Approve: show confirmation first
-      Alert.alert(
-        'Approve Application',
-        `Approve this application? ${cosplayer.display_name} will gain Marketplace access.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Approve',
-            style: 'default',
-            onPress: async () => {
-              try {
-                await AuthService.updateVerificationStatus(cosplayer.email, 'verified');
-                Alert.alert('Success', `${cosplayer.display_name} approved`);
-                loadCosplayers(); // Refresh list
-              } catch (error) {
-                Alert.alert('Error', 'Failed to approve application.');
-              }
-            },
-          },
-        ]
-      );
+      // Approve: show confirmation modal
+      setCosplayerToApprove(cosplayer);
+      setShowApprovalModal(true);
     } else {
-      // Reject: show modal for required reason
+      // Reject: show reason modal
       setCosplayerToReject(cosplayer);
       setShowRejectionModal(true);
     }
+  };
+
+  const handleApprovalConfirm = async () => {
+    if (!cosplayerToApprove) return;
+
+    setShowApprovalModal(false);
+
+    try {
+      await AuthService.updateVerificationStatus(cosplayerToApprove.email, 'verified');
+      setSuccessMessage(`${cosplayerToApprove.display_name} approved`);
+      setShowSuccessModal(true);
+      setCosplayerToApprove(null);
+      loadCosplayers(); // Refresh list
+    } catch (error) {
+      setSuccessMessage('Error: Failed to approve application');
+      setShowSuccessModal(true);
+    }
+  };
+
+  const handleApprovalCancel = () => {
+    setShowApprovalModal(false);
+    setCosplayerToApprove(null);
   };
 
   const handleRejectSubmit = async (reason: string) => {
@@ -133,12 +148,14 @@ export const VerifyCosplayersScreen: React.FC = () => {
         'rejected',
         reason
       );
-      Alert.alert('Rejected', `${cosplayerToReject.display_name}'s application was rejected`);
+      setSuccessMessage(`${cosplayerToReject.display_name}'s application was rejected`);
+      setShowSuccessModal(true);
       setShowRejectionModal(false);
       setCosplayerToReject(null);
       loadCosplayers(); // Refresh list
     } catch (error) {
-      Alert.alert('Error', 'Failed to reject application.');
+      setSuccessMessage('Error: Failed to reject application');
+      setShowSuccessModal(true);
     }
   };
 
@@ -148,26 +165,32 @@ export const VerifyCosplayersScreen: React.FC = () => {
   };
 
   const handleRevoke = async (cosplayer: StoredAccount) => {
-    Alert.alert(
-      'Revoke Access',
-      `Are you sure you want to revoke marketplace access for ${cosplayer.display_name}? They will need to be re-verified.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revoke',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AuthService.updateVerificationStatus(cosplayer.email, 'revoked');
-              Alert.alert('Success', `Marketplace access revoked for ${cosplayer.display_name}.`);
-              loadCosplayers();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to revoke access.');
-            }
-          },
-        },
-      ]
-    );
+    // Show confirmation modal for revoke action
+    setCosplayerToRevoke(cosplayer);
+    setShowRevokeModal(true);
+  };
+  
+  const handleRevokeConfirm = async () => {
+    if (!cosplayerToRevoke) return;
+    
+    try {
+      await AuthService.updateVerificationStatus(cosplayerToRevoke.email, 'revoked');
+      setSuccessMessage(`Marketplace access revoked for ${cosplayerToRevoke.display_name}.`);
+      setShowSuccessModal(true);
+      setShowRevokeModal(false);
+      setCosplayerToRevoke(null);
+      loadCosplayers();
+    } catch (error) {
+      setSuccessMessage('Error: Failed to revoke access');
+      setShowSuccessModal(true);
+      setShowRevokeModal(false);
+      setCosplayerToRevoke(null);
+    }
+  };
+  
+  const handleRevokeCancel = () => {
+    setShowRevokeModal(false);
+    setCosplayerToRevoke(null);
   };
 
   const renderCosplayerCard = (cosplayer: StoredAccount) => {
@@ -421,6 +444,38 @@ export const VerifyCosplayersScreen: React.FC = () => {
         applicantName={cosplayerToReject?.display_name || ''}
         onCancel={handleRejectCancel}
         onSubmit={handleRejectSubmit}
+      />
+
+      {/* Approval Confirmation Modal */}
+      <ConfirmationModal
+        visible={showApprovalModal}
+        title="Approve Application"
+        message={`Approve this application? ${cosplayerToApprove?.display_name || ''} will gain Marketplace access.`}
+        confirmText="Approve"
+        cancelText="Cancel"
+        onConfirm={handleApprovalConfirm}
+        onCancel={handleApprovalCancel}
+      />
+
+      {/* Success Notification Modal */}
+      <ConfirmationModal
+        visible={showSuccessModal}
+        title={successMessage.startsWith('Error') ? 'Error' : 'Success'}
+        message={successMessage}
+        confirmText="OK"
+        cancelText=""
+        onConfirm={() => setShowSuccessModal(false)}
+        onCancel={() => setShowSuccessModal(false)}
+      />
+      
+      {/* Revoke Confirmation Modal */}
+      <ConfirmationModal
+        visible={showRevokeModal}
+        title="Revoke Access"
+        message={`Are you sure you want to revoke marketplace access for ${cosplayerToRevoke?.display_name || ''}? They will need to be re-verified.`}
+        confirmText="Revoke"
+        onConfirm={handleRevokeConfirm}
+        onCancel={handleRevokeCancel}
       />
     </View>
   );

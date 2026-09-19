@@ -6,8 +6,8 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { Button } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
-import { OrganizerAccessRequest } from '../../types/organizer';
-import { formatVerificationStatus } from '../../utils/formatStatus';
+import { OrganizerAccessRequest, DEPARTMENT_LABELS } from '../../types/organizer';
+import { formatVerificationStatus, formatDepartmentVerificationStatus } from '../../utils/formatStatus';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, resetOnboarding, updateVerification } = useUser();
@@ -334,15 +334,26 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.detailRow}>
               <Ionicons name="briefcase-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.detailLabel}>Department</Text>
-              <Text style={styles.detailValue}>To be assigned</Text>
+              <Text style={styles.detailValue}>
+                {user.department ? DEPARTMENT_LABELS[user.department] : 'None selected'}
+              </Text>
             </View>
             <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Event</Text>
-              <Text style={styles.detailValue}>Waiting for invite</Text>
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>Status</Text>
+              <Text style={[
+                styles.detailValue,
+                user.department_verification_status === 'approved' && { color: colors.success },
+                user.department_verification_status === 'pending' && { color: colors.warning },
+                user.department_verification_status === 'rejected' && { color: colors.error },
+              ]}>
+                {user.department_verification_status
+                  ? formatDepartmentVerificationStatus(user.department_verification_status)
+                  : 'Not registered'}
+              </Text>
             </View>
             <Text style={styles.cardNote}>
-              Staff members have department-specific access to event logistics. You'll see your assignment details here once a Head Organizer invites you to an event.
+              Your department assignment and verification status. Head Organizers verify staff members for specific departments.
             </Text>
           </View>
 

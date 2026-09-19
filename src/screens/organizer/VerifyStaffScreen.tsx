@@ -23,7 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { AuthService, StoredAccount } from '../../services/AuthService';
-import { Button, RejectionReasonModal } from '../../components';
+import { Button, RejectionReasonModal, ConfirmationModal } from '../../components';
 import {
   STAFF_DEPARTMENTS,
   DEPARTMENT_LABELS,
@@ -47,6 +47,14 @@ export const VerifyStaffScreen: React.FC = () => {
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [staffToReject, setStaffToReject] = useState<StoredAccount | null>(null);
+  
+  // Approval confirmation modal state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [staffToApprove, setStaffToApprove] = useState<StoredAccount | null>(null);
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   // NEW: Track which departments have at least one Head Organizer assigned
   const [claimedDepartments, setClaimedDepartments] = useState<Set<StaffDepartment>>(new Set());
@@ -135,39 +143,43 @@ export const VerifyStaffScreen: React.FC = () => {
     const deptLabel = member.department ? DEPARTMENT_LABELS[member.department] : 'unknown department';
 
     if (approve) {
-      // Approve: show confirmation first
-      Alert.alert(
-        `Approve ${deptLabel} Staff`,
-        `Approve this application? ${member.display_name} will gain membership in the ${deptLabel} department only.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Approve',
-            style: 'default',
-            onPress: async () => {
-              try {
-                const result = await AuthService.updateDepartmentVerificationStatus(
-                  member.email,
-                  'approved'
-                );
-                if (result.success) {
-                  Alert.alert('Success', `${member.display_name} approved`);
-                  loadStaff();
-                } else {
-                  Alert.alert('Error', result.error || 'Failed to approve application.');
-                }
-              } catch (error) {
-                Alert.alert('Error', 'Failed to approve application.');
-              }
-            },
-          },
-        ]
-      );
+      // Approve: show confirmation modal
+      setStaffToApprove(member);
+      setShowApprovalModal(true);
     } else {
       // Reject: show modal for required reason
       setStaffToReject(member);
       setShowRejectionModal(true);
     }
+  };
+  
+  const handleApprovalConfirm = async () => {
+    if (!staffToApprove) return;
+    
+    const deptLabel = staffToApprove.department ? DEPARTMENT_LABELS[staffToApprove.department] : 'unknown department';
+    
+    try {
+      const result = await AuthService.updateDepartmentVerificationStatus(
+        staffToApprove.email,
+        'approved'
+      );
+      if (result.success) {
+        setShowApprovalModal(false);
+        setSuccessMessage(`${staffToApprove.display_name} approved for ${deptLabel}`);
+        setShowSuccessModal(true);
+        setStaffToApprove(null);
+        loadStaff();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to approve application.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to approve application.');
+    }
+  };
+  
+  const handleApprovalCancel = () => {
+    setShowApprovalModal(false);
+    setStaffToApprove(null);
   };
 
   const handleRejectSubmit = async (reason: string) => {
@@ -180,8 +192,9 @@ export const VerifyStaffScreen: React.FC = () => {
         reason
       );
       if (result.success) {
-        Alert.alert('Rejected', `${staffToReject.display_name}'s application was rejected`);
         setShowRejectionModal(false);
+        setSuccessMessage(`${staffToReject.display_name}'s application was rejected`);
+        setShowSuccessModal(true);
         setStaffToReject(null);
         loadStaff();
       } else {
@@ -397,6 +410,27 @@ export const VerifyStaffScreen: React.FC = () => {
         applicantName={staffToReject?.display_name || ''}
         onCancel={handleRejectCancel}
         onSubmit={handleRejectSubmit}
+      />
+      
+      {/* Approval Confirmation Modal */}
+      <ConfirmationModal
+        visible={showApprovalModal}
+        title={`Approve ${staffToApprove?.department ? DEPARTMENT_LABELS[staffToApprove.department] : ''} Staff`}
+        message={`Approve this application? ${staffToApprove?.display_name || ''} will gain membership in the ${staffToApprove?.department ? DEPARTMENT_LABELS[staffToApprove.department] : 'unknown'} department only.`}
+        confirmText="Approve"
+        onConfirm={handleApprovalConfirm}
+        onCancel={handleApprovalCancel}
+      />
+      
+      {/* Success Modal */}
+      <ConfirmationModal
+        visible={showSuccessModal}
+        title="Success"
+        message={successMessage}
+        confirmText="OK"
+        cancelText=""
+        onConfirm={() => setShowSuccessModal(false)}
+        onCancel={() => setShowSuccessModal(false)}
       />
     </View>
   );
