@@ -47,15 +47,46 @@ export const VerifyStaffScreen: React.FC = () => {
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [staffToReject, setStaffToReject] = useState<StoredAccount | null>(null);
+  
+  // NEW: Track which departments have at least one Head Organizer assigned
+  const [claimedDepartments, setClaimedDepartments] = useState<Set<StaffDepartment>>(new Set());
 
   // Load staff accounts (organizer_role === 'staff' with a department on record)
   useEffect(() => {
     loadStaff();
+    loadClaimedDepartments();
   }, []);
 
-  // Filter/group staff based on status and department
+  // Load which departments have Head Organizers assigned
+  const loadClaimedDepartments = async () => {
+    try {
+      const accounts = await AuthService.getAccounts();
+      const headOrganizers = accounts.filter(
+        acc => acc.organizer_role === 'head' && acc.head_organizer_department
+      );
+      const claimed = new Set(headOrganizers.map(acc => acc.head_organizer_department!));
+      setClaimedDepartments(claimed);
+    } catch (error) {
+      console.error('[VerifyStaffScreen] Failed to load claimed departments:', error);
+    }
+  };
+
+  // Filter/group staff based on status, department, and Head Organizer department ownership
   useEffect(() => {
     let filtered = staff;
+
+    // NEW: Scope by Head Organizer department (with fallback for unclaimed departments)
+    if (user?.head_organizer_department) {
+      // This Head Organizer has a department assigned - show only their department's staff
+      filtered = filtered.filter(acc => acc.department === user.head_organizer_department);
+    } else {
+      // This Head Organizer has NO department (legacy/shouldn't happen) OR
+      // we need fallback logic: show staff from departments with NO Head Organizers assigned
+      filtered = filtered.filter(acc => {
+        // Show staff if their department has NO Head Organizers claimed
+        return !claimedDepartments.has(acc.department!);
+      });
+    }
 
     // Status filter (pending/approved/rejected/all)
     if (statusFilter !== 'all') {
@@ -77,7 +108,7 @@ export const VerifyStaffScreen: React.FC = () => {
     });
 
     setFilteredStaff(filtered);
-  }, [staff, statusFilter, departmentFilter]);
+  }, [staff, statusFilter, departmentFilter, user, claimedDepartments]);
 
   const loadStaff = async () => {
     setLoading(true);

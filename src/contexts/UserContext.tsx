@@ -31,6 +31,10 @@ interface User {
   // Organizer hierarchy (FE-5.5 - real schema, replaces mock fields)
   organizer_role: 'head' | 'staff' | null;  // User.organizer_role (Enum, nullable)
   
+  // HEAD ORGANIZER DEPARTMENT OWNERSHIP
+  // Each Head Organizer manages ONE department. Multiple Head Organizers can manage the SAME department.
+  head_organizer_department?: StaffDepartment | null; // NEW: The ONE department this Head Organizer manages
+  
   // Marketplace registration (ASSUMPTIONS - not in Foundation spec)
   marketplace_registration?: {
     marketplace_role: 'buyer' | 'seller' | 'both';  // STEP 2: buyer/seller differentiation

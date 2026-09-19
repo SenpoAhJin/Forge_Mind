@@ -32,6 +32,10 @@ export interface StoredAccount {
   verification_status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'; // User.verification_status (Enum)
   organizer_role: 'head' | 'staff' | null; // User.organizer_role (FE-5.5 - Enum, nullable)
   
+  // HEAD ORGANIZER DEPARTMENT OWNERSHIP
+  // Each Head Organizer manages ONE department. Multiple Head Organizers can manage the SAME department.
+  head_organizer_department?: StaffDepartment | null; // NEW: The ONE department this Head Organizer manages
+  
   // MARKETPLACE REGISTRATION (ASSUMPTIONS - not in Foundation spec v0.2.1)
   // Only populated when user submits marketplace registration form
   // Feeds existing verification pipeline (verification_status field above)
@@ -284,6 +288,38 @@ export class AuthService {
     } catch (error) {
       console.error('[AuthService] Failed to update organizer_role:', error);
       return { success: false, error: 'Failed to update role' };
+    }
+  }
+
+  /**
+   * Set Head Organizer's department ownership
+   * Each Head Organizer manages ONE department. Multiple Head Organizers can manage the SAME department.
+   */
+  static async setHeadOrganizerDepartment(
+    email: string,
+    department: StaffDepartment | null
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const accounts = await this.getAccounts();
+      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
+
+      if (index === -1) {
+        return { success: false, error: 'Account not found' };
+      }
+
+      accounts[index].head_organizer_department = department;
+      await this.saveAccounts(accounts);
+
+      // Update active session if this is the current user
+      const session = await this.getActiveSession();
+      if (session && session.email.toLowerCase() === email.toLowerCase()) {
+        await this.setActiveSession({ ...session, head_organizer_department: department });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthService] Failed to set Head Organizer department:', error);
+      return { success: false, error: 'Failed to set department' };
     }
   }
 

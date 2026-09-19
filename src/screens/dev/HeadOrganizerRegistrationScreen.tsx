@@ -26,6 +26,11 @@ import {
   validateDisplayName,
   validateRequired,
 } from '../../utils/validation';
+import {
+  STAFF_DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  StaffDepartment,
+} from '../../types/organizer';
 
 interface HeadOrganizerRegistrationScreenProps {
   onSuccess: () => void;
@@ -43,6 +48,7 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [organization, setOrganization] = useState('');
+  const [department, setDepartment] = useState<StaffDepartment | null>(null); // NEW: Head Organizer department
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -56,6 +62,7 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [organizationError, setOrganizationError] = useState('');
+  const [departmentError, setDepartmentError] = useState(''); // NEW
   const [globalError, setGlobalError] = useState('');
 
   const handleValidateDisplayName = (value: string) => {
@@ -98,6 +105,12 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
     const isConfirmPasswordValid = handleValidateConfirmPassword(confirmPassword);
     const isOrganizationValid = handleValidateOrganization(organization);
 
+    // NEW: Validate department selection
+    if (!department) {
+      setDepartmentError('Please select a department');
+      return;
+    }
+
     if (
       !isDisplayNameValid ||
       !isEmailValid ||
@@ -125,6 +138,9 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
       if (result.success) {
         // Set organizer_role to 'head' directly (bypassing OrganizerAccessRequest)
         await AuthService.updateOrganizerRole(email.trim().toLowerCase(), 'head');
+
+        // NEW: Set Head Organizer department
+        await AuthService.setHeadOrganizerDepartment(email.trim().toLowerCase(), department);
 
         // Log in immediately
         const loginResult = await AuthService.login(email.trim().toLowerCase(), password);
@@ -271,8 +287,44 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
             }}
             placeholder="e.g., Manila Cosplay Con"
             error={organizationError}
-
           />
+
+          {/* NEW: Department selection */}
+          <View style={styles.departmentSection}>
+            <Text style={styles.departmentLabel}>Department to Manage *</Text>
+            <Text style={styles.departmentHint}>
+              Select the ONE department you will manage. Multiple Head Organizers can manage the same department.
+            </Text>
+            <View style={styles.departmentGrid}>
+              {STAFF_DEPARTMENTS.map((dept) => (
+                <TouchableOpacity
+                  key={dept}
+                  style={[
+                    styles.departmentButton,
+                    department === dept && styles.departmentButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setDepartment(dept);
+                    setDepartmentError('');
+                  }}
+                  activeOpacity={0.7}
+                  disabled={loading}
+                >
+                  <Text
+                    style={[
+                      styles.departmentButtonText,
+                      department === dept && styles.departmentButtonTextSelected,
+                    ]}
+                  >
+                    {DEPARTMENT_LABELS[dept]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {departmentError ? (
+              <Text style={styles.departmentError}>{departmentError}</Text>
+            ) : null}
+          </View>
         </View>
 
         {globalError ? <Text style={styles.globalError}>{globalError}</Text> : null}
@@ -368,6 +420,50 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: spacing.xl,
+  },
+  departmentSection: {
+    marginTop: spacing.lg,
+  },
+  departmentLabel: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  departmentHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  departmentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  departmentButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundLight,
+  },
+  departmentButtonSelected: {
+    borderColor: colors.secondary,
+    backgroundColor: `${colors.secondary}10`,
+  },
+  departmentButtonText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  departmentButtonTextSelected: {
+    color: colors.secondary,
+  },
+  departmentError: {
+    ...typography.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
   passwordContainer: {
     position: 'relative',
