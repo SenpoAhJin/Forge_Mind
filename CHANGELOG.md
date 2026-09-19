@@ -696,4 +696,4 @@ Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.ema
 **Verified:** `npx tsc --noEmit` passes clean; `git grep "navigate('Marketplace')"` returns zero hits (only the tab registration + `MarketplaceRegistration` route names remain, which are unique).
 
 ### Commits
-- `(added on push)` — `Remove duplicate Marketplace screen name nested inside one another (Marketplace → MarketplaceHome)`
+- `887823d` — `Remove duplicate Marketplace screen name nested inside one another (Marketplace → MarketplaceHome)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/887823d)
