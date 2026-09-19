@@ -674,4 +674,4 @@ Each card's "tap to reveal" now just checks `revealedPayoutFor === cosplayer.ema
 **Verified:** `npx tsc --noEmit` → clean. Repo-wide grep confirms no remaining screen renders the raw snake_case enum text.
 
 ### Commits
-- `(added on push)` — `Format verification status labels for display (no raw enums)`
+- `0152d4e` — `Format verification status labels for display (no raw enums)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/0152d4e)
