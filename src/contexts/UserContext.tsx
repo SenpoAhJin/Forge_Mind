@@ -147,7 +147,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...user,
       is_holder_verified: isVerified,
       verification_status: status,
-    };
+    } as StoredAccount;  // STEP 2: Type assertion to preserve marketplace_registration type
     
     await AuthService.updateUser(updated);
     setUser(updated);

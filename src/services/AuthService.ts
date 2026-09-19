@@ -36,6 +36,7 @@ export interface StoredAccount {
   // Only populated when user submits marketplace registration form
   // Feeds existing verification pipeline (verification_status field above)
   marketplace_registration?: {
+    marketplace_role: 'buyer' | 'seller' | 'both';  // STEP 2: buyer/seller differentiation
     seller_display_name: string;          // ASSUMPTION: defaults to display_name, editable
     contact_email: string;                 // ASSUMPTION: defaults to email, editable, validated
     contact_phone?: string;                // ASSUMPTION: optional
@@ -409,6 +410,7 @@ export class AuthService {
   static async submitMarketplaceRegistration(
     email: string,
     registrationData: {
+      marketplace_role: 'buyer' | 'seller' | 'both';  // STEP 2: required role selection
       seller_display_name: string;
       contact_email: string;
       contact_phone?: string;

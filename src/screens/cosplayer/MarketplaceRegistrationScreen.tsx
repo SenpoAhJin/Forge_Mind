@@ -39,6 +39,9 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
 }) => {
   const { user } = useUser();
 
+  // STEP 2: Marketplace role selection
+  const [marketplaceRole, setMarketplaceRole] = useState<'buyer' | 'seller' | 'both' | null>(null);
+
   // Form fields (pre-filled with account defaults)
   const [sellerDisplayName, setSellerDisplayName] = useState(user?.display_name || '');
   const [contactEmail, setContactEmail] = useState(user?.email || '');
@@ -57,6 +60,9 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // STEP 2: Determine if payout fields are required
+  const requiresPayoutInfo = marketplaceRole === 'seller' || marketplaceRole === 'both';
+
   // Validation functions
   const validateSellerDisplayName = (value: string): boolean => {
     const result = validateRequired(value, 'Seller display name');
@@ -71,12 +77,22 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
   };
 
   const validatePayoutMethodLabel = (value: string): boolean => {
+    // STEP 2: Only validate if payout info is required
+    if (!requiresPayoutInfo) {
+      setPayoutMethodLabelError('');
+      return true;
+    }
     const result = validateRequired(value, 'Payout method');
     setPayoutMethodLabelError(result.error);
     return result.valid;
   };
 
   const validatePayoutMethodNumber = (value: string): boolean => {
+    // STEP 2: Only validate if payout info is required
+    if (!requiresPayoutInfo) {
+      setPayoutMethodNumberError('');
+      return true;
+    }
     const result = validateRequired(value, 'Account/phone number');
     setPayoutMethodNumberError(result.error);
     return result.valid;
@@ -89,6 +105,12 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
     }
 
     setGlobalError('');
+
+    // STEP 2: Validate marketplace role selection
+    if (!marketplaceRole) {
+      setGlobalError('Please select your marketplace role');
+      return;
+    }
 
     // Validate all fields
     const isSellerNameValid = validateSellerDisplayName(sellerDisplayName);
@@ -110,6 +132,7 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
 
     try {
       const result = await AuthService.submitMarketplaceRegistration(user.email, {
+        marketplace_role: marketplaceRole,  // STEP 2: include role in submission
         seller_display_name: sellerDisplayName.trim(),
         contact_email: contactEmail.trim().toLowerCase(),
         contact_phone: contactPhone.trim() || undefined,
@@ -153,15 +176,84 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
           </View>
           <Text style={styles.title}>Marketplace Registration</Text>
           <Text style={styles.subtitle}>
-            Register as a seller to list items, propose trades, and request commissions
+            Choose your role and complete your marketplace profile
+          </Text>
+        </View>
+
+        {/* STEP 2: Marketplace Role Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>I want to use the Marketplace as a:</Text>
+          <View style={styles.roleContainer}>
+            <TouchableOpacity
+              style={[styles.roleButton, marketplaceRole === 'buyer' && styles.roleButtonSelected]}
+              onPress={() => setMarketplaceRole('buyer')}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name="cart-outline"
+                size={24}
+                color={marketplaceRole === 'buyer' ? colors.primary : colors.textSecondary}
+              />
+              <Text style={[
+                styles.roleButtonText,
+                marketplaceRole === 'buyer' && styles.roleButtonTextSelected
+              ]}>
+                Buyer
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.roleButton, marketplaceRole === 'seller' && styles.roleButtonSelected]}
+              onPress={() => setMarketplaceRole('seller')}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name="storefront-outline"
+                size={24}
+                color={marketplaceRole === 'seller' ? colors.primary : colors.textSecondary}
+              />
+              <Text style={[
+                styles.roleButtonText,
+                marketplaceRole === 'seller' && styles.roleButtonTextSelected
+              ]}>
+                Seller
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.roleButton, marketplaceRole === 'both' && styles.roleButtonSelected]}
+              onPress={() => setMarketplaceRole('both')}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name="swap-horizontal-outline"
+                size={24}
+                color={marketplaceRole === 'both' ? colors.primary : colors.textSecondary}
+              />
+              <Text style={[
+                styles.roleButtonText,
+                marketplaceRole === 'both' && styles.roleButtonTextSelected
+              ]}>
+                Both
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.roleNote}>
+            {marketplaceRole === 'buyer' && 'Browse and purchase items from verified sellers'}
+            {marketplaceRole === 'seller' && 'List items, accept commissions, and manage sales'}
+            {marketplaceRole === 'both' && 'Full access to buy and sell in the marketplace'}
+            {!marketplaceRole && 'Select your primary marketplace activity'}
           </Text>
         </View>
 
         {/* Seller Info Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seller Information</Text>
+          <Text style={styles.sectionTitle}>Display Name</Text>
           <Text style={styles.sectionSubtitle}>
-            How you'll appear to buyers and traders
+            How you'll appear in the marketplace
           </Text>
 
           <TextInputField
@@ -176,7 +268,7 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
           />
 
           <Text style={styles.fieldNote}>
-            This can be different from your account name. Choose how you want to be known in the marketplace.
+            This can be different from your account name
           </Text>
         </View>
 
@@ -184,7 +276,7 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contact Information</Text>
           <Text style={styles.sectionSubtitle}>
-            Buyers will use this to reach you for orders and inquiries
+            How participants can reach you
           </Text>
 
           <TextInputField
@@ -209,46 +301,48 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
           />
         </View>
 
-        {/* Payout Info Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payout Information</Text>
-          <Text style={styles.sectionSubtitle}>
-            Where you'll receive payments for sales
-          </Text>
+        {/* STEP 2: Payout Info Section - Only shown for seller or both */}
+        {requiresPayoutInfo && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Payout Information</Text>
+            <Text style={styles.sectionSubtitle}>
+              Where you'll receive payments for sales
+            </Text>
 
-          <View style={styles.mockBanner}>
-            <Ionicons name="warning-outline" size={16} color={colors.warning} />
-            <Text style={styles.mockBannerText}>
-              DEMO ONLY — These fields are not encrypted or secured. Real payment integration in backend phase.
+            <View style={styles.mockBanner}>
+              <Ionicons name="warning-outline" size={16} color={colors.warning} />
+              <Text style={styles.mockBannerText}>
+                DEMO ONLY — These fields are not encrypted or secured. Real payment integration in backend phase.
+              </Text>
+            </View>
+
+            <TextInputField
+              label="Payout Method"
+              value={payoutMethodLabel}
+              onChangeText={(text) => {
+                setPayoutMethodLabel(text);
+                if (payoutMethodLabelError) validatePayoutMethodLabel(text);
+              }}
+              placeholder="e.g., GCash, Bank Transfer, PayMaya"
+              error={payoutMethodLabelError}
+            />
+
+            <TextInputField
+              label="Account/Phone Number"
+              value={payoutMethodNumber}
+              onChangeText={(text) => {
+                setPayoutMethodNumber(text);
+                if (payoutMethodNumberError) validatePayoutMethodNumber(text);
+              }}
+              placeholder="Account number or mobile number"
+              error={payoutMethodNumberError}
+            />
+
+            <Text style={styles.fieldNote}>
+              Examples: GCash number (09XX XXX XXXX), bank account number, PayMaya number
             </Text>
           </View>
-
-          <TextInputField
-            label="Payout Method"
-            value={payoutMethodLabel}
-            onChangeText={(text) => {
-              setPayoutMethodLabel(text);
-              if (payoutMethodLabelError) validatePayoutMethodLabel(text);
-            }}
-            placeholder="e.g., GCash, Bank Transfer, PayMaya"
-            error={payoutMethodLabelError}
-          />
-
-          <TextInputField
-            label="Account/Phone Number"
-            value={payoutMethodNumber}
-            onChangeText={(text) => {
-              setPayoutMethodNumber(text);
-              if (payoutMethodNumberError) validatePayoutMethodNumber(text);
-            }}
-            placeholder="Account number or mobile number"
-            error={payoutMethodNumberError}
-          />
-
-          <Text style={styles.fieldNote}>
-            Examples: GCash number (09XX XXX XXXX), bank account number, PayMaya number
-          </Text>
-        </View>
+        )}
 
         {/* Marketplace Terms */}
         <TouchableOpacity
@@ -351,6 +445,44 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     marginBottom: spacing.md,
+  },
+  // STEP 2: Role selection styles
+  roleContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  roleButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundLight,
+  },
+  roleButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}10`,
+  },
+  roleButtonText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginTop: spacing.xs,
+  },
+  roleButtonTextSelected: {
+    color: colors.primary,
+  },
+  roleNote: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   fieldNote: {
     ...typography.caption,

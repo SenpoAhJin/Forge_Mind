@@ -180,9 +180,20 @@ export const VerifyCosplayersScreen: React.FC = () => {
         {/* Marketplace Registration Details (if submitted) */}
         {marketplaceReg && (
           <View style={styles.registrationDetails}>
+            {/* STEP 2: Role tag */}
+            <View style={styles.roleTagContainer}>
+              <View style={styles.roleTag}>
+                <Text style={styles.roleTagText}>
+                  {marketplaceReg.marketplace_role === 'buyer' && 'Buyer'}
+                  {marketplaceReg.marketplace_role === 'seller' && 'Seller'}
+                  {marketplaceReg.marketplace_role === 'both' && 'Buyer & Seller'}
+                </Text>
+              </View>
+            </View>
+
             <View style={styles.detailRow}>
               <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Seller Name:</Text>
+              <Text style={styles.detailLabel}>Display Name:</Text>
               <Text style={styles.detailValue}>{marketplaceReg.seller_display_name}</Text>
             </View>
             <View style={styles.detailRow}>
@@ -197,33 +208,39 @@ export const VerifyCosplayersScreen: React.FC = () => {
                 <Text style={styles.detailValue}>{marketplaceReg.contact_phone}</Text>
               </View>
             )}
-            <View style={styles.detailRow}>
-              <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Payout:</Text>
-              <Text style={styles.detailValue}>{marketplaceReg.payout_method_label}</Text>
-            </View>
-            {/* Payout number: hidden by default, tap to reveal */}
-            <TouchableOpacity
-              style={styles.revealButton}
-              onPress={() =>
-                setRevealedPayoutFor(payoutRevealed ? null : cosplayer.email)
-              }
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={payoutRevealed ? 'eye-off-outline' : 'eye-outline'}
-                size={16}
-                color={colors.primary}
-              />
-              <Text style={styles.revealButtonText}>
-                {payoutRevealed ? 'Hide' : 'Show'} Payout Number
-              </Text>
-            </TouchableOpacity>
-            {payoutRevealed && (
-              <View style={styles.payoutNumberBox}>
-                <Text style={styles.payoutNumberText}>{marketplaceReg.payout_method_number}</Text>
-                <Text style={styles.mockWarning}>⚠️ MOCK FIELD (not encrypted)</Text>
-              </View>
+
+            {/* STEP 2: Only show payout info for seller or both */}
+            {(marketplaceReg.marketplace_role === 'seller' || marketplaceReg.marketplace_role === 'both') && (
+              <>
+                <View style={styles.detailRow}>
+                  <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>Payout:</Text>
+                  <Text style={styles.detailValue}>{marketplaceReg.payout_method_label}</Text>
+                </View>
+                {/* Payout number: hidden by default, tap to reveal */}
+                <TouchableOpacity
+                  style={styles.revealButton}
+                  onPress={() =>
+                    setRevealedPayoutFor(payoutRevealed ? null : cosplayer.email)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={payoutRevealed ? 'eye-off-outline' : 'eye-outline'}
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.revealButtonText}>
+                    {payoutRevealed ? 'Hide' : 'Show'} Payout Number
+                  </Text>
+                </TouchableOpacity>
+                {payoutRevealed && (
+                  <View style={styles.payoutNumberBox}>
+                    <Text style={styles.payoutNumberText}>{marketplaceReg.payout_method_number}</Text>
+                    <Text style={styles.mockWarning}>⚠️ MOCK FIELD (not encrypted)</Text>
+                  </View>
+                )}
+              </>
             )}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
@@ -590,6 +607,22 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: spacing.xs,
+  },
+  // STEP 2: Role tag styles
+  roleTagContainer: {
+    marginBottom: spacing.sm,
+  },
+  roleTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: borderRadius.sm,
+  },
+  roleTagText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.primary,
   },
   detailRow: {
     flexDirection: 'row',

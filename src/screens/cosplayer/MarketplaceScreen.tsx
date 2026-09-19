@@ -37,7 +37,7 @@ export const MarketplaceScreen: React.FC = () => {
           <View style={styles.featureList}>
             <View style={styles.featureRow}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-              <Text style={styles.featureText}>List items for sale or trade</Text>
+              <Text style={styles.featureText}>Browse and list cosplay items</Text>
             </View>
             <View style={styles.featureRow}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
@@ -49,7 +49,7 @@ export const MarketplaceScreen: React.FC = () => {
             </View>
             <View style={styles.featureRow}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-              <Text style={styles.featureText}>Chat with buyers and sellers</Text>
+              <Text style={styles.featureText}>Chat with other participants</Text>
             </View>
           </View>
 
