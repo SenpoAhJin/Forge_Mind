@@ -7,6 +7,7 @@ import { OrganizerTabNavigator } from './OrganizerTabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { useUser } from '../contexts/UserContext';
+import { GlobalNotificationHandler } from '../components';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
 export const RootNavigator: React.FC = () => {
@@ -49,6 +50,7 @@ export const RootNavigator: React.FC = () => {
 
   return (
     <NavigationContainer>
+      <GlobalNotificationHandler />
       <View style={styles.root}>
         {showRoleSwitcher && (
           <SafeAreaView edges={['top']} style={styles.switcherSafe}>

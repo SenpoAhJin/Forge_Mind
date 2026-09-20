@@ -17,7 +17,6 @@ import { OffersProvider } from './src/contexts/OffersContext';
 import { ChatProvider } from './src/contexts/ChatContext';
 import { EventsProvider } from './src/contexts/EventsContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { GlobalNotificationHandler } from './src/components';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
 
@@ -50,7 +49,6 @@ export default function App() {
                   <ChatProvider>
                     <EventsProvider>
                       <RootNavigator />
-                      <GlobalNotificationHandler />
                       <StatusBar style="auto" />
                     </EventsProvider>
                   </ChatProvider>
