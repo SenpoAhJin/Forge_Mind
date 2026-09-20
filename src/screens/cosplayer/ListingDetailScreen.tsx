@@ -18,6 +18,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Button } from '../../components';
+import { formatPHP } from '../../utils/formatCurrency';
 
 type ListingDetailRouteProp = RouteProp<{ params: { listingId: string } }, 'params'>;
 
@@ -45,7 +46,7 @@ export const ListingDetailScreen: React.FC = () => {
     );
   }
 
-  const formattedPrice = listing.price.toFixed(2);
+  const formattedPrice = formatPHP(listing.price);
   const formattedDate = new Date(listing.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -58,7 +59,7 @@ export const ListingDetailScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.title}>{listing.title}</Text>
         <View style={styles.priceRow}>
-          <Text style={styles.price}>${formattedPrice}</Text>
+          <Text style={styles.price}>{formattedPrice}</Text>
           <View style={styles.conditionBadge}>
             <Text style={styles.conditionText}>
               {CONDITION_LABELS[listing.condition]}

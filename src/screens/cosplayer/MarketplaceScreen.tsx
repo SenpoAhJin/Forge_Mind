@@ -17,6 +17,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Listing } from '../../types/marketplace';
+import { formatPHP } from '../../utils/formatCurrency';
 
 export const MarketplaceScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -188,7 +189,6 @@ const MarketplaceBrowse: React.FC = () => {
   }, [selectedCategory, getActiveListings]);
 
   const renderListingCard = ({ item }: { item: Listing }) => {
-    const formattedPrice = item.price.toFixed(2);
     const hasPhoto = item.photos && item.photos.length > 0;
     
     // Generate initials from title for placeholder
@@ -221,7 +221,7 @@ const MarketplaceBrowse: React.FC = () => {
           <View style={styles.listingDetails}>
             <View style={styles.listingHeader}>
               <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
-              <Text style={styles.listingPrice}>${formattedPrice}</Text>
+              <Text style={styles.listingPrice}>{formatPHP(item.price)}</Text>
             </View>
             
             <View style={styles.listingMeta}>
@@ -611,13 +611,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     overflow: 'hidden',
+    // Minimum footprint sized to comfortably fit the 2-line description cap
+    // (title ~1 line + tags + 2-line description), so a card with a one-line
+    // description occupies the same box as one with a full two-line cap.
+    minHeight: 120,
   },
   cardContent: {
     flexDirection: 'row',
+    alignItems: 'stretch', // thumbnail column fills the full card height
   },
   listingThumbnail: {
     width: 100,
-    height: 100,
+    minHeight: 100, // grows with the card via stretch, never collapses
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',

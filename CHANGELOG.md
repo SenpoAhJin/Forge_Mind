@@ -2075,3 +2075,66 @@ Exit Code: 0
 ---
 
 *Last updated: September 20, 2026, 11:31*
+
+---
+
+## Session — Sunday, September 20, 2026, 12:43 (FE-6 Step 2 follow-up: expand blocklist, fix "fire arm"/mixed-case gap, prohibited-items notice, PHP pricing, card height consistency)
+
+### What we did
+
+**Follow-up fix to FE-6 Step 2 (commit `ff0f273`), found through real testing.** A listing titled "real gun" with description "fire arm glock real gun" ($1000.00) published successfully and appeared in the public browse feed — it should have been blocked. Root causes: the old blocklist had "firearm" (no space) but the listing said "fire arm" (two words, which the substring check misses), and common terms like "gun" weren't on the list at all. This session also folds in two fixes requested beforehand: standardizing displayed currency to Philippine pesos (PHP), and fixing inconsistent listing-card box heights between short and long descriptions.
+
+**Scoped to these four items only** — the screener's category-check logic, the appeal flow, and everything else from Step 2 that wasn't broken were left untouched.
+
+**1. Expanded the blocklist, organized by category.** `src/utils/listingScreener.ts` now holds an illustrative, non-exhaustive MOCK/DEMO list grouped by category (weapons/firearms, drugs, real estate/vehicles, live animals, counterfeit/illegal goods, adult content). It stays labeled as a demo list, not a production moderation system — real classification is Phase 4. Both "firearm" and "fire arm" exist as separate entries because matching is a plain substring check (no normalization/fuzzy matching until Phase 4). Case-insensitivity is handled via `.toLowerCase()` on both sides, which the trace confirmed covers mixed case like "Real GUn" → "gun".
+
+**2. Prohibited-items notice on Create Listing.** `CreateListingScreen.tsx` now shows a warning banner (same banner pattern as the existing "Photo upload will be added..." note, warning-colored) before the submit button: "This marketplace is for cosplay-related items and services only. Listings involving real weapons/firearms, drugs, real estate, vehicles, live animals, counterfeit goods, or other items outside the cosplay community will be automatically blocked from publishing." The wording stays at the category level — it does NOT enumerate the literal blocklist words (same reasoning as the block modal's generic reason text: don't teach sellers how to word around the filter).
+
+**3. Standardized pricing display to PHP.** Created `src/utils/formatCurrency.ts` with `formatPHP(amount)` → "₱1,000.00" (peso sign, thousands separator, two decimals; no Intl dependency so it behaves the same on Hermes/RN Web). Applied everywhere a listing price is rendered:
+- Browse cards (`MarketplaceScreen.tsx`): was `$` + `price.toFixed(2)` → now `formatPHP(item.price)`.
+- Listing details (`ListingDetailScreen.tsx`): was `$` + `toFixed(2)` → now `formatPHP(listing.price)`.
+- Create form (`CreateListingScreen.tsx`): price input label changed to "Price (₱) *" (the input component has no prefix/suffix prop, so the label pattern was used, as the fix allowed).
+The stored `price` field stays a plain number — only the display layer changes, same store-raw/format-at-render pattern as `formatVerificationStatus`. Note: other screens (Card.tsx, ProjectDashboardScreen, OwnedItemDetail) already inlined `₱` formatting; they are untouched and can migrate to this helper later.
+
+**Seed-price decision: ADJUSTED (flagged, not silent).** The 6 seed values were written assuming USD scale ($45 wig, $25 rings, etc.), which would read oddly as ₱45. They were adjusted to realistic Philippine cosplay-market prices: wig 1800, Makima rings 750, satin 600, EVA foam 1200, photography session 3500, prop-sword commission 6000 (all .00). Real user-created listings are unaffected — their numbers just now display with a `₱` prefix.
+
+**4. Fixed inconsistent listing-card heights.** `MarketplaceScreen.tsx` card styles: added `minHeight: 120` to the card (sized to comfortably fit the title + tags + the existing 2-line description cap), so a card with a one-line description occupies the same box as one with a full two-line description; added `alignItems: 'stretch'` to the row content so the thumbnail column now fills the full card height instead of leaving a gap when text is taller; changed the thumbnail from fixed `height: 100` to `minHeight: 100` so it stretches with the card but never collapses. Description truncation at 2 lines (`numberOfLines={2}`) is unchanged.
+
+### Files Created
+- `src/utils/formatCurrency.ts` — shared `formatPHP()` currency helper
+
+### Files Modified
+- `src/utils/listingScreener.ts` — categorized/expanded MOCK blocklist (27 terms), "fire arm" + "gun" entries, known-trade-off note in comments
+- `src/screens/cosplayer/MarketplaceScreen.tsx` — card price via `formatPHP`; card `minHeight: 120` + stretched thumbnail for uniform box heights
+- `src/screens/cosplayer/ListingDetailScreen.tsx` — detail price via `formatPHP`
+- `src/screens/cosplayer/CreateListingScreen.tsx` — "Price (₱) *" label; prohibited-items notice banner + styles
+- `src/data/marketplace_listings.json` — seed prices adjusted to realistic PHP scale
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Self-verified traces
+- **"Real GUn" (mixed case) / "Real Gun - Caliber Glock" is now BLOCKED.** Ran the real matching logic against the actual 27-term array pulled from the file: title+description lowercased → `"real gun real gun - caliber glock"` contains `"gun"` → blocked. Case-folding is `String.prototype.toLowerCase()` on both halves, which handles the mixed-case "GUn" correctly.
+- **"fire arm" (spaced) is now BLOCKED** via its own `"fire arm"` entry.
+- **Normal listings still pass** (Gojo wig, prop-sword commission, photography session — all traced as PASSED).
+- **Known limitation (explicitly flagged):** "prop gun replica" IS still blocked — a plain substring blocklist can't tell a "prop gun replica" from a real gun. Accepted demo trade-off; the seller appeal path from Step 2 covers exactly this case. Production-grade understanding is Phase 4.
+- **No `$` remains in marketplace pricing.** Grepped the marketplace screens: listing card and detail both render via `formatPHP`; the only remaining `$` hits are unrelated template literals or pre-existing `₱` usage in owned-attire/project screens.
+
+### What Needs User Verification (Test Checklist)
+- [ ] Recreate the exact "Real GUn" / "Real Gun - Caliber Glock" listing → confirm it is now blocked (not published)
+- [ ] Confirm the prohibited-items notice banner appears on Create Listing, before the submit button
+- [ ] Confirm normal listings (wig, fabric, photography services) still publish fine
+- [ ] Try "prop gun replica" → it WILL also be blocked (expected trade-off of a substring word-list) — decide whether that's acceptable
+- [ ] Confirm every listing card, the detail screen, and the create form show "₱" instead of "$"
+- [ ] Compare a short-description card against a long-description one → both should now share the same box height/shape
+
+### Out of scope (unchanged from Step 2)
+- Real AI/ML classification (Phase 4) and FE-8 Holder appeal review remain out of scope; this is still a mock word-list screener.
+
+---
+
+*Last updated: September 20, 2026, 12:43*

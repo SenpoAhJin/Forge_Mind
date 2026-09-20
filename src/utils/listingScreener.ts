@@ -13,15 +13,56 @@
 
 import { MARKETPLACE_CATEGORIES } from '../constants/marketplaceCategories';
 
-// MOCK / DEMO blocklist — NOT a production moderation list.
-// A short, defensible set of obviously off-topic/prohibited terms for
-// hand-testing the screener. Replaced by real classification in Phase 4.
+// MOCK / DEMO blocklist — NOT a production moderation list. Replaced by
+// real classification (Phase 4) against the permitted-category list.
+//
+// This is an ILLUSTRATIVE, NON-EXHAUSTIVE set of obviously off-topic /
+// prohibited terms, organized by category so it is easy to extend while
+// hand-testing. A real production system would need proper NLP /
+// classification (Phase 4), not an ever-growing manual word list.
+//
+// NOTE: matching is a plain case-insensitive substring check, so both
+// "firearm" (no space) AND "fire arm" (with space) must exist as separate
+// entries — a normalized / fuzzy matcher is Phase 4 work.
+//
+// KNOWN TRADE-OFF: because this is a substring match, a legitimate cosplay
+// listing containing a blocked word (e.g. "prop gun replica") will also be
+// blocked. That is an accepted limitation of a demo word-list and is exactly
+// the gap the seller appeal path exists for.
 const BLOCKLISTED_TERMS: string[] = [
+  // Weapons / firearms
   'firearm',
+  'fire arm', // space variant: substring check is not normalized
   'weapon',
+  'gun',
+  'pistol',
+  'rifle',
+  'shotgun',
+  'ammunition',
+  'ammo',
+  'explosive',
+  'grenade',
+  // Drugs / controlled substances
   'drug',
+  'narcotic',
+  'cocaine',
+  'heroin',
+  'meth',
+  // Real estate / vehicles (already present, kept)
   'real estate',
   'vehicle for sale',
+  'car for sale',
+  'motorcycle for sale',
+  // Live animals
+  'live animal',
+  'puppy for sale',
+  'kitten for sale',
+  // Counterfeit / illegal goods
+  'counterfeit',
+  'fake id',
+  'stolen',
+  // Adult content (kept generic and mild — demo list only)
+  'explicit adult content',
 ];
 
 export interface ScreenableListing {

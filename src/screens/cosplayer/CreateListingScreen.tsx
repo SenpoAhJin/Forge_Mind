@@ -261,7 +261,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
 
           {/* Price */}
           <TextInputField
-            label="Price *"
+            label="Price (₱) *"
             value={price}
             onChangeText={setPrice}
             placeholder="0.00"
@@ -303,6 +303,17 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
             <Ionicons name="information-circle" size={18} color={colors.info} />
             <Text style={styles.infoText}>
               Photo upload will be added in a later update. For now, describe your item thoroughly.
+            </Text>
+          </View>
+
+          {/* Prohibited-items notice */}
+          <View style={styles.noticeBox}>
+            <Ionicons name="shield-outline" size={18} color={colors.warning} />
+            <Text style={styles.noticeText}>
+              This marketplace is for cosplay-related items and services only. Listings
+              involving real weapons/firearms, drugs, real estate, vehicles, live animals,
+              counterfeit goods, or other items outside the cosplay community will be
+              automatically blocked from publishing.
             </Text>
           </View>
 
@@ -438,6 +449,22 @@ const styles = StyleSheet.create({
   infoText: {
     ...typography.caption,
     color: colors.info,
+    flex: 1,
+    lineHeight: 18,
+  },
+  noticeBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.warning + '12',
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  noticeText: {
+    ...typography.caption,
+    color: colors.textSecondary,
     flex: 1,
     lineHeight: 18,
   },
