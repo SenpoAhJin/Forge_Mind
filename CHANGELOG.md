@@ -1,6 +1,6 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 16, 2026
+**Last updated:** September 20, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
 
 ---
@@ -20,7 +20,7 @@ It is being built **mobile-first** (a phone app) using Expo (a tool that lets on
 
 ## 2. Current Status (one paragraph)
 
-The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), and — newest — **owned-item logging**: users can add each piece of attire they own by **photo, typed description, or voice**, review and fix the AI-categorized details, and manage their whole inventory with filters. Everything still uses **demo (mock) data** — there is no real server or AI yet, by design.
+The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), **owned-item logging** (photo/text/voice input with AI categorization), **staff/Head Organizer verification** (pending/approved/rejected department access requests), and a **full marketplace** (create listings, browse with category screener, make/receive purchase/trade/commission offers, transaction-scoped chat between buyers and sellers). Everything still uses **demo (mock) data** — there is no real server or AI yet, by design.
 
 ---
 
@@ -251,11 +251,20 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 | Voice Entry | Mock recorder → mocked transcript → categorization |
 | Confirm Item | Edit AI guesses + flexibility, condition, date, cost, notes → save |
 | Item Details | Full fields, condition history, edit/delete, commit to a project |
-| Marketplace | Explains future buy/sell/trade features |
-| Events | Explains future organizer event features |
-| Logistics | Explains future guest/performance tracking |
-| Meetups | Explains future group-meetup planning |
-| Profile | Shows real demo user data, logout, Test Mode persona switcher |
+| Marketplace Registration | Role selection (buyer/seller/both), submission + verification flow |
+| Marketplace (Browse) | Active listings feed with category filter, create/offers/messages buttons |
+| Create Listing | Post items for sale/trade with photos, category screener, appeal flow |
+| Listing Detail | Full listing view, make offer buttons, message seller |
+| Make Offer | Structured purchase/trade/commission offer with type-specific fields |
+| Offer Log | Sent/Received tabs with status filters, standardized offer cards |
+| Offer Detail | Full offer read-out, accept/decline/withdraw actions, message button |
+| Chat List | Open/Closed conversation threads with unread dots |
+| Chat Thread | Message area with input bar, close conversation, listing context banner |
+| Verify Staff | Head Organizer approval screen for staff department access requests |
+| Events | Placeholder for organizer event features (FE-7) |
+| Logistics | Placeholder for guest/performance tracking (FE-7) |
+| Meetups | Placeholder for group-meetup planning (FE-7) |
+| Profile | User data, verification status, marketplace role, logout, Test Mode switcher |
 
 ### The design system (reusable parts)
 - **Colors:** 17 fixed tokens matching the official design spec.
@@ -274,19 +283,29 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 ## 5. Known Limits (by design, not bugs)
 
 - **Accounts and inventory are local only** — they persist on the device (or browser) via AsyncStorage, but there's **no server**, so nothing syncs between phone and web, and there's no real login security (passwords are hashed locally as a placeholder until the backend).
-- **AI is mocked** — photo categorization is randomized and voice transcription is generated; real image classification and speech-to-text arrive with the backend.
-- **No 3D preview, real matching, or marketplace listings yet** — character browsing and matching are previews; 3D viewer and marketplace come in later stages.
-- The remaining "coming soon" areas are all planned future stages.
+- **AI is mocked** — photo categorization is randomized and voice transcription is generated; listing screener uses rule-based mock logic; real image classification, speech-to-text, and AI fairness assessment arrive with the backend.
+- **Marketplace offers and chat are local-only and not real-time** — messages/offers appear only on reload or screen focus; no push notifications or live updates yet. ForgeMind does not process payments or shipping.
+- **No 3D preview or real matching yet** — character browsing and matching are previews; 3D viewer comes in a later stage.
+- The remaining "coming soon" organizer tools (events, logistics, meetups, contest tiers) are planned for FE-7.
 
 ---
 
 ## 6. What's Planned Next (Roadmap)
 
 1. ~~**FE-3 — Character Browse & Variant Selection**~~ **(done — Sept 15, 2026)**: searching characters, choosing a variant, seeing match results against your owned items.
-2. ~~**FE-4 — Project Dashboard & Readiness**~~ **(done — Sept 16, 2026)**: creating projects, task lists, budgets, readiness score, 3D preview.
+2. ~~**FE-4 — Project Dashboard & Readiness**~~ **(done — Sept 16, 2026)**: creating projects, task lists, budgets, readiness score, 3D preview placeholder.
 3. ~~**FE-5 — Owned-Item Logging**~~ **(done — Sept 16, 2026)**: photo/text/voice input with AI categorization.
-4. **FE-6 — Marketplace:** browse, list items, screening, condition, prices, trades, commissions, chat.
-5. **FE-7 — Organizer tools:** events, logistics tracker, contest tier suggestions, group meetups.
+4. ~~**FE-6 — Marketplace**~~ **(done — Sept 20, 2026)**:
+   - Step 1: Browse listings + create listing with category screener (block/appeal flow)
+   - Step 2: Permitted-category listing screener (mock rule-based)
+   - Step 3: Structured purchase/trade/commission offers with offer log
+   - Step 4: Transaction-scoped chat (listing+buyer threads)
+5. **FE-7 — Organizer tools** (in progress):
+   - Step 1: Events (organizer-confirmed event details)
+   - Step 2: Logistics tracker (guests/sponsors/performers, structured fields, completion status)
+   - Step 3: Commitment log + department-routed change alerts
+   - Step 4: Contest tier view (opt-in history, organizer criteria, human confirmation)
+   - Step 5: Group meetups + aggregate readiness signal
 6. **FE-8 — Holder verification surface:** a separate web app for vetting sellers and moderating listings.
 
 ---

@@ -94,7 +94,8 @@ export const formatOfferType = (offerType?: string | null): string => {
 
 // ----- Chat Threads (FE-6 Step 4) ------------------------------------------
 
-import { ThreadStatus, ThreadClosedReason } from '../types/chat';
+type ThreadStatus = 'open' | 'closed';
+type ThreadClosedReason = 'closed_by_participant' | 'listing_unavailable';
 
 const THREAD_STATUS_LABELS: Record<ThreadStatus, string> = {
   open: 'Open',
