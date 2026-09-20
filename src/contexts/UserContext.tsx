@@ -6,8 +6,11 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthService, StoredAccount } from '../services/AuthService';
 import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
+
+const NOTIFICATION_SEEN_KEY = '@forgemind:notification_seen';
 
 // User entity from v0.2.1 schema
 interface User {
@@ -79,6 +82,10 @@ interface UserContextType {
   // Holder verification (FE-4.5 - persists across logout/login)
   updateVerification: (isVerified: boolean, status: User['verification_status']) => Promise<void>;
   
+  // Notification system (FE-7 fix)
+  pendingNotification: { type: 'marketplace' | 'staff'; status: 'verified' | 'approved' | 'rejected' } | null;
+  clearPendingNotification: () => Promise<void>;
+  
   isOnboardingComplete: boolean;
   resetOnboarding: () => Promise<void>;
 }
@@ -88,6 +95,16 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingNotification, setPendingNotification] = useState<{ 
+    type: 'marketplace' | 'staff'; 
+    status: 'verified' | 'approved' | 'rejected' 
+  } | null>(null);
+
+  // Track last seen verification statuses to detect changes
+  const [lastSeenStatuses, setLastSeenStatuses] = useState<{
+    marketplace?: string;
+    staff?: string;
+  }>({});
 
   // Load active session on mount
   useEffect(() => {
@@ -96,6 +113,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const session = await AuthService.getActiveSession();
         if (session) {
           setUser(session);
+          await checkForNotifications(session);
         }
       } catch (error) {
         console.error('[UserContext] Failed to load session:', error);
@@ -105,6 +123,82 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     loadSession();
   }, []);
+
+  // Check for notification on user change (login, verification update)
+  useEffect(() => {
+    if (user) {
+      checkForNotifications(user);
+    }
+  }, [user?.verification_status, user?.department_verification_status]);
+
+  // Check if there's a pending notification to show
+  const checkForNotifications = async (currentUser: User) => {
+    try {
+      const storedKey = `${NOTIFICATION_SEEN_KEY}:${currentUser.email}`;
+      const seenData = await AsyncStorage.getItem(storedKey);
+      const seen = seenData ? JSON.parse(seenData) : {};
+
+      // Check marketplace verification
+      if (currentUser.marketplace_registration && 
+          (currentUser.verification_status === 'verified' || currentUser.verification_status === 'rejected')) {
+        const currentStatus = currentUser.verification_status;
+        const hasSeenCurrent = seen.marketplace === currentStatus;
+        
+        if (!hasSeenCurrent) {
+          setPendingNotification({
+            type: 'marketplace',
+            status: currentStatus as 'verified' | 'rejected'
+          });
+          return; // Only show one notification at a time
+        }
+      }
+
+      // Check staff verification
+      if (currentUser.is_organizer && 
+          currentUser.organizer_role === 'staff' &&
+          (currentUser.department_verification_status === 'approved' || 
+           currentUser.department_verification_status === 'rejected')) {
+        const currentStatus = currentUser.department_verification_status;
+        const hasSeenCurrent = seen.staff === currentStatus;
+        
+        if (!hasSeenCurrent) {
+          setPendingNotification({
+            type: 'staff',
+            status: currentStatus as 'approved' | 'rejected'
+          });
+          return;
+        }
+      }
+
+      // No pending notifications
+      setPendingNotification(null);
+    } catch (error) {
+      console.error('[UserContext] Failed to check notifications:', error);
+    }
+  };
+
+  // Mark notification as seen
+  const clearPendingNotification = async () => {
+    if (!user || !pendingNotification) return;
+
+    try {
+      const storedKey = `${NOTIFICATION_SEEN_KEY}:${user.email}`;
+      const seenData = await AsyncStorage.getItem(storedKey);
+      const seen = seenData ? JSON.parse(seenData) : {};
+
+      // Update the seen status for this notification type
+      if (pendingNotification.type === 'marketplace') {
+        seen.marketplace = user.verification_status;
+      } else if (pendingNotification.type === 'staff') {
+        seen.staff = user.department_verification_status;
+      }
+
+      await AsyncStorage.setItem(storedKey, JSON.stringify(seen));
+      setPendingNotification(null);
+    } catch (error) {
+      console.error('[UserContext] Failed to clear notification:', error);
+    }
+  };
 
   // Login with persisted storage
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -225,6 +319,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUserBody,
         isOnboardingComplete,
         resetOnboarding,
+        pendingNotification,
+        clearPendingNotification,
       }}
     >
       {children}
