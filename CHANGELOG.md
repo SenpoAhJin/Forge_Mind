@@ -2338,7 +2338,93 @@ Fixes applied during type check:
 
 ---
 
-*Last updated: September 20, 2026, 16:45*
+## Session — Sunday, September 20, 2026, 18:30 (FE-7 Step 1 of 5: organizer event details)
+
+### What we did
+
+Built the first step of the organizer event management system: **creating and managing events with draft/confirmed/cancelled status**.
+
+**Event lifecycle:**
+- Head Organizers create events (name, venue, city, date range, contest flag) that start as **draft**.
+- Draft events can be edited, confirmed, or cancelled.
+- Once **confirmed**, events are locked (cannot be directly edited until Step 3 adds logged changes).
+- Confirmed events become visible to verified staff (read-only).
+- Events can be **cancelled** at any status (terminal state).
+
+**Role-based access:**
+- **Head Organizers** (`organizer_role === 'head'`): Full CRUD (create, read, update, confirm, cancel).
+- **Verified Staff** (`organizer_role === 'staff' && department_verification_status === 'approved'`): Read-only access to confirmed events only. Cannot see drafts or cancelled events.
+- **Unverified staff/regular users**: No access (permission banner shown).
+
+**What was created:**
+
+1. **Event data model** (`src/types/events.ts`):
+   - EventStatus: `draft`, `confirmed`, `cancelled`
+   - Event interface with all fields (id, name, description, venue_name, city, start_date, end_date, has_contest, status, timestamps, confirmed_at/by, cancelled_at/by)
+
+2. **EventsContext** (`src/contexts/EventsContext.tsx`):
+   - AsyncStorage persistence with 3 seed events from `src/data/events.json`
+   - **Validation guards**: 3-80 char names, 2-80 char venues, 500 char descriptions, YYYY-MM-DD dates, start_date can't be in past for NEW events, end_date >= start_date
+   - **Role guards**: All mutations (create/update/confirm/cancel) require `organizer_role === 'head'`
+   - **State guards**: Can only edit drafts, can only confirm drafts, can't cancel already-cancelled events
+   - Returns structured `{ success, error? }` responses
+
+3. **EventsStackNavigator** (`src/navigation/EventsStackNavigator.tsx`):
+   - Routes: `EventsHome` (list), `CreateEvent`, `EventDetail`
+   - Integrated into OrganizerTabNavigator (Events tab now shows stack navigator, not direct screen)
+
+4. **EventsScreen** (list view, `src/screens/organizer/EventsScreen.tsx`):
+   - **Status filter chips**: All / Draft / Confirmed / Cancelled (staff don't see Draft chip)
+   - **Staff visibility rule**: Staff see confirmed events only (drafts/cancelled filtered out)
+   - **Create Event button** (Head Organizer only)
+   - **Fixed-height cards** (150px) with name, date range, venue/city, status + past badges
+   - Sort by start_date ascending
+   - Empty state messages
+
+5. **CreateEventScreen** (`src/screens/organizer/CreateEventScreen.tsx`):
+   - **Route-level guard**: Head Organizer only, edit only for drafts
+   - All fields with inline validation (name, venue, city, description, start_date, end_date, has_contest)
+   - Native DateTimePicker (works on web phone-frame)
+   - "Has contest?" toggle chips (Yes/No)
+   - Character counter for description (500 max)
+   - Saves as draft, shows success modal, returns to list
+
+6. **EventDetailScreen** (`src/screens/organizer/EventDetailScreen.tsx`):
+   - **Route-level guard**: Staff can only view confirmed events
+   - Shows all event details, timestamps (created, confirmed, cancelled), history log
+   - **Head Organizer actions**:
+     - Draft: Edit / Confirm Event / Cancel Event buttons
+     - Confirmed: Cancel Event button + locked notice ("logged changes coming in Step 3")
+     - Cancelled: Read-only with terminal notice
+   - **Staff view**: Read-only, no action buttons
+   - Confirmation modals with "are you sure?" for confirm/cancel
+
+7. **formatEventStatus** (`src/utils/formatStatus.ts`):
+   - Maps `draft` → "Draft", `confirmed` → "Confirmed", `cancelled` → "Cancelled"
+
+**Technical details:**
+- EventsProvider nested inside ChatProvider in App.tsx (outermost context)
+- No `Alert.alert` calls (uses ConfirmationModal)
+- No `&& <Text>` conditionals (all use ternary `? : null`)
+- Tag component styling: status badges use `type="status"` with custom backgroundColor styles (no variant prop)
+- Button component: uses `title` prop (not children), variant "secondary" (not "outline")
+- TypeScript exit code 0 (no errors)
+
+**Mock data:**
+- 3 seed events: Manila CosCon 2026 (confirmed, with contest), Cebu Anime Festival (draft, no contest), Davao Cosplay Meetup (cancelled, past)
+
+**What is NOT in Step 1:**
+- Logistics, commitment log, contest tier suggestions, meetups, notifications (coming in Steps 2-5)
+- Editing confirmed events (will require logged changes in Step 3)
+- Staff invites to events (coming in Step 2)
+
+### Commits
+- `e0b2b7c` — docs: refresh changelog summary sections and FE-6 status; formatStatus no longer imports chat types (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/e0b2b7c)
+- `8a25c64` — feat: FE-7 Step 1 - organizer event details (draft/confirmed/cancelled) with guards and role checks (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/8a25c64)
+
+---
+
+*Last updated: September 20, 2026, 18:30*
 
 
 ---
