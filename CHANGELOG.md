@@ -2046,7 +2046,7 @@ Exit Code: 0
 
 ### Commits
 - `ff0f273` — `FE-6 Step 2: permitted-category listing screener (mock rule-based) with block + appeal flow`
-- (docs commit with this changelog entry added on top)
+- `8556d60` — `docs: FE-6 Step 2 permitted-category screener changelog`
 
 ### What's Verified
 ✅ Screener flags "Vintage Firearm Prop Replica" — `firearm` is on the demo blocklist and the check runs on title+description, case-insensitive  
