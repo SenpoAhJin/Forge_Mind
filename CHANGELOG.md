@@ -1505,3 +1505,159 @@ Exit Code: 0
 ---
 
 *Last updated: September 20, 2026, 10:07*
+
+
+---
+
+## Session — Sunday, September 20, 2026, 10:13 (Fix: Marketplace filter bar expansion with long category names)
+
+### What we did
+
+**Fixed remaining marketplace filter navigation bar expansion issue** (follow-up to commit `eab75c0`).
+
+**The bug:** Even after adding `minHeight: 56`, the navigation bar still expanded when clicking on longer category names like "Costumes & Cosplay", "Props & Accessories", or "Commissions & Crafting Services". The "All" filter worked correctly, but longer category names would cause the bar to grow vertically because the text was wrapping to multiple lines.
+
+**Root cause:** 
+- Using `minHeight` instead of `height` allowed the container to expand beyond the minimum
+- Long category text (e.g., "Commissions & Crafting Services") was wrapping to multiple lines, forcing the chip and container to grow vertically
+- No constraint on Text component to prevent wrapping
+
+**The fixes:**
+
+1. **Changed `minHeight: 56` to `height: 56` in `filterScroll`** to enforce fixed height
+```tsx
+// BEFORE
+filterScroll: {
+  backgroundColor: colors.backgroundLight,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  minHeight: 56, // Allowed expansion
+},
+
+// AFTER
+filterScroll: {
+  backgroundColor: colors.backgroundLight,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  height: 56, // Fixed height (not minHeight) to prevent expansion
+},
+```
+
+2. **Added fixed height to chips** to prevent vertical growth
+```tsx
+// BEFORE
+filterChip: {
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: borderRadius.full,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+// AFTER
+filterChip: {
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: borderRadius.full,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  justifyContent: 'center',
+  alignItems: 'center',
+  flexShrink: 0, // Prevent chip from shrinking
+  height: 36, // Fixed height for chips
+},
+```
+
+3. **Added `numberOfLines={1}` to all filter chip Text components** to prevent wrapping
+```tsx
+// BEFORE
+<Text style={[styles.filterChipText, ...]}>
+  {category}
+</Text>
+
+// AFTER
+<Text 
+  style={[styles.filterChipText, ...]}
+  numberOfLines={1}
+>
+  {category}
+</Text>
+```
+
+4. **Added `flexShrink: 0` to chip text style** to maintain text integrity
+```tsx
+// BEFORE
+filterChipText: {
+  ...typography.caption,
+  color: colors.textSecondary,
+  fontWeight: '600',
+},
+
+// AFTER
+filterChipText: {
+  ...typography.caption,
+  color: colors.textSecondary,
+  fontWeight: '600',
+  flexShrink: 0, // Prevent text from shrinking
+},
+```
+
+**Why these changes work:**
+- `height: 56` (not `minHeight`) creates an absolute constraint that cannot expand
+- `height: 36` on chips prevents individual chips from growing
+- `numberOfLines={1}` forces text to stay on a single line (truncates with ellipsis if too long)
+- `flexShrink: 0` prevents the flexbox from compressing chips or text
+
+**Long category names will now truncate with "..." if they don't fit** rather than wrapping to multiple lines and expanding the navigation bar.
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Commits
+- `9ff1d9f` — `Fix marketplace filter bar: enforce fixed height and prevent text wrapping in category chips` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/9ff1d9f)
+
+**Commit stats:**
+- 1 file changed, 18 insertions(+), 9 deletions(-)
+- MarketplaceScreen.tsx: Updated `filterScroll`, `filterChip`, `filterChipText` styles, and added `numberOfLines={1}` to Text components
+
+### What's Verified
+✅ TypeScript type-check passes with zero errors  
+✅ Changed `minHeight` to `height` for absolute constraint  
+✅ Added fixed height to chips (36px)  
+✅ Added `numberOfLines={1}` to all filter Text components  
+✅ Added `flexShrink: 0` to prevent compression  
+✅ Committed and pushed to GitHub (`9ff1d9f`)
+
+### What Needs User Verification (Test Checklist)
+- [ ] **Test all categories:** Click through every filter including the longest names:
+  - "All"
+  - "Costumes & Cosplay"
+  - "Wigs"
+  - "Props & Accessories"
+  - "Materials & Fabric"
+  - "Makeup & Contacts"
+  - "Photography Services"
+  - "Commissions & Crafting Services"
+  - "Other"
+- [ ] **Navigation bar stability:** Confirm the navigation bar stays at exactly 56px height for ALL categories (no expansion whatsoever)
+- [ ] **Text visibility:** Confirm all category text is visible (may truncate with "..." for very long names, which is expected behavior)
+- [ ] **Selection highlighting:** Confirm teal background highlights correctly on all categories
+- [ ] **Filter functionality:** Confirm filtering works correctly for all categories
+- [ ] **Test on both platforms:** Verify on web preview AND Expo Go
+
+### Notes
+- Very long category names (like "Commissions & Crafting Services") may truncate with ellipsis ("...") if they exceed the available width — this is **expected and correct behavior** to maintain fixed bar height
+- The navigation bar is now absolutely constrained to 56px height and cannot expand under any circumstance
+- This completes the marketplace filter chip layout fixes
+
+---
+
+*Last updated: September 20, 2026, 10:13*
