@@ -531,11 +531,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   filterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
   filterChip: {
+    alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,

@@ -317,6 +317,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   chip: {
+    alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
