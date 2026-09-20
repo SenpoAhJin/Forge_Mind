@@ -268,52 +268,53 @@ const MarketplaceBrowse: React.FC = () => {
       )}
 
       {/* Category filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterContent}
-      >
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            selectedCategory === 'All' && styles.filterChipActive,
-          ]}
-          onPress={() => setSelectedCategory('All')}
-          activeOpacity={0.7}
+      <View style={styles.filterScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContent}
         >
-          <Text 
-            style={[
-              styles.filterChipText,
-              selectedCategory === 'All' && styles.filterChipTextActive,
-            ]}
-            numberOfLines={1}
-          >
-            All
-          </Text>
-        </TouchableOpacity>
-        {MARKETPLACE_CATEGORIES.map((category) => (
           <TouchableOpacity
-            key={category}
             style={[
               styles.filterChip,
-              selectedCategory === category && styles.filterChipActive,
+              selectedCategory === 'All' && styles.filterChipActive,
             ]}
-            onPress={() => setSelectedCategory(category)}
+            onPress={() => setSelectedCategory('All')}
             activeOpacity={0.7}
           >
             <Text 
               style={[
                 styles.filterChipText,
-                selectedCategory === category && styles.filterChipTextActive,
+                selectedCategory === 'All' && styles.filterChipTextActive,
               ]}
               numberOfLines={1}
             >
-              {category}
+              All
             </Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          {MARKETPLACE_CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.filterChip,
+                selectedCategory === category && styles.filterChipActive,
+              ]}
+              onPress={() => setSelectedCategory(category)}
+              activeOpacity={0.7}
+            >
+              <Text 
+                style={[
+                  styles.filterChipText,
+                  selectedCategory === category && styles.filterChipTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Listings feed */}
       {filteredListings.length === 0 ? (
@@ -560,29 +561,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterScroll: {
+    height: 56, // Fixed height container
     backgroundColor: colors.backgroundLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    height: 56, // Fixed height (not minHeight) to prevent expansion
+    overflow: 'hidden', // Prevent content from expanding beyond this height
   },
   filterContent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs, // Reduced from spacing.sm to fit within 56px container
+    paddingVertical: spacing.sm, // Back to sm for better spacing
     gap: spacing.sm,
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs, // Reduced padding to fit in fixed height container
+    paddingVertical: spacing.sm, // Back to sm for better button feel
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0, // Prevent chip from shrinking
-    height: 32, // Reduced from 36 to fit better in fixed 56px container
   },
   filterChipActive: {
     backgroundColor: colors.tertiary,
