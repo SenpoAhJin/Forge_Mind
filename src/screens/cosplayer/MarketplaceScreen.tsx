@@ -189,6 +189,15 @@ const MarketplaceBrowse: React.FC = () => {
 
   const renderListingCard = ({ item }: { item: Listing }) => {
     const formattedPrice = item.price.toFixed(2);
+    const hasPhoto = item.photos && item.photos.length > 0;
+    
+    // Generate initials from title for placeholder
+    const initials = item.title
+      .split(' ')
+      .slice(0, 2)
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
     
     return (
       <TouchableOpacity
@@ -196,25 +205,39 @@ const MarketplaceBrowse: React.FC = () => {
         onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
         activeOpacity={0.7}
       >
-        <View style={styles.listingHeader}>
-          <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.listingPrice}>${formattedPrice}</Text>
-        </View>
-        
-        <View style={styles.listingMeta}>
-          <View style={styles.metaTag}>
-            <Ionicons name="pricetag-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{item.category}</Text>
+        <View style={styles.cardContent}>
+          {/* Image/Thumbnail Area */}
+          <View style={styles.listingThumbnail}>
+            {hasPhoto ? (
+              <Text style={styles.thumbnailPlaceholder}>📷</Text>
+            ) : (
+              <View style={styles.thumbnailInitials}>
+                <Text style={styles.initialsText}>{initials}</Text>
+              </View>
+            )}
           </View>
-          <View style={styles.metaTag}>
-            <Ionicons name="checkmark-circle-outline" size={12} color={colors.secondary} />
-            <Text style={styles.metaText}>{CONDITION_LABELS[item.condition]}</Text>
+
+          {/* Card Details */}
+          <View style={styles.listingDetails}>
+            <View style={styles.listingHeader}>
+              <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.listingPrice}>${formattedPrice}</Text>
+            </View>
+            
+            <View style={styles.listingMeta}>
+              <View style={styles.categoryTag}>
+                <Text style={styles.categoryTagText}>{item.category}</Text>
+              </View>
+              <View style={styles.conditionTag}>
+                <Text style={styles.conditionTagText}>{CONDITION_LABELS[item.condition]}</Text>
+              </View>
+            </View>
+            
+            <Text style={styles.listingDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
           </View>
         </View>
-        
-        <Text style={styles.listingDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
       </TouchableOpacity>
     );
   };
@@ -541,13 +564,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs, // Reduced from spacing.sm to fit within 56px container
     gap: spacing.sm,
-    minHeight: 56, // Match parent height
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs, // Reduced padding to fit in fixed height container
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -555,7 +577,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0, // Prevent chip from shrinking
-    height: 36, // Fixed height for chips
+    height: 32, // Reduced from 36 to fit better in fixed 56px container
   },
   filterChipActive: {
     backgroundColor: colors.tertiary,
@@ -572,53 +594,100 @@ const styles = StyleSheet.create({
   },
   listingsList: {
     padding: spacing.md,
-    gap: spacing.md,
   },
   listingCard: {
     backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardContent: {
+    flexDirection: 'row',
+  },
+  listingThumbnail: {
+    width: 100,
+    height: 100,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailPlaceholder: {
+    fontSize: 40,
+  },
+  thumbnailInitials: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.tertiary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    ...typography.h2,
+    color: colors.tertiary,
+    fontWeight: '700',
+  },
+  listingDetails: {
+    flex: 1,
+    padding: spacing.md,
   },
   listingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     gap: spacing.sm,
   },
   listingTitle: {
     ...typography.h3,
     color: colors.textPrimary,
     flex: 1,
+    fontWeight: '600',
   },
   listingPrice: {
-    ...typography.h3,
+    ...typography.h2,
     color: colors.tertiary,
     fontWeight: '700',
   },
   listingMeta: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginBottom: spacing.sm,
+    flexWrap: 'wrap',
   },
-  metaTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs / 2,
+  categoryTag: {
+    backgroundColor: colors.tertiary + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: borderRadius.sm,
   },
-  metaText: {
+  categoryTagText: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: colors.tertiary,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  conditionTag: {
+    backgroundColor: colors.secondary + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: borderRadius.sm,
+  },
+  conditionTagText: {
+    ...typography.caption,
+    color: colors.secondary,
+    fontWeight: '600',
+    fontSize: 10,
   },
   listingDescription: {
     ...typography.body,
     color: colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 18,
+    fontSize: 13,
   },
   loadingContainer: {
     flex: 1,
