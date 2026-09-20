@@ -1994,3 +1994,84 @@ The `overflow: 'hidden'` property acts like scissors - it cuts off anything tryi
 ---
 
 *Last updated: September 20, 2026, 11:18*
+
+---
+
+## Session — Sunday, September 20, 2026, 11:31 (FE-6 Step 2 of 4: permitted-category listing screener)
+
+### What we did
+
+**Added the listing screener.** This is Step 2 of the 4-step FE-6 marketplace plan (Step 1: listing creation + browse — done in commit `6249dea` + follow-ups; Step 2: this prompt; Step 3: trade/commission offers — later; Step 4: transaction-scoped chat — later). Every submitted listing is now screened at the point of posting against a permitted-category list (per ForgeMind.docx), and listings that fail are automatically blocked from going public before any other user can see them — this is explicitly "the one point in the system where the AI acts rather than only suggests," and this stage implements it as a **MOCK rule-based screener**, NOT real AI (real image/text classification is Phase 4 AI/ML Layer per the build plan). A simplified Holder-appeal path for disputed blocks is included.
+
+**Data model (blocked + screening fields)** — Extended `src/types/marketplace.ts`. `ListingStatus` now includes `'blocked'` (failed the category screen, never went public). `Listing` gains:
+- `screening_result: 'passed' | 'blocked'` — explicit screen outcome, queryable apart from whether it was later sold/cancelled
+- `screening_reason?: string` — plain-language explanation, populated only when blocked
+- `appeal_status?: 'none' | 'pending' | 'upheld' | 'overturned'` (defaults to `'none'`) — tracks the Holder-appeal path
+- `appeal_message?: string` — the seller's appeal text, if submitted
+
+**The screener (rule-based, mock)** — Created `src/utils/listingScreener.ts`:
+- The file states in a comment that it is a MOCK rule-based screener for Phase 1; real image + text classification is Phase 4.
+- Check 1: category must be one of the `MARKETPLACE_CATEGORIES` (defensive — the create form already uses that same picker, but this guards any future entry point that might bypass it).
+- Check 2: a SHORT, explicitly-labeled MOCK/DEMO blocklist (`firearm`, `weapon`, `drug`, `real estate`, `vehicle for sale`) — if the title or description contains a term (case-insensitive), the listing fails.
+- The failure reason does NOT reveal which specific term triggered it ("Listing content did not match the cosplay-community permitted-category list... you can appeal below") — mirrors how real moderation systems avoid teaching sellers how to word around the filter.
+
+**Wired into listing creation** — `CreateListingScreen.tsx` now calls `screenListing()` before `createListing`:
+- Passed → listing saved as `status: 'active'`, `screening_result: 'passed'`, normal success flow (confirm + return to browse), exactly as Step 1 did.
+- Blocked → listing is STILL SAVED but as `status: 'blocked'`, `screening_result: 'blocked'`, `screening_reason` set. The seller sees a DIFFERENT modal ("Listing Not Published") with the reason and two choices: **Edit & Resubmit** or **Appeal this Decision**. They are NOT navigated to the public browse feed as if it succeeded.
+
+**Blocked listings are never public** — `getActiveListings()` in `MarketplaceContext.tsx` filters strictly on `status === 'active'`, which by definition excludes `'blocked'` (and `'sold'`, `'cancelled'`). The public browse feed and the buyer account can never see a blocked listing.
+
+**Simplified appeal flow** — In the block modal, tapping "Appeal this Decision" opens a text-input modal (created `src/components/AppealModal.tsx`, following the same pattern as the existing `RejectionReasonModal` but relabeled for appeal text). Submitting calls the new `submitAppeal(listingId, message)` on MarketplaceContext, which sets `appeal_status: 'pending'` and stores `appeal_message`. A confirmation modal then tells the seller the appeal is under review. **Reviewing appeals (approving/overturning) is explicitly NOT built in this step** — it needs a Holder review surface, which per the project spec is FE-8 work, so the appeal is submitted and stored only, and this is flagged rather than left quietly half-implemented.
+
+**"My Listings" gap (flagged, not built)** — `MarketplaceContext.getListingsBySeller` has existed since Step 1 but no screen currently surfaces it (verified by searching the codebase). A seller also has no persistent "My Listings" screen to view their blocked listing later. Building one is a substantial new screen (new route + screen + entry-point UI), which the step explicitly said to flag rather than scope-creep, so it was NOT built here. The immediate appeal path is fully reachable through the post-submit block modal instead. This remains as follow-up work.
+
+### Files Created
+- `src/utils/listingScreener.ts` — mock rule-based screener (`screenListing`)
+- `src/components/AppealModal.tsx` — appeal text-input modal (RejectionReasonModal pattern, relabeled)
+- `src/components/ListingBlockedModal.tsx` — "Listing Not Published" modal with reason + Edit/Appeal actions
+
+### Files Modified
+- `src/types/marketplace.ts` — added `'blocked'` status, `ScreeningResult`, `AppealStatus`, and the four screening/appeal fields on `Listing`
+- `src/contexts/MarketplaceContext.tsx` — `createListing` accepts an optional screening override; added `submitAppeal`; documented the `getActiveListings` public-feed filter
+- `src/screens/cosplayer/CreateListingScreen.tsx` — runs the screener in `handleSubmit`, persists blocked listings, shows the block modal + appeal flow
+- `src/components/index.ts` — exported `AppealModal`, `ListingBlockedModal`
+- `src/data/marketplace_listings.json` — seed listings now carry `screening_result: "passed"` and `appeal_status: "none"`
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Commits
+- `ff0f273` — `FE-6 Step 2: permitted-category listing screener (mock rule-based) with block + appeal flow`
+- (docs commit with this changelog entry added on top)
+
+### What's Verified
+✅ Screener flags "Vintage Firearm Prop Replica" — `firearm` is on the demo blocklist and the check runs on title+description, case-insensitive  
+✅ A blocked listing is excluded from `getActiveListings` by the strict `status === 'active'` filter  
+✅ The seller never sees the normal success flow for a blocked listing — a distinct "Listing Not Published" modal is shown instead  
+✅ Appeals are submitted and stored (`appeal_status: 'pending'`, `appeal_message` saved), no reviewer UI needed  
+✅ All files type-check, committed, and pushed
+
+### What Needs User Verification (Test Checklist)
+- [ ] Create a listing with a normal cosplay item title/description → confirm it publishes normally and appears in the browse feed
+- [ ] Create a listing using one of the mock blocklisted words in the title or description → confirm it does NOT appear in the public browse feed, and confirm you see a block message with a reason instead of the normal success flow
+- [ ] On that block message, tap "Appeal this Decision" → type a short message → confirm the "Appeal Submitted" confirmation appears
+- [ ] Confirm a blocked listing never shows up when browsing/filtering (as any account — the browse feed only shows `status === 'active'`)
+- [ ] Confirm "Edit & Resubmit" on the block modal returns you to the form so you can change the title/description and resubmit
+
+### Out of scope (explicitly flagged)
+- **Phase 4 – real AI/ML classification** (image + text against the permitted-category list). This step is a mock keyword/category rule-scorer only, per the build plan ("start as a rule-based attribute scorer... since your training data will be small early on").
+- **FE-8 – Holder appeal review** (approving/`overturned` outcomes). Only submission + storage is built here; there is no reviewer-side approval UI yet.
+- **"My Listings" screen** surfacing `getListingsBySeller` for the seller to re-view blocked listings later — a pre-existing gap (the context method exists but no screen uses it); flagged, not built, to avoid scope creep.
+
+### Notes/Assumptions
+- Keeping the persisted listing on a block (rather than discarding it) means the seller's appeal has a record to reference, matching the spec's Holder-appeal path.
+- The demo blocklist deliberately includes terms that a legitimate cosplay listing could arguably use (e.g. `weapon` describing a convention-safe prop) — that is intentional: it makes the appeal flow hand-testable, and the generic reason text keeps sellers from learning the exact terms.
+- Old persisted listings from Step 1 testing (saved in AsyncStorage) lack the new fields; the app tolerates this because the browse feed and detail screen never read `screening_result`/`appeal_*`, and `screening_reason` is read defensively only in the block modal.
+
+---
+
+*Last updated: September 20, 2026, 11:31*
