@@ -12,6 +12,7 @@ import { UserProvider } from './src/contexts/UserContext';
 import { SelectionProvider } from './src/contexts/SelectionContext';
 import { ProjectsProvider } from './src/contexts/ProjectsContext';
 import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
+import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
@@ -40,8 +41,10 @@ export default function App() {
         <SelectionProvider>
           <ProjectsProvider>
             <OwnedAttireProvider>
-              <RootNavigator />
-              <StatusBar style="auto" />
+              <MarketplaceProvider>
+                <RootNavigator />
+                <StatusBar style="auto" />
+              </MarketplaceProvider>
             </OwnedAttireProvider>
           </ProjectsProvider>
         </SelectionProvider>

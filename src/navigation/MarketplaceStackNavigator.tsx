@@ -8,12 +8,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   MarketplaceScreen,
   MarketplaceRegistrationScreen,
+  CreateListingScreen,
+  ListingDetailScreen,
 } from '../screens/cosplayer';
 import { colors, typography } from '../theme';
 
 export type MarketplaceStackParamList = {
   MarketplaceHome: undefined;
   MarketplaceRegistration: undefined;
+  CreateListing: undefined;
+  ListingDetail: { listingId: string };
 };
 
 const Stack = createNativeStackNavigator<MarketplaceStackParamList>();
@@ -43,5 +47,20 @@ export const MarketplaceStackNavigator: React.FC = () => (
         />
       )}
     </Stack.Screen>
+    <Stack.Screen
+      name="CreateListing"
+      options={{ title: 'Create Listing' }}
+    >
+      {({ navigation }) => (
+        <CreateListingScreen
+          onSuccess={() => navigation.navigate('MarketplaceHome')}
+        />
+      )}
+    </Stack.Screen>
+    <Stack.Screen
+      name="ListingDetail"
+      component={ListingDetailScreen}
+      options={{ title: 'Listing Details' }}
+    />
   </Stack.Navigator>
 );

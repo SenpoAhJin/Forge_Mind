@@ -4,16 +4,19 @@
  * States:
  * 1. No registration submitted → Call-to-action to register
  * 2. Registration submitted, status='pending' → Blocked state (under review)
- * 3. Status='verified' → Full marketplace access (placeholder for FE-6)
+ * 3. Status='verified' → Full marketplace access (browse feed - FE-6 Step 1)
  * 4. Status='rejected' or 'revoked' → Allow resubmission with pre-filled data
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { useMarketplace } from '../../contexts/MarketplaceContext';
+import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
+import { Listing } from '../../types/marketplace';
 
 export const MarketplaceScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -110,41 +113,9 @@ export const MarketplaceScreen: React.FC = () => {
     );
   }
 
-  // State 3: Verified — show placeholder marketplace content (FE-6)
+  // State 3: Verified — show marketplace browse feed (FE-6 Step 1)
   if (verificationStatus === 'verified') {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.heroCard}>
-          <Ionicons name="cart-outline" size={48} color={colors.tertiary} />
-          <Text style={styles.heroTitle}>Marketplace</Text>
-          <Text style={styles.heroSub}>
-            Buy, sell and trade cosplay items with verified participants.
-          </Text>
-        </View>
-
-        <View style={styles.featureList}>
-          <View style={styles.featureRow}>
-            <Ionicons name="search-outline" size={20} color={colors.tertiary} />
-            <Text style={styles.featureText}>Browse items by category, price and condition</Text>
-          </View>
-          <View style={styles.featureRow}>
-            <Ionicons name="swap-horizontal-outline" size={20} color={colors.tertiary} />
-            <Text style={styles.featureText}>Propose trades with fairness assessment</Text>
-          </View>
-          <View style={styles.featureRow}>
-            <Ionicons name="ribbon-outline" size={20} color={colors.tertiary} />
-            <Text style={styles.featureText}>Request commissions from skilled crafters</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle" size={18} color={colors.info} />
-          <Text style={styles.infoText}>
-            Marketplace browsing, listing creation and chat will be built in FE-6.
-          </Text>
-        </View>
-      </ScrollView>
-    );
+    return <MarketplaceBrowse />;
   }
 
   // State 4: Rejected or Revoked — allow resubmission
@@ -193,6 +164,159 @@ export const MarketplaceScreen: React.FC = () => {
 
   // Fallback (shouldn't reach here)
   return null;
+};
+
+/**
+ * MarketplaceBrowse Component - Browse feed for verified users (FE-6 Step 1)
+ */
+const MarketplaceBrowse: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const { user } = useUser();
+  const { getActiveListings, isLoading } = useMarketplace();
+  
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  
+  // Check if user can create listings (seller or both role)
+  const canCreateListing = user?.marketplace_registration?.marketplace_role === 'seller' ||
+                           user?.marketplace_registration?.marketplace_role === 'both';
+
+  // Filter listings by category
+  const filteredListings = useMemo(() => {
+    const active = getActiveListings();
+    if (selectedCategory === 'All') return active;
+    return active.filter(listing => listing.category === selectedCategory);
+  }, [selectedCategory, getActiveListings]);
+
+  const renderListingCard = ({ item }: { item: Listing }) => {
+    const formattedPrice = item.price.toFixed(2);
+    
+    return (
+      <TouchableOpacity
+        style={styles.listingCard}
+        onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.listingHeader}>
+          <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.listingPrice}>${formattedPrice}</Text>
+        </View>
+        
+        <View style={styles.listingMeta}>
+          <View style={styles.metaTag}>
+            <Ionicons name="pricetag-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.category}</Text>
+          </View>
+          <View style={styles.metaTag}>
+            <Ionicons name="checkmark-circle-outline" size={12} color={colors.secondary} />
+            <Text style={styles.metaText}>{CONDITION_LABELS[item.condition]}</Text>
+          </View>
+        </View>
+        
+        <Text style={styles.listingDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.tertiary} />
+        <Text style={styles.loadingText}>Loading marketplace...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.browseContainer}>
+      {/* Header with Create button */}
+      {canCreateListing && (
+        <View style={styles.browseHeader}>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => navigation.navigate('CreateListing')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle" size={20} color={colors.backgroundLight} />
+            <Text style={styles.createButtonText}>Create Listing</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Category filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterContent}
+      >
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            selectedCategory === 'All' && styles.filterChipActive,
+          ]}
+          onPress={() => setSelectedCategory('All')}
+          activeOpacity={0.7}
+        >
+          <Text style={[
+            styles.filterChipText,
+            selectedCategory === 'All' && styles.filterChipTextActive,
+          ]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        {MARKETPLACE_CATEGORIES.map((category) => (
+          <TouchableOpacity
+            key={category}
+            style={[
+              styles.filterChip,
+              selectedCategory === category && styles.filterChipActive,
+            ]}
+            onPress={() => setSelectedCategory(category)}
+            activeOpacity={0.7}
+          >
+            <Text style={[
+              styles.filterChipText,
+              selectedCategory === category && styles.filterChipTextActive,
+            ]}>
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Listings feed */}
+      {filteredListings.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="file-tray-outline" size={64} color={colors.textDisabled} />
+          <Text style={styles.emptyStateTitle}>No Listings Found</Text>
+          <Text style={styles.emptyStateText}>
+            {selectedCategory === 'All'
+              ? 'No active listings in the marketplace yet.'
+              : `No listings in the ${selectedCategory} category.`}
+          </Text>
+          {canCreateListing && (
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => navigation.navigate('CreateListing')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.emptyStateButtonText}>Create First Listing</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <FlatList
+          data={filteredListings}
+          renderItem={renderListingCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listingsList}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -374,6 +498,152 @@ const styles = StyleSheet.create({
     color: colors.info,
     flex: 1,
     lineHeight: 18,
+  },
+  // MarketplaceBrowse styles
+  browseContainer: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  browseHeader: {
+    padding: spacing.md,
+    backgroundColor: colors.backgroundLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tertiary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  createButtonText: {
+    ...typography.body,
+    color: colors.backgroundLight,
+    fontWeight: '600',
+  },
+  filterScroll: {
+    backgroundColor: colors.backgroundLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  filterContent: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.tertiary,
+    borderColor: colors.tertiary,
+  },
+  filterChipText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: colors.backgroundLight,
+  },
+  listingsList: {
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  listingCard: {
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  listingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  listingTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  listingPrice: {
+    ...typography.h3,
+    color: colors.tertiary,
+    fontWeight: '700',
+  },
+  listingMeta: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  metaTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+  },
+  metaText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  listingDescription: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyStateTitle: {
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+  },
+  emptyStateText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  emptyStateButton: {
+    backgroundColor: colors.tertiary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.lg,
+  },
+  emptyStateButtonText: {
+    ...typography.body,
+    color: colors.backgroundLight,
+    fontWeight: '600',
   },
 });
 

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "listing-gojo-wig-white",
+    "seller_email": "demo-seller@forgemind.test",
+    "title": "Gojo Satoru White Wig - Heat Resistant",
+    "description": "High-quality white wig perfect for Gojo Satoru cosplay. Heat resistant up to 180°C. Used once for a convention photoshoot, professionally styled. Comes with wig cap.",
+    "category": "Wigs",
+    "price": 45.00,
+    "condition": "like_new",
+    "photos": [],
+    "status": "active",
+    "created_at": "2026-09-18T14:30:00Z"
+  },
+  {
+    "id": "listing-chainsaw-man-makima-rings",
+    "seller_email": "demo-seller@forgemind.test",
+    "title": "Makima Layered Rings Set (6 pieces)",
+    "description": "Accurate replica of Makima's signature layered pupil rings contact lenses. Comes in set of 6 rings (3 pairs). Never worn, still sealed. Perfect for Chainsaw Man cosplay.",
+    "category": "Makeup & Contacts",
+    "price": 25.00,
+    "condition": "new",
+    "photos": [],
+    "status": "active",
+    "created_at": "2026-09-17T10:15:00Z"
+  },
+  {
+    "id": "listing-zelda-fabric-blue",
+    "seller_email": "demo-crafter@forgemind.test",
+    "title": "Royal Blue Satin Fabric - 3 yards",
+    "description": "Beautiful royal blue satin fabric, perfect for Princess Zelda's dress or other fantasy costumes. 3 yards available. Soft, flows beautifully. Small mark on one corner (see photos) but plenty of usable material.",
+    "category": "Materials & Fabric",
+    "price": 18.00,
+    "condition": "good",
+    "photos": [],
+    "status": "active",
+    "created_at": "2026-09-16T09:00:00Z"
+  },
+  {
+    "id": "listing-armor-foam-crafting",
+    "seller_email": "demo-crafter@forgemind.test",
+    "title": "EVA Foam Sheets for Armor - 10mm thickness (5 sheets)",
+    "description": "High-density EVA foam sheets perfect for crafting armor pieces. 10mm thickness, 50cm x 50cm per sheet. Includes 5 sheets total. Heat-moldable, easy to cut and shape. Great for props and armor builds.",
+    "category": "Materials & Fabric",
+    "price": 30.00,
+    "condition": "new",
+    "photos": [],
+    "status": "active",
+    "created_at": "2026-09-15T16:45:00Z"
+  },
+  {
+    "id": "listing-photography-commission",
+    "seller_email": "demo-photographer@forgemind.test",
+    "title": "Cosplay Photography Session - Convention or Studio",
+    "description": "Professional cosplay photographer available for convention shoots or studio sessions. 1-hour session includes 20+ edited photos in high resolution. Experienced with action shots, dramatic lighting, and character-accurate poses. Portfolio available upon request.",
+    "category": "Photography Services",
+    "price": 80.00,
+    "condition": "new",
+    "photos": [],
+    "status": "active",
+    "created_at": "2026-09-14T12:00:00Z"
+  },
+  {
+    "id": "listing-commission-prop-sword",
+    "seller_email": "demo-crafter@forgemind.test",
+    "title": "Custom Prop Sword Commission - Any Design",
+    "description": "Offering custom prop sword commissions. Can create any design from your reference images. Made from EVA foam and PVC, lightweight and convention-safe. Price varies by complexity - $120 base price for standard sword, complex designs quoted individually. 2-3 week turnaround.",
+    "category": "Commissions & Crafting Services",
+    "price": 120.00,
+    "condition": "new",
+    "photos": [],
+    "status": "active",
+    "created_at": "2026-09-13T15:20:00Z"
+  }
+]
