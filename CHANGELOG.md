@@ -1266,3 +1266,115 @@ Exit Code: 0
 ---
 
 *Last updated: September 20, 2026, 09:49*
+
+
+---
+
+## Session — Sunday, September 20, 2026, 09:58 (Fix: Marketplace category chips rendering as stretched ovals on web)
+
+### What we did
+
+**Fixed React Native Web flexbox bug** in FE-6 Step 1's marketplace category filter chips (follow-up fix to commit `6249dea`).
+
+**The bug:** The Marketplace category filter chips ("All", "Costumes & Cosplay", "Wigs", "Props & Accessories", etc.) rendered correctly as short horizontal pills on real devices (Expo Go), but on the web/phone-frame preview they stretched into tall, distorted oval/capsule shapes with text pushed toward the top instead of centered. The filter functionality worked correctly (selection highlighting, filtering listings) — this was purely a visual layout bug specific to React Native Web.
+
+**Root cause:** React Native Web's flexbox implementation doesn't automatically apply `flexDirection: 'row'` to a ScrollView's `contentContainerStyle`, even when the parent ScrollView has `horizontal={true}`. Without explicit `flexDirection: 'row'` and `alignItems: 'center'`, the chips stacked vertically and stretched to fill the cross-axis (height).
+
+**Ground truth comparison (working vs. broken):**
+
+**CharacterBrowseScreen.tsx (WORKING — media-type filter chips):**
+```tsx
+// JSX structure identical to Marketplace
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  style={styles.filterRow}
+  contentContainerStyle={styles.filterContent}
+>
+  {/* chips here */}
+</ScrollView>
+
+// Styles
+filterContent: {
+  gap: spacing.sm,
+  paddingVertical: spacing.xs,
+  paddingHorizontal: spacing.lg,
+  paddingRight: spacing.xl,
+},
+filterChip: {
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: borderRadius.full,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+},
+```
+
+**MarketplaceScreen.tsx (BROKEN — before fix):**
+```tsx
+filterContent: {
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  gap: spacing.sm,
+  // MISSING: flexDirection: 'row', alignItems: 'center'
+},
+filterChip: {
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: borderRadius.full,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  // MISSING: alignSelf: 'flex-start'
+},
+```
+
+**The fix:**
+1. **MarketplaceScreen.tsx `filterContent` style:** Added `flexDirection: 'row'` and `alignItems: 'center'` to explicitly control the horizontal layout for React Native Web
+2. **MarketplaceScreen.tsx `filterChip` style:** Added `alignSelf: 'flex-start'` to prevent individual chips from stretching vertically
+3. **CreateListingScreen.tsx `chip` style:** Added `alignSelf: 'flex-start'` as a preventive fix (category/condition chip pickers inside the listing form)
+
+**Audit of other FE-6 Step 1 UI elements:**
+- ✅ **"Create Listing" button:** Already has `flexDirection: 'row'` and `alignItems: 'center'` — no issue
+- ✅ **Listing cards:** All card header/meta/content rows already have proper `flexDirection: 'row'` and `alignItems` — no issue
+- ✅ **CreateListingScreen chip containers:** Already had `flexDirection: 'row'` and `flexWrap: 'wrap'` — added explicit `alignSelf: 'flex-start'` to individual chips as preventive measure
+
+**This is the same class of bug as the FE-2.1 session's "Unexpected text node" React Native Web fix** — React Native Web requires explicit flexbox properties that native React Native infers automatically.
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Commits
+- `029f67d` — `Fix Marketplace category chips rendering as stretched ovals on web (React Native Web flexbox fix)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/029f67d)
+
+**Commit stats:**
+- 2 files changed, 4 insertions(+)
+- MarketplaceScreen.tsx: `filterContent` + `filterChip` styles updated
+- CreateListingScreen.tsx: `chip` style updated
+
+### What's Verified
+✅ TypeScript type-check passes with zero errors  
+✅ Root cause identified via side-by-side comparison with working CharacterBrowseScreen chips  
+✅ Fix applied to exact style gap (missing `flexDirection: 'row'`, `alignItems: 'center'`, `alignSelf: 'flex-start'`)  
+✅ Audit completed for all other FE-6 Step 1 UI elements — no other web flexbox issues found  
+✅ Committed and pushed to GitHub (`029f67d`)
+
+### What Needs User Verification (Test Checklist)
+- [ ] **Web/phone-frame preview:** Open Marketplace → confirm category chips now look like short horizontal pills, matching the Characters screen's filter chips (no tall ovals)
+- [ ] **Real device (Expo Go):** Open Marketplace → confirm chips still look correct (should be unchanged since native was never broken)
+- [ ] **Web filter functionality:** Tap through "All" → "Wigs" → "Costumes & Cosplay" → confirm selection highlights correctly (teal background) and filters the listing feed
+- [ ] **Create Listing form:** Open Create Listing → confirm category and condition chips look correct (short pills, not stretched)
+
+### Notes
+- This fix only affects React Native Web rendering — native (iOS/Android) behavior is unchanged
+- The CharacterBrowseScreen chips were the "known-working" reference pattern from FE-3, which FE-6 Step 1 was supposed to mirror
+- React Native Web quirks documented: requires explicit `flexDirection: 'row'` in horizontal ScrollView `contentContainerStyle`, and `alignSelf: 'flex-start'` on flex children to prevent cross-axis stretching
+
+---
+
+*Last updated: September 20, 2026, 09:58*
