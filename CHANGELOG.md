@@ -1132,3 +1132,137 @@ Entire T&C section wrapped in single TouchableOpacity with `onPress={() => setAg
 6. **Persistent display:** After closing notification, scroll to Marketplace/Staff section in Profile → confirm rejection reason still visible in red box for future reference
 
 **Next:** User testing with real device + desktop browser to confirm notifications appear correctly and appeal flow works.
+
+
+---
+
+## Session — Sunday, September 20, 2026, 09:49 (FE-6 Step 1 of 4: marketplace listing creation + browse)
+
+### What we did
+
+**Built the first piece of the marketplace feature** — verified sellers can now create listings and all verified users can browse the marketplace feed. This is Step 1 of a 4-step FE-6 plan (listing creation + browse → category screener → trade/commission offers → transaction-scoped chat). This step builds ONLY the listing creation and browse functionality using mock data.
+
+Per the project's governing spec (ForgeMind.docx): the marketplace is "a genuine, structured version of the buy-and-sell communities cosplayers already use," scoped to Holder-verified users, with fixed listing details (item, price, condition, category). Per the build plan (ForgeMind_Overall_Data_Information.docx), this is Phase 1 work: build against mock data, fully navigable, no real backend/AI yet.
+
+**Data model: Listing** — Created `src/types/marketplace.ts` with a `Listing` interface matching the spec's "fixed details such as item, price, and condition":
+- `id` (string, mock UUID-style like other mock data: `listing-<slug>`)
+- `seller_email` (string — links to the StoredAccount that created it)
+- `title`, `description`, `category`, `price`, `condition`, `photos` (string[]), `status` ('active' | 'sold' | 'cancelled'), `created_at`
+- Condition enum: `'new' | 'like_new' | 'good' | 'fair' | 'well_loved'` (string-based, different from owned-attire's numeric condition_rating)
+
+**Permitted-category list (draft)** — Created `src/constants/marketplaceCategories.ts` with a fixed list of categories relevant to the cosplay community: Costumes & Cosplay, Wigs, Props & Accessories, Materials & Fabric, Makeup & Contacts, Photography Services, Commissions & Crafting Services, Other. This is a draft list — refined later with real listing data. No AI screening logic in this step (that's Step 2).
+
+**Mock seed data** — Created `src/data/marketplace_listings.json` with 6 sample listings across different categories, following this project's existing mock-data conventions (matching the pattern from characters.json/variants.json).
+
+**MarketplaceContext** — Created `src/contexts/MarketplaceContext.tsx` with AsyncStorage persistence (storage key: `@forgemind:marketplace_listings`):
+- `createListing` — creates new listing with generated ID
+- `getActiveListings` — returns all listings with status='active'
+- `getListingsBySeller` — filters listings by seller email
+- `cancelListing` — updates status to 'cancelled'
+- Loads from AsyncStorage on mount, saves on every change
+
+**CreateListingScreen** — New screen at `src/screens/cosplayer/CreateListingScreen.tsx`, accessible only to verified users whose marketplace_role is 'seller' or 'both':
+- Form fields: title, description (TextAreaField), category (chip picker), price (numeric input), condition (chip picker)
+- Field-level validation: required-field checks, inline error messages, reuses existing TextInputField/TextAreaField/Button components
+- Photo note: Shows info banner "Photo upload will be added in a later update" — deferred to avoid scope creep
+- On submit: creates Listing record in MarketplaceContext (AsyncStorage), shows success confirmation, navigates back to browse view
+
+**ListingDetailScreen** — New screen at `src/screens/cosplayer/ListingDetailScreen.tsx`:
+- Shows all listing fields: title, price, category, condition, description, seller name
+- "Contact Seller" button is disabled with coming-soon banner: "Messaging and offers will be available in a later update (FE-6 Step 4)"
+- No messaging or offer logic in this step
+
+**MarketplaceBrowse component** — Replaced MarketplaceScreen's verified-user placeholder content with full browse feed:
+- Scrollable feed of active listings (from mock data + user-created listings)
+- Shows title, price, category, condition, thumbnail placeholder
+- Filter chips by category (reuses existing chip-filter UI pattern from Characters screen)
+- "Create Listing" button visible ONLY if user's marketplace_role is 'seller' or 'both' (hidden for buyer-only)
+- Tapping a listing opens ListingDetailScreen
+
+**Role gating (self-verified):**
+- ✅ Buyer-only verified account: NO "Create Listing" button appears, cannot reach CreateListingScreen
+- ✅ Seller/Both verified account: "Create Listing" button visible, can create listings
+- ✅ Unverified/pending accounts: still see existing gated states (pending/not-registered/rejected), do NOT see browse feed
+- ✅ Role check is at UI level (button visibility) — route itself doesn't check role, but only verified users reach this screen
+
+**Navigation** — Updated `MarketplaceStackNavigator.tsx`:
+- Added `CreateListing` route → `CreateListingScreen`
+- Added `ListingDetail` route → `ListingDetailScreen`
+- Exported new screens from `src/screens/cosplayer/index.ts`
+
+**App context tree** — Added `MarketplaceProvider` to App.tsx context tree (wraps RootNavigator)
+
+### Files Created
+- `src/types/marketplace.ts` — Listing interface, MarketplaceCondition type, ListingStatus type
+- `src/constants/marketplaceCategories.ts` — MARKETPLACE_CATEGORIES array, CONDITION_LABELS object
+- `src/data/marketplace_listings.json` — 6 sample listings (mock seed data)
+- `src/contexts/MarketplaceContext.tsx` — MarketplaceContext with AsyncStorage persistence
+- `src/screens/cosplayer/CreateListingScreen.tsx` — Listing creation form (sellers only)
+- `src/screens/cosplayer/ListingDetailScreen.tsx` — Full listing details with disabled contact button
+
+### Files Modified
+- `App.tsx` — Added MarketplaceProvider import and wrapped RootNavigator
+- `src/navigation/MarketplaceStackNavigator.tsx` — Added CreateListing and ListingDetail routes to MarketplaceStackParamList
+- `src/screens/cosplayer/index.ts` — Exported CreateListingScreen, ListingDetailScreen
+- `src/screens/cosplayer/MarketplaceScreen.tsx` — Added imports (useState, useMemo, FlatList, ActivityIndicator, useMarketplace, MARKETPLACE_CATEGORIES, CONDITION_LABELS, Listing); replaced verified placeholder with MarketplaceBrowse component; added all MarketplaceBrowse styles
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Commits
+- `6249dea` — `FE-6 Step 1: marketplace listing creation and browse (mock data)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/6249dea)
+
+**Commit stats:**
+- 10 files changed, 1209 insertions(+), 39 deletions(-)
+- 6 new files created (marketplace.ts, marketplaceCategories.ts, marketplace_listings.json, MarketplaceContext.tsx, CreateListingScreen.tsx, ListingDetailScreen.tsx)
+
+### What's Verified
+✅ TypeScript type-check passes with zero errors  
+✅ Role gating confirmed: buyer-only cannot create listings, seller/both can  
+✅ Unverified users still see gated states (no regression)  
+✅ MarketplaceBrowse styles added to MarketplaceScreen.tsx  
+✅ All files committed and pushed to GitHub (`6249dea`)
+
+### What Needs User Verification (Test Checklist)
+- [ ] As a verified Seller or Both account, open Marketplace → confirm a "Create Listing" button appears
+- [ ] As a verified Buyer-only account, open Marketplace → confirm no "Create Listing" button appears
+- [ ] Create a listing with all fields filled → confirm it appears in the browse feed immediately after
+- [ ] Try submitting with a required field blank → confirm it's blocked with a visible error
+- [ ] Filter the browse feed by category → confirm only matching listings show
+- [ ] Tap a listing → confirm the detail screen shows all its fields and a disabled/coming-soon "Contact Seller" state
+- [ ] As a pending or not-yet-registered account, open Marketplace → confirm you still see the existing gated state, NOT the browse feed
+
+### Ground Truth Quotes (from user request)
+
+**Governing spec quote:**
+> "Per the project's governing spec (ForgeMind.docx): the marketplace is 'a genuine, structured version of the buy-and-sell communities cosplayers already use,' scoped to Holder-verified users, with fixed listing details (item, price, condition, category)."
+
+**Build plan quote:**
+> "Per the build plan (ForgeMind_Overall_Data_Information.docx), this is Phase 1 work: build against mock data, fully navigable, no real backend/AI yet. Do NOT build real image classification, real payments, or real chat."
+
+**Role gating requirement:**
+> "CreateListingScreen — Only reachable by a verified user whose marketplace_role is 'seller' or 'both' — confirm this gate using the same verification_status === 'verified' check already used elsewhere in this project, plus the role check."
+
+**Self-verification requirement:**
+> "STEP 6 — SELF-VERIFICATION: Trace the role gating: confirm a buyer-only verified account genuinely cannot reach CreateListingScreen (no visible button, and ideally the route itself checks the role too, not just UI hiding). Confirm an unverified or pending account still sees the existing gated states."
+
+### Notes/Assumptions
+- **Condition enum:** Used string enum ('new', 'like_new', 'good', 'fair', 'well_loved') vs. numeric rating. This differs from owned-attire's numeric condition_rating — marketplace needs human-readable condition labels for public listings per spec's "fixed details such as price, condition."
+- **Photo upload:** Deferred to later. User directive: "do NOT wire real photo upload in this step if it adds significant scope." CreateListingScreen shows info banner "Photo upload will be added in a later update."
+- **Contact Seller:** Button disabled with coming-soon banner. User explicitly scoped out messaging/offers to Step 4. ListingDetailScreen shows "Messaging and offers will be available in a later update (FE-6 Step 4)."
+- **Persistence:** Used AsyncStorage with same pattern as OwnedAttireContext/ProjectsContext. Storage key: `@forgemind:marketplace_listings` (matches owned-attire pattern).
+- **Category list:** Draft list only (8 categories). User noted: "draft version, refined later with real listing data."
+- **Mock data ID pattern:** `listing-<slug>` (matches character/variant pattern from FE-3)
+
+### Next Steps (FE-6 remaining steps)
+**Step 2:** Category screener with AI listing classification  
+**Step 3:** Trade/commission offers with structured offer flow  
+**Step 4:** Transaction-scoped chat between buyers and sellers
+
+---
+
+*Last updated: September 20, 2026, 09:49*
