@@ -13,6 +13,8 @@ import {
   MakeOfferScreen,
   OfferLogScreen,
   OfferDetailScreen,
+  ChatListScreen,
+  ChatThreadScreen,
 } from '../screens/cosplayer';
 import { colors, typography } from '../theme';
 import { OfferType } from '../types/offers';
@@ -25,6 +27,8 @@ export type MarketplaceStackParamList = {
   MakeOffer: { listingId: string; offerType: OfferType };
   OfferLog: { initialTab?: 'sent' | 'received' } | undefined;
   OfferDetail: { offerId: string };
+  ChatList: undefined;
+  ChatThread: { threadId: string };
 };
 
 const Stack = createNativeStackNavigator<MarketplaceStackParamList>();
@@ -83,6 +87,16 @@ export const MarketplaceStackNavigator: React.FC = () => (
       name="OfferDetail"
       component={OfferDetailScreen}
       options={{ title: 'Offer Details' }}
+    />
+    <Stack.Screen
+      name="ChatList"
+      component={ChatListScreen}
+      options={{ title: 'Messages' }}
+    />
+    <Stack.Screen
+      name="ChatThread"
+      component={ChatThreadScreen}
+      options={{ title: 'Chat' }}
     />
   </Stack.Navigator>
 );

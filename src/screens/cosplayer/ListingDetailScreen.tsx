@@ -1,10 +1,9 @@
 /**
- * Listing Detail Screen (FE-6 Step 1)
- * Shows full listing details
- * Contact seller button is disabled/coming soon (Step 4 will add chat)
+ * Listing Detail Screen (FE-6 Steps 1, 3, 4)
+ * Shows full listing details with offer buttons and messaging
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,8 +17,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
+import { useChat } from '../../contexts/ChatContext';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Button } from '../../components';
+import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { formatPHP } from '../../utils/formatCurrency';
 import { getAllowedOfferTypes } from '../../utils/offerRules';
 import { OfferType } from '../../types/offers';
@@ -32,6 +33,10 @@ export const ListingDetailScreen: React.FC = () => {
   const route = useRoute<ListingDetailRouteProp>();
   const { user } = useUser();
   const { getListingById } = useMarketplace();
+  const { getOrCreateThread } = useChat();
+
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const listing = getListingById(route.params.listingId);
 
@@ -61,6 +66,30 @@ export const ListingDetailScreen: React.FC = () => {
     listing.seller_email !== user?.email &&
     listing.status === 'active';
   const allowedOfferTypes = getAllowedOfferTypes(listing.category);
+
+  // FE-6 Step 4: messaging eligibility
+  const isVerified = user?.verification_status === 'verified';
+  const isSeller = user?.email === listing.seller_email;
+  const canMessageSeller =
+    isVerified &&
+    !isSeller &&
+    listing.status === 'active' &&
+    user?.marketplace_registration?.marketplace_role !== 'seller';
+
+  const handleMessageSeller = async () => {
+    if (!user?.email) return;
+    const result = await getOrCreateThread(listing.id, user.email);
+    if (result.success && result.thread) {
+      navigation.navigate('ChatThread', { threadId: result.thread.id });
+    } else {
+      setErrorMessage(result.error || 'Failed to start conversation.');
+      setErrorVisible(true);
+    }
+  };
+
+  const handleViewMessages = () => {
+    navigation.navigate('ChatList');
+  };
 
   const offerButtonLabels: Record<OfferType, string> = {
     purchase: 'Make Purchase Offer',
@@ -141,21 +170,42 @@ export const ListingDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Coming Soon Banner */}
-      <View style={styles.comingSoonBanner}>
-        <Ionicons name="information-circle" size={18} color={colors.info} />
-        <Text style={styles.comingSoonText}>
-          Direct messaging between participants will be available in a later update (FE-6 Step 4).
-        </Text>
-      </View>
+      {/* Messaging (FE-6 Step 4) */}
+      {canMessageSeller ? (
+        <Button
+          title="Message Seller"
+          onPress={handleMessageSeller}
+          variant="secondary"
+          fullWidth
+        />
+      ) : isSeller ? (
+        <Button
+          title="View Messages"
+          onPress={handleViewMessages}
+          variant="secondary"
+          fullWidth
+        />
+      ) : (
+        <View style={styles.ineligibleBanner}>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
+          <Text style={styles.ineligibleText}>
+            {!isVerified
+              ? 'Only verified marketplace users can message sellers.'
+              : listing.status !== 'active'
+              ? 'This listing is no longer accepting messages.'
+              : 'Messaging is available to buyers and both-role users.'}
+          </Text>
+        </View>
+      )}
 
-      {/* Contact Seller Button (Disabled) */}
-      <Button
-        title="Contact Seller (Coming Soon)"
-        onPress={() => {}}
-        variant="primary"
-        fullWidth
-        disabled={true}
+      {/* Error Modal */}
+      <ConfirmationModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+        onCancel={() => setErrorVisible(false)}
       />
     </ScrollView>
   );
@@ -253,18 +303,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
-  comingSoonBanner: {
+  ineligibleBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.info + '10',
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.sm,
-    marginVertical: spacing.lg,
+    marginVertical: spacing.md,
   },
-  comingSoonText: {
+  ineligibleText: {
     ...typography.caption,
-    color: colors.info,
+    color: colors.textSecondary,
     flex: 1,
     lineHeight: 18,
   },

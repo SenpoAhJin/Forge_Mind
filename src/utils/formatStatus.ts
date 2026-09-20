@@ -91,3 +91,32 @@ export const formatOfferType = (offerType?: string | null): string => {
   if (!offerType) return '';
   return OFFER_TYPE_LABELS[offerType] ?? toTitleCase(offerType);
 };
+
+// ----- Chat Threads (FE-6 Step 4) ------------------------------------------
+
+import { ThreadStatus, ThreadClosedReason } from '../types/chat';
+
+const THREAD_STATUS_LABELS: Record<ThreadStatus, string> = {
+  open: 'Open',
+  closed: 'Closed',
+};
+
+const THREAD_CLOSED_REASON_LABELS: Record<ThreadClosedReason, string> = {
+  closed_by_participant: 'Closed',
+  listing_unavailable: 'Listing Unavailable',
+};
+
+/**
+ * Format a stored thread status for display.
+ * e.g. 'open' -> 'Open', 'closed' -> 'Closed'.
+ * If closed with a reason, returns the formatted reason instead.
+ */
+export const formatThreadStatus = (
+  status: ThreadStatus,
+  closedReason?: ThreadClosedReason | null
+): string => {
+  if (status === 'closed' && closedReason) {
+    return THREAD_CLOSED_REASON_LABELS[closedReason] ?? toTitleCase(closedReason);
+  }
+  return THREAD_STATUS_LABELS[status] ?? toTitleCase(status);
+};

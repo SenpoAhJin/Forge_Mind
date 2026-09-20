@@ -1,8 +1,6 @@
 /**
- * Offer Detail Screen (FE-6 Step 3)
- * Full read-out of a structured offer. The recipient (seller) can accept or
- * decline a pending offer; the proposer can withdraw it. Non-pending offers
- * are read-only. ForgeMind never processes payment or shipping.
+ * Offer Detail Screen (FE-6 Steps 3, 4)
+ * Full read-out of a structured offer with accept/decline/withdraw actions and messaging
  */
 
 import React, { useState } from 'react';
@@ -14,14 +12,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useOffers } from '../../contexts/OffersContext';
+import { useChat } from '../../contexts/ChatContext';
 import { Button, ConfirmationModal } from '../../components';
 import { OfferStatus } from '../../types/offers';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { formatOfferStatus, formatOfferType } from '../../utils/formatStatus';
 import { formatPHP } from '../../utils/formatCurrency';
+import { MarketplaceStackParamList } from '../../navigation/MarketplaceStackNavigator';
 
 type OfferDetailRouteProp = RouteProp<
   { params: { offerId: string } },
@@ -42,10 +43,11 @@ const statusColor = (status: OfferStatus): string => {
 };
 
 export const OfferDetailScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<OfferDetailRouteProp>();
   const { user } = useUser();
   const { getOfferById, acceptOffer, declineOffer, withdrawOffer } = useOffers();
+  const { getOrCreateThread } = useChat();
 
   const [confirmAcceptVisible, setConfirmAcceptVisible] = useState(false);
   const [confirmDeclineVisible, setConfirmDeclineVisible] = useState(false);
@@ -79,6 +81,20 @@ export const OfferDetailScreen: React.FC = () => {
   const isRecipient = user?.email === offer.listing_seller_email;
   const isProposer = user?.email === offer.proposer_email;
   const isPending = offer.status === 'pending';
+  const isParticipant = isRecipient || isProposer;
+  const isVerified = user?.verification_status === 'verified';
+
+  const handleMessage = async () => {
+    if (!user?.email || !isParticipant) return;
+    const buyerEmail = offer.proposer_email;
+    const result = await getOrCreateThread(offer.listing_id, buyerEmail);
+    if (result.success && result.thread) {
+      navigation.navigate('ChatThread', { threadId: result.thread.id });
+    } else {
+      setErrorMessage(result.error || 'Failed to open conversation.');
+      setErrorVisible(true);
+    }
+  };
 
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString('en-US', {
@@ -289,6 +305,18 @@ export const OfferDetailScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Message button (FE-6 Step 4) */}
+      {isVerified && isParticipant && (
+        <View style={styles.messageButtonContainer}>
+          <Button
+            title="Message"
+            onPress={handleMessage}
+            variant="secondary"
+            fullWidth
+          />
+        </View>
+      )}
+
       {/* Confirmations */}
       <ConfirmationModal
         visible={confirmAcceptVisible}
@@ -320,7 +348,6 @@ export const OfferDetailScreen: React.FC = () => {
         title={successTitle}
         message={successMessage}
         confirmText="OK"
-        cancelText=""
         onConfirm={() => setSuccessVisible(false)}
         onCancel={() => setSuccessVisible(false)}
       />
@@ -329,7 +356,6 @@ export const OfferDetailScreen: React.FC = () => {
         title="Something went wrong"
         message={errorMessage}
         confirmText="OK"
-        cancelText=""
         onConfirm={() => setErrorVisible(false)}
         onCancel={() => setErrorVisible(false)}
       />
@@ -461,6 +487,9 @@ const styles = StyleSheet.create({
   readOnlyText: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  messageButtonContainer: {
+    marginTop: spacing.md,
   },
   errorContainer: {
     flex: 1,

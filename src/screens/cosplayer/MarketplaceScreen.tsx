@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
+import { useChat } from '../../contexts/ChatContext';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Listing } from '../../types/marketplace';
 import { formatPHP } from '../../utils/formatCurrency';
@@ -168,18 +169,22 @@ export const MarketplaceScreen: React.FC = () => {
 };
 
 /**
- * MarketplaceBrowse Component - Browse feed for verified users (FE-6 Step 1)
+ * MarketplaceBrowse Component - Browse feed for verified users (FE-6 Steps 1, 4)
  */
 const MarketplaceBrowse: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useUser();
   const { getActiveListings, isLoading } = useMarketplace();
+  const { getUnreadCount } = useChat();
   
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   
   // Check if user can create listings (seller or both role)
   const canCreateListing = user?.marketplace_registration?.marketplace_role === 'seller' ||
                            user?.marketplace_registration?.marketplace_role === 'both';
+
+  // Unread message count
+  const unreadCount = user?.email ? getUnreadCount(user.email) : 0;
 
   // Filter listings by category
   const filteredListings = useMemo(() => {
@@ -255,12 +260,27 @@ const MarketplaceBrowse: React.FC = () => {
       {/* Header with actions */}
       <View style={styles.browseHeader}>
         <TouchableOpacity
-          style={styles.myOffersButton}
+          style={styles.headerButton}
+          onPress={() => navigation.navigate('ChatList')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.headerButtonContent}>
+            <Ionicons name="chatbubbles-outline" size={18} color={colors.tertiary} />
+            <Text style={styles.headerButtonText}>Messages</Text>
+            {unreadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.headerButton}
           onPress={() => navigation.navigate('OfferLog')}
           activeOpacity={0.7}
         >
-          <Ionicons name="mail-outline" size={20} color={colors.tertiary} />
-          <Text style={styles.myOffersButtonText}>My Offers</Text>
+          <Ionicons name="mail-outline" size={18} color={colors.tertiary} />
+          <Text style={styles.headerButtonText}>Offers</Text>
         </TouchableOpacity>
         {canCreateListing && (
           <TouchableOpacity
@@ -268,8 +288,8 @@ const MarketplaceBrowse: React.FC = () => {
             onPress={() => navigation.navigate('CreateListing')}
             activeOpacity={0.7}
           >
-            <Ionicons name="add-circle" size={20} color={colors.backgroundLight} />
-            <Text style={styles.createButtonText}>Create Listing</Text>
+            <Ionicons name="add-circle" size={18} color={colors.backgroundLight} />
+            <Text style={styles.createButtonText}>Create</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -517,9 +537,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-  myOffersButton: {
+  headerButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -528,14 +548,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.tertiary,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: borderRadius.md,
     gap: spacing.xs,
+    minHeight: 38,
   },
-  myOffersButtonText: {
-    ...typography.body,
+  headerButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    position: 'relative',
+  },
+  headerButtonText: {
+    ...typography.caption,
     color: colors.tertiary,
     fontWeight: '600',
+    fontSize: 12,
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  unreadBadgeText: {
+    ...typography.caption,
+    color: colors.backgroundLight,
+    fontWeight: '700',
+    fontSize: 10,
   },
   createButton: {
     flex: 1,
@@ -544,14 +590,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.tertiary,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: borderRadius.md,
     gap: spacing.xs,
+    minHeight: 38,
   },
   createButtonText: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.backgroundLight,
     fontWeight: '600',
+    fontSize: 12,
   },
   filterScroll: {
     height: 56, // Fixed height container

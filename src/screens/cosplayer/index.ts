@@ -9,6 +9,8 @@ export * from './ListingDetailScreen';
 export * from './MakeOfferScreen';
 export * from './OfferLogScreen';
 export * from './OfferDetailScreen';
+export * from './ChatListScreen';
+export * from './ChatThreadScreen';
 export * from './ProjectDashboardScreen';
 export * from './CreateProjectScreen';
 export * from './EntryMethodScreen';
