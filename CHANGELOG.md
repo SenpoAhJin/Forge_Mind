@@ -2216,9 +2216,110 @@ Exit Code: 0
 - **Listing finalization** — accepting an offer does not flip the listing to `sold` or affect other offers; wiring accept → listing status is left for a later step.
 - **AI fairness / Value Reference** — the make-offer screen states suggestions are a later phase and computes nothing.
 
+### Commits
+- `23ee892` — FE-6 Step 3: structured purchase/trade/commission offers with offer log (mock data) (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/23ee892)
+
 ---
 
-*Last updated: September 20, 2026, 13:01*
+## Session — Sunday, September 20, 2026, 16:45 (FE-6 Step 4 of 4: transaction-scoped chat)
+
+### What we did
+
+Built FE-6 Step 4 of 4: transaction-scoped messaging between buyers and sellers. This completes the FE-6 marketplace feature. Per the governing spec, chat is **scoped to two Holder-verified users who are both party to one specific active listing** — no open or general messaging outside that context. A thread closes once manually closed by a participant or when its listing is no longer active. **Chat is for discussion and clarification only**; final price or timeline agreements must still be submitted as structured offers (Step 3) so that data can inform the system's fairness/pricing computations. **Chat content is never read or used as AI input** (privacy boundary enforced by design).
+
+**1. Data model (`src/types/chat.ts`).** `ThreadStatus = 'open' | 'closed'`; `ThreadClosedReason = 'closed_by_participant' | 'listing_unavailable'`. `ChatThread`: one thread per (listing_id, buyer_email) pair; snapshots listing title + seller/buyer display names + emails at creation; tracks `status`, `closed_reason`, `closed_at`, `closed_by_email`, `created_at`, `last_message_at`, `last_message_preview` (first 60 chars), and per-party `last_read_at` timestamps (for unread dots only — no read receipts shown). `ChatMessage`: `id`, `thread_id`, `sender_email`, `body` (trimmed text, no attachments/images/edit/delete), `created_at`. Text only: max 1000 chars, no price fields.
+
+**2. Chat context (`src/contexts/ChatContext.tsx`).** AsyncStorage key `@forgemind:marketplace_chat` (threads + messages in one object). Provider nested inside `MarketplaceProvider` in `App.tsx`, wrapping `OffersProvider`. **No seed threads** (would belong to nonexistent accounts). API + guards:
+- `getOrCreateThread(listingId, buyerEmail)` — listing must exist and be `'active'`; buyer ≠ seller; returns existing thread for that pair if one exists (even if closed — closed threads are not reopened or duplicated).
+- `sendMessage(threadId, senderEmail, body)` — sender must be one of the two participants; thread must be effectively open; body trimmed must be non-empty and ≤ 1000 chars.
+- `closeThread(threadId, closerEmail)` — participants only, open threads only; records `closed_reason: 'closed_by_participant'`, `closed_at`, `closed_by_email`.
+- `getEffectiveStatus(thread)` — **derived at read time**: a stored-open thread whose listing is no longer `'active'` is treated as closed with reason `'listing_unavailable'`. No cross-context write syncing added.
+- `markThreadRead(threadId, readerEmail)` — updates `buyer_last_read_at` or `seller_last_read_at` (used for unread dot logic only).
+- `getUnreadCount(email)` — counts threads where last counterpart message is newer than my `last_read_at`.
+- `getThreadsForUser(email)` — returns only threads with at least one message.
+- **Privacy boundary enforced:** chat content is never logged, screened, classified, scored, or passed to any AI/rule computation. Verified by grep: no `console.log` of message bodies, no imports of chat types in `listingScreener.ts` or `offerRules.ts`, no calls to `createOffer`/`updateListing` from `ChatContext`.
+
+**3. Chat Thread screen (`ChatThreadScreen.tsx`, route `ChatThread { threadId }`).** Route-level guard → blocked state with Back button when: user not verified, not a participant, or thread doesn't exist. Layout: header (counterpart display name + tappable listing title → `ListingDetail`); pinned info banner for open threads: *"Chat is for questions and clarification. Any final price or timeline must be submitted as a structured offer."* with action button (buyer: "Go to Listing", seller: "View Offers" → `OfferLog` Received tab). Message area: `ScrollView` (not inverted `FlatList` — unreliable on React Native Web) with existing `ChatBubble` component reuse (`sender`/`receiver` types, small timestamp), scrolls to bottom on open and on send. Pinned input bar (multiline `TextInput` max 1000 chars + Send button, disabled for empty/whitespace, cleared after send). `KeyboardAvoidingView` on native only (not web). Open thread: "Close conversation" action behind `ConfirmationModal`. Closed thread (manual or listing unavailable): input bar replaced by system-style notice with reason text ("This conversation was closed" / "This listing is no longer available"), history stays readable. `markThreadRead` on mount and on message changes. Privacy boundary comment at top.
+
+**4. Chat List screen (`ChatListScreen.tsx`, route `ChatList`).** "Messages" for all threads where current user is a participant (verified marketplace users only; route-level guard). Fixed-height chip bar (56px container, `overflow: 'hidden'`, horizontal `ScrollView`): Open / Closed tabs. Standardized cards (fixed `height: 110`, `justifyContent: 'space-between'`, `numberOfLines` on all text): counterpart name, listing title, last-message preview, relative date display (Just now / Xm ago / Xh ago / Xd ago / MMM D), status tag (formatted via `formatThreadStatus`, not raw), and unread dot when last message from counterpart is newer than my `last_read_at`. Empty states reuse round-icon-in-card design (Open: "Browse Marketplace" button, Closed: no button). Sorted by `last_message_at` descending. Privacy boundary comment at top.
+
+**5. Integration + navigation.**
+- **MarketplaceStackNavigator**: added routes `ChatList` (undefined) and `ChatThread { threadId: string }` — unique names, no collision with other navigators.
+- **ListingDetailScreen**: enabled the Contact Seller button → relabeled "Message Seller" for verified buyer/both users who are not the seller and where listing is `active` (calls `getOrCreateThread` then navigates to `ChatThread`). Seller viewing own listing: "View Messages" button (opens `ChatList`). Ineligible/unverified/inactive: shows banner with reason (no longer a coming-soon state). Error modal for `getOrCreateThread` failures (no `cancelText` prop — omitted for OK-only).
+- **OfferDetailScreen**: added "Message" button for verified participants (either seller or proposer) — opens/creates thread for that offer's listing + proposer (calls `getOrCreateThread`, navigates to `ChatThread`).
+- **MarketplaceScreen browse header**: added three compact header buttons to fit 390px phone width (Messages with unread badge | Offers | Create). Replaced "My Offers"/"Create Listing" text with shorter labels. Messages button shows unread dot badge (9+ for counts >9), positioned absolute top-right. All buttons: smaller caption text (fontSize: 12), reduced padding, `minHeight: 38`, icon size: 18.
+- **formatStatus.ts**: added `formatThreadStatus(status, closedReason?)` — maps `ThreadStatus` ('open' → 'Open', 'closed' → 'Closed'), with closed reason override (`closed_by_participant` → 'Closed', `listing_unavailable` → 'Listing Unavailable'). Display-layer only, same pattern as verification/offer status.
+
+### Files Created
+- `src/types/chat.ts` — ThreadStatus / ThreadClosedReason / ChatThread / ChatMessage
+- `src/contexts/ChatContext.tsx` — AsyncStorage persistence + guarded chat API (no seed data)
+- `src/screens/cosplayer/ChatThreadScreen.tsx`
+- `src/screens/cosplayer/ChatListScreen.tsx`
+
+### Files Modified
+- `App.tsx` — `ChatProvider` nested inside `MarketplaceProvider`, wrapping `OffersProvider`
+- `src/components/ConfirmationModal.tsx` — fixed cancel button conditional from `cancelText &&` to `cancelText ? ... : null` (prevents text node with empty string on web)
+- `src/navigation/MarketplaceStackNavigator.tsx` — 2 new routes + param list
+- `src/screens/cosplayer/ListingDetailScreen.tsx` — "Message Seller" / "View Messages" buttons enabled, removed coming-soon banner
+- `src/screens/cosplayer/OfferDetailScreen.tsx` — "Message" button for both parties, removed `cancelText=""` from success/error modals
+- `src/screens/cosplayer/MarketplaceScreen.tsx` — "Messages" button with unread dot, compact header buttons
+- `src/screens/cosplayer/index.ts` — new screen exports
+- `src/utils/formatStatus.ts` — `formatThreadStatus` (additive)
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+Fixes applied during type check:
+- ChatContext: derive `seller_display_name` from `seller_email` (Listing type doesn't have this field)
+- Button imports: changed from `'../../components/Button'` to `'../../components'`
+- Replaced `borderRadius.pill` with `borderRadius.full`
+- Replaced `typography.h4` with `typography.h3`
+- Replaced `colors.infoBackground` with `colors.info + '10'`
+- Replaced `borderRadius.round` with literal `20`
+- Removed `icon` prop from Button in OfferDetailScreen (not supported)
+
+### Privacy Boundary Verification (grep checks)
+✅ No `Alert.alert` in chat files
+✅ No `&&` text conditionals in chat files (all use ternary `? : null`)
+✅ No chat types imported by `listingScreener.ts` or `offerRules.ts` (privacy boundary intact)
+✅ `formatStatus.ts` imports chat types only for display formatting (expected behavior)
+✅ No `console.log` of message bodies or content in ChatContext, ChatThreadScreen, ChatListScreen
+✅ ChatContext never calls `createOffer`, `updateListing`, or `acceptOffer` (no message text written to offers/listings)
+✅ Privacy boundary header comments present in all chat files
+
+**Privacy boundary enforced:** Chat content is transaction-scoped and is never screened, classified, scored, or used as input to any AI/rule computation (see spec).
+
+### What Needs User Verification (Test Checklist — two verified accounts)
+- [ ] **Buyer** opens an active listing → "Message Seller" → thread opens; nothing appears in either Messages list until a message is sent
+- [ ] **Buyer** sends a message → **Seller's** Messages shows the thread with an unread dot → opens it → dot clears → **Seller** replies → **Buyer** sees the reply
+- [ ] Empty/whitespace message can't be sent; a 1001-char message is refused
+- [ ] The pinned banner appears; "Go to Listing" (buyer) / "View Offers" (seller) work
+- [ ] On a Photography Services listing, chat works the same (all offer types)
+- [ ] Either party closes the conversation → both see it under Closed, read-only
+- [ ] **Seller** cancels/blocks a listing → its thread shows "This listing is no longer available"
+- [ ] Seller-only account cannot start chats on others' listings; own listing shows "View Messages"
+- [ ] Offer Detail → "Message" opens the right thread
+- [ ] Web phone-frame: input pinned, only messages scroll, three header buttons fit, cards in Messages are the same size with short and long previews
+- [ ] Reload the browser → messages still there
+
+### Out of scope (explicitly flagged)
+- **Real-time delivery / push notifications** (spec allows notifications only for milestone/logistics/commitment alerts) — messages appear on reopen/focus.
+- **Attachments, edit/delete, reporting/blocking a user.**
+- **A "transaction complete" state** (needs milestone tracking from FE-8); accepted offers leave the thread open until a participant closes it.
+- **Holder access to chat for disputes** (spec is silent; FE-8).
+- **Chat content stored in plain local storage** (mock; backend phase will add encryption/access controls).
+- **Reopening closed threads** for a pair+listing (not permitted; closed is final until a new thread is created).
+
+### Commits
+- `b5e3cb7` — FE-6 Step 4: transaction-scoped chat (listing+buyer threads) with chat list, thread view, close, and structured-offer reminder (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/b5e3cb7)
+
+---
+
+*Last updated: September 20, 2026, 16:45*
 
 
 ---
