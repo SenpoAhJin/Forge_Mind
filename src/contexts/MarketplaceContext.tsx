@@ -7,19 +7,33 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Listing, CreateListingInput } from '../types/marketplace';
+import { Listing, CreateListingInput, ListingStatus, ScreeningResult } from '../types/marketplace';
 import seedListings from '../data/marketplace_listings.json';
 
 const STORAGE_KEY = '@forgemind:marketplace_listings';
 
+// Optional screening outcome passed in by the caller (the screener runs at
+// the point of posting, before the listing is persisted). When omitted the
+// listing defaults to a fully-passed screen ('active', 'passed').
+export interface ScreeningOverride {
+  status: ListingStatus;
+  screening_result: ScreeningResult;
+  screening_reason?: string;
+}
+
 interface MarketplaceContextType {
   listings: Listing[];
   isLoading: boolean;
-  createListing: (sellerEmail: string, input: CreateListingInput) => Promise<Listing>;
+  createListing: (
+    sellerEmail: string,
+    input: CreateListingInput,
+    screening?: ScreeningOverride
+  ) => Promise<Listing>;
   getListingById: (id: string) => Listing | undefined;
   getActiveListings: () => Listing[];
   getListingsBySeller: (sellerEmail: string) => Listing[];
   cancelListing: (id: string) => Promise<void>;
+  submitAppeal: (listingId: string, message: string) => Promise<void>;
 }
 
 const MarketplaceContext = createContext<MarketplaceContextType | undefined>(undefined);
@@ -68,7 +82,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
-  const createListing = async (sellerEmail: string, input: CreateListingInput): Promise<Listing> => {
+  const createListing = async (
+    sellerEmail: string,
+    input: CreateListingInput,
+    screening?: ScreeningOverride
+  ): Promise<Listing> => {
     const newListing: Listing = {
       id: `listing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       seller_email: sellerEmail,
@@ -78,7 +96,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       price: input.price,
       condition: input.condition,
       photos: input.photos,
-      status: 'active',
+      status: screening?.status ?? 'active',
+      screening_result: screening?.screening_result ?? 'passed',
+      screening_reason: screening?.screening_reason,
+      appeal_status: 'none',
       created_at: new Date().toISOString(),
     };
 
@@ -87,10 +108,26 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return newListing;
   };
 
+  // Seller appeal path (FE-6 Step 2, simplified mock): records the seller's
+  // appeal text and marks the listing pending Holder review. Approving or
+  // overturning an appeal is a Holder action and is explicitly out of scope
+  // until FE-8 (Holder verification / review surface) exists.
+  const submitAppeal = async (listingId: string, message: string): Promise<void> => {
+    const updatedListings = listings.map(listing =>
+      listing.id === listingId
+        ? { ...listing, appeal_status: 'pending' as const, appeal_message: message }
+        : listing
+    );
+    await saveListings(updatedListings);
+  };
+
   const getListingById = (id: string): Listing | undefined => {
     return listings.find(listing => listing.id === id);
   };
 
+  // Public browse feed: ONLY 'active' listings are ever visible to buyers.
+  // Strictly excluded: 'blocked' (failed the category screen, never went
+  // public), 'sold', and 'cancelled'.
   const getActiveListings = (): Listing[] => {
     return listings.filter(listing => listing.status === 'active');
   };
@@ -116,6 +153,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         getActiveListings,
         getListingsBySeller,
         cancelListing,
+        submitAppeal,
       }}
     >
       {children}
