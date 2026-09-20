@@ -14,17 +14,23 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Button } from '../../components';
 import { formatPHP } from '../../utils/formatCurrency';
+import { getAllowedOfferTypes } from '../../utils/offerRules';
+import { OfferType } from '../../types/offers';
+import { MarketplaceStackParamList } from '../../navigation/MarketplaceStackNavigator';
 
 type ListingDetailRouteProp = RouteProp<{ params: { listingId: string } }, 'params'>;
 
 export const ListingDetailScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<ListingDetailRouteProp>();
+  const { user } = useUser();
   const { getListingById } = useMarketplace();
 
   const listing = getListingById(route.params.listingId);
@@ -45,6 +51,22 @@ export const ListingDetailScreen: React.FC = () => {
       </View>
     );
   }
+
+  // FE-6 Step 3: a verified, non-seller participant on their own feed can open
+  // a structured offer flow against an active listing. Seller-only accounts
+  // cannot make offers (they can only receive them).
+  const isEligibleToOffer =
+    user?.verification_status === 'verified' &&
+    user?.marketplace_registration?.marketplace_role !== 'seller' &&
+    listing.seller_email !== user?.email &&
+    listing.status === 'active';
+  const allowedOfferTypes = getAllowedOfferTypes(listing.category);
+
+  const offerButtonLabels: Record<OfferType, string> = {
+    purchase: 'Make Purchase Offer',
+    trade: 'Propose Trade',
+    commission: 'Request Commission',
+  };
 
   const formattedPrice = formatPHP(listing.price);
   const formattedDate = new Date(listing.created_at).toLocaleDateString('en-US', {
@@ -99,11 +121,31 @@ export const ListingDetailScreen: React.FC = () => {
         <Text style={styles.infoValue}>{formattedDate}</Text>
       </View>
 
+      {/* Offer entry point (FE-6 Step 3) */}
+      {isEligibleToOffer && (
+        <View style={styles.offerSection}>
+          {allowedOfferTypes.map((offerType) => (
+            <Button
+              key={offerType}
+              title={offerButtonLabels[offerType]}
+              onPress={() =>
+                navigation.navigate('MakeOffer', {
+                  listingId: listing.id,
+                  offerType,
+                })
+              }
+              variant="primary"
+              fullWidth
+            />
+          ))}
+        </View>
+      )}
+
       {/* Coming Soon Banner */}
       <View style={styles.comingSoonBanner}>
         <Ionicons name="information-circle" size={18} color={colors.info} />
         <Text style={styles.comingSoonText}>
-          Messaging and offers will be available in a later update (FE-6 Step 4).
+          Direct messaging between participants will be available in a later update (FE-6 Step 4).
         </Text>
       </View>
 
@@ -206,6 +248,10 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     fontWeight: '600',
+  },
+  offerSection: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   comingSoonBanner: {
     flexDirection: 'row',

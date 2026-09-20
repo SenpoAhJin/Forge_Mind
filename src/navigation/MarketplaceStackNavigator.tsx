@@ -1,6 +1,6 @@
 /**
  * ForgeMind Navigation - Marketplace Stack
- * Marketplace tab → Registration flow
+ * Marketplace tab → Registration flow + listing/offer flows
  */
 
 import React from 'react';
@@ -10,14 +10,21 @@ import {
   MarketplaceRegistrationScreen,
   CreateListingScreen,
   ListingDetailScreen,
+  MakeOfferScreen,
+  OfferLogScreen,
+  OfferDetailScreen,
 } from '../screens/cosplayer';
 import { colors, typography } from '../theme';
+import { OfferType } from '../types/offers';
 
 export type MarketplaceStackParamList = {
   MarketplaceHome: undefined;
   MarketplaceRegistration: undefined;
   CreateListing: undefined;
   ListingDetail: { listingId: string };
+  MakeOffer: { listingId: string; offerType: OfferType };
+  OfferLog: { initialTab?: 'sent' | 'received' } | undefined;
+  OfferDetail: { offerId: string };
 };
 
 const Stack = createNativeStackNavigator<MarketplaceStackParamList>();
@@ -61,6 +68,21 @@ export const MarketplaceStackNavigator: React.FC = () => (
       name="ListingDetail"
       component={ListingDetailScreen}
       options={{ title: 'Listing Details' }}
+    />
+    <Stack.Screen
+      name="MakeOffer"
+      component={MakeOfferScreen}
+      options={{ title: 'Make Offer' }}
+    />
+    <Stack.Screen
+      name="OfferLog"
+      component={OfferLogScreen}
+      options={{ title: 'Offers' }}
+    />
+    <Stack.Screen
+      name="OfferDetail"
+      component={OfferDetailScreen}
+      options={{ title: 'Offer Details' }}
     />
   </Stack.Navigator>
 );

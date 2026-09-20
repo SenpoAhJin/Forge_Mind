@@ -2138,3 +2138,84 @@ Exit Code: 0
 ---
 
 *Last updated: September 20, 2026, 12:43*
+
+---
+
+## Session — Sunday, September 20, 2026, 13:01 (FE-6 Step 3: structured Trade / Commission / Purchase offer flow + offer log)
+
+### What we did
+
+Built FE-6 Step 3 of 4: the structured offer system. The spec's boundary is strict — *final agreements must be recorded as structured offers*; chat is discussion only (Step 4); the system never finalizes without human confirmation; and ForgeMind does **not** process payment, shipping, or disputes. This step covers only the structured offer flow + offer log. No chat, no payments, no AI fairness validation.
+
+**1. Data model (`src/types/offers.ts`).** `OfferType = 'purchase' | 'trade' | 'commission'`; `OfferStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn'`. Each offer snapshots the listing title + asking price + seller email/display name and the proposer email/display name, plus type-specific fields (`offered_price`, `trade_offered_item`/`_condition`/`_est_value`, `commission_description`/`timeline_days`) and `created_at`/`responded_at`. Deliberately NO free-text note/message field — free discussion belongs to the Step 4 chat surface, keeping the record structured per spec. `responded_at` is set when an offer leaves `pending`.
+
+**2. Rules (`src/utils/offerRules.ts`).** `getAllowedOfferTypes(category)`: `Commissions & Crafting Services` and `Photography Services` → `['commission']` only; every other category → `['purchase','trade']`. Shared by the make-offer form, the listing-detail entry buttons, and the context guard.
+
+**3. Offers context (`src/contexts/OffersContext.tsx`).** Same AsyncStorage pattern as MarketplaceContext under key `@forgemind:marketplace_offers`, provider nested inside `MarketplaceProvider` in `App.tsx` (it validates against live listings via `useMarketplace`). **No seed offers** — offers only exist once a user creates them (seed data would belong to accounts that don't exist). API + guards:
+- `createOffer` — listing must exist and be `active`, proposer ≠ seller, offer type allowed for the category, and no existing **pending** offer by the same proposer on that listing.
+- `acceptOffer` / `declineOffer` — seller only, pending only. For purchase/trade, accepting is refused if another offer on the listing is already accepted; commissions may be accepted more than once.
+- `withdrawOffer` — proposer only, pending only.
+- Accepting an offer does **not** change the listing status or any other offers (listing finalization is explicitly out of scope; flagged in the report).
+
+**4. Make Offer screen (`MakeOfferScreen.tsx`, route `MakeOffer`).** Route-level guard → blocked state with Back button when: not verified, the acting user is the listing's seller, role is `seller`-only, listing not `active`, or the route's offer type isn't allowed for the category. Read-only listing summary (title + `formatPHP`). Type-specific fields: purchase → "Offer price (₱) *"; trade → "Item you're offering *" + condition chips (`CONDITION_LABELS`) + optional "Estimated value (₱)"; commission → "What do you want made or done? *" (TextArea) + "Budget (₱) *" + "Timeline (days) *" (integer 1–365, not a date picker). Inline validation per field. Info banner: *"Price and fairness suggestions will arrive with the AI layer in a later phase. Offers are not checked against the Value Reference yet."* — and nothing is computed. Success → "Offer Sent" ConfirmationModal → navigates to Offer Log "Sent" tab. Context errors surface in a ConfirmationModal.
+
+**5. Offer Log (`OfferLogScreen.tsx`, route `OfferLog`).** Sent + Received tabs (Received shown only for `seller`/`both` roles; buyer-only accounts see Sent only). Fixed-height (56) horizontal status-filter chip bar (All/Pending/Accepted/Declined/Withdrawn). Standardized cards (`minHeight: 120`, `justifyContent: 'space-between'`) with type tag + status badge at the top, listing title `numberOfLines={2}`, a per-type detail line `numberOfLines={2}`, and counterpart + date footer. All prices via `formatPHP`. Empty states reuse the 11:09 session's round-icon-in-card design.
+
+**6. Offer Detail (`OfferDetailScreen.tsx`, route `OfferDetail`).** Full read-out: listing snapshot, type-specific offer fields, parties (From/To with display names + emails), created/responded timestamps. Pending + recipient (seller) → Accept / Decline behind ConfirmationModals; pending + proposer → Withdraw behind a ConfirmationModal; non-pending → read-only with responded date and "no longer awaiting a response" note. Payment/shipping disclaimer: "ForgeMind does not process payment or shipping. Arrange payment and delivery directly with the other party."
+
+**7. Wiring.** New stack routes `MakeOffer`, `OfferLog`, `OfferDetail` (unique names across nested navigators). `ListingDetailScreen` now offers entry buttons per allowed type ("Make Purchase Offer" / "Propose Trade" / "Request Commission") for verified, non-seller participants on active listings — the stale "offers … later update" banner text updated to reference chat (Step 4) only; the disabled Contact Seller button stays. `MarketplaceScreen` browse header gains a "My Offers" button (beside Create Listing) so the log is reachable for everyone. Screens exported from `src/screens/cosplayer/index.ts`.
+
+### Files Created
+- `src/types/offers.ts` — Offer / CreateOfferInput / OfferType / OfferStatus
+- `src/utils/offerRules.ts` — `getAllowedOfferTypes` / `isOfferTypeAllowed`
+- `src/contexts/OffersContext.tsx` — persistence + guarded offer API (no seed data)
+- `src/screens/cosplayer/MakeOfferScreen.tsx`
+- `src/screens/cosplayer/OfferLogScreen.tsx`
+- `src/screens/cosplayer/OfferDetailScreen.tsx`
+
+### Files Modified
+- `App.tsx` — `OffersProvider` nested inside `MarketplaceProvider` (needs `useMarketplace`)
+- `src/navigation/MarketplaceStackNavigator.tsx` — 3 new routes + param list
+- `src/screens/cosplayer/ListingDetailScreen.tsx` — eligible Make-Offer entry buttons; banner text updated
+- `src/screens/cosplayer/MarketplaceScreen.tsx` — "My Offers" header button
+- `src/screens/cosplayer/index.ts` — new screen exports
+- `src/utils/formatStatus.ts` — `formatOfferStatus` / `formatOfferType` (display-layer only, same pattern as verification status)
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Self-verified traces (pitfall adherence)
+- **No `Alert.alert`** in any new screen — all confirmations/errors use `ConfirmationModal`. Confirmation dialogs use the default Cancel; OK-only success/error dialogs use the repo's existing `cancelText=""` pattern to render a single button.
+- **No `{cond && <Text/>}`** — every conditional `<Text>` uses an explicit ternary (`{cond ? <Text/> : null}`);
+- **Chip bar** uses the established pattern: outer fixed-height `View` (56, `overflow: 'hidden'`) wrapping a horizontal `ScrollView` with explicit `flexDirection: 'row'` content.
+- **No hooks inside render helpers** — `renderOfferCard`, `emptyState`, `BlockedView` are hook-free JSX-only functions/components; all state lives at the component top level.
+- **Route names unique** across nested navigators: `MakeOffer`, `OfferLog`, `OfferDetail` don't collide with `Marketplace`/`MarketplaceHome`/`Characters` etc.
+- **Raw enums stored** (`offer_type`, `status` are plain values on the record); display goes through `formatOfferType`/`formatOfferStatus`/`formatPHP`, consistent with the rest of the app.
+- **Guards traced by hand:** create-on-non-active listing, self-offer, seller-only role, disallowed type, duplicate pending offer, non-seller accept, non-proposer withdraw, accept-with-existing-accepted (purchase/trade) — all return error results; commission accepts are not blocked by another accepted commission.
+- Unsigned `useNavigation()` calls in the three new screens were typed with `NativeStackNavigationProp<MarketplaceStackParamList>` to fix `navigate` arity errors.
+
+### What Needs User Verification (Test Checklist)
+- [ ] On a listing detail (verified `buyer`/`both` account, not the seller), confirm "Make Purchase Offer"/"Propose Trade" buttons appear for item categories and "Request Commission" for Photography/Commissions categories
+- [ ] Send a purchase offer → "Offer Sent" modal → lands on Offer Log "Sent" tab with the new card (Pending badge, listing title, offer price vs asking, "To: seller")
+- [ ] Seller-only account: confirm My Offers shows Sent only (no Received tab) and listing detail shows no offer buttons on others' listings
+- [ ] Confirm "My Offers" is reachable from the marketplace browse header
+- [ ] As the seller, open the received offer → Accept (behind confirmation) → status flips to Accepted, buttons become the read-only state, commission guards let you accept more than one
+- [ ] Try to accept a second purchase/trade offer on the same listing → confirm it's refused with the "already accepted" message
+- [ ] As the proposer, withdraw a pending offer → status flips to Withdrawn
+- [ ] Both sides: confirm declined/withdrawn offers show responded date and the read-only note
+- [ ] Confirm no `$` currency anywhere in the offer flow — prices render as ₱ via `formatPHP`
+- [ ] Confirm the AI-layer banner text on Make Offer and that no fairness Value-Reference check is performed
+
+### Out of scope (explicitly flagged)
+- **Chat / messaging (FE-6 Step 4)** — offers deliberately carry no free-text message field.
+- **Payments, shipping, dispute mediation** — the detail screen explicitly says ForgeMind does not process these.
+- **Listing finalization** — accepting an offer does not flip the listing to `sold` or affect other offers; wiring accept → listing status is left for a later step.
+- **AI fairness / Value Reference** — the make-offer screen states suggestions are a later phase and computes nothing.
+
+---
+
+*Last updated: September 20, 2026, 13:01*

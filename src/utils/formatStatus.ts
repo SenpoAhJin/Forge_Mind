@@ -58,3 +58,36 @@ export const formatDepartmentVerificationStatus = (
   if (!status) return '';
   return DEPARTMENT_VERIFICATION_STATUS_LABELS[status] ?? toTitleCase(status);
 };
+
+// ----- Offers (FE-6 Step 3) ------------------------------------------------
+
+const OFFER_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  accepted: 'Accepted',
+  declined: 'Declined',
+  withdrawn: 'Withdrawn',
+};
+
+const OFFER_TYPE_LABELS: Record<string, string> = {
+  purchase: 'Purchase Offer',
+  trade: 'Trade Offer',
+  commission: 'Commission',
+};
+
+/**
+ * Format a stored offer status for display.
+ * e.g. 'pending' -> 'Pending', 'accepted' -> 'Accepted'. Never raw snake_case.
+ */
+export const formatOfferStatus = (status?: string | null): string => {
+  if (!status) return '';
+  return OFFER_STATUS_LABELS[status] ?? toTitleCase(status);
+};
+
+/**
+ * Format a stored offer type for display.
+ * e.g. 'purchase' -> 'Purchase Offer', 'commission' -> 'Commission'.
+ */
+export const formatOfferType = (offerType?: string | null): string => {
+  if (!offerType) return '';
+  return OFFER_TYPE_LABELS[offerType] ?? toTitleCase(offerType);
+};

@@ -253,9 +253,17 @@ const MarketplaceBrowse: React.FC = () => {
 
   return (
     <View style={styles.browseContainer}>
-      {/* Header with Create button */}
-      {canCreateListing && (
-        <View style={styles.browseHeader}>
+      {/* Header with actions */}
+      <View style={styles.browseHeader}>
+        <TouchableOpacity
+          style={styles.myOffersButton}
+          onPress={() => navigation.navigate('OfferLog')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mail-outline" size={20} color={colors.primary} />
+          <Text style={styles.myOffersButtonText}>My Offers</Text>
+        </TouchableOpacity>
+        {canCreateListing && (
           <TouchableOpacity
             style={styles.createButton}
             onPress={() => navigation.navigate('CreateListing')}
@@ -264,8 +272,8 @@ const MarketplaceBrowse: React.FC = () => {
             <Ionicons name="add-circle" size={20} color={colors.backgroundLight} />
             <Text style={styles.createButtonText}>Create Listing</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Category filter chips */}
       <View style={styles.filterScroll}>
@@ -544,6 +552,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  myOffersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  myOffersButtonText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
   },
   createButton: {
     flexDirection: 'row',
