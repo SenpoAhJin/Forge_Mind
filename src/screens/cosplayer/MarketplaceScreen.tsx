@@ -318,22 +318,27 @@ const MarketplaceBrowse: React.FC = () => {
       {/* Listings feed */}
       {filteredListings.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="file-tray-outline" size={64} color={colors.textDisabled} />
-          <Text style={styles.emptyStateTitle}>No Listings Found</Text>
-          <Text style={styles.emptyStateText}>
-            {selectedCategory === 'All'
-              ? 'No active listings in the marketplace yet.'
-              : `No listings in the ${selectedCategory} category.`}
-          </Text>
-          {canCreateListing && (
-            <TouchableOpacity
-              style={styles.emptyStateButton}
-              onPress={() => navigation.navigate('CreateListing')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.emptyStateButtonText}>Create First Listing</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.emptyStateCard}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="cart-outline" size={80} color={colors.tertiary} />
+            </View>
+            <Text style={styles.emptyStateTitle}>No Listings Found</Text>
+            <Text style={styles.emptyStateText}>
+              {selectedCategory === 'All'
+                ? 'No active listings in the marketplace yet. Be the first to list an item!'
+                : `No listings in the ${selectedCategory} category yet. Try browsing other categories or create your own listing.`}
+            </Text>
+            {canCreateListing && (
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() => navigation.navigate('CreateListing')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add-circle" size={20} color={colors.backgroundLight} />
+                <Text style={styles.emptyStateButtonText}>Create First Listing</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       ) : (
         <FlatList
@@ -594,6 +599,7 @@ const styles = StyleSheet.create({
   },
   listingsList: {
     padding: spacing.md,
+    paddingBottom: spacing.xl, // Extra padding at bottom for comfortable scrolling
   },
   listingCard: {
     backgroundColor: colors.backgroundLight,
@@ -705,24 +711,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
+    backgroundColor: colors.surface,
+  },
+  emptyStateCard: {
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.tertiary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   emptyStateTitle: {
     ...typography.h2,
     color: colors.textPrimary,
-    marginTop: spacing.md,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   emptyStateText: {
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    lineHeight: 22,
+    marginBottom: spacing.xl,
   },
   emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.tertiary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
-    marginTop: spacing.lg,
+    gap: spacing.xs,
+    shadowColor: colors.tertiary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emptyStateButtonText: {
     ...typography.body,
