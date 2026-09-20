@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   typeTagText: {
     ...typography.caption,
     fontWeight: '600',
-    fontSize: 10,
+    fontSize: 11,
   },
   statusTag: {
     paddingHorizontal: spacing.sm,
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   statusTagText: {
     ...typography.caption,
     fontWeight: '700',
-    fontSize: 10,
+    fontSize: 11,
   },
   listingTitle: {
     ...typography.h3,

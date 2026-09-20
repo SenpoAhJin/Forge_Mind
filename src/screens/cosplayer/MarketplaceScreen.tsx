@@ -219,11 +219,8 @@ const MarketplaceBrowse: React.FC = () => {
 
           {/* Card Details */}
           <View style={styles.listingDetails}>
-            <View style={styles.listingHeader}>
-              <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
-              <Text style={styles.listingPrice}>{formatPHP(item.price)}</Text>
-            </View>
-            
+            <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+
             <View style={styles.listingMeta}>
               <View style={styles.categoryTag}>
                 <Text style={styles.categoryTagText}>{item.category}</Text>
@@ -232,7 +229,9 @@ const MarketplaceBrowse: React.FC = () => {
                 <Text style={styles.conditionTagText}>{CONDITION_LABELS[item.condition]}</Text>
               </View>
             </View>
-            
+
+            <Text style={styles.listingPrice}>{formatPHP(item.price)}</Text>
+
             <Text style={styles.listingDescription} numberOfLines={2}>
               {item.description}
             </Text>
@@ -260,7 +259,7 @@ const MarketplaceBrowse: React.FC = () => {
           onPress={() => navigation.navigate('OfferLog')}
           activeOpacity={0.7}
         >
-          <Ionicons name="mail-outline" size={20} color={colors.primary} />
+          <Ionicons name="mail-outline" size={20} color={colors.tertiary} />
           <Text style={styles.myOffersButtonText}>My Offers</Text>
         </TouchableOpacity>
         {canCreateListing && (
@@ -393,29 +392,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  heroCard: {
-    backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: spacing.xl,
-  },
-  heroTitle: {
-    ...typography.h2,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-  },
-  heroSub: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
   cardTitle: {
     ...typography.h2,
     color: colors.textPrimary,
@@ -528,20 +504,6 @@ const styles = StyleSheet.create({
     color: colors.warning,
     fontWeight: '700',
   },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#EBF5FF',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  infoText: {
-    ...typography.caption,
-    color: colors.info,
-    flex: 1,
-    lineHeight: 18,
-  },
   // MarketplaceBrowse styles
   browseContainer: {
     flex: 1,
@@ -558,12 +520,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   myOffersButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.tertiary,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
@@ -571,10 +534,11 @@ const styles = StyleSheet.create({
   },
   myOffersButtonText: {
     ...typography.body,
-    color: colors.primary,
+    color: colors.tertiary,
     fontWeight: '600',
   },
   createButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -634,25 +598,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
     overflow: 'hidden',
-    // Minimum footprint sized to comfortably fit the 2-line description cap
-    // (title ~1 line + tags + 2-line description), so a card with a one-line
-    // description occupies the same box as one with a full two-line cap.
-    minHeight: 120,
+    height: 140, // Fixed height instead of minHeight - all cards same size
   },
   cardContent: {
     flexDirection: 'row',
-    alignItems: 'stretch', // thumbnail column fills the full card height
+    height: '100%', // Fill parent height exactly
   },
   listingThumbnail: {
     width: 100,
-    minHeight: 100, // grows with the card via stretch, never collapses
+    height: '100%', // Fixed to fill card height exactly
     backgroundColor: colors.surface,
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -662,36 +627,25 @@ const styles = StyleSheet.create({
   thumbnailInitials: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.tertiary + '20',
+    backgroundColor: colors.tertiary + '18',
     justifyContent: 'center',
     alignItems: 'center',
   },
   initialsText: {
-    ...typography.h2,
+    fontSize: 28,
     color: colors.tertiary,
     fontWeight: '700',
   },
   listingDetails: {
     flex: 1,
     padding: spacing.md,
-  },
-  listingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
+    justifyContent: 'space-between', // Distribute content evenly
   },
   listingTitle: {
     ...typography.h3,
     color: colors.textPrimary,
-    flex: 1,
     fontWeight: '600',
-  },
-  listingPrice: {
-    ...typography.h2,
-    color: colors.tertiary,
-    fontWeight: '700',
+    marginBottom: spacing.xs,
   },
   listingMeta: {
     flexDirection: 'row',
@@ -709,7 +663,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.tertiary,
     fontWeight: '600',
-    fontSize: 10,
+    fontSize: 11,
   },
   conditionTag: {
     backgroundColor: colors.secondary + '15',
@@ -721,7 +675,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.secondary,
     fontWeight: '600',
-    fontSize: 10,
+    fontSize: 11,
+  },
+  listingPrice: {
+    ...typography.h3,
+    color: colors.tertiary,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
   },
   listingDescription: {
     ...typography.body,
