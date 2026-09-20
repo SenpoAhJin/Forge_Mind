@@ -1,75 +1,192 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { useEvents } from '../../contexts/EventsContext';
+import { EventsStackParamList } from '../../navigation/EventsStackNavigator';
+import { Button, StandardCard, Tag } from '../../components';
+import { formatEventStatus } from '../../utils/formatStatus';
+import { Event, EventStatus } from '../../types/events';
+
+type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList, 'EventsHome'>;
 
 export const EventsScreen: React.FC = () => {
   const { user } = useUser();
-  const isStaff = user?.organizer_role === 'staff';
+  const { events, isLoading } = useEvents();
+  const navigation = useNavigation<EventsScreenNavigationProp>();
+  
+  const [selectedStatus, setSelectedStatus] = useState<'all' | EventStatus>('all');
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Staff permission notice */}
-      {isStaff && (
+  // Role checks
+  const isHeadOrganizer = user?.organizer_role === 'head';
+  const isVerifiedStaff = user?.organizer_role === 'staff' && user?.department_verification_status === 'approved';
+  const hasAccess = isHeadOrganizer || isVerifiedStaff;
+
+  // Filter logic
+  const getFilteredEvents = (): Event[] => {
+    let filtered = events;
+
+    // Staff see confirmed events only
+    if (isVerifiedStaff && !isHeadOrganizer) {
+      filtered = filtered.filter(e => e.status === 'confirmed');
+    }
+
+    // Status filter
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(e => e.status === selectedStatus);
+    }
+
+    // Sort by start_date ascending
+    return filtered.sort((a, b) => a.start_date.localeCompare(b.start_date));
+  };
+
+  // Helper: Check if event is in the past
+  const isPastEvent = (event: Event): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = event.end_date ? new Date(event.end_date + 'T00:00:00') : new Date(event.start_date + 'T00:00:00');
+    return endDate < today;
+  };
+
+  // Helper: Format date range
+  const formatDateRange = (event: Event): string => {
+    if (event.end_date && event.end_date !== event.start_date) {
+      return `${event.start_date} to ${event.end_date}`;
+    }
+    return event.start_date;
+  };
+
+  // Staff/unverified user UI
+  if (!hasAccess) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.permissionBanner}>
           <Ionicons name="information-circle" size={20} color={colors.warning} />
           <Text style={styles.permissionText}>
-            As a Staff Member, you can view events you're assigned to. Creating and editing events requires Head Organizer permissions.
+            {user?.organizer_role === 'staff'
+              ? 'Your department access is pending approval. Once approved, you can view confirmed events.'
+              : 'Events access requires Head Organizer or approved Staff status. Please request organizer access from your profile.'}
           </Text>
         </View>
-      )}
+      </ScrollView>
+    );
+  }
 
-      <View style={styles.heroCard}>
-        <Ionicons name="calendar-outline" size={48} color={colors.secondary} />
-        <Text style={styles.heroTitle}>Events</Text>
-        <Text style={styles.heroSub}>
-          Create and manage cosplay events, track attendance and readiness.
-        </Text>
-      </View>
+  const filteredEvents = getFilteredEvents();
 
-      <View style={styles.featureList}>
-        <View style={styles.featureRow}>
-          <Ionicons name="add-circle-outline" size={20} color={colors.secondary} />
-          <Text style={styles.featureText}>Create events with venue and date details</Text>
-        </View>
-        <View style={styles.featureRow}>
-          <Ionicons name="people-outline" size={20} color={colors.secondary} />
-          <Text style={styles.featureText}>View aggregate cosplayer readiness data</Text>
-        </View>
-        <View style={styles.featureRow}>
-          <Ionicons name="trophy-outline" size={20} color={colors.secondary} />
-          <Text style={styles.featureText}>Suggest contest tiers based on skill levels</Text>
-        </View>
-      </View>
+  // Status chips (staff don't see Draft chip)
+  const statusChips: Array<{ key: 'all' | EventStatus; label: string }> = [
+    { key: 'all', label: 'All' },
+    ...(isHeadOrganizer ? [{ key: 'draft' as const, label: 'Draft' }] : []),
+    { key: 'confirmed' as const, label: 'Confirmed' },
+    { key: 'cancelled' as const, label: 'Cancelled' },
+  ];
 
-      <View style={styles.infoBanner}>
-        <Ionicons name="information-circle" size={18} color={colors.info} />
-        <Text style={styles.infoText}>
-          Event creation, logistics and meetup planning will be built in FE-7.
-        </Text>
-      </View>
-    </ScrollView>
+  return (
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Status chip bar */}
+        <View style={styles.chipBarContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipBar}
+          >
+            {statusChips.map(chip => (
+              <TouchableOpacity
+                key={chip.key}
+                onPress={() => setSelectedStatus(chip.key)}
+                style={styles.chipWrapper}
+                activeOpacity={0.7}
+              >
+                <Tag
+                  type="category"
+                  label={chip.label}
+                  style={selectedStatus === chip.key ? styles.chipSelected : undefined}
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Create button (Head Organizer only) */}
+        {isHeadOrganizer && (
+          <View style={styles.createButtonContainer}>
+            <Button
+              title="Create Event"
+              variant="primary"
+              onPress={() => navigation.navigate('CreateEvent')}
+            />
+          </View>
+        )}
+
+        {/* Event cards */}
+        {filteredEvents.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="calendar-outline" size={48} color={colors.textDisabled} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {selectedStatus === 'all' ? 'No events yet' : `No ${selectedStatus} events`}
+            </Text>
+            <Text style={styles.emptyMessage}>
+              {isHeadOrganizer && selectedStatus === 'all'
+                ? 'Create your first event to get started'
+                : isVerifiedStaff
+                ? 'Check back later for confirmed events'
+                : 'Events will appear here once created'}
+            </Text>
+          </View>
+        ) : (
+          filteredEvents.map(event => (
+            <TouchableOpacity
+              key={event.id}
+              onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+              activeOpacity={0.7}
+            >
+              <StandardCard style={styles.eventCard}>
+                <View style={styles.cardContent}>
+                  <Text style={styles.eventName} numberOfLines={2}>
+                    {event.name}
+                  </Text>
+                  <Text style={styles.eventDate} numberOfLines={1}>
+                    {formatDateRange(event)}
+                  </Text>
+                  <Text style={styles.eventVenue} numberOfLines={1}>
+                    {event.venue_name}{event.city ? `, ${event.city}` : ''}
+                  </Text>
+                  <View style={styles.badges}>
+                    <Tag
+                      type="status"
+                      label={formatEventStatus(event.status)}
+                      style={
+                        event.status === 'confirmed'
+                          ? styles.badgeConfirmed
+                          : event.status === 'cancelled'
+                          ? styles.badgeCancelled
+                          : styles.badgeDraft
+                      }
+                    />
+                    {isPastEvent(event) && (
+                      <Tag type="status" label="Past" style={styles.badgeNeutral} />
+                    )}
+                  </View>
+                </View>
+              </StandardCard>
+            </TouchableOpacity>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  heroCard: {
-    backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: spacing.xl,
-  },
-  heroTitle: { ...typography.h2, color: colors.textPrimary, marginTop: spacing.md },
-  heroSub: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm },
+  content: { padding: spacing.md, paddingBottom: spacing.xxl },
   permissionBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -79,30 +196,89 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.warning,
     padding: spacing.md,
     gap: spacing.sm,
-    marginBottom: spacing.lg,
   },
   permissionText: { ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 20 },
-  featureList: {
-    backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-    marginBottom: spacing.xl,
-    gap: spacing.md,
+  chipBarContainer: {
+    height: 56,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
   },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  featureText: { ...typography.body, color: colors.textPrimary, flex: 1 },
-  infoBanner: {
+  chipBar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#EBF5FF',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
-  infoText: { ...typography.caption, color: colors.info, flex: 1, lineHeight: 18 },
+  chipWrapper: {
+    alignSelf: 'flex-start',
+  },
+  chipSelected: {
+    backgroundColor: colors.primary,
+  },
+  createButtonContainer: {
+    marginBottom: spacing.lg,
+  },
+  eventCard: {
+    marginBottom: spacing.md,
+    height: 150,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  eventName: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  eventDate: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  eventVenue: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  badges: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: 'auto',
+  },
+  badgeConfirmed: {
+    backgroundColor: colors.success,
+  },
+  badgeCancelled: {
+    backgroundColor: colors.error,
+  },
+  badgeDraft: {
+    backgroundColor: colors.textSecondary,
+  },
+  badgeNeutral: {
+    backgroundColor: colors.textSecondary,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  emptyMessage: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
 });
+

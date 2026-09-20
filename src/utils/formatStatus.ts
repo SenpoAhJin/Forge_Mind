@@ -121,3 +121,21 @@ export const formatThreadStatus = (
   }
   return THREAD_STATUS_LABELS[status] ?? toTitleCase(status);
 };
+
+// ----- Events (FE-7 Step 1) -------------------------------------------------
+
+import { EventStatus } from '../types/events';
+
+const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  draft: 'Draft',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled',
+};
+
+/**
+ * Format a stored event status for display.
+ * e.g. 'draft' -> 'Draft', 'confirmed' -> 'Confirmed'.
+ */
+export const formatEventStatus = (status: EventStatus): string => {
+  return EVENT_STATUS_LABELS[status] ?? toTitleCase(status);
+};

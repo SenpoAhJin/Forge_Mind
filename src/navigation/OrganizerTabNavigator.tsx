@@ -2,11 +2,11 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  EventsScreen,
   LogisticsScreen,
   MeetupsScreen,
 } from '../screens/organizer';
 import { ProfileStackNavigator } from './ProfileStackNavigator';
+import { EventsStackNavigator } from './EventsStackNavigator';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -50,8 +50,8 @@ export const OrganizerTabNavigator: React.FC = () => {
     >
       <Tab.Screen
         name="Events"
-        component={EventsScreen}
-        options={{ tabBarLabel: 'Events' }}
+        component={EventsStackNavigator}
+        options={{ tabBarLabel: 'Events', headerShown: false }}
       />
       <Tab.Screen
         name="Logistics"

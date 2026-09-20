@@ -15,6 +15,7 @@ import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
 import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { OffersProvider } from './src/contexts/OffersContext';
 import { ChatProvider } from './src/contexts/ChatContext';
+import { EventsProvider } from './src/contexts/EventsContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
@@ -46,8 +47,10 @@ export default function App() {
               <MarketplaceProvider>
                 <OffersProvider>
                   <ChatProvider>
-                    <RootNavigator />
-                    <StatusBar style="auto" />
+                    <EventsProvider>
+                      <RootNavigator />
+                      <StatusBar style="auto" />
+                    </EventsProvider>
                   </ChatProvider>
                 </OffersProvider>
               </MarketplaceProvider>
