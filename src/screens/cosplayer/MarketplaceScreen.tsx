@@ -259,10 +259,13 @@ const MarketplaceBrowse: React.FC = () => {
           onPress={() => setSelectedCategory('All')}
           activeOpacity={0.7}
         >
-          <Text style={[
-            styles.filterChipText,
-            selectedCategory === 'All' && styles.filterChipTextActive,
-          ]}>
+          <Text 
+            style={[
+              styles.filterChipText,
+              selectedCategory === 'All' && styles.filterChipTextActive,
+            ]}
+            numberOfLines={1}
+          >
             All
           </Text>
         </TouchableOpacity>
@@ -276,10 +279,13 @@ const MarketplaceBrowse: React.FC = () => {
             onPress={() => setSelectedCategory(category)}
             activeOpacity={0.7}
           >
-            <Text style={[
-              styles.filterChipText,
-              selectedCategory === category && styles.filterChipTextActive,
-            ]}>
+            <Text 
+              style={[
+                styles.filterChipText,
+                selectedCategory === category && styles.filterChipTextActive,
+              ]}
+              numberOfLines={1}
+            >
               {category}
             </Text>
           </TouchableOpacity>
@@ -529,7 +535,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    minHeight: 56, // Fixed height to prevent expansion
+    height: 56, // Fixed height (not minHeight) to prevent expansion
   },
   filterContent: {
     flexDirection: 'row',
@@ -548,6 +554,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0, // Prevent chip from shrinking
+    height: 36, // Fixed height for chips
   },
   filterChipActive: {
     backgroundColor: colors.tertiary,
@@ -557,6 +565,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     fontWeight: '600',
+    flexShrink: 0, // Prevent text from shrinking
   },
   filterChipTextActive: {
     color: colors.backgroundLight,
