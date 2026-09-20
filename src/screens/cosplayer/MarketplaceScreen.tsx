@@ -529,6 +529,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    minHeight: 56, // Fixed height to prevent expansion
   },
   filterContent: {
     flexDirection: 'row',
@@ -536,15 +537,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
+    minHeight: 56, // Match parent height
   },
   filterChip: {
-    alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: colors.tertiary,
