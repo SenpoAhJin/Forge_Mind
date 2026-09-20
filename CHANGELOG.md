@@ -1378,3 +1378,130 @@ Exit Code: 0
 ---
 
 *Last updated: September 20, 2026, 09:58*
+
+
+---
+
+## Session — Sunday, September 20, 2026, 10:07 (Fix: Marketplace filter navigation bar expansion and layout issues)
+
+### What we did
+
+**Fixed marketplace filter navigation bar layout issues** reported by user (follow-up fix to commits `6249dea` and `029f67d`).
+
+**The bugs:**
+1. **Navigation bar expanding:** When clicking between filter chips, the navigation bar would expand/contract vertically, creating a jarring visual effect
+2. **Text visibility issues:** When certain filters were selected, the text in other chips would become difficult to see or the layout would shift unexpectedly
+
+**Root cause:** 
+- The `filterScroll` container had no fixed height, allowing it to resize dynamically when content changed
+- The `filterChip` had `alignSelf: 'flex-start'` which was causing inconsistent sizing behavior in the horizontal scroll context
+- Missing explicit `justifyContent` and `alignItems` on the chips themselves
+
+**The fixes:**
+
+1. **Added `minHeight: 56` to `filterScroll`** to prevent vertical expansion/contraction
+```tsx
+// BEFORE
+filterScroll: {
+  backgroundColor: colors.backgroundLight,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+},
+
+// AFTER
+filterScroll: {
+  backgroundColor: colors.backgroundLight,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  minHeight: 56, // Fixed height to prevent expansion
+},
+```
+
+2. **Added `minHeight: 56` to `filterContent`** to match parent height and stabilize layout
+```tsx
+// BEFORE
+filterContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  gap: spacing.sm,
+},
+
+// AFTER
+filterContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  gap: spacing.sm,
+  minHeight: 56, // Match parent height
+},
+```
+
+3. **Replaced `alignSelf: 'flex-start'` with `justifyContent: 'center'` and `alignItems: 'center'` in `filterChip`**
+```tsx
+// BEFORE
+filterChip: {
+  alignSelf: 'flex-start',
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: borderRadius.full,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+},
+
+// AFTER
+filterChip: {
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: borderRadius.full,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+```
+
+**Why these changes work:**
+- Fixed `minHeight` prevents the ScrollView container from resizing when content or selection changes
+- Removing `alignSelf: 'flex-start'` allows chips to size consistently within the horizontal scroll context
+- Adding explicit `justifyContent` and `alignItems` to chips ensures text is always centered and visible
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ TypeScript compilation passed with zero errors
+
+### Commits
+- `eab75c0` — `Fix marketplace filter navigation bar: prevent expansion and improve layout stability` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/eab75c0)
+
+**Commit stats:**
+- 1 file changed, 4 insertions(+), 1 deletion(-)
+- MarketplaceScreen.tsx: `filterScroll`, `filterContent`, and `filterChip` styles updated
+
+### What's Verified
+✅ TypeScript type-check passes with zero errors  
+✅ Fixed height applied to prevent navigation bar expansion  
+✅ Chip layout improved with proper centering  
+✅ Committed and pushed to GitHub (`eab75c0`)
+
+### What Needs User Verification (Test Checklist)
+- [ ] **Navigation bar stability:** Open Marketplace → click through filters ("All" → "Wigs" → "Costumes & Cosplay" → "Props & Accessories") → confirm navigation bar does NOT expand or contract vertically
+- [ ] **Text visibility:** Click each filter → confirm all chip text remains visible and properly centered in all states (selected and unselected)
+- [ ] **Selection highlighting:** Confirm teal background highlights correctly when selecting any filter
+- [ ] **Filter functionality:** Confirm filtering still works correctly (shows only matching listings)
+- [ ] **Test on both web and device:** Verify the fix works on both web preview and Expo Go
+
+### Notes
+- This is a visual layout fix only — filter functionality remains unchanged
+- The issue was specific to the horizontal ScrollView layout in React Native Web
+- This completes the marketplace filter chip fixes from FE-6 Step 1
+
+---
+
+*Last updated: September 20, 2026, 10:07*
