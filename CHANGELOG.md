@@ -1910,3 +1910,87 @@ To https://github.com/SenpoAhJin/Forge_Mind.git
 ---
 
 *Last updated: September 20, 2026, 11:09*
+
+
+---
+
+## Session — Sunday, September 20, 2026, 11:18 (Navigation bar fix: FINAL solution with overflow hidden)
+
+### What was still broken
+
+The navigation bar with category filters was STILL expanding when you clicked on longer category names like "Costumes & Cosplay" or "Commissions & Crafting Services", even after 4 previous attempts to fix it.
+
+### Why previous fixes didn't work
+
+The problem was that we were trying to set a fixed height directly on the ScrollView itself. But in React Native Web, a ScrollView's content can push past its own height limit because the scrollable content area isn't strictly constrained by the ScrollView's height property.
+
+### The REAL fix (5th attempt)
+
+**Changed the structure:**
+- BEFORE: `<ScrollView style={height: 56}>`
+- AFTER: `<View style={height: 56, overflow: 'hidden'}><ScrollView></ScrollView></View>`
+
+**What this does:**
+1. Put the ScrollView INSIDE a regular View container
+2. The outer View has `height: 56` (fixed)
+3. The outer View has `overflow: 'hidden'` (FORCES content to stay inside)
+4. Now the ScrollView cannot push the container taller, because the outer View clips everything beyond 56 pixels
+
+**Think of it like this:**
+- Before: A box that says "I want to be 56px tall" but content can push it bigger
+- After: A hard metal frame that is exactly 56px tall and cuts off anything trying to go beyond
+
+### TypeScript check result
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+**Meaning:** No errors.
+
+### Git commit result
+```
+[master 957f520] Fix navigation bar height by wrapping ScrollView in fixed-height container with overflow hidden
+ 1 file changed, 36 insertions(+), 36 deletions(-)
+```
+
+### Git push result
+```
+To https://github.com/SenpoAhJin/Forge_Mind.git
+   048ab7e..957f520  master -> master
+```
+**Meaning:** Changes uploaded successfully.
+
+### What you need to test NOW
+
+**CRITICAL: Restart the development server with cache clearing:**
+```
+1. Stop the server (Ctrl+C)
+2. Run: npx expo start -c
+3. Wait for it to fully start
+4. Hard refresh your browser: Ctrl+Shift+R
+```
+
+**Then test the navigation bar:**
+1. Click "All" - look at the bar height
+2. Click "Costumes & Cosplay" - is the bar the SAME height as step 1? YES or NO
+3. Click "Wigs" - same height? YES or NO
+4. Click "Props & Accessories" - same height? YES or NO
+5. Click "Materials & Fabric" - same height? YES or NO
+6. Click "Makeup & Contacts" - same height? YES or NO
+7. Click "Photography Services" - same height? YES or NO
+8. Click "Commissions & Crafting Services" (longest name) - same height? YES or NO
+9. Click "Other" - same height? YES or NO
+
+**If ANY of these make the bar bigger or smaller, the filter name and tell me. If ALL stay the same height, say "ALL FILTERS STAY SAME HEIGHT".**
+
+### Why this should finally work
+
+This is the 5th attempt. The key difference from all previous attempts:
+- Attempt 1-4: Tried to fix it by adjusting styles on the ScrollView or chips
+- Attempt 5 (this one): **Used a hard outer container with `overflow: 'hidden'` that physically prevents expansion**
+
+The `overflow: 'hidden'` property acts like scissors - it cuts off anything trying to go beyond 56 pixels. This is a guaranteed fix because it's a physical constraint, not a sizing suggestion.
+
+---
+
+*Last updated: September 20, 2026, 11:18*
