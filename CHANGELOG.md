@@ -1826,3 +1826,87 @@ Exit Code: 0
 ---
 
 *Last updated: September 20, 2026, 10:25*
+
+
+---
+
+## Session — Sunday, September 20, 2026, 11:09 (Marketplace visual improvements: empty screen and card alignment)
+
+### What was broken
+
+**Problem 1: Empty category screen looked unfinished**
+When you clicked on a category with no listings (like "Costumes & Cosplay" with zero items), the screen showed just a small gray icon, plain text, and a button. It looked like a quick placeholder, not a real design.
+
+**Problem 2: Card spacing might be uneven**
+User wanted to make sure all listing cards line up exactly the same with consistent spacing between them and inside them.
+
+### What I fixed
+
+**Fixed the empty category screen:**
+1. Added a big round circle (120px) with a shopping cart icon inside. The circle has a light teal background that matches the app's colors.
+2. Put the circle, title, text, and button inside a nice white card with rounded corners and shadow (same style as the listing cards).
+3. Made the button look exactly like the "Create Listing" button at the top - same teal color, same size, with an icon next to the text.
+4. Made the message more friendly and helpful. Now it says things like "Be the first to list an item!" or "Try browsing other categories".
+5. Added better spacing between all the parts so nothing looks cramped.
+
+**Fixed the card alignment:**
+1. All cards have exactly 12px of space around them (left, right, top).
+2. Each card has exactly 12px of space below it before the next card starts.
+3. Added extra space at the very bottom of the list (24px) so the last card doesn't touch the bottom of the screen.
+4. Every card uses the same padding inside (12px) around the thumbnail and text.
+
+### TypeScript check result
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+**This means:** No errors. Code is correct.
+
+### Git commit result
+```
+[master 2e27fb0] Improve empty category screen design and card alignment
+ 1 file changed, 60 insertions(+), 21 deletions(-)
+```
+**This means:** Changes saved. 1 file changed. Added 60 lines, removed 21 lines.
+
+### Git push result
+```
+To https://github.com/SenpoAhJin/Forge_Mind.git
+   906863b..2e27fb0  master -> master
+```
+**This means:** Changes uploaded to GitHub successfully.
+
+### What you need to test
+
+**Test the empty category screen:**
+1. Open the Marketplace
+2. Click on "Costumes & Cosplay" (or any category that has no listings)
+3. You should now see:
+   - A big round teal circle with a shopping cart icon
+   - Everything centered in a white card with shadow
+   - Friendlier message text
+   - A button that looks like the "Create Listing" button
+4. Does it look nicer now? Yes or no?
+
+**Test the card alignment:**
+1. Open the Marketplace
+2. Click "All" to see all listings
+3. Look at how the cards stack up:
+   - Is the left edge of every card lined up the same? Yes or no?
+   - Is the right edge of every card lined up the same? Yes or no?
+   - Is the space between cards the same every time? Yes or no?
+   - Does the space inside each card (around the picture and text) look the same on every card? Yes or no?
+
+**Test the filter bar (still need to confirm):**
+1. Click each filter one by one: All → Costumes & Cosplay → Wigs → Props & Accessories → Materials & Fabric → Makeup & Contacts → Photography Services → Commissions & Crafting Services → Other
+2. Does the bar stay exactly the same height for ALL of these? Yes or no?
+3. If any filter makes the bar bigger, tell me which one.
+
+### Notes
+- The code for the filter bar should keep it at exactly 56 pixels tall for all categories
+- The empty screen now matches the app's design style with proper colors, shadows, and spacing
+- All listing cards are now guaranteed to have consistent spacing
+
+---
+
+*Last updated: September 20, 2026, 11:09*
