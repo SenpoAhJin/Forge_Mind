@@ -76,40 +76,51 @@ export const EventsScreen: React.FC = () => {
 
   const filteredEvents = getFilteredEvents();
 
-  // Status chips (staff don't see Draft chip)
-  const statusChips: Array<{ key: 'all' | EventStatus; label: string }> = [
-    { key: 'all', label: 'All' },
-    ...(isHeadOrganizer ? [{ key: 'draft' as const, label: 'Draft' }] : []),
-    { key: 'confirmed' as const, label: 'Confirmed' },
-    { key: 'cancelled' as const, label: 'Cancelled' },
-  ];
+  // Status chips (staff only see chips that make sense for their filtered view)
+  const statusChips: Array<{ key: 'all' | EventStatus; label: string }> = isHeadOrganizer
+    ? [
+        { key: 'all', label: 'All' },
+        { key: 'draft' as const, label: 'Draft' },
+        { key: 'confirmed' as const, label: 'Confirmed' },
+        { key: 'cancelled' as const, label: 'Cancelled' },
+      ]
+    : [
+        // Staff only see confirmed events, so only show All/Confirmed chips
+        { key: 'all', label: 'All' },
+        { key: 'confirmed' as const, label: 'Confirmed' },
+      ];
+
+  // If only one chip remains after filtering, hide the chip bar entirely
+  const showChipBar = statusChips.length > 1;
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Status chip bar */}
-        <View style={styles.chipBarContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipBar}
-          >
-            {statusChips.map(chip => (
-              <TouchableOpacity
-                key={chip.key}
-                onPress={() => setSelectedStatus(chip.key)}
-                style={styles.chipWrapper}
-                activeOpacity={0.7}
-              >
-                <Tag
-                  type="category"
-                  label={chip.label}
-                  style={selectedStatus === chip.key ? styles.chipSelected : undefined}
-                />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {/* Status chip bar (only show if multiple chips) */}
+        {showChipBar && (
+          <View style={styles.chipBarContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipBar}
+            >
+              {statusChips.map(chip => (
+                <TouchableOpacity
+                  key={chip.key}
+                  onPress={() => setSelectedStatus(chip.key)}
+                  style={styles.chipWrapper}
+                  activeOpacity={0.7}
+                >
+                  <Tag
+                    type="category"
+                    label={chip.label}
+                    style={selectedStatus === chip.key ? styles.chipSelected : undefined}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Create button (Head Organizer only) */}
         {isHeadOrganizer && (
