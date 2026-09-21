@@ -105,19 +105,21 @@ export const AddLogisticsEntryScreen: React.FC = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Event Selection */}
-        <Text style={styles.label}>Event *</Text>
-        <View style={styles.chipRow}>
-          {confirmedEvents.map(event => (
-            <TouchableOpacity
-              key={event.id}
-              style={[styles.chip, eventId === event.id && styles.chipSelected]}
-              onPress={() => setEventId(event.id)}
-            >
-              <Text style={[styles.chipText, eventId === event.id && styles.chipTextSelected]}>
-                {event.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Event *</Text>
+          <View style={styles.chipRow}>
+            {confirmedEvents.map(event => (
+              <TouchableOpacity
+                key={event.id}
+                style={[styles.chip, eventId === event.id && styles.chipSelected]}
+                onPress={() => setEventId(event.id)}
+              >
+                <Text style={[styles.chipText, eventId === event.id && styles.chipTextSelected]}>
+                  {event.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Participant Info */}
@@ -137,19 +139,21 @@ export const AddLogisticsEntryScreen: React.FC = () => {
         />
 
         {/* Participant Kind */}
-        <Text style={styles.label}>Participant Type *</Text>
-        <View style={styles.chipRow}>
-          {(['confirmed_guest', 'sponsor', 'performer'] as ParticipantKind[]).map(kind => (
-            <TouchableOpacity
-              key={kind}
-              style={[styles.chip, participantKind === kind && styles.chipSelected]}
-              onPress={() => setParticipantKind(kind)}
-            >
-              <Text style={[styles.chipText, participantKind === kind && styles.chipTextSelected]}>
-                {kind === 'confirmed_guest' ? 'Guest' : kind === 'sponsor' ? 'Sponsor' : 'Performer'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Participant Type *</Text>
+          <View style={styles.chipRow}>
+            {(['confirmed_guest', 'sponsor', 'performer'] as ParticipantKind[]).map(kind => (
+              <TouchableOpacity
+                key={kind}
+                style={[styles.chip, participantKind === kind && styles.chipSelected]}
+                onPress={() => setParticipantKind(kind)}
+              >
+                <Text style={[styles.chipText, participantKind === kind && styles.chipTextSelected]}>
+                  {kind === 'confirmed_guest' ? 'Guest' : kind === 'sponsor' ? 'Sponsor' : 'Performer'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Submission Deadline */}
@@ -178,19 +182,21 @@ export const AddLogisticsEntryScreen: React.FC = () => {
         />
 
         {/* Parking */}
-        <Text style={styles.label}>Parking Needs</Text>
-        <View style={styles.chipRow}>
-          {(['none', 'standard', 'accessible'] as ParkingNeeds[]).map(needs => (
-            <TouchableOpacity
-              key={needs}
-              style={[styles.chip, parkingNeeds === needs && styles.chipSelected]}
-              onPress={() => setParkingNeeds(needs)}
-            >
-              <Text style={[styles.chipText, parkingNeeds === needs && styles.chipTextSelected]}>
-                {needs === 'none' ? 'None' : needs === 'standard' ? 'Standard' : 'Accessible'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Parking Needs</Text>
+          <View style={styles.chipRow}>
+            {(['none', 'standard', 'accessible'] as ParkingNeeds[]).map(needs => (
+              <TouchableOpacity
+                key={needs}
+                style={[styles.chip, parkingNeeds === needs && styles.chipSelected]}
+                onPress={() => setParkingNeeds(needs)}
+              >
+                <Text style={[styles.chipText, parkingNeeds === needs && styles.chipTextSelected]}>
+                  {needs === 'none' ? 'None' : needs === 'standard' ? 'Standard' : 'Accessible'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {parkingNeeds !== 'none' && (
@@ -247,17 +253,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.lg,
   },
+  fieldContainer: {
+    marginBottom: spacing.lg,
+  },
   label: {
-    ...typography.h3,
+    ...typography.body,
     fontSize: 16,
+    fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   chip: {
     paddingVertical: spacing.sm,
