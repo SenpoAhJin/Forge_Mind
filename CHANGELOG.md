@@ -261,7 +261,7 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 | Chat List | Open/Closed conversation threads with unread dots |
 | Chat Thread | Message area with input bar, close conversation, listing context banner |
 | Verify Staff | Head Organizer approval screen for staff department access requests |
-| Events | Placeholder for organizer event features (FE-7) |
+| Events | Event list, create, detail (role-gated: Head full access, staff read-only) |
 | Logistics | Placeholder for guest/performance tracking (FE-7) |
 | Meetups | Placeholder for group-meetup planning (FE-7) |
 | Profile | User data, verification status, marketplace role, logout, Test Mode switcher |
@@ -725,7 +725,7 @@ What we did:
 - Wired the modal to accept optional recap/review fields for highlighting what the cosplayer submitted.
 
 ### Commits
-- (in progress - commit right after this entry)
+- `95b94e4` — Marketplace: success modal now shows a marketplace-specific success screen (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/95b94e4)
 
 
 ## Session — Saturday, September 19, 2026, 16:09 (Marketplace: buyer/seller/both registration role)
@@ -2240,6 +2240,56 @@ Exit Code: 0
 
 ---
 
+## Session — Sunday, September 20, 2026, 13:35 (Fix listing cards to standard size)
+
+### What was broken
+
+The listing cards in the marketplace were expanding to different sizes. Some cards were taller, some were shorter. They looked irregular and inconsistent.
+
+### What I fixed
+
+Changed all listing cards to be exactly the same size:
+
+**BEFORE:**
+- Cards had `minHeight: 180` (minimum height, but could grow taller)
+- Thumbnail had `minHeight: 100` (could grow)
+- Cards with longer text would expand taller
+- Result: Uneven, irregular card sizes
+
+**AFTER:**
+- Cards have `height: 140` (FIXED height, cannot grow)
+- Thumbnail has `height: '100%'` (fills the fixed card height exactly)
+- Content area uses `justifyContent: 'space-between'` (spreads content evenly)
+- Result: Every card is exactly 140 pixels tall
+
+**What this means:**
+- Every listing card is now exactly the same size
+- Cards are lined up perfectly in rows
+- The thumbnail is always 100 pixels wide and 140 pixels tall
+- Text that's too long gets cut off with "..." instead of making the card bigger
+
+### TypeScript check result
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+**Meaning:** No errors.
+
+### Git commit result
+```
+[master 60a2a02] Fix listing cards to standard size: all cards now exactly 140px tall
+ 2 files changed, 34 insertions(+), 74 deletions(-)
+```
+
+### Git push result
+```
+To https://github.com/SenpoAhJin/Forge_Mind.git
+   23ee892..60a2a02  master -> master
+```
+**Meaning:** Changes uploaded successfully.
+
+---
+
 ## Session — Sunday, September 20, 2026, 16:45 (FE-6 Step 4 of 4: transaction-scoped chat)
 
 ### What we did
@@ -2305,7 +2355,7 @@ Fixes applied during type check:
 ✅ No `Alert.alert` in chat files
 ✅ No `&&` text conditionals in chat files (all use ternary `? : null`)
 ✅ No chat types imported by `listingScreener.ts` or `offerRules.ts` (privacy boundary intact)
-✅ `formatStatus.ts` imports chat types only for display formatting (expected behavior)
+✅ `formatStatus.ts` defines local type definitions for display formatting (no import from chat types module)
 ✅ No `console.log` of message bodies or content in ChatContext, ChatThreadScreen, ChatListScreen
 ✅ ChatContext never calls `createOffer`, `updateListing`, or `acceptOffer` (no message text written to offers/listings)
 ✅ Privacy boundary header comments present in all chat files
@@ -2424,76 +2474,22 @@ Built the first step of the organizer event management system: **creating and ma
 - `68490f7` — fix: verification notifications now show once on login, not repeatedly on Profile screen visits (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/68490f7)
 - `ac2ab87` — fix: move GlobalNotificationHandler inside NavigationContainer to fix navigation error (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/ac2ab87)
 
+### Verification Notification Fix (68490f7, ac2ab87)
+
+**Problem:** The verification decision popup (Approved/Rejected/Pending) was showing repeatedly every time users visited the Profile screen, even after they had already seen it.
+
+**Solution:** Moved the notification handler from ProfileScreen into a global `GlobalNotificationHandler` component inside `NavigationContainer` (`App.tsx`). The handler now:
+- Shows the popup once per login session, immediately after authentication
+- Stores shown decisions in AsyncStorage (`@forgemind:shown_decisions`) to prevent re-showing across sessions
+- Uses `navigationRef` to ensure navigation context is available (prevents "navigation object not found" error)
+- Displays approval/rejection alerts only when the user's marketplace verification status changes
+
+**Result:** Users now see the decision popup exactly once after the Head Organizer approves or rejects their marketplace registration, and it won't re-appear on subsequent Profile visits or app launches.
+
 ---
 
 *Last updated: September 20, 2026, 19:00*
 
-
----
-
-## Session — Sunday, September 20, 2026, 16:45 (FE-6 Step 4 of 4: transaction-scoped chat)
-
-### What we did
-
-Built transaction-scoped chat between marketplace buyers and sellers with privacy boundaries and thread management.
-
-**Key features:**
-- Chat threads tied to listing + buyer (one thread per unique pair)
-- Messages stored with sender email, timestamp, thread status
-- Thread status: `open` (active) or `closed` (closed by either party or listing unavailable)
-- Close reasons: `closed_by_participant`, `listing_unavailable`
-- Unread tracking per user (last_read_at timestamps)
-- Privacy boundary: Chat content is NEVER screened, classified, scored, or used as AI input
-
-**What was created:**
-
-1. **Chat types** (`src/types/chat.ts`):
-   - ThreadStatus, ThreadClosedReason enums
-   - ChatThread, ChatMessage interfaces
-   - Privacy boundary header comment
-
-2. **ChatContext** (`src/contexts/ChatContext.tsx`):
-   - AsyncStorage persistence (`@forgemind:chat_threads`)
-   - `getOrCreateThread(listing_id, buyer_email)` - finds or creates thread
-   - `sendMessage(thread_id, sender_email, message_body)`
-   - `closeThread(thread_id, actor_email, reason)`
-   - `getUnreadCount(user_email)` - counts unread threads
-   - Guards: verified buyer + active listing, no reopening closed threads
-
-3. **ChatThreadScreen** (`src/screens/cosplayer/ChatThreadScreen.tsx`):
-   - Route-level guard: participant only (seller or buyer)
-   - Message area with sender badges, timestamps, read receipts
-   - Input bar with send button (disabled when closed)
-   - Close thread action (ConfirmationModal)
-   - Structured-offer reminder: "Use Offers tab for formal proposals"
-
-4. **ChatListScreen** (`src/screens/cosplayer/ChatListScreen.tsx`):
-   - Open/Closed tabs
-   - Standardized cards: listing name, other party, last message preview, timestamp, unread dot
-   - Empty states per tab
-
-5. **formatThreadStatus** (`src/utils/formatStatus.ts`):
-   - Maps `open` → "Open", `closed` → "Closed"
-   - Local type definitions (no import from chat types)
-
-6. **MarketplaceStackNavigator** updated:
-   - Added `ChatList` and `ChatThread` routes
-
-7. **Integration points**:
-   - MarketplaceScreen: "Messages" button with unread badge (shows 9+ for counts >9)
-   - ListingDetailScreen: "Message Seller" button (verified buyers), "View Messages" (sellers)
-   - OfferDetailScreen: "Message" button (both parties, any offer status)
-
-**Privacy boundary verified:**
-- No Alert.alert in chat files
-- No `&& <Text>` conditionals (all use ternary)
-- formatStatus.ts imports chat types only for display (no content access)
-- No console.log of message bodies
-- ChatContext never calls createOffer, updateListing, or acceptOffer
-- Chat content is never screened, classified, scored, or used as AI input
-
-### Commits
-- `b5e3cb7` — FE-6 Step 4: transaction-scoped chat (listing+buyer threads) with chat list, thread view, close, and structured-offer reminder (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/b5e3cb7)
 
 ---
 
