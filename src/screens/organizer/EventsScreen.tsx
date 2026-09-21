@@ -158,32 +158,30 @@ export const EventsScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <StandardCard style={styles.eventCard}>
-                <View style={styles.cardContent}>
-                  <Text style={styles.eventName} numberOfLines={2}>
-                    {event.name}
-                  </Text>
-                  <Text style={styles.eventDate} numberOfLines={1}>
-                    {formatDateRange(event)}
-                  </Text>
-                  <Text style={styles.eventVenue} numberOfLines={1}>
-                    {event.venue_name}{event.city ? `, ${event.city}` : ''}
-                  </Text>
-                  <View style={styles.badges}>
-                    <Tag
-                      type="status"
-                      label={formatEventStatus(event.status)}
-                      style={
-                        event.status === 'confirmed'
-                          ? styles.badgeConfirmed
-                          : event.status === 'cancelled'
-                          ? styles.badgeCancelled
-                          : styles.badgeDraft
-                      }
-                    />
-                    {isPastEvent(event) && (
-                      <Tag type="status" label="Past" style={styles.badgeNeutral} />
-                    )}
-                  </View>
+                <Text style={styles.eventName} numberOfLines={2}>
+                  {event.name}
+                </Text>
+                <Text style={styles.eventDate} numberOfLines={1}>
+                  {formatDateRange(event)}
+                </Text>
+                <Text style={styles.eventVenue} numberOfLines={1}>
+                  {event.venue_name}{event.city ? `, ${event.city}` : ''}
+                </Text>
+                <View style={styles.badges}>
+                  <Tag
+                    type="status"
+                    label={formatEventStatus(event.status)}
+                    style={
+                      event.status === 'confirmed'
+                        ? styles.badgeConfirmed
+                        : event.status === 'cancelled'
+                        ? styles.badgeCancelled
+                        : styles.badgeDraft
+                    }
+                  />
+                  {isPastEvent(event) && (
+                    <Tag type="status" label="Past" style={styles.badgeNeutral} />
+                  )}
                 </View>
               </StandardCard>
             </TouchableOpacity>
@@ -231,9 +229,6 @@ const styles = StyleSheet.create({
   eventCard: {
     marginBottom: spacing.md,
     height: 150,
-  },
-  cardContent: {
-    flex: 1,
   },
   eventName: {
     ...typography.h3,
