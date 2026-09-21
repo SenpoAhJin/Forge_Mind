@@ -30,7 +30,9 @@ export interface LogisticsEntry {
   stage_time_preference: string | null; // performers only, required for completion
 
   // Assignment (Head Organizer assigns to Staff)
-  assigned_to_email: string | null; // Staff email, null = unassigned
+  assigned_to_email?: string | null; // Staff email, null/undefined = unassigned
+  assigned_at?: string | null; // ISO 8601, set on assign, cleared on unassign
+  assigned_by_email?: string | null; // Head email who assigned, cleared on unassign
 
   // Status
   status: LogisticsStatus;

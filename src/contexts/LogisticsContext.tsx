@@ -16,6 +16,7 @@ import { LogisticsEntry, ParticipantKind, ParkingNeeds, LogisticsStatus } from '
 import { useUser } from './UserContext';
 import { useEvents } from './EventsContext';
 import { getNowISO, getTodayLocal, compareDateStrings } from '../utils/dateHelpers';
+import { AuthService } from '../services/AuthService';
 
 const STORAGE_KEY = '@forgemind:logistics_entries';
 
@@ -27,6 +28,7 @@ interface LogisticsContextValue {
   assignEntry: (id: string, staffEmail: string | null) => Promise<{ success: boolean; error?: string }>; // NEW: Assign to staff
   withdrawEntry: (id: string) => Promise<{ success: boolean; error?: string }>;
   getEntriesByEvent: (eventId: string) => LogisticsEntry[];
+  getEligibleStaff: () => Promise<Array<{ name: string; email: string; department: string }>>;
   reseedData: () => Promise<void>; // Dev-only
 }
 
@@ -96,7 +98,9 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: 'ABC123',
       entourage_size: 2,
       stage_time_preference: null,
-      assigned_to_email: 'staff-logistics@cosforge.ph', // Assigned to logistics staff
+      assigned_to_email: null, // No approved staff in seed data
+      assigned_at: null,
+      assigned_by_email: null,
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -119,7 +123,9 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: 'XYZ789',
       entourage_size: 1,
       stage_time_preference: null,
-      assigned_to_email: null, // Unassigned
+      assigned_to_email: null,
+      assigned_at: null,
+      assigned_by_email: null,
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -142,7 +148,9 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: null, // MISSING
       entourage_size: 0,
       stage_time_preference: null,
-      assigned_to_email: null, // Unassigned
+      assigned_to_email: null,
+      assigned_at: null,
+      assigned_by_email: null,
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -165,7 +173,9 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: null,
       entourage_size: null, // MISSING
       stage_time_preference: 'Afternoon preferred',
-      assigned_to_email: null, // Unassigned
+      assigned_to_email: null,
+      assigned_at: null,
+      assigned_by_email: null,
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -188,7 +198,9 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: 'DEF456',
       entourage_size: 1,
       stage_time_preference: null,
-      assigned_to_email: null, // Unassigned
+      assigned_to_email: null,
+      assigned_at: null,
+      assigned_by_email: null,
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -311,6 +323,8 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
       stage_time_preference: data.stage_time_preference || null,
       // Assignment
       assigned_to_email: null, // Unassigned by default
+      assigned_at: null,
+      assigned_by_email: null,
       // Status
       status: 'active',
       withdrawn_at: null,
@@ -402,22 +416,70 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
       return { success: false, error: 'Entry not found' };
     }
 
-    // Guard: cannot assign withdrawn entries
-    if (entry.status === 'withdrawn') {
-      return { success: false, error: 'Cannot assign withdrawn entries' };
+    // Guard: must be active entry
+    if (entry.status !== 'active') {
+      return { success: false, error: 'Can only assign active entries' };
     }
 
-    // Validate staff email (optional - null means unassign)
-    if (staffEmail && !validateEmail(staffEmail)) {
+    // Guard: event must exist and not be cancelled
+    const event = events.find(e => e.id === entry.event_id);
+    if (!event) {
+      return { success: false, error: 'Event not found' };
+    }
+    if (event.status === 'cancelled') {
+      return { success: false, error: 'Cannot assign entries of cancelled events' };
+    }
+
+    // Unassign case: clear all assignment fields
+    if (!staffEmail) {
+      const now = getNowISO();
+      const updated = entries.map(e =>
+        e.id === id
+          ? {
+              ...e,
+              assigned_to_email: null,
+              assigned_at: null,
+              assigned_by_email: null,
+              updated_at: now,
+              updated_by_email: user!.email,
+            }
+          : e
+      );
+
+      setEntries(updated);
+      await persist(updated);
+      return { success: true };
+    }
+
+    // Validate staff account exists and is approved staff
+    if (!validateEmail(staffEmail)) {
       return { success: false, error: 'Invalid staff email format' };
     }
 
+    const accounts = await AuthService.getAccounts();
+    const staffAccount = accounts.find(a => a.email.toLowerCase() === staffEmail.toLowerCase());
+    
+    if (!staffAccount) {
+      return { success: false, error: 'Staff account not found' };
+    }
+    
+    if (staffAccount.organizer_role !== 'staff') {
+      return { success: false, error: 'Selected account is not a staff member' };
+    }
+    
+    if (staffAccount.department_verification_status !== 'approved') {
+      return { success: false, error: 'Staff member is not approved yet' };
+    }
+
+    // Assign staff
     const now = getNowISO();
     const updated = entries.map(e =>
       e.id === id
         ? {
             ...e,
-            assigned_to_email: staffEmail ? staffEmail.trim().toLowerCase() : null,
+            assigned_to_email: staffEmail.trim().toLowerCase(),
+            assigned_at: now,
+            assigned_by_email: user!.email,
             updated_at: now,
             updated_by_email: user!.email,
           }
@@ -467,6 +529,24 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
     return entries.filter(e => e.event_id === eventId);
   };
 
+  // Get eligible staff for assignment (approved staff only)
+  const getEligibleStaff = async (): Promise<Array<{ name: string; email: string; department: string }>> => {
+    try {
+      const accounts = await AuthService.getAccounts();
+      return accounts
+        .filter(acc => acc.organizer_role === 'staff' && acc.department_verification_status === 'approved')
+        .map(acc => ({
+          name: acc.display_name,
+          email: acc.email,
+          department: acc.department || 'No Department',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      console.error('[LogisticsContext] getEligibleStaff error:', error);
+      return [];
+    }
+  };
+
   // Dev-only: reseed with fresh relative dates
   const reseedData = async () => {
     const seed = generateSeedData();
@@ -482,6 +562,7 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
     assignEntry,
     withdrawEntry,
     getEntriesByEvent,
+    getEligibleStaff,
     reseedData,
   };
 
