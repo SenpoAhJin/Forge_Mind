@@ -1,6 +1,6 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 20, 2026
+**Last updated:** September 21, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
 
 ---
@@ -262,15 +262,18 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 | Chat Thread | Message area with input bar, close conversation, listing context banner |
 | Verify Staff | Head Organizer approval screen for staff department access requests |
 | Events | Event list, create, detail (role-gated: Head full access, staff read-only) |
-| Logistics | Placeholder for guest/performance tracking (FE-7) |
-| Meetups | Placeholder for group-meetup planning (FE-7) |
+| Logistics Home | Active logistics entries with "Needs attention" panel (top 3 critical), confirmed event cards with completion status |
+| Event Logistics | Per-event logistics tracker with chip filters (All/Needs info/Complete/Withdrawn), sorted by criticality |
+| Add Logistics Entry | Create new entry (Head only) with submission deadline, participant details, arrival/parking/entourage fields |
+| Logistics Entry Detail | View/edit tracked fields (Head), completion bar, missing-field indicators, withdraw entry, CORE fields read-only |
+| Meetups | Placeholder for group-meetup planning (FE-7 Step 5) |
 | Profile | User data, verification status, marketplace role, logout, Test Mode switcher |
 
 ### The design system (reusable parts)
 - **Colors:** 17 fixed tokens matching the official design spec.
 - **Text styles:** 7 sizes/weights from title to caption.
 - **Spacing:** standard 4-8-12-16-24-32-48 px rhythm.
-- **Components:** Buttons (4 kinds), Cards (3 kinds), Tags, Status badges, Sliders (2 kinds), Chat bubbles (3 kinds), Input fields (4 kinds).
+- **Components:** Buttons (4 kinds), Cards (3 kinds), Tags, Status badges, Sliders (2 kinds), Chat bubbles (3 kinds), Input fields (5 kinds: text, long-text, date, time picker with 30-min intervals, dropdown).
 
 ### Tech notes (for the developers)
 - **Stack:** Expo SDK 57, React Native 0.86, TypeScript 6.0, React Navigation 7.
@@ -2700,4 +2703,96 @@ To https://github.com/SenpoAhJin/Forge_Mind.git
 
 ---
 
-*Last updated: September 20, 2026, 13:35*
+## Session — Saturday, September 21, 2026, 10:00 (FE-7 Step 2 Correction Pass: deadline-based urgency + withdraw + edit UI)
+
+### What we did
+
+**C1-C2 — Data model + rules (commit a120b99):**
+- **Logistics entry type changes:**
+  - Added `submission_deadline` (CORE field, locks after creation)
+  - Changed `status` to LogisticsStatus enum: `'active' | 'withdrawn'`
+  - Made `participant_email` optional (excluded from completion)
+  - Storage key changed to `@forgemind:logistics_entries` (legacy `@forgemind:logistics` ignored)
+- **Urgency rules (deadline-based, not event-based):**
+  - COMPLETE: all tracked fields answered
+  - ON_TRACK: >7 days to deadline
+  - REMINDER: ≤7 days
+  - URGENT: ≤3 days
+  - CRITICAL: ≤1 day OR past deadline while incomplete
+- **Rules module (`logisticsRules.ts`):**
+  - Renamed `sortByUrgency` → `sortByCriticality`
+  - Renamed `checkUrgency` → `getUrgency` (now takes `entry, todayLocal` only)
+  - Added `getMissingFields`, `formatTime12h` (24h → 12h AM/PM)
+  - `formatParticipantKind` returns "Guest" for `confirmed_guest`
+- **Context guards (LogisticsContext):**
+  - `createEntry`: only CONFIRMED events, name 2-80 chars trimmed, deadline >= today <= event.start_date
+  - `updateLogisticsFields`: replaces `updateEntry`, validates plate 3-10 A-Z0-9 space hyphen uppercase, entourage 0-50, refuses withdrawn/cancelled entries
+  - `withdrawEntry`: replaces `deleteEntry` (soft delete: status='withdrawn', sets withdrawn_at/withdrawn_by_email)
+- **Seed data:** 5 entries for evt-manila-coscon (24 days from today), deadlines at +17/+20/+6/+2/-1 days
+
+**C3-C4 — Edit UI + withdraw (commit 84d6e70):**
+- **LogisticsEntryDetailScreen complete rewrite:**
+  - Edit mode for tracked fields (arrival_date, arrival_time, plate_number, entourage_size, stage_time_preference, parking_needs)
+  - CORE fields read-only section (event, participant name/kind/email, submission deadline)
+  - Completion bar shows percentage + count (e.g., "60% (3 of 5 fields)")
+  - Per-field missing indicators (red italic "Missing" text)
+  - Withdraw button (ConfirmationModal) replaces delete
+  - Staff read-only guard (no edit/withdraw buttons)
+- **AddLogisticsEntryScreen:**
+  - Added `submission_deadline` DateInput field
+  - Email labeled "optional"
+  - Helper text: "Core details lock after creation"
+
+**C5-C7 — Screens + guards + formatters (commit e32acbc):**
+- **LogisticsHomeScreen rewrite:**
+  - "Needs attention" panel: top 3 incomplete entries sorted by criticality, urgency dot, deadline/missing count
+  - Confirmed event cards: fixed height 100px, "x of y complete", worst urgency badge (CRITICAL/URGENT)
+  - Banner: "Reminders are in-app. Scheduled push notifications need the backend."
+- **NEW EventLogisticsScreen:**
+  - Chip filters: All / Needs Info / Complete / Withdrawn (explicit `overflow:hidden`, `flexDirection:row`)
+  - Entry list sorted by criticality (active first, withdrawn last)
+  - "Add Entry" button (Head only, confirmed events)
+  - Read-only notice for cancelled events
+- **Display formatters:**
+  - `formatEventDateRange(start, end)` → "2026-11-15 to 2026-11-17" or single date if same
+  - `formatTime12h` used everywhere arrival_time displays (e.g., "14:30" → "2:30 PM")
+  - `formatParticipantKind` returns "Guest" on chips/cards
+- **LogisticsStackNavigator:** Added EventLogistics route
+
+**C8 — Changelog/docs (this entry).**
+
+### Technical
+
+**Files modified (C1-C2):**
+- `src/types/logistics.ts`
+- `src/utils/logisticsRules.ts`
+- `src/contexts/LogisticsContext.tsx`
+
+**Files modified (C3-C4):**
+- `src/screens/organizer/LogisticsEntryDetailScreen.tsx` (complete rewrite)
+- `src/screens/organizer/AddLogisticsEntryScreen.tsx`
+
+**Files modified (C5-C7):**
+- `src/screens/organizer/LogisticsHomeScreen.tsx` (complete rewrite)
+- `src/screens/organizer/EventLogisticsScreen.tsx` (NEW)
+- `src/navigation/LogisticsStackNavigator.tsx`
+- `src/screens/organizer/index.ts`
+- `src/utils/logisticsRules.ts` (added `formatEventDateRange`)
+
+**TypeScript:** Exit code 0 (all commits).
+
+**Git state:** HEAD at e32acbc, working tree clean.
+
+### Accepted deviations
+- Storage key changed to `@forgemind:logistics_entries` — legacy data at `@forgemind:logistics` ignored, no migration logic (spec allowed reseed-once approach).
+- Email made optional and excluded from completion (spec implied required but completion logic never counted it).
+- Submission deadline is CORE field and locks after creation (spec didn't explicitly forbid deadline changes, but locking it prevents retroactive urgency manipulation).
+
+### Commits
+- `a120b99` — refactor(C1-C2): data model + rules with deadline-based urgency, submission_deadline field, withdraw status, optional email, new storage key (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/a120b99)
+- `84d6e70` — feat(C3-C4): add edit UI for tracked fields with inline validation, replace delete with withdraw, CORE fields read-only, completion bar, per-field indicators (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/84d6e70)
+- `e32acbc` — feat(C5-C7): add LogisticsHome needs-attention panel, EventLogistics screen with chip filters, formatEventDateRange, guards verified (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/e32acbc)
+
+---
+
+*Last updated: September 21, 2026, 13:35*
