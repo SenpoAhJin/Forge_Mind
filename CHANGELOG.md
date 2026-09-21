@@ -2726,3 +2726,80 @@ Built a complete logistics tracker for managing participant arrival details, par
 ---
 
 *Last updated: September 21, 2026*
+
+
+---
+
+## Session: September 21, 2026 — Logistics Staff Assignment Backend + DateTimePicker Fix + Completion Audit
+
+Fixed DateTimePicker deprecation warning (v9.1.0 requires `onValueChange`/`onDismiss` instead of `onChange`), completed staff assignment backend with full validation (Head assigns approved staff to logistics entries), audited completion logic and fixed whitespace handling, added optional date field clear button.
+
+### What Changed
+**DateTimePicker API Update (48049b9, 61f44bf):**
+- Replaced deprecated `onChange` with `onValueChange` (date param required, not optional) and `onDismiss` (cancel without pick)
+- Fixed UTC date shift by parsing YYYY-MM-DD as local date (`new Date(year, month-1, day)` instead of string parsing)
+- Android auto-closes picker after selection; iOS keeps open until dismiss
+- Added "Clear" button for optional date fields on native (web already clearable via browser control)
+
+**Staff Assignment Backend (e212622, 4eb63c6):**
+- Added `assigned_to_email`, `assigned_at`, `assigned_by_email` fields to LogisticsEntry (all optional for backward compatibility)
+- `assignEntry(entryId, staffEmail | null)` validates: Head-only access, entry active, event not cancelled, staff account exists with `organizer_role: 'staff'` AND `department_verification_status: 'approved'`
+- Unassign (`staffEmail: null`) clears all three assignment fields
+- `getEligibleStaff()` returns sorted list of approved staff (name, email, department) for UI picker (not yet built)
+- Assignment does NOT affect completion or urgency calculations
+- `updateLogisticsFields` and `withdrawEntry` preserve assignment unchanged
+- All 13 backend validation test cases pass (Head + approved staff, staff caller error, cosplayer error, pending/rejected staff error, unknown email error, withdrawn entry error, cancelled event error, unassign, update preserves, old entries read unassigned, assignment no affect completion/urgency)
+
+**Completion Logic Audit (50f818c):**
+- Fixed whitespace handling: empty strings (`""`) and space-only strings (`"   "`) now treated as missing (added `isEmpty` helper with `.trim()` check)
+- All 21 test cases pass: parking none w/ no plate = complete, parking standard w/ no plate = incomplete, spaces = incomplete, arrival date+time both required, entourage 0 = complete vs null = incomplete, performer needs stage_time vs non-performer doesn't, empty string = null = undefined = missing, all filled = complete, deadline boundaries (+1d critical, +3d urgent, +7d reminder, +8d on_track, past = critical), withdrawn entries still calculate completion (UI filters them out)
+- Verified all screens (LogisticsHomeScreen, EventLogisticsScreen, LogisticsEntryDetailScreen) use single source of truth (`checkCompletion`, `getMissingFields`, `getUrgency` from `logisticsRules.ts`) — no duplicate logic
+
+### What to Test
+**Phone (Android/iOS):**
+- Open any date field (Create Event, Add Logistics Entry, Create Project, etc.) → native picker should open
+- Pick a date → value fills, picker closes (Android) or stays open (iOS, tap outside to dismiss)
+- Cancel/dismiss picker without picking → value unchanged
+- Optional date fields (e.g., End Date, Target Completion Date) → "Clear" button appears when value set, tap to empty
+- **Check phone console for DateTimePicker deprecation warning — should be GONE**
+
+**Web (localhost:8081):**
+- Date fields open browser calendar popup (unchanged from before)
+
+**Logistics Completion (both platforms):**
+- Add logistics entry with parking "Standard" and blank plate number → shows "1 missing" (not complete)
+- Add entry with parking "Standard" and plate number " " (spaces) → shows "1 missing" (was bug, now fixed)
+- Add entry with arrival date but no time → shows "1 missing"
+- Add entry with entourage size 0 → counts as answered, complete if rest filled
+- Performer without stage time preference → incomplete; non-performer without it → complete
+
+**Staff Assignment (context only, UI not built):**
+- Backend ready: Head Organizers can assign/unassign via `assignEntry(id, email | null)`
+- Validates staff must be approved (`department_verification_status: 'approved'`)
+- Old entries without assignment fields read as unassigned (no crash)
+
+### Files Modified
+- `src/components/inputs/DateInput.tsx` — onValueChange/onDismiss, local date parsing, Clear button
+- `src/contexts/LogisticsContext.tsx` — assignEntry validation, getEligibleStaff
+- `src/types/logistics.ts` — added optional assignment fields
+- `src/utils/logisticsRules.ts` — isEmpty helper for whitespace trimming
+
+### TypeScript Verification
+```
+npx tsc --noEmit
+Exit Code: 0
+```
+✅ Zero errors
+
+### Commits
+- `48049b9` — fix(DateInput): use correct non-deprecated DateTimePicker API - onValueChange/onDismiss, local date parsing
+- `61f44bf` — feat(DateInput): add Clear button for optional date fields on native
+- `e212622` — feat(logistics): complete staff assignment backend - validate approved staff, track assignment metadata
+- `4eb63c6` — test(logistics): verify staff assignment backend validation - all cases pass
+- `50f818c` — fix(logistics): trim whitespace in completion checks - empty strings now treated as missing
+
+### Known Gaps
+- Staff assignment UI not built yet (Head Organizer assign picker, Staff "My Tasks" filter) — backend ready for UI implementation
+- Form alignment fix (56587ed) from earlier session not requested but kept (AddLogisticsEntryScreen fieldContainer + spacing)
+- iOS date picker behavior NOT TESTED (iOS-specific: picker stays open after pick until user dismisses)
+
