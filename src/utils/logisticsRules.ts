@@ -44,12 +44,17 @@ export interface UrgencyStatus {
 export const getMissingFields = (entry: LogisticsEntry): string[] => {
   const missing: string[] = [];
 
+  // Helper: check if string field is empty (null, undefined, or whitespace-only)
+  const isEmpty = (val: string | null | undefined): boolean => {
+    return !val || val.trim() === '';
+  };
+
   // Rule 1: Arrival needs BOTH date and time
-  if (!entry.arrival_date) missing.push('arrival_date');
-  if (!entry.arrival_time) missing.push('arrival_time');
+  if (isEmpty(entry.arrival_date)) missing.push('arrival_date');
+  if (isEmpty(entry.arrival_time)) missing.push('arrival_time');
 
   // Rule 2: Plate number required UNLESS parking is 'none'
-  if (entry.parking_needs !== 'none' && !entry.plate_number) {
+  if (entry.parking_needs !== 'none' && isEmpty(entry.plate_number)) {
     missing.push('plate_number');
   }
 
@@ -59,7 +64,7 @@ export const getMissingFields = (entry: LogisticsEntry): string[] => {
   }
 
   // Rule 4: Stage time required for performers only
-  if (entry.participant_kind === 'performer' && !entry.stage_time_preference) {
+  if (entry.participant_kind === 'performer' && isEmpty(entry.stage_time_preference)) {
     missing.push('stage_time_preference');
   }
 
