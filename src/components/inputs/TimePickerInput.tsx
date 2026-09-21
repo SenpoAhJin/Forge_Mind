@@ -23,23 +23,27 @@ interface TimeOption {
 
 // Convert 24-hour time to 12-hour format with AM/PM
 const formatTime12Hour = (time24: string): string => {
-  const [hourStr] = time24.split(':');
+  const [hourStr, minuteStr] = time24.split(':');
   const hour24 = parseInt(hourStr, 10);
+  const minute = minuteStr || '00';
   
-  if (hour24 === 0) return '12:00 AM';
-  if (hour24 < 12) return `${hour24}:00 AM`;
-  if (hour24 === 12) return '12:00 PM';
-  return `${hour24 - 12}:00 PM`;
+  if (hour24 === 0) return `12:${minute} AM`;
+  if (hour24 < 12) return `${hour24}:${minute} AM`;
+  if (hour24 === 12) return `12:${minute} PM`;
+  return `${hour24 - 12}:${minute} PM`;
 };
 
-// Generate time options with 1-hour intervals
+// Generate time options with 30-minute intervals
 const generateTimeOptions = (): TimeOption[] => {
   const options: TimeOption[] = [];
   for (let hour = 0; hour < 24; hour++) {
-    const hourStr = String(hour).padStart(2, '0');
-    const value = `${hourStr}:00`;
-    const label = formatTime12Hour(value);
-    options.push({ value, label });
+    for (let minute = 0; minute < 60; minute += 30) {
+      const hourStr = String(hour).padStart(2, '0');
+      const minuteStr = String(minute).padStart(2, '0');
+      const value = `${hourStr}:${minuteStr}`;
+      const label = formatTime12Hour(value);
+      options.push({ value, label });
+    }
   }
   return options;
 };
