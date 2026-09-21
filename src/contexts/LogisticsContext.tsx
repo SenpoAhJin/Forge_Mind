@@ -24,6 +24,7 @@ interface LogisticsContextValue {
   loading: boolean;
   createEntry: (data: CreateEntryData) => Promise<{ success: boolean; error?: string; entry?: LogisticsEntry }>;
   updateLogisticsFields: (id: string, data: UpdateLogisticsFieldsData) => Promise<{ success: boolean; error?: string }>;
+  assignEntry: (id: string, staffEmail: string | null) => Promise<{ success: boolean; error?: string }>; // NEW: Assign to staff
   withdrawEntry: (id: string) => Promise<{ success: boolean; error?: string }>;
   getEntriesByEvent: (eventId: string) => LogisticsEntry[];
   reseedData: () => Promise<void>; // Dev-only
@@ -95,6 +96,7 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: 'ABC123',
       entourage_size: 2,
       stage_time_preference: null,
+      assigned_to_email: 'staff-logistics@cosforge.ph', // Assigned to logistics staff
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -117,6 +119,7 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: 'XYZ789',
       entourage_size: 1,
       stage_time_preference: null,
+      assigned_to_email: null, // Unassigned
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -139,6 +142,7 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: null, // MISSING
       entourage_size: 0,
       stage_time_preference: null,
+      assigned_to_email: null, // Unassigned
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -161,6 +165,7 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: null,
       entourage_size: null, // MISSING
       stage_time_preference: 'Afternoon preferred',
+      assigned_to_email: null, // Unassigned
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -183,6 +188,7 @@ const generateSeedData = (): LogisticsEntry[] => {
       plate_number: 'DEF456',
       entourage_size: 1,
       stage_time_preference: null,
+      assigned_to_email: null, // Unassigned
       status: 'active' as LogisticsStatus,
       withdrawn_at: null,
       withdrawn_by_email: null,
@@ -303,6 +309,8 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
       plate_number: data.plate_number || null,
       entourage_size: data.entourage_size !== undefined ? data.entourage_size : null,
       stage_time_preference: data.stage_time_preference || null,
+      // Assignment
+      assigned_to_email: null, // Unassigned by default
       // Status
       status: 'active',
       withdrawn_at: null,
@@ -385,6 +393,43 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
     return { success: true };
   };
 
+  const assignEntry = async (id: string, staffEmail: string | null): Promise<{ success: boolean; error?: string }> => {
+    const guard = requireHeadOrganizer();
+    if (!guard.success) return guard;
+
+    const entry = entries.find(e => e.id === id);
+    if (!entry) {
+      return { success: false, error: 'Entry not found' };
+    }
+
+    // Guard: cannot assign withdrawn entries
+    if (entry.status === 'withdrawn') {
+      return { success: false, error: 'Cannot assign withdrawn entries' };
+    }
+
+    // Validate staff email (optional - null means unassign)
+    if (staffEmail && !validateEmail(staffEmail)) {
+      return { success: false, error: 'Invalid staff email format' };
+    }
+
+    const now = getNowISO();
+    const updated = entries.map(e =>
+      e.id === id
+        ? {
+            ...e,
+            assigned_to_email: staffEmail ? staffEmail.trim().toLowerCase() : null,
+            updated_at: now,
+            updated_by_email: user!.email,
+          }
+        : e
+    );
+
+    setEntries(updated);
+    await persist(updated);
+
+    return { success: true };
+  };
+
   const withdrawEntry = async (id: string): Promise<{ success: boolean; error?: string }> => {
     const guard = requireHeadOrganizer();
     if (!guard.success) return guard;
@@ -434,6 +479,7 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
     loading,
     createEntry,
     updateLogisticsFields,
+    assignEntry,
     withdrawEntry,
     getEntriesByEvent,
     reseedData,

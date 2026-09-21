@@ -29,6 +29,9 @@ export interface LogisticsEntry {
   entourage_size: number | null; // 0 means answered (no entourage), null means unanswered
   stage_time_preference: string | null; // performers only, required for completion
 
+  // Assignment (Head Organizer assigns to Staff)
+  assigned_to_email: string | null; // Staff email, null = unassigned
+
   // Status
   status: LogisticsStatus;
   withdrawn_at: string | null; // ISO 8601
