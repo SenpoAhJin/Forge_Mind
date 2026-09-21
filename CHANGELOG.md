@@ -2630,79 +2630,6 @@ Built a complete logistics tracker for managing participant arrival details, par
 
 ---
 
-## Session — Sunday, September 20, 2026, 13:35 (Fix listing cards to standard size)
-
-### What was broken
-
-The listing cards in the marketplace were expanding to different sizes. Some cards were taller, some were shorter. They looked irregular and inconsistent.
-
-### What I fixed
-
-Changed all listing cards to be exactly the same size:
-
-**BEFORE:**
-- Cards had `minHeight: 180` (minimum height, but could grow taller)
-- Thumbnail had `minHeight: 100` (could grow)
-- Cards with longer text would expand taller
-- Result: Uneven, irregular card sizes
-
-**AFTER:**
-- Cards have `height: 140` (FIXED height, cannot grow)
-- Thumbnail has `height: '100%'` (fills the fixed card height exactly)
-- Content area uses `justifyContent: 'space-between'` (spreads content evenly)
-- Result: Every card is exactly 140 pixels tall
-
-**What this means:**
-- Every listing card is now exactly the same size
-- Cards are lined up perfectly in rows
-- The thumbnail is always 100 pixels wide and 140 pixels tall
-- Text that's too long gets cut off with "..." instead of making the card bigger
-
-### TypeScript check result
-```
-npx tsc --noEmit
-Exit Code: 0
-```
-**Meaning:** No errors.
-
-### Git commit result
-```
-[master 60a2a02] Fix listing cards to standard size: all cards now exactly 140px tall
- 2 files changed, 34 insertions(+), 74 deletions(-)
-```
-
-### Git push result
-```
-To https://github.com/SenpoAhJin/Forge_Mind.git
-   23ee892..60a2a02  master -> master
-```
-**Meaning:** Changes uploaded successfully.
-
-### What you need to test
-
-**Restart the server first:**
-1. Stop the server (Ctrl+C)
-2. Run: `npx expo start -c`
-3. Hard refresh browser: Ctrl+Shift+R
-
-**Then check the listing cards:**
-1. Open Marketplace
-2. Click "All" to see all listings
-3. Look at all the cards in the list
-4. Check: Is every card the SAME height? YES or NO
-5. Check: Is every card the SAME width? YES or NO
-6. Check: Are the thumbnail boxes all the SAME size? YES or NO
-7. Scroll through the list - do all cards look consistent? YES or NO
-
-**What you should see:**
-- All cards are exactly 140 pixels tall (same height everywhere)
-- All cards fill the screen width (same width everywhere)
-- All thumbnails are exactly 100×140 pixels
-- All cards line up perfectly on the left and right edges
-- Text in cards might get cut off with "..." if it's too long (this is correct - prevents expansion)
-
----
-
 ## Session — Saturday, September 21, 2026, 10:00 (FE-7 Step 2 Correction Pass: deadline-based urgency + withdraw + edit UI)
 
 ### What we did
@@ -2784,9 +2711,12 @@ To https://github.com/SenpoAhJin/Forge_Mind.git
 **Git state:** HEAD at e32acbc, working tree clean.
 
 ### Accepted deviations
-- Storage key changed to `@forgemind:logistics_entries` — legacy data at `@forgemind:logistics` ignored, no migration logic (spec allowed reseed-once approach).
-- Email made optional and excluded from completion (spec implied required but completion logic never counted it).
-- Submission deadline is CORE field and locks after creation (spec didn't explicitly forbid deadline changes, but locking it prevents retroactive urgency manipulation).
+- **Storage key:** Changed to `@forgemind:logistics_entries` (legacy `@forgemind:logistics` ignored, no migration logic).
+- **participant_kind values:** Uses `confirmed_guest | sponsor | performer` (spec-aligned).
+- **parking_needs values:** Uses `'none' | 'standard' | 'accessible'` enum (spec-aligned).
+- **stage_time_preference:** Required for performers only, optional for other kinds (spec-aligned).
+- **TimePickerInput:** Uses 12-hour format with 30-minute intervals (e.g., "12:00 AM", "12:30 AM", "1:00 AM"...) for better UX.
+- **participant_email:** Made optional and excluded from completion (reduces friction, email not critical for logistics tracking).
 
 ### Commits
 - `a120b99` — refactor(C1-C2): data model + rules with deadline-based urgency, submission_deadline field, withdraw status, optional email, new storage key (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/a120b99)
@@ -2795,4 +2725,4 @@ To https://github.com/SenpoAhJin/Forge_Mind.git
 
 ---
 
-*Last updated: September 21, 2026, 13:35*
+*Last updated: September 21, 2026*
