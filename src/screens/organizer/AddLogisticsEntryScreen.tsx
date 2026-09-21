@@ -39,6 +39,7 @@ export const AddLogisticsEntryScreen: React.FC = () => {
   const [participantEmail, setParticipantEmail] = useState('');
   const [participantName, setParticipantName] = useState('');
   const [participantKind, setParticipantKind] = useState<ParticipantKind>('confirmed_guest');
+  const [submissionDeadline, setSubmissionDeadline] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
   const [parkingNeeds, setParkingNeeds] = useState<ParkingNeeds>('none');
@@ -67,16 +68,17 @@ export const AddLogisticsEntryScreen: React.FC = () => {
       setError('Please select an event');
       return;
     }
-    if (!participantEmail || !participantName) {
-      setError('Participant email and name are required');
+    if (!participantName || !submissionDeadline) {
+      setError('Participant name and submission deadline are required');
       return;
     }
 
     const result = await createEntry({
       event_id: eventId,
-      participant_email: participantEmail,
+      participant_email: participantEmail || null,
       participant_name: participantName,
       participant_kind: participantKind,
+      submission_deadline: submissionDeadline,
       arrival_date: arrivalDate || null,
       arrival_time: arrivalTime || null,
       parking_needs: parkingNeeds,
@@ -118,7 +120,7 @@ export const AddLogisticsEntryScreen: React.FC = () => {
 
         {/* Participant Info */}
         <TextInputField
-          label="Participant Email *"
+          label="Participant Email (optional)"
           value={participantEmail}
           onChangeText={setParticipantEmail}
           placeholder="email@example.com"
@@ -133,7 +135,7 @@ export const AddLogisticsEntryScreen: React.FC = () => {
         />
 
         {/* Participant Kind */}
-        <Text style={styles.label}>Participant Type</Text>
+        <Text style={styles.label}>Participant Type *</Text>
         <View style={styles.chipRow}>
           {(['confirmed_guest', 'sponsor', 'performer'] as ParticipantKind[]).map(kind => (
             <TouchableOpacity
@@ -147,6 +149,16 @@ export const AddLogisticsEntryScreen: React.FC = () => {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Submission Deadline */}
+        <DateInput 
+          label="Submission Deadline *" 
+          value={submissionDeadline} 
+          onChange={setSubmissionDeadline}
+        />
+        <Text style={styles.helperText}>
+          Core details (name, type, deadline) lock after creation.
+        </Text>
 
         {/* Arrival */}
         <DateInput label="Arrival Date" value={arrivalDate} onChange={setArrivalDate} />
@@ -260,6 +272,12 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.body,
     color: colors.error,
+    marginBottom: spacing.md,
+  },
+  helperText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: -spacing.sm,
     marginBottom: spacing.md,
   },
 });
