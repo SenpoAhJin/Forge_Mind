@@ -1,0 +1,199 @@
+FE-7 Step 2 Correction Pass C1-C2: Rules Traces (Deadline-Based Urgency)
+
+=== getMissingFields CASES ===
+
+Test Entry A (entourage_size = 0):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '14:30',
+  parking_needs: 'standard',
+  plate_number: 'ABC123',
+  entourage_size: 0,  // 0 counts as answered
+  participant_kind: 'sponsor',
+  stage_time_preference: null
+}
+→ getMissingFields(A) = []
+✓ entourage_size: 0 counts as answered
+
+Test Entry B (parking='none', plate n/a):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '10:00',
+  parking_needs: 'none',
+  plate_number: null,  // n/a when parking='none'
+  entourage_size: 2,
+  participant_kind: 'confirmed_guest',
+  stage_time_preference: null
+}
+→ getMissingFields(B) = []
+✓ plate_number: n/a when parking_needs === 'none'
+
+Test Entry C (arrival with only date, no time):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: null,  // MISSING
+  parking_needs: 'none',
+  plate_number: null,
+  entourage_size: 1,
+  participant_kind: 'sponsor',
+  stage_time_preference: null
+}
+→ getMissingFields(C) = ['arrival_time']
+✓ arrival needs BOTH date AND time
+
+Test Entry D (performer, stage_time required):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '14:00',
+  parking_needs: 'standard',
+  plate_number: 'XYZ789',
+  entourage_size: 1,
+  participant_kind: 'performer',
+  stage_time_preference: null  // MISSING for performer
+}
+→ getMissingFields(D) = ['stage_time_preference']
+✓ stage_time_preference required for performers only
+
+Test Entry E (non-performer, stage_time not required):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '14:00',
+  parking_needs: 'none',
+  plate_number: null,
+  entourage_size: 0,
+  participant_kind: 'sponsor',  // NOT performer
+  stage_time_preference: null  // OK to be null
+}
+→ getMissingFields(E) = []
+✓ stage_time_preference NOT required for non-performers
+
+=== getUrgency AT VARIOUS DAYS-TO-DEADLINE ===
+
+Constants: REMINDER_DAYS=7, URGENT_DAYS=3, CRITICAL_DAYS=1
+Today: 2026-09-21
+
+Entry F1 (20 days to deadline, incomplete):
+submission_deadline: '2026-10-11'
+→ getUrgency(F1, '2026-09-21')
+→ { level: 'on_track', daysUntilDeadline: 20, reason: '20 days left' }
+✓ >7 days = ON_TRACK
+
+Entry F2 (8 days to deadline, incomplete):
+submission_deadline: '2026-09-29'
+→ getUrgency(F2, '2026-09-21')
+→ { level: 'on_track', daysUntilDeadline: 8, reason: '8 days left' }
+✓ 8 days = ON_TRACK (must be >7)
+
+Entry F3 (7 days to deadline, incomplete):
+submission_deadline: '2026-09-28'
+→ getUrgency(F3, '2026-09-21')
+→ { level: 'reminder', daysUntilDeadline: 7, reason: '7 days left' }
+✓ ≤7 days = REMINDER
+
+Entry F4 (4 days to deadline, incomplete):
+submission_deadline: '2026-09-25'
+→ getUrgency(F4, '2026-09-21')
+→ { level: 'reminder', daysUntilDeadline: 4, reason: '4 days left' }
+✓ 4 days = REMINDER (4 > URGENT_DAYS=3)
+
+Entry F5 (3 days to deadline, incomplete):
+submission_deadline: '2026-09-24'
+→ getUrgency(F5, '2026-09-21')
+→ { level: 'urgent', daysUntilDeadline: 3, reason: '3 days left' }
+✓ ≤3 days = URGENT
+
+Entry F6 (2 days to deadline, incomplete):
+submission_deadline: '2026-09-23'
+→ getUrgency(F6, '2026-09-21')
+→ { level: 'urgent', daysUntilDeadline: 2, reason: '2 days left' }
+✓ 2 days = URGENT
+
+Entry F7 (1 day to deadline, incomplete):
+submission_deadline: '2026-09-22'
+→ getUrgency(F7, '2026-09-21')
+→ { level: 'critical', daysUntilDeadline: 1, reason: '1 day left' }
+✓ ≤1 day = CRITICAL
+
+Entry F8 (0 days to deadline = today, incomplete):
+submission_deadline: '2026-09-21'
+→ getUrgency(F8, '2026-09-21')
+→ { level: 'critical', daysUntilDeadline: 0, reason: '0 days left' }
+✓ 0 days (deadline today) = CRITICAL
+
+Entry F9 (-1 days = past deadline, incomplete):
+submission_deadline: '2026-09-20'
+→ getUrgency(F9, '2026-09-21')
+→ { level: 'critical', daysUntilDeadline: -1, reason: 'Past deadline' }
+✓ Past deadline while incomplete = CRITICAL with "Past deadline" reason
+
+Entry F10 (1 day to deadline, COMPLETE):
+submission_deadline: '2026-09-22'
+→ getUrgency(F10, '2026-09-21')
+→ { level: 'complete', daysUntilDeadline: 1, reason: 'Complete' }
+✓ Complete entries = 'complete' regardless of days
+
+=== sortByCriticality ON NEW SEEDS ===
+
+Today: 2026-09-21
+Event: Manila CosCon 2026, start_date: '2026-10-15' (confirmed)
+
+Seed Entry 1 (COMPLETE):
+- submission_deadline: '2026-10-08' (17 days)
+- missing: []
+→ urgency: 'complete'
+
+Seed Entry 2 (20 days, incomplete):
+- submission_deadline: '2026-10-11' (20 days)
+- missing: ['arrival_time']
+→ urgency: 'on_track'
+
+Seed Entry 3 (6 days, incomplete):
+- submission_deadline: '2026-09-27' (6 days)
+- missing: ['plate_number']
+→ urgency: 'reminder'
+
+Seed Entry 4 (2 days, incomplete):
+- submission_deadline: '2026-09-23' (2 days)
+- missing: ['entourage_size']
+→ urgency: 'urgent'
+
+Seed Entry 5 (-1 days = past deadline, incomplete):
+- submission_deadline: '2026-09-20' (yesterday)
+- missing: ['arrival_date', 'arrival_time']
+→ urgency: 'critical' (past deadline)
+
+sortByCriticality([1,2,3,4,5], events, '2026-09-21')
+→ Sorted order:
+  1. Entry 5 (critical, past deadline, 2 missing fields)
+  2. Entry 4 (urgent, 2 days, 1 missing field)
+  3. Entry 3 (reminder, 6 days, 1 missing field)
+  4. Entry 2 (on_track, 20 days, 1 missing field)
+  5. Entry 1 (complete, 17 days, 0 missing fields)
+
+✓ Incomplete first
+✓ Earliest deadline first
+✓ More missing fields first (Entry 5 has 2, Entry 4 has 1)
+✓ Complete entries last
+
+=== formatTime12h TESTS ===
+
+formatTime12h('00:00') → '12:00 AM'
+formatTime12h('00:30') → '12:30 AM'
+formatTime12h('01:00') → '1:00 AM'
+formatTime12h('11:30') → '11:30 AM'
+formatTime12h('12:00') → '12:00 PM'
+formatTime12h('12:30') → '12:30 PM'
+formatTime12h('13:00') → '1:00 PM'
+formatTime12h('14:30') → '2:30 PM'
+formatTime12h('23:00') → '11:00 PM'
+formatTime12h('23:30') → '11:30 PM'
+
+✓ All 24-hour times convert correctly to 12-hour AM/PM format
+
+=== formatParticipantKind TESTS ===
+
+formatParticipantKind('confirmed_guest') → 'Guest'
+formatParticipantKind('sponsor') → 'Sponsor'
+formatParticipantKind('performer') → 'Performer'
+
+✓ "Guest" used on chips and cards (not "Confirmed Guest")

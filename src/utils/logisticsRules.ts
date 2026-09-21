@@ -1,27 +1,31 @@
 /**
- * FE-7 Step 2: Logistics Rules & Completion Logic
+ * FE-7 Step 2: Logistics Rules & Completion Logic (Correction Pass C2)
  * 
  * Completion rules:
  * - plate_number: n/a when parking_needs === 'none', otherwise required
  * - arrival: needs both date AND time to count as complete
  * - entourage_size: 0 counts as answered
+ * - stage_time_preference: required for performers only
+ * - participant_email: EXCLUDED from completion (optional field)
  * 
- * Urgency rules (days until event start_date):
- * - REMINDER: 7+ days (grey)
- * - URGENT: 3-6 days (amber)
- * - CRITICAL: 0-2 days (red)
+ * Urgency rules (days until submission_deadline):
+ * - COMPLETE: all tracked fields answered
+ * - ON_TRACK: >7 days to deadline
+ * - REMINDER: ≤7 days to deadline
+ * - URGENT: ≤3 days to deadline
+ * - CRITICAL: ≤1 day to deadline OR past deadline while incomplete
  */
 
-import { LogisticsEntry, ParkingNeeds } from '../types/logistics';
+import { LogisticsEntry, ParkingNeeds, LogisticsStatus } from '../types/logistics';
 import { Event } from '../types/events';
 import { daysBetween, compareDateStrings } from './dateHelpers';
 
-// Rule constants
+// Rule constants - used everywhere, no hard-coded ranges elsewhere
 export const REMINDER_DAYS = 7;
 export const URGENT_DAYS = 3;
 export const CRITICAL_DAYS = 1;
 
-export type UrgencyLevel = 'none' | 'reminder' | 'urgent' | 'critical';
+export type UrgencyLevel = 'complete' | 'on_track' | 'reminder' | 'urgent' | 'critical';
 
 export interface CompletionStatus {
   isComplete: boolean;
@@ -30,21 +34,19 @@ export interface CompletionStatus {
 
 export interface UrgencyStatus {
   level: UrgencyLevel;
-  daysUntilEvent: number;
+  daysUntilDeadline: number;
   reason: string;
 }
 
 /**
- * Check if a logistics entry is complete according to rules
+ * Get missing fields for a logistics entry
  */
-export const checkCompletion = (entry: LogisticsEntry): CompletionStatus => {
+export const getMissingFields = (entry: LogisticsEntry): string[] => {
   const missing: string[] = [];
 
   // Rule 1: Arrival needs BOTH date and time
-  if (!entry.arrival_date || !entry.arrival_time) {
-    if (!entry.arrival_date) missing.push('arrival_date');
-    if (!entry.arrival_time) missing.push('arrival_time');
-  }
+  if (!entry.arrival_date) missing.push('arrival_date');
+  if (!entry.arrival_time) missing.push('arrival_time');
 
   // Rule 2: Plate number required UNLESS parking is 'none'
   if (entry.parking_needs !== 'none' && !entry.plate_number) {
@@ -56,6 +58,20 @@ export const checkCompletion = (entry: LogisticsEntry): CompletionStatus => {
     missing.push('entourage_size');
   }
 
+  // Rule 4: Stage time required for performers only
+  if (entry.participant_kind === 'performer' && !entry.stage_time_preference) {
+    missing.push('stage_time_preference');
+  }
+
+  return missing;
+};
+
+/**
+ * Check if a logistics entry is complete according to rules
+ */
+export const checkCompletion = (entry: LogisticsEntry): CompletionStatus => {
+  const missing = getMissingFields(entry);
+  
   return {
     isComplete: missing.length === 0,
     missingFields: missing,
@@ -63,11 +79,10 @@ export const checkCompletion = (entry: LogisticsEntry): CompletionStatus => {
 };
 
 /**
- * Calculate urgency level based on days until event
+ * Calculate urgency level based on days until submission_deadline
  */
-export const checkUrgency = (
+export const getUrgency = (
   entry: LogisticsEntry,
-  event: Event,
   todayLocal: string
 ): UrgencyStatus => {
   const completion = checkCompletion(entry);
@@ -75,58 +90,66 @@ export const checkUrgency = (
   // Complete entries have no urgency
   if (completion.isComplete) {
     return {
-      level: 'none',
-      daysUntilEvent: daysBetween(todayLocal, event.start_date),
+      level: 'complete',
+      daysUntilDeadline: daysBetween(todayLocal, entry.submission_deadline),
       reason: 'Complete',
     };
   }
 
-  // Past events have no urgency
-  if (compareDateStrings(event.start_date, todayLocal) < 0) {
+  const days = daysBetween(todayLocal, entry.submission_deadline);
+
+  // Past deadline while incomplete = CRITICAL
+  if (days < 0) {
     return {
-      level: 'none',
-      daysUntilEvent: daysBetween(todayLocal, event.start_date),
-      reason: 'Event has passed',
+      level: 'critical',
+      daysUntilDeadline: days,
+      reason: 'Past deadline',
     };
   }
 
-  const days = daysBetween(todayLocal, event.start_date);
-
+  // ≤1 day = CRITICAL
   if (days <= CRITICAL_DAYS) {
     return {
       level: 'critical',
-      daysUntilEvent: days,
-      reason: `${days} day${days === 1 ? '' : 's'} until event`,
+      daysUntilDeadline: days,
+      reason: `${days} day${days === 1 ? '' : 's'} left`,
     };
   }
 
+  // ≤3 days = URGENT
   if (days <= URGENT_DAYS) {
     return {
       level: 'urgent',
-      daysUntilEvent: days,
-      reason: `${days} days until event`,
+      daysUntilDeadline: days,
+      reason: `${days} days left`,
     };
   }
 
-  if (days < REMINDER_DAYS) {
+  // ≤7 days = REMINDER
+  if (days <= REMINDER_DAYS) {
     return {
-      level: 'urgent',
-      daysUntilEvent: days,
-      reason: `${days} days until event`,
+      level: 'reminder',
+      daysUntilDeadline: days,
+      reason: `${days} days left`,
     };
   }
 
+  // >7 days = ON_TRACK
   return {
-    level: 'reminder',
-    daysUntilEvent: days,
-    reason: `${days} days until event`,
+    level: 'on_track',
+    daysUntilDeadline: days,
+    reason: `${days} days left`,
   };
 };
 
 /**
- * Sort logistics entries by urgency (critical first), then by event date, then by name
+ * Sort logistics entries by criticality
+ * - Incomplete first
+ * - Earliest deadline
+ * - More missing fields
+ * - Earlier event start
  */
-export const sortByUrgency = (
+export const sortByCriticality = (
   entries: LogisticsEntry[],
   events: Event[],
   todayLocal: string
@@ -139,17 +162,31 @@ export const sortByUrgency = (
 
     if (!eventA || !eventB) return 0;
 
-    const urgencyA = checkUrgency(a, eventA, todayLocal);
-    const urgencyB = checkUrgency(b, eventB, todayLocal);
+    const urgencyA = getUrgency(a, todayLocal);
+    const urgencyB = getUrgency(b, todayLocal);
 
-    // Sort by urgency level (critical > urgent > reminder > none)
-    const urgencyOrder = { critical: 0, urgent: 1, reminder: 2, none: 3 };
-    const urgencyDiff = urgencyOrder[urgencyA.level] - urgencyOrder[urgencyB.level];
-    if (urgencyDiff !== 0) return urgencyDiff;
+    // Complete entries go last
+    if (urgencyA.level === 'complete' && urgencyB.level !== 'complete') return 1;
+    if (urgencyA.level !== 'complete' && urgencyB.level === 'complete') return -1;
 
-    // Same urgency: sort by event date (soonest first)
-    const dateDiff = compareDateStrings(eventA.start_date, eventB.start_date);
-    if (dateDiff !== 0) return dateDiff;
+    // Both incomplete: sort by deadline (earliest first)
+    if (urgencyA.level !== 'complete' && urgencyB.level !== 'complete') {
+      const deadlineDiff = compareDateStrings(a.submission_deadline, b.submission_deadline);
+      if (deadlineDiff !== 0) return deadlineDiff;
+
+      // Same deadline: more missing fields first
+      const missingA = getMissingFields(a).length;
+      const missingB = getMissingFields(b).length;
+      if (missingA !== missingB) return missingB - missingA;
+
+      // Same missing count: earlier event start first
+      const eventDateDiff = compareDateStrings(eventA.start_date, eventB.start_date);
+      if (eventDateDiff !== 0) return eventDateDiff;
+    }
+
+    // Both complete or same priority: sort by event date
+    const eventDateDiff = compareDateStrings(eventA.start_date, eventB.start_date);
+    if (eventDateDiff !== 0) return eventDateDiff;
 
     // Same event date: sort by participant name
     return a.participant_name.localeCompare(b.participant_name);
@@ -176,7 +213,7 @@ export const formatParkingNeeds = (needs: ParkingNeeds): string => {
 export const formatParticipantKind = (kind: string): string => {
   switch (kind) {
     case 'confirmed_guest':
-      return 'Confirmed Guest';
+      return 'Guest';
     case 'sponsor':
       return 'Sponsor';
     case 'performer':
@@ -184,4 +221,19 @@ export const formatParticipantKind = (kind: string): string => {
     default:
       return kind;
   }
+};
+
+/**
+ * Format time from 24-hour to 12-hour with AM/PM
+ * Used everywhere arrival time shows
+ */
+export const formatTime12h = (time24: string): string => {
+  const [hourStr, minuteStr] = time24.split(':');
+  const hour24 = parseInt(hourStr, 10);
+  const minute = minuteStr || '00';
+  
+  if (hour24 === 0) return `12:${minute} AM`;
+  if (hour24 < 12) return `${hour24}:${minute} AM`;
+  if (hour24 === 12) return `12:${minute} PM`;
+  return `${hour24 - 12}:${minute} PM`;
 };
