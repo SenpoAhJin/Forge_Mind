@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { useLogistics } from '../../contexts/LogisticsContext';
 import { Button, ConfirmationModal } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
 import { OrganizerAccessRequest, DEPARTMENT_LABELS } from '../../types/organizer';
@@ -11,6 +12,7 @@ import { formatVerificationStatus, formatDepartmentVerificationStatus } from '..
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, resetOnboarding, updateVerification } = useUser();
+  const { reseedData } = useLogistics();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const [accessRequest, setAccessRequest] = useState<OrganizerAccessRequest | null>(null);
@@ -19,6 +21,7 @@ export const ProfileScreen: React.FC = () => {
   // Modal states
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showReseedLogisticsModal, setShowReseedLogisticsModal] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   // Load access request when screen is focused
@@ -65,6 +68,15 @@ export const ProfileScreen: React.FC = () => {
   const confirmReset = () => {
     setShowResetModal(false);
     resetOnboarding();
+  };
+
+  const handleReseedLogistics = () => {
+    setShowReseedLogisticsModal(true);
+  };
+
+  const confirmReseedLogistics = async () => {
+    setShowReseedLogisticsModal(false);
+    await reseedData();
   };
 
   // Determine if user is viewing as organizer
@@ -432,12 +444,22 @@ export const ProfileScreen: React.FC = () => {
           fullWidth
         />
         {__DEV__ && (
-          <Button
-            title="Reset Onboarding (Delete All Accounts)"
-            variant="destructive"
-            onPress={handleResetOnboarding}
-            fullWidth
-          />
+          <>
+            <Button
+              title="Reset Onboarding (Delete All Accounts)"
+              variant="destructive"
+              onPress={handleResetOnboarding}
+              fullWidth
+            />
+            {user?.is_organizer && user?.organizer_role === 'head' && (
+              <Button
+                title="Reseed Logistics Data (Test Mode)"
+                variant="secondary"
+                onPress={handleReseedLogistics}
+                fullWidth
+              />
+            )}
+          </>
         )}
       </View>
 
@@ -471,6 +493,17 @@ export const ProfileScreen: React.FC = () => {
         confirmText="OK"
         onConfirm={() => setShowComingSoonModal(false)}
         onCancel={() => setShowComingSoonModal(false)}
+      />
+
+      {/* Reseed Logistics Confirmation Modal */}
+      <ConfirmationModal
+        visible={showReseedLogisticsModal}
+        title="Reseed Logistics Data"
+        message="This will replace all logistics entries with fresh test data (dates relative to today). Use this to test urgency states."
+        confirmText="Reseed"
+        confirmStyle="default"
+        onConfirm={confirmReseedLogistics}
+        onCancel={() => setShowReseedLogisticsModal(false)}
       />
 
     </ScrollView>

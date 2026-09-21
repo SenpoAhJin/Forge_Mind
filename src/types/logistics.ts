@@ -19,7 +19,7 @@ export interface LogisticsEntry {
   arrival_time: string | null; // HH:MM (24-hour)
   parking_needs: ParkingNeeds;
   plate_number: string | null; // null when parking_needs === 'none'
-  entourage_size: number; // 0 means answered (no entourage), null means unanswered
+  entourage_size: number | null; // 0 means answered (no entourage), null means unanswered
 
   // Performance logistics (performers only)
   stage_time_preference: string | null; // free text, optional
