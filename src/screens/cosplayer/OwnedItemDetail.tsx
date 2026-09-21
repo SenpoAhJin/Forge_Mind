@@ -5,11 +5,12 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Button, TextInputField, TextAreaField, ConditionSlider, DropdownField } from '../../components';
+import { Button, TextInputField, TextAreaField, ConditionSlider, DropdownField, ConfirmationModal } from '../../components';
+import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { getTodayLocal } from '../../utils/dateHelpers';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import { useProjects } from '../../contexts/ProjectsContext';
 import {
@@ -62,18 +63,17 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
   const item = getItemById(attireId);
 
   const [editing, setEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showNoProjectsModal, setShowNoProjectsModal] = useState(false);
 
   const [type, setType] = useState<AttireCategory>(item?.auto_categorized_type ?? 'other');
   const [color, setColor] = useState(item?.auto_categorized_color ?? '');
   const [style, setStyle] = useState(item?.auto_categorized_style ?? '');
   const [flexibility, setFlexibility] = useState<FlexibilityTag>(item?.flexibility_tag ?? 'as-is-only');
   const [conditionRating, setConditionRating] = useState(item?.condition_rating ?? 3);
-  const [acquiredDate, setAcquiredDate] = useState<Date>(
-    item?.acquired_date ? new Date(item.acquired_date + 'T00:00:00') : new Date()
-  );
+  const [acquiredDate, setAcquiredDate] = useState(item?.acquired_date ?? getTodayLocal());
   const [acquisitionCost, setAcquisitionCost] = useState(item?.acquisition_cost ? String(item.acquisition_cost) : '');
   const [notes, setNotes] = useState(item?.notes ?? '');
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [commitTarget, setCommitTarget] = useState<string | null>(
     item?.committed_to_project_id ?? null
   );
@@ -101,7 +101,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
       auto_categorized_style: style.trim() || 'unclear',
       flexibility_tag: flexibility,
       condition_rating: conditionRating,
-      acquired_date: acquiredDate.toISOString().slice(0, 10),
+      acquired_date: acquiredDate,
       acquisition_cost: parsedCost,
       notes: notes.trim(),
     });
@@ -110,17 +110,13 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
   };
 
   const handleDelete = () => {
-    Alert.alert('Delete item?', 'This removes the attire from your inventory.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          deleteItem(item.attire_id);
-          onBack();
-        },
-      },
-    ]);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    deleteItem(item.attire_id);
+    setShowDeleteModal(false);
+    onBack();
   };
 
   const handleCommit = (projectId: string | null) => {
@@ -204,27 +200,12 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
           <ConditionSlider value={conditionRating} onValueChange={setConditionRating} label="Condition" />
 
           <Text style={styles.sectionTitle}>Acquisition</Text>
-          <Text style={styles.fieldLabel}>Acquired date</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-            <Text style={styles.dateButtonText}>{acquiredDate.toISOString().slice(0, 10)}</Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={acquiredDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              maximumDate={new Date()}
-              onChange={(event: any, selectedDate?: Date) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) setAcquiredDate(selectedDate);
-              }}
-            />
-          )}
+          <DateInput
+            label="Acquired date"
+            value={acquiredDate}
+            onChange={setAcquiredDate}
+            maxDate={getTodayLocal()}
+          />
           <TextInputField
             label="Acquisition cost (₱)"
             value={acquisitionCost}
@@ -303,7 +284,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
                 placeholder="Select a project"
                 onPress={() => {
                   if (projects.length === 0) {
-                    Alert.alert('No projects yet', 'Create a project first before committing this item.');
+                    setShowNoProjectsModal(true);
                     return;
                   }
                   setShowCommitPicker(true);
@@ -351,6 +332,24 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
           )}
         </>
       )}
+
+      <ConfirmationModal
+        visible={showDeleteModal}
+        title="Delete item?"
+        message="This removes the attire from your inventory."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
+      <ConfirmationModal
+        visible={showNoProjectsModal}
+        title="No projects yet"
+        message="Create a project first before committing this item."
+        confirmText="OK"
+        onConfirm={() => setShowNoProjectsModal(false)}
+        onCancel={() => setShowNoProjectsModal(false)}
+      />
     </ScrollView>
   );
 };

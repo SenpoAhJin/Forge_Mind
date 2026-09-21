@@ -12,6 +12,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { Button, TextInputField, Tag, ConfirmationModal, DateInput } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { getTodayLocal } from '../../utils/dateHelpers';
 
 type Props = NativeStackScreenProps<EventsStackParamList, 'CreateEvent'>;
 
@@ -174,6 +175,7 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
               setEndDate('');
             }
           }}
+          minDate={getTodayLocal()}
           placeholder="YYYY-MM-DD"
         />
 
@@ -182,7 +184,8 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
           label="End date (optional)"
           value={endDate}
           onChange={setEndDate}
-          minimumDate={startDate}
+          minDate={startDate || getTodayLocal()}
+          optional
           placeholder="YYYY-MM-DD (optional)"
         />
 

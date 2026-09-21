@@ -15,8 +15,10 @@ interface DateInputProps {
   value: string; // YYYY-MM-DD
   onChange: (dateString: string) => void;
   error?: string;
-  minimumDate?: string; // YYYY-MM-DD
+  minDate?: string; // YYYY-MM-DD
+  maxDate?: string; // YYYY-MM-DD
   placeholder?: string;
+  optional?: boolean;
 }
 
 export const DateInput: React.FC<DateInputProps> = ({
@@ -24,11 +26,12 @@ export const DateInput: React.FC<DateInputProps> = ({
   value,
   onChange,
   error,
-  minimumDate,
+  minDate,
+  maxDate,
   placeholder = 'YYYY-MM-DD',
+  optional = false,
 }) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [textValue, setTextValue] = useState(value);
 
   // Convert YYYY-MM-DD string to Date object for native picker
   const stringToDate = (dateStr: string): Date => {
@@ -44,11 +47,6 @@ export const DateInput: React.FC<DateInputProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-  // Validate YYYY-MM-DD format
-  const isValidFormat = (str: string): boolean => {
-    return /^\d{4}-\d{2}-\d{2}$/.test(str);
-  };
-
   // Handle native picker change
   const onPickerChange = (event: any, selectedDate?: Date) => {
     setShowPicker(Platform.OS === 'ios');
@@ -58,42 +56,41 @@ export const DateInput: React.FC<DateInputProps> = ({
     }
   };
 
-  // Handle web text input change
-  const onTextChange = (text: string) => {
-    setTextValue(text);
-    // Only call onChange if format is valid
-    if (isValidFormat(text)) {
-      onChange(text);
-    }
-  };
-
-  // Handle web text input blur (validate and correct)
-  const onTextBlur = () => {
-    if (isValidFormat(textValue)) {
-      onChange(textValue);
-    } else if (textValue.trim() === '') {
-      onChange('');
-    } else {
-      // Invalid format - revert to last valid value
-      setTextValue(value);
-    }
+  // Handle web date input change
+  const onWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value); // Empty string if cleared
   };
 
   if (Platform.OS === 'web') {
-    // Web: Text input with format validation
+    // Web: Native HTML date input with calendar popup
+    const InputElement = 'input' as any;
+    
     return (
       <View style={styles.container}>
         <Text style={styles.label}>{label}</Text>
-        <TextInput
-          style={[styles.webInput, error ? styles.inputError : null]}
-          value={textValue}
-          onChangeText={onTextChange}
-          onBlur={onTextBlur}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textDisabled}
-          maxLength={10}
+        <InputElement
+          type="date"
+          value={value}
+          onChange={onWebDateChange}
+          min={minDate || undefined}
+          max={maxDate || undefined}
+          style={{
+            fontSize: typography.body.fontSize,
+            backgroundColor: colors.backgroundLight,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: error ? colors.error : colors.border,
+            borderRadius: borderRadius.md,
+            paddingLeft: spacing.md,
+            paddingRight: spacing.md,
+            paddingTop: spacing.md,
+            paddingBottom: spacing.md,
+            color: colors.textPrimary,
+            outlineColor: colors.primary,
+            outlineWidth: 2,
+            width: '100%',
+          }}
         />
-        <Text style={styles.hint}>Format: YYYY-MM-DD (e.g., 2026-12-25)</Text>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
     );
@@ -117,7 +114,8 @@ export const DateInput: React.FC<DateInputProps> = ({
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onPickerChange}
-          minimumDate={minimumDate ? stringToDate(minimumDate) : undefined}
+          minimumDate={minDate ? stringToDate(minDate) : undefined}
+          maximumDate={maxDate ? stringToDate(maxDate) : undefined}
         />
       )}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -152,24 +150,6 @@ const styles = StyleSheet.create({
   dateButtonText: {
     ...typography.body,
     color: colors.textPrimary,
-  },
-  webInput: {
-    ...typography.body,
-    backgroundColor: colors.backgroundLight,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    color: colors.textPrimary,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  hint: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
   },
   errorText: {
     ...typography.caption,

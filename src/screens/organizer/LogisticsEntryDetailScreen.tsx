@@ -167,7 +167,12 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
 
           {isEditing ? (
             <>
-              <DateInput label="Arrival Date" value={arrivalDate} onChange={setArrivalDate} />
+              <DateInput 
+                label="Arrival Date" 
+                value={arrivalDate} 
+                onChange={setArrivalDate}
+                maxDate={event.end_date || event.start_date}
+              />
               <TimePickerInput label="Arrival Time" value={arrivalTime} onChange={setArrivalTime} />
               
               <Text style={styles.label}>Parking Needs</Text>

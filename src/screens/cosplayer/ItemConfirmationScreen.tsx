@@ -5,11 +5,12 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, TextInputField, TextAreaField, ConditionSlider } from '../../components';
+import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { getTodayLocal } from '../../utils/dateHelpers';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import {
   AttireCategory,
@@ -68,12 +69,9 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   const [style, setStyle] = useState(draft.auto_categorized_style);
   const [flexibility, setFlexibility] = useState<FlexibilityTag>('as-is-only');
   const [conditionRating, setConditionRating] = useState(draft.condition_rating);
-  const [acquiredDate, setAcquiredDate] = useState<Date>(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [acquiredDate, setAcquiredDate] = useState(getTodayLocal());
   const [acquisitionCost, setAcquisitionCost] = useState('');
   const [notes, setNotes] = useState('');
-
-  const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
   const handleSave = () => {
     const item = addItem({
@@ -86,7 +84,7 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
       auto_categorized_style: style.trim() || 'unclear',
       flexibility_tag: flexibility,
       condition_rating: conditionRating,
-      acquired_date: formatDate(acquiredDate),
+      acquired_date: acquiredDate,
       acquisition_cost: acquisitionCost.trim() ? parseFloat(acquisitionCost) : 0,
       notes: notes.trim(),
     });
@@ -161,27 +159,12 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
 
       <Text style={styles.sectionTitle}>Acquisition details</Text>
 
-      <Text style={styles.fieldLabel}>Acquired date</Text>
-      <TouchableOpacity
-        style={styles.dateButton}
-        onPress={() => setShowDatePicker(true)}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-        <Text style={styles.dateButtonText}>{formatDate(acquiredDate)}</Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker
-          value={acquiredDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          maximumDate={new Date()}
-          onChange={(event: any, selectedDate?: Date) => {
-            setShowDatePicker(Platform.OS === 'ios');
-            if (selectedDate) setAcquiredDate(selectedDate);
-          }}
-        />
-      )}
+      <DateInput
+        label="Acquired date"
+        value={acquiredDate}
+        onChange={setAcquiredDate}
+        maxDate={getTodayLocal()}
+      />
 
       <TextInputField
         label="Acquisition cost (₱)"

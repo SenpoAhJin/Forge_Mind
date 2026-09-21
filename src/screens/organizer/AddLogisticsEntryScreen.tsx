@@ -17,6 +17,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useLogistics } from '../../contexts/LogisticsContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { ParticipantKind, ParkingNeeds } from '../../types/logistics';
+import { getTodayLocal } from '../../utils/dateHelpers';
 
 type LogisticsStackParamList = {
   LogisticsHome: undefined;
@@ -60,6 +61,7 @@ export const AddLogisticsEntryScreen: React.FC = () => {
   }
 
   const confirmedEvents = events.filter(e => e.status === 'confirmed');
+  const selectedEvent = events.find(e => e.id === eventId);
 
   const handleSave = async () => {
     setError('');
@@ -155,13 +157,20 @@ export const AddLogisticsEntryScreen: React.FC = () => {
           label="Submission Deadline *" 
           value={submissionDeadline} 
           onChange={setSubmissionDeadline}
+          minDate={getTodayLocal()}
+          maxDate={selectedEvent?.start_date || undefined}
         />
         <Text style={styles.helperText}>
           Core details (name, type, deadline) lock after creation.
         </Text>
 
         {/* Arrival */}
-        <DateInput label="Arrival Date" value={arrivalDate} onChange={setArrivalDate} />
+        <DateInput 
+          label="Arrival Date" 
+          value={arrivalDate} 
+          onChange={setArrivalDate}
+          maxDate={selectedEvent?.end_date || selectedEvent?.start_date || undefined}
+        />
         <TimePickerInput
           label="Arrival Time"
           value={arrivalTime}
