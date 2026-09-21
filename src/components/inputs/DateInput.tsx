@@ -118,6 +118,11 @@ export const DateInput: React.FC<DateInputProps> = ({
         <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
         <Text style={styles.dateButtonText}>{value || placeholder}</Text>
       </TouchableOpacity>
+      {optional && value ? (
+        <TouchableOpacity onPress={() => onChange('')} style={styles.clearButton}>
+          <Text style={styles.clearButtonText}>Clear</Text>
+        </TouchableOpacity>
+      ) : null}
       {showPicker && (
         <DateTimePicker
           value={stringToDate(value)}
@@ -166,5 +171,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
     marginTop: spacing.xs,
+  },
+  clearButton: {
+    marginTop: spacing.xs,
+  },
+  clearButtonText: {
+    ...typography.caption,
+    color: colors.primary,
+    textAlign: 'right',
   },
 });
