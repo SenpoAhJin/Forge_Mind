@@ -1,6 +1,7 @@
 /**
  * Time Picker Input Component
- * Dropdown with 1-hour intervals (00:00 to 23:00)
+ * Dropdown with 1-hour intervals in 12-hour format with AM/PM
+ * Stores in 24-hour HH:MM format internally
  */
 
 import React, { useState } from 'react';
@@ -10,17 +11,35 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 
 interface TimePickerInputProps {
   label: string;
-  value: string; // HH:MM format
+  value: string; // HH:MM format (24-hour)
   onChange: (time: string) => void;
   error?: string;
 }
 
+interface TimeOption {
+  value: string; // 24-hour format (e.g., "14:00")
+  label: string; // 12-hour format (e.g., "2:00 PM")
+}
+
+// Convert 24-hour time to 12-hour format with AM/PM
+const formatTime12Hour = (time24: string): string => {
+  const [hourStr] = time24.split(':');
+  const hour24 = parseInt(hourStr, 10);
+  
+  if (hour24 === 0) return '12:00 AM';
+  if (hour24 < 12) return `${hour24}:00 AM`;
+  if (hour24 === 12) return '12:00 PM';
+  return `${hour24 - 12}:00 PM`;
+};
+
 // Generate time options with 1-hour intervals
-const generateTimeOptions = (): string[] => {
-  const options: string[] = [];
+const generateTimeOptions = (): TimeOption[] => {
+  const options: TimeOption[] = [];
   for (let hour = 0; hour < 24; hour++) {
     const hourStr = String(hour).padStart(2, '0');
-    options.push(`${hourStr}:00`);
+    const value = `${hourStr}:00`;
+    const label = formatTime12Hour(value);
+    options.push({ value, label });
   }
   return options;
 };
@@ -40,7 +59,8 @@ export const TimePickerInput: React.FC<TimePickerInputProps> = ({
     setShowPicker(false);
   };
 
-  const displayValue = value || 'Select time';
+  // Display in 12-hour format
+  const displayValue = value ? formatTime12Hour(value) : 'Select time';
   const hasValue = Boolean(value);
 
   return (
@@ -81,25 +101,25 @@ export const TimePickerInput: React.FC<TimePickerInputProps> = ({
             </View>
 
             <ScrollView style={styles.optionsList}>
-              {TIME_OPTIONS.map((time) => (
+              {TIME_OPTIONS.map((option) => (
                 <TouchableOpacity
-                  key={time}
+                  key={option.value}
                   style={[
                     styles.optionItem,
-                    value === time && styles.optionItemSelected,
+                    value === option.value && styles.optionItemSelected,
                   ]}
-                  onPress={() => handleSelectTime(time)}
+                  onPress={() => handleSelectTime(option.value)}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
                       styles.optionText,
-                      value === time && styles.optionTextSelected,
+                      value === option.value && styles.optionTextSelected,
                     ]}
                   >
-                    {time}
+                    {option.label}
                   </Text>
-                  {value === time && (
+                  {value === option.value && (
                     <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
