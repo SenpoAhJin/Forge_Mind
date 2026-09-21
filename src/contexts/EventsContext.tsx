@@ -9,6 +9,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Event, EventStatus } from '../types/events';
 import seedEvents from '../data/events.json';
+import { getTodayLocal, getNowISO, isDateInPast, compareDateStrings } from '../utils/dateHelpers';
 
 const STORAGE_KEY = '@forgemind:events';
 
@@ -173,10 +174,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       // Check if start_date is in the past (only for NEW events)
       if (isCreate && input.start_date) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const startDate = new Date(input.start_date + 'T00:00:00');
-        if (startDate < today) {
+        if (isDateInPast(input.start_date)) {
           return 'Start date cannot be in the past';
         }
       }
@@ -192,7 +190,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // End date must be >= start_date
       const startDate = 'start_date' in input ? input.start_date : null;
       if (startDate && input.end_date) {
-        if (input.end_date < startDate) {
+        if (compareDateStrings(input.end_date, startDate) < 0) {
           return 'End date must be on or after start date';
         }
       }
@@ -235,7 +233,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     // Create new event
-    const now = new Date().toISOString();
+    const now = getNowISO();
     const eventId = `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
     const newEvent: Event = {
@@ -313,7 +311,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           ...(input.start_date !== undefined && { start_date: input.start_date }),
           ...(input.end_date !== undefined && { end_date: input.end_date || null }),
           ...(input.has_contest !== undefined && { has_contest: input.has_contest }),
-          updated_at: new Date().toISOString(),
+          updated_at: getNowISO(),
         };
       }
       return e;
@@ -362,15 +360,12 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     // Check if start_date is in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(event.start_date + 'T00:00:00');
-    if (startDate < today) {
+    if (isDateInPast(event.start_date)) {
       return { success: false, error: 'Cannot confirm event with past start date' };
     }
 
     // Confirm event
-    const now = new Date().toISOString();
+    const now = getNowISO();
     const updated = events.map(e => {
       if (e.id === eventId) {
         return {
@@ -411,7 +406,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     // Cancel event
-    const now = new Date().toISOString();
+    const now = getNowISO();
     const updated = events.map(e => {
       if (e.id === eventId) {
         return {

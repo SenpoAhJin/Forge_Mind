@@ -10,6 +10,7 @@ import { EventsStackParamList } from '../../navigation/EventsStackNavigator';
 import { Button, StandardCard, Tag } from '../../components';
 import { formatEventStatus } from '../../utils/formatStatus';
 import { Event, EventStatus } from '../../types/events';
+import { isDateInPast } from '../../utils/dateHelpers';
 
 type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList, 'EventsHome'>;
 
@@ -45,10 +46,8 @@ export const EventsScreen: React.FC = () => {
 
   // Helper: Check if event is in the past
   const isPastEvent = (event: Event): boolean => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endDate = event.end_date ? new Date(event.end_date + 'T00:00:00') : new Date(event.start_date + 'T00:00:00');
-    return endDate < today;
+    const checkDate = event.end_date || event.start_date;
+    return isDateInPast(checkDate);
   };
 
   // Helper: Format date range

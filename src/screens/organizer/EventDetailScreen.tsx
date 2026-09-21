@@ -14,6 +14,7 @@ import { useEvents } from '../../contexts/EventsContext';
 import { Button, Tag, ConfirmationModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { formatEventStatus } from '../../utils/formatStatus';
+import { isDateInPast } from '../../utils/dateHelpers';
 
 type Props = NativeStackScreenProps<EventsStackParamList, 'EventDetail'>;
 
@@ -41,10 +42,8 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   // Helper: Check if event is in the past
   const isPastEvent = (): boolean => {
     if (!event) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endDate = event.end_date ? new Date(event.end_date + 'T00:00:00') : new Date(event.start_date + 'T00:00:00');
-    return endDate < today;
+    const checkDate = event.end_date || event.start_date;
+    return isDateInPast(checkDate);
   };
 
   // Helper: Format date range
