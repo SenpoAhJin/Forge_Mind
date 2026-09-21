@@ -47,13 +47,17 @@ export const DateInput: React.FC<DateInputProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-  // Handle native picker change
-  const onPickerChange = (event: any, selectedDate?: Date) => {
-    setShowPicker(Platform.OS === 'ios');
+  // Handle native picker value change (new API)
+  const onValueChange = (event: any, selectedDate?: Date) => {
     if (selectedDate) {
       const dateStr = dateToString(selectedDate);
       onChange(dateStr);
     }
+  };
+
+  // Handle picker dismiss (Android auto-dismisses, iOS needs manual control)
+  const onDismiss = () => {
+    setShowPicker(false);
   };
 
   // Handle web date input change
@@ -113,7 +117,8 @@ export const DateInput: React.FC<DateInputProps> = ({
           value={stringToDate(value)}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onPickerChange}
+          onValueChange={onValueChange}
+          onDismiss={onDismiss}
           minimumDate={minDate ? stringToDate(minDate) : undefined}
           maximumDate={maxDate ? stringToDate(maxDate) : undefined}
         />
