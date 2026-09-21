@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { Button, TextInputField, ConfirmationModal } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
+import { TimePickerInput } from '../../components/inputs/TimePickerInput';
 import { useUser } from '../../contexts/UserContext';
 import { useLogistics } from '../../contexts/LogisticsContext';
 import { useEvents } from '../../contexts/EventsContext';
@@ -149,11 +150,10 @@ export const AddLogisticsEntryScreen: React.FC = () => {
 
         {/* Arrival */}
         <DateInput label="Arrival Date" value={arrivalDate} onChange={setArrivalDate} />
-        <TextInputField
-          label="Arrival Time (HH:MM)"
+        <TimePickerInput
+          label="Arrival Time"
           value={arrivalTime}
-          onChangeText={setArrivalTime}
-          placeholder="14:30"
+          onChange={setArrivalTime}
         />
 
         {/* Parking */}
