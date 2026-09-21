@@ -1,0 +1,133 @@
+FE-7 Step 2 Part B2: Logistics Rules Module - Test Traces
+
+=== COMPLETION RULES ===
+
+Rule 1: Arrival needs BOTH date AND time
+Rule 2: Plate number n/a when parking_needs === 'none', otherwise required
+Rule 3: Entourage size: 0 counts as answered, null means unanswered
+
+Test Entry A (COMPLETE):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '14:30',
+  parking_needs: 'standard',
+  plate_number: 'ABC123',
+  entourage_size: 2
+}
+→ checkCompletion(A)
+→ { isComplete: true, missingFields: [] }
+
+Test Entry B (INCOMPLETE - missing arrival_time):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: null,
+  parking_needs: 'standard',
+  plate_number: 'ABC123',
+  entourage_size: 0
+}
+→ checkCompletion(B)
+→ { isComplete: false, missingFields: ['arrival_time'] }
+
+Test Entry C (COMPLETE - parking 'none', plate n/a):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '10:00',
+  parking_needs: 'none',
+  plate_number: null,
+  entourage_size: 0
+}
+→ checkCompletion(C)
+→ { isComplete: true, missingFields: [] }
+
+Test Entry D (INCOMPLETE - parking 'standard' but no plate):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '10:00',
+  parking_needs: 'standard',
+  plate_number: null,
+  entourage_size: 1
+}
+→ checkCompletion(D)
+→ { isComplete: false, missingFields: ['plate_number'] }
+
+Test Entry E (INCOMPLETE - entourage_size null):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '10:00',
+  parking_needs: 'none',
+  plate_number: null,
+  entourage_size: null
+}
+→ checkCompletion(E)
+→ { isComplete: false, missingFields: ['entourage_size'] }
+
+Test Entry F (COMPLETE - entourage_size 0 counts as answered):
+{
+  arrival_date: '2026-09-25',
+  arrival_time: '10:00',
+  parking_needs: 'none',
+  plate_number: null,
+  entourage_size: 0
+}
+→ checkCompletion(F)
+→ { isComplete: true, missingFields: [] }
+
+=== URGENCY RULES ===
+
+Constants:
+- REMINDER_DAYS = 7
+- URGENT_DAYS = 3
+- CRITICAL_DAYS = 1
+
+Today: 2026-09-21 (local)
+
+Event X: start_date = '2026-09-30' (9 days away)
+Entry G (incomplete):
+→ checkUrgency(G, X, '2026-09-21')
+→ { level: 'reminder', daysUntilEvent: 9, reason: '9 days until event' }
+
+Event Y: start_date = '2026-09-25' (4 days away)
+Entry H (incomplete):
+→ checkUrgency(H, Y, '2026-09-21')
+→ { level: 'urgent', daysUntilEvent: 4, reason: '4 days until event' }
+
+Event Z: start_date = '2026-09-22' (1 day away)
+Entry I (incomplete):
+→ checkUrgency(I, Z, '2026-09-21')
+→ { level: 'critical', daysUntilEvent: 1, reason: '1 day until event' }
+
+Entry J (complete, 1 day away):
+→ checkUrgency(J, Z, '2026-09-21')
+→ { level: 'none', daysUntilEvent: 1, reason: 'Complete' }
+
+Event W: start_date = '2026-09-20' (past)
+Entry K (incomplete, past event):
+→ checkUrgency(K, W, '2026-09-21')
+→ { level: 'none', daysUntilEvent: -1, reason: 'Event has passed' }
+
+=== SORT BY URGENCY ===
+
+Entries:
+- Entry M: event_id='evt-1', participant_name='Alice', event start='2026-09-22', incomplete → critical (1 day)
+- Entry N: event_id='evt-2', participant_name='Bob', event start='2026-09-25', incomplete → urgent (4 days)
+- Entry O: event_id='evt-3', participant_name='Carol', event start='2026-09-30', incomplete → reminder (9 days)
+- Entry P: event_id='evt-1', participant_name='Dave', event start='2026-09-22', complete → none
+- Entry Q: event_id='evt-2', participant_name='Eve', event start='2026-09-25', incomplete → urgent (4 days)
+
+sortByUrgency([M, N, O, P, Q], events, '2026-09-21')
+→ Sorted order:
+  1. Entry M (critical, 1 day, Alice)
+  2. Entry N (urgent, 4 days, Bob)
+  3. Entry Q (urgent, 4 days, Eve)
+  4. Entry O (reminder, 9 days, Carol)
+  5. Entry P (none/complete, 1 day, Dave)
+
+=== FORMAT FUNCTIONS ===
+
+formatParkingNeeds('none') → 'None'
+formatParkingNeeds('standard') → 'Standard'
+formatParkingNeeds('accessible') → 'Accessible'
+
+formatParticipantKind('confirmed_guest') → 'Confirmed Guest'
+formatParticipantKind('sponsor') → 'Sponsor'
+formatParticipantKind('performer') → 'Performer'
