@@ -237,3 +237,14 @@ export const formatTime12h = (time24: string): string => {
   if (hour24 === 12) return `12:${minute} PM`;
   return `${hour24 - 12}:${minute} PM`;
 };
+
+/**
+ * Format event date range for display
+ * C7: Used in event cards/headers
+ */
+export const formatEventDateRange = (startDate: string, endDate: string): string => {
+  if (startDate === endDate) {
+    return startDate;
+  }
+  return `${startDate} to ${endDate}`;
+};

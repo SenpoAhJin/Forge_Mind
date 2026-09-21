@@ -5,10 +5,11 @@
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LogisticsHomeScreen, AddLogisticsEntryScreen, LogisticsEntryDetailScreen } from '../screens/organizer';
+import { LogisticsHomeScreen, AddLogisticsEntryScreen, LogisticsEntryDetailScreen, EventLogisticsScreen } from '../screens/organizer';
 
 export type LogisticsStackParamList = {
   LogisticsHome: undefined;
+  EventLogistics: { eventId: string };
   AddLogisticsEntry: { eventId?: string };
   LogisticsEntryDetail: { entryId: string };
 };
@@ -33,6 +34,11 @@ export const LogisticsStackNavigator: React.FC = () => {
         name="LogisticsHome"
         component={LogisticsHomeScreen}
         options={{ title: 'Logistics' }}
+      />
+      <Stack.Screen
+        name="EventLogistics"
+        component={EventLogisticsScreen}
+        options={{ title: 'Event Logistics' }}
       />
       <Stack.Screen
         name="AddLogisticsEntry"

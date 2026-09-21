@@ -2,6 +2,7 @@ export * from './EventsScreen';
 export * from './CreateEventScreen';
 export * from './EventDetailScreen';
 export * from './LogisticsHomeScreen';
+export * from './EventLogisticsScreen';
 export * from './AddLogisticsEntryScreen';
 export * from './LogisticsEntryDetailScreen';
 export * from './MeetupsScreen';

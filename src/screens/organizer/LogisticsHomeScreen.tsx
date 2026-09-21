@@ -1,10 +1,8 @@
 /**
- * FE-7 Step 2: Logistics Home Screen
- * Lists all logistics entries sorted by urgency (critical → urgent → reminder → complete)
+ * FE-7 Step 2 Correction Pass C5: Logistics Home Screen
+ * "Needs attention" panel + confirmed event cards
  * 
- * Access:
- * - Head Organizer: full access (view, create, edit, delete)
- * - Staff: read-only (view only)
+ * Access: Both Head and Staff can view
  */
 
 import React from 'react';
@@ -13,11 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { Button, StandardCard, Tag } from '../../components';
+import { StandardCard, Tag } from '../../components';
 import { useUser } from '../../contexts/UserContext';
 import { useLogistics } from '../../contexts/LogisticsContext';
 import { useEvents } from '../../contexts/EventsContext';
-import { sortByUrgency, checkCompletion, checkUrgency, formatParticipantKind } from '../../utils/logisticsRules';
+import { sortByCriticality, checkCompletion, getUrgency, formatParticipantKind, formatEventDateRange } from '../../utils/logisticsRules';
 import { getTodayLocal } from '../../utils/dateHelpers';
 
 type LogisticsStackParamList = {
@@ -38,61 +36,19 @@ export const LogisticsHomeScreen: React.FC = () => {
   const isHeadOrganizer = user?.organizer_role === 'head';
   const today = getTodayLocal();
 
-  // Sort entries by urgency
-  const sortedEntries = sortByUrgency(entries, events, today);
+  // Filter active entries for confirmed events
+  const confirmedEvents = events.filter(e => e.status === 'confirmed');
+  const activeEntries = entries.filter(e => e.status === 'active');
+  const confirmedEventEntries = activeEntries.filter(e =>
+    confirmedEvents.some(ev => ev.id === e.event_id)
+  );
 
-  // Get event map for quick lookup
-  const eventMap = new Map(events.map(e => [e.id, e]));
-
-  const renderEntry = (entry: typeof entries[0]) => {
-    const event = eventMap.get(entry.event_id);
-    if (!event) return null;
-
+  // Get top 3 most critical incomplete entries
+  const sortedIncomplete = sortByCriticality(confirmedEventEntries, events, today).filter(entry => {
     const completion = checkCompletion(entry);
-    const urgency = checkUrgency(entry, event, today);
-
-    // Urgency badge color
-    const urgencyColor =
-      urgency.level === 'critical'
-        ? colors.error
-        : urgency.level === 'urgent'
-        ? colors.warning
-        : urgency.level === 'reminder'
-        ? colors.textDisabled
-        : colors.success;
-
-    return (
-      <TouchableOpacity
-        key={entry.id}
-        onPress={() => navigation.navigate('LogisticsEntryDetail', { entryId: entry.id })}
-        activeOpacity={0.7}
-      >
-        <StandardCard style={styles.entryCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.participantName} numberOfLines={1}>
-              {entry.participant_name}
-            </Text>
-            {!completion.isComplete && (
-              <View style={[styles.urgencyBadge, { backgroundColor: urgencyColor }]}>
-                <Text style={styles.urgencyText}>
-                  {urgency.level === 'critical' ? 'CRITICAL' : urgency.level === 'urgent' ? 'URGENT' : 'REMINDER'}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.eventName} numberOfLines={1}>
-            {event.name}
-          </Text>
-          <View style={styles.cardDetails}>
-            <Tag type="status" label={formatParticipantKind(entry.participant_kind)} style={styles.kindTag} />
-            <Text style={styles.detailText}>
-              {completion.isComplete ? '✓ Complete' : `${completion.missingFields.length} field${completion.missingFields.length > 1 ? 's' : ''} missing`}
-            </Text>
-          </View>
-        </StandardCard>
-      </TouchableOpacity>
-    );
-  };
+    return !completion.isComplete;
+  });
+  const needsAttention = sortedIncomplete.slice(0, 3);
 
   if (loading) {
     return (
@@ -105,33 +61,126 @@ export const LogisticsHomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header actions */}
-        {isHeadOrganizer && (
-          <View style={styles.actions}>
-            <Button
-              title="Add Entry"
-              onPress={() => navigation.navigate('AddLogisticsEntry', {})}
-              fullWidth
-            />
+        {/* Banner */}
+        <View style={styles.banner}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.info} />
+          <Text style={styles.bannerText}>
+            Reminders are in-app. Scheduled push notifications need the backend.
+          </Text>
+        </View>
+
+        {/* Needs Attention Panel */}
+        {needsAttention.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Needs Attention</Text>
+            {needsAttention.map(entry => {
+              const event = events.find(e => e.id === entry.event_id);
+              if (!event) return null;
+
+              const urgency = getUrgency(entry, today);
+              const completion = checkCompletion(entry);
+
+              const urgencyColor =
+                urgency.level === 'critical'
+                  ? colors.error
+                  : urgency.level === 'urgent'
+                  ? colors.warning
+                  : colors.textSecondary;
+
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  style={styles.attentionCard}
+                  onPress={() => navigation.navigate('LogisticsEntryDetail', { entryId: entry.id })}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.attentionHeader}>
+                    <View style={[styles.urgencyDot, { backgroundColor: urgencyColor }]} />
+                    <Text style={styles.attentionName} numberOfLines={1}>
+                      {entry.participant_name}
+                    </Text>
+                  </View>
+                  <Text style={styles.attentionEvent} numberOfLines={1}>
+                    {event.name}
+                  </Text>
+                  <View style={styles.attentionFooter}>
+                    <Text style={[styles.attentionDeadline, urgency.level === 'critical' && styles.attentionDeadlineCritical]}>
+                      {urgency.daysUntilDeadline < 0 ? 'Past deadline' : urgency.reason}
+                    </Text>
+                    <Text style={styles.attentionMissing}>
+                      {completion.missingFields.length} missing
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
-        {/* Entries list */}
-        {sortedEntries.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="car-outline" size={48} color={colors.textDisabled} />
+        {/* Confirmed Events */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Confirmed Events</Text>
+          {confirmedEvents.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="calendar-outline" size={48} color={colors.textDisabled} />
+              </View>
+              <Text style={styles.emptyTitle}>No confirmed events yet</Text>
+              <Text style={styles.emptyMessage}>
+                Logistics entries are created for confirmed events only
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>No logistics entries yet</Text>
-            <Text style={styles.emptyMessage}>
-              {isHeadOrganizer
-                ? 'Add participant logistics to track arrivals, parking, and stage times'
-                : 'Logistics entries will appear here once added'}
-            </Text>
-          </View>
-        ) : (
-          sortedEntries.map(renderEntry)
-        )}
+          ) : (
+            confirmedEvents.map(event => {
+              const eventEntries = activeEntries.filter(e => e.event_id === event.id);
+              const completeCount = eventEntries.filter(e => checkCompletion(e).isComplete).length;
+              const totalCount = eventEntries.length;
+
+              // Get worst urgency for this event
+              const urgencies = eventEntries
+                .filter(e => !checkCompletion(e).isComplete)
+                .map(e => getUrgency(e, today));
+              const worstUrgency = urgencies.find(u => u.level === 'critical') ||
+                urgencies.find(u => u.level === 'urgent') ||
+                urgencies.find(u => u.level === 'reminder') ||
+                null;
+
+              return (
+                <TouchableOpacity
+                  key={event.id}
+                  onPress={() => navigation.navigate('EventLogistics', { eventId: event.id })}
+                  activeOpacity={0.7}
+                >
+                  <StandardCard style={styles.eventCard}>
+                    <View style={styles.eventHeader}>
+                      <Text style={styles.eventName} numberOfLines={1}>
+                        {event.name}
+                      </Text>
+                      {worstUrgency && (
+                        <View
+                          style={[
+                            styles.eventBadge,
+                            { backgroundColor: worstUrgency.level === 'critical' ? colors.error : colors.warning },
+                          ]}
+                        >
+                          <Text style={styles.eventBadgeText}>
+                            {worstUrgency.level === 'critical' ? 'CRITICAL' : 'URGENT'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.eventDates} numberOfLines={1}>
+                      {formatEventDateRange(event.start_date, event.end_date || event.start_date)}
+                    </Text>
+                    <Text style={styles.eventCompletion}>
+                      {completeCount} of {totalCount} complete
+                    </Text>
+                  </StandardCard>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -151,53 +200,111 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xl,
   },
-  actions: {
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.info + '15',
+    borderRadius: borderRadius.md,
     marginBottom: spacing.lg,
   },
-  entryCard: {
+  bannerText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  attentionCard: {
+    padding: spacing.md,
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.error,
+    marginBottom: spacing.sm,
+  },
+  attentionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  urgencyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: spacing.sm,
+  },
+  attentionName: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  attentionEvent: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  attentionFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  attentionDeadline: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  attentionDeadlineCritical: {
+    color: colors.error,
+    fontWeight: '600',
+  },
+  attentionMissing: {
+    ...typography.caption,
+    color: colors.error,
+  },
+  eventCard: {
     marginBottom: spacing.md,
     padding: spacing.md,
+    height: 100,
   },
-  cardHeader: {
+  eventHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  participantName: {
-    ...typography.h3,
-    fontSize: 16,
+  eventName: {
+    ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
     flex: 1,
   },
-  urgencyBadge: {
+  eventBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     marginLeft: spacing.sm,
   },
-  urgencyText: {
+  eventBadgeText: {
     ...typography.caption,
     fontWeight: '600',
     color: colors.backgroundLight,
   },
-  eventName: {
-    ...typography.body,
+  eventDates: {
+    ...typography.caption,
     color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
-  cardDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  kindTag: {
-    backgroundColor: colors.tertiary,
-  },
-  detailText: {
-    ...typography.caption,
-    color: colors.textSecondary,
+  eventCompletion: {
+    ...typography.body,
+    color: colors.textPrimary,
   },
   emptyState: {
     alignItems: 'center',
