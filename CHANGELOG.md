@@ -2384,7 +2384,7 @@ Built the first step of the organizer event management system: **creating and ma
 5. **CreateEventScreen** (`src/screens/organizer/CreateEventScreen.tsx`):
    - **Route-level guard**: Head Organizer only, edit only for drafts
    - All fields with inline validation (name, venue, city, description, start_date, end_date, has_contest)
-   - Native DateTimePicker (works on web phone-frame)
+   - Native DateTimePicker on mobile, validated text input on web (fixed in FE-7 Step 2 Part A1)
    - "Has contest?" toggle chips (Yes/No)
    - Character counter for description (500 max)
    - Saves as draft, shows success modal, returns to list
@@ -2411,21 +2411,89 @@ Built the first step of the organizer event management system: **creating and ma
 - TypeScript exit code 0 (no errors)
 
 **Mock data:**
-- 3 seed events: Manila CosCon 2026 (confirmed, with contest), Cebu Anime Festival (draft, no contest), Davao Cosplay Meetup (cancelled, past)
+- 3 seed events: Manila CosCon 2026 (confirmed, with contest), Cebu Anime Festival (draft, no contest), Davao Cosplay Meetup 2026 (cancelled, upcoming 2026-10-30)
 
 **What is NOT in Step 1:**
 - Logistics, commitment log, contest tier suggestions, meetups, notifications (coming in Steps 2-5)
 - Editing confirmed events (will require logged changes in Step 3)
-- Staff invites to events (coming in Step 2)
 
 ### Commits
 - `e0b2b7c` — docs: refresh changelog summary sections and FE-6 status; formatStatus no longer imports chat types (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/e0b2b7c)
 - `8a25c64` — feat: FE-7 Step 1 - organizer event details (draft/confirmed/cancelled) with guards and role checks (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/8a25c64)
+- `fc04c9a` — docs: update CHANGELOG with FE-7 Step 1 entry (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/fc04c9a)
+- `68490f7` — fix: verification notifications now show once on login, not repeatedly on Profile screen visits (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/68490f7)
+- `ac2ab87` — fix: move GlobalNotificationHandler inside NavigationContainer to fix navigation error (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/ac2ab87)
 
 ---
 
-*Last updated: September 20, 2026, 18:30*
+*Last updated: September 20, 2026, 19:00*
 
+
+---
+
+## Session — Sunday, September 20, 2026, 16:45 (FE-6 Step 4 of 4: transaction-scoped chat)
+
+### What we did
+
+Built transaction-scoped chat between marketplace buyers and sellers with privacy boundaries and thread management.
+
+**Key features:**
+- Chat threads tied to listing + buyer (one thread per unique pair)
+- Messages stored with sender email, timestamp, thread status
+- Thread status: `open` (active) or `closed` (closed by either party or listing unavailable)
+- Close reasons: `closed_by_participant`, `listing_unavailable`
+- Unread tracking per user (last_read_at timestamps)
+- Privacy boundary: Chat content is NEVER screened, classified, scored, or used as AI input
+
+**What was created:**
+
+1. **Chat types** (`src/types/chat.ts`):
+   - ThreadStatus, ThreadClosedReason enums
+   - ChatThread, ChatMessage interfaces
+   - Privacy boundary header comment
+
+2. **ChatContext** (`src/contexts/ChatContext.tsx`):
+   - AsyncStorage persistence (`@forgemind:chat_threads`)
+   - `getOrCreateThread(listing_id, buyer_email)` - finds or creates thread
+   - `sendMessage(thread_id, sender_email, message_body)`
+   - `closeThread(thread_id, actor_email, reason)`
+   - `getUnreadCount(user_email)` - counts unread threads
+   - Guards: verified buyer + active listing, no reopening closed threads
+
+3. **ChatThreadScreen** (`src/screens/cosplayer/ChatThreadScreen.tsx`):
+   - Route-level guard: participant only (seller or buyer)
+   - Message area with sender badges, timestamps, read receipts
+   - Input bar with send button (disabled when closed)
+   - Close thread action (ConfirmationModal)
+   - Structured-offer reminder: "Use Offers tab for formal proposals"
+
+4. **ChatListScreen** (`src/screens/cosplayer/ChatListScreen.tsx`):
+   - Open/Closed tabs
+   - Standardized cards: listing name, other party, last message preview, timestamp, unread dot
+   - Empty states per tab
+
+5. **formatThreadStatus** (`src/utils/formatStatus.ts`):
+   - Maps `open` → "Open", `closed` → "Closed"
+   - Local type definitions (no import from chat types)
+
+6. **MarketplaceStackNavigator** updated:
+   - Added `ChatList` and `ChatThread` routes
+
+7. **Integration points**:
+   - MarketplaceScreen: "Messages" button with unread badge (shows 9+ for counts >9)
+   - ListingDetailScreen: "Message Seller" button (verified buyers), "View Messages" (sellers)
+   - OfferDetailScreen: "Message" button (both parties, any offer status)
+
+**Privacy boundary verified:**
+- No Alert.alert in chat files
+- No `&& <Text>` conditionals (all use ternary)
+- formatStatus.ts imports chat types only for display (no content access)
+- No console.log of message bodies
+- ChatContext never calls createOffer, updateListing, or acceptOffer
+- Chat content is never screened, classified, scored, or used as AI input
+
+### Commits
+- `b5e3cb7` — FE-6 Step 4: transaction-scoped chat (listing+buyer threads) with chat list, thread view, close, and structured-offer reminder (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/b5e3cb7)
 
 ---
 
