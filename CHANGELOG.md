@@ -2493,6 +2493,140 @@ Built the first step of the organizer event management system: **creating and ma
 
 ---
 
+## Session — Sunday, September 20, 2026, 21:30 (FE-7 Step 2 of 5: Logistics Tracker)
+
+### What we built
+
+Built a complete logistics tracker for managing participant arrival details, parking needs, entourage size, and stage-time preferences. The system tracks confirmed guests, sponsors, and performers with smart urgency states (critical/urgent/reminder) based on days until event and completion status.
+
+**Part A: Carry-over fixes from Step 1**
+
+1. **Web-safe DateInput component** (`src/components/inputs/DateInput.tsx`):
+   - Native DateTimePicker on mobile (iOS/Android)
+   - Validated text input on web (Platform.OS === 'web')
+   - Accepts and returns YYYY-MM-DD strings (not Date objects)
+   - Used in CreateEventScreen and AddLogisticsEntryScreen
+
+2. **Local date helpers** (`src/utils/dateHelpers.ts`):
+   - `getTodayLocal()` — returns YYYY-MM-DD in local timezone (not UTC)
+   - Fixes UTC shift bug: at 03:00 UTC+8, old code returned yesterday's date
+   - Evidence: grep found zero remaining `toISOString().slice(0,10)` date derivations
+   - Full-timestamp fields (created_at, updated_at) correctly use `getNowISO()` for UTC
+
+3. **Staff card style fix** (EventsScreen):
+   - Removed inner `<View style={styles.cardContent}>` wrapper causing visible rectangle
+   - Staff and Head cards now render identically
+
+4. **CHANGELOG corrections**:
+   - Filled 14:17 marketplace registration commit hash (95b94e4)
+   - Deleted duplicate FE-6 Step 4 entry
+   - Moved 13:35 listing cards entry to correct chronological position
+   - Updated Section 4 screens table: Events is now built (list/create/detail)
+   - Added notification fix narrative (68490f7, ac2ab87)
+   - Corrected formatStatus.ts import claim (e0b2b7c removed chat types import)
+
+**Part B: Logistics Tracker (full implementation)**
+
+1. **Logistics types** (`src/types/logistics.ts`):
+   - ParticipantKind: `confirmed_guest`, `sponsor`, `performer`
+   - ParkingNeeds: `none`, `standard`, `accessible`
+   - LogisticsEntry: participant details + arrival date/time, parking, plate number, entourage size, stage-time preference
+
+2. **Rules module** (`src/utils/logisticsRules.ts`):
+   - **Completion logic**:
+     * plate_number: n/a when parking_needs === 'none', otherwise required
+     * arrival: needs BOTH date AND time to count as complete
+     * entourage_size: 0 counts as answered, null means unanswered
+   - **Urgency calculation** (days until event start_date):
+     * CRITICAL: ≤1 day, incomplete entries
+     * URGENT: 2-6 days, incomplete entries
+     * REMINDER: ≥7 days, incomplete entries
+     * Complete entries: no urgency
+   - **Sort by urgency**: critical → urgent → reminder → complete, then by event date, then by participant name
+   - Constants: `REMINDER_DAYS = 7`, `URGENT_DAYS = 3`, `CRITICAL_DAYS = 1`
+
+3. **LogisticsContext** (`src/contexts/LogisticsContext.tsx`):
+   - AsyncStorage persistence (`@forgemind:logistics`)
+   - **Guards**: All mutations (create/update/delete) require `organizer_role === 'head'`
+   - Staff can read only (context methods return error for non-head users)
+   - **Seed data**: 5 entries with dates relative to today (critical/urgent/reminder states)
+   - `reseedData()` method for dev testing (regenerates seed with fresh dates)
+   - Validation: email format, participant name 1-100 chars
+
+4. **Four screens** (Head full access, Staff read-only):
+   - **LogisticsHomeScreen** (`src/screens/organizer/LogisticsHomeScreen.tsx`):
+     * Lists all entries sorted by urgency (critical badge → urgent badge → reminder badge → complete)
+     * Head sees "Add Entry" button, Staff sees list only
+     * Shows participant name, event name, kind tag, completion status
+     * Urgency badges color-coded: red (critical), amber (urgent), grey (reminder), green (complete)
+   
+   - **AddLogisticsEntryScreen** (`src/screens/organizer/AddLogisticsEntryScreen.tsx`):
+     * **Route-level guard**: Head Organizer only (early return with error message)
+     * Form fields: event selection (confirmed events only), participant email/name, kind (guest/sponsor/performer), arrival date/time, parking needs, plate number, entourage size, stage-time preference
+     * Conditional fields: plate number shown only when parking ≠ 'none', stage-time shown only for performers
+     * Uses DateInput component (web-safe), TextInputField for text inputs
+   
+   - **LogisticsEntryDetailScreen** (`src/screens/organizer/LogisticsEntryDetailScreen.tsx`):
+     * View single entry with all fields organized in sections (Participant, Event, Arrival, Parking, Other, Status)
+     * Shows completion status and urgency level with reason
+     * Missing fields highlighted in red with "Missing" label
+     * Head sees "Delete Entry" button, Staff sees read-only view
+
+   - **LogisticsStackNavigator** (`src/navigation/LogisticsStackNavigator.tsx`):
+     * Stack routes: LogisticsHome → AddLogisticsEntry → LogisticsEntryDetail
+     * Integrated into OrganizerTabNavigator (Logistics tab)
+     * Replaces old LogisticsScreen placeholder
+
+5. **Profile screen dev button** (`src/screens/shared/ProfileScreen.tsx`):
+   - "Reseed Logistics Data (Test Mode)" button in dev mode (`__DEV__`)
+   - Visible only to Head Organizers
+   - Regenerates seed data with dates relative to current day
+   - Useful for testing urgency states across different dates
+
+**What changed:**
+- `App.tsx` — LogisticsProvider nested inside EventsProvider
+- `src/navigation/OrganizerTabNavigator.tsx` — Logistics tab uses LogisticsStackNavigator
+- `src/screens/organizer/index.ts` — Exports updated (removed placeholder, added three new screens)
+- `src/screens/shared/ProfileScreen.tsx` — Dev reseed button for Head Organizers
+
+**Access Matrix:**
+- **Head Organizer**: View list, add entry, view details, delete entry
+- **Staff**: View list (read-only), view details (read-only)
+
+**Technical details:**
+- No `Alert.alert` calls (uses ConfirmationModal)
+- No `&& <Text>` conditionals (all use ternary `? : null`)
+- Web-compatible: DateInput handles Platform.OS === 'web' text input
+- TypeScript exit code 0 (no errors)
+- AsyncStorage key: `@forgemind:logistics`
+
+**Mock seed data:**
+- Entry 1: Maria Santos (confirmed_guest) — CRITICAL, 1 day, missing arrival_time
+- Entry 2: TechCorp Inc. (sponsor) — URGENT, 1 day, missing plate_number
+- Entry 3: Cosplay Band (performer) — Complete, 4 days
+- Entry 4: John Reyes (confirmed_guest) — URGENT, 4 days, missing entourage_size
+- Entry 5: Local Store (sponsor) — Complete, 4 days
+
+**What is NOT in Step 2:**
+- Commitment log, department-routed alerts (Step 3)
+- Contest tier suggestions (Step 4)
+- Group meetups, readiness signal (Step 5)
+- Editing logistics entries from detail screen (guard in place, UI not exposed)
+
+### Commits
+
+**Part A corrections:**
+- `3710284` — fix(A3-correction): remove inner cardContent View causing visible rectangle and faded appearance (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/3710284)
+- `0998487` — docs(A4): CHANGELOG corrections - fill 14:17 commit, delete duplicate FE-6, move 13:35, update section 4 Events, add notification fix narrative, correct formatStatus import claim (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/0998487)
+
+**Part B implementation:**
+- `29ac42d` — feat(B2): logistics types + rules module with completion/urgency/sort logic + test traces (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/29ac42d)
+- `7ea16d9` — feat(B3): LogisticsContext with guards, seeds relative to today, AsyncStorage persistence, dev reseed button in Profile (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/7ea16d9)
+- `a59e191` — feat(B4): four logistics screens with route guards (LogisticsHome list with urgency, AddEntry form, EntryDetail, stack navigator) (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/a59e191)
+- `c7411fc` — docs(B5): verification traces for rules, guards, access matrix, web compatibility, grep checks (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/c7411fc)
+
+---
+
 ## Session — Sunday, September 20, 2026, 13:35 (Fix listing cards to standard size)
 
 ### What was broken
