@@ -6,12 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { EventsStackParamList } from '../../navigation/EventsStackNavigator';
 import { useUser } from '../../contexts/UserContext';
 import { useEvents } from '../../contexts/EventsContext';
-import { Button, TextInputField, Tag, ConfirmationModal } from '../../components';
+import { Button, TextInputField, Tag, ConfirmationModal, DateInput } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 
 type Props = NativeStackScreenProps<EventsStackParamList, 'CreateEvent'>;
@@ -33,16 +32,10 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
   const [description, setDescription] = useState(existingEvent?.description || '');
   const [venueName, setVenueName] = useState(existingEvent?.venue_name || '');
   const [city, setCity] = useState(existingEvent?.city || '');
-  const [startDate, setStartDate] = useState<Date>(
-    existingEvent?.start_date ? new Date(existingEvent.start_date + 'T00:00:00') : new Date()
-  );
-  const [endDate, setEndDate] = useState<Date | null>(
-    existingEvent?.end_date ? new Date(existingEvent.end_date + 'T00:00:00') : null
-  );
+  const [startDate, setStartDate] = useState<string>(existingEvent?.start_date || '');
+  const [endDate, setEndDate] = useState<string>(existingEvent?.end_date || '');
   const [hasContest, setHasContest] = useState(existingEvent?.has_contest || false);
 
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -57,29 +50,6 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
     ? 'Description must be at most 500 characters'
     : null;
 
-  const formatDate = (date: Date | null): string => {
-    if (!date) return '';
-    return date.toISOString().slice(0, 10);
-  };
-
-  const onStartDateChange = (event: any, selectedDate?: Date) => {
-    setShowStartPicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setStartDate(selectedDate);
-      // If end date is before new start date, clear it
-      if (endDate && selectedDate > endDate) {
-        setEndDate(null);
-      }
-    }
-  };
-
-  const onEndDateChange = (event: any, selectedDate?: Date) => {
-    setShowEndPicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setEndDate(selectedDate);
-    }
-  };
-
   const handleSave = async () => {
     setError(null);
 
@@ -92,8 +62,8 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
           description: description.trim() || null,
           venue_name: venueName.trim(),
           city: city.trim() || null,
-          start_date: formatDate(startDate),
-          end_date: endDate ? formatDate(endDate) : null,
+          start_date: startDate,
+          end_date: endDate || null,
           has_contest: hasContest,
         },
         user?.email || '',
@@ -113,8 +83,8 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
           description: description.trim() || null,
           venue_name: venueName.trim(),
           city: city.trim() || null,
-          start_date: formatDate(startDate),
-          end_date: endDate ? formatDate(endDate) : null,
+          start_date: startDate,
+          end_date: endDate || null,
           has_contest: hasContest,
           created_by_email: user?.email || '',
         },
@@ -194,45 +164,27 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
         <Text style={styles.charCount}>{description.length}/500</Text>
 
         {/* Start Date */}
-        <Text style={styles.fieldLabel}>Start date</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setShowStartPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.dateButtonText}>{formatDate(startDate)}</Text>
-        </TouchableOpacity>
-        {showStartPicker && (
-          <DateTimePicker
-            value={startDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={onStartDateChange}
-          />
-        )}
+        <DateInput
+          label="Start date"
+          value={startDate}
+          onChange={(newDate) => {
+            setStartDate(newDate);
+            // If end date is before new start date, clear it
+            if (endDate && newDate && endDate < newDate) {
+              setEndDate('');
+            }
+          }}
+          placeholder="YYYY-MM-DD"
+        />
 
         {/* End Date */}
-        <Text style={styles.fieldLabel}>End date (optional)</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setShowEndPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.dateButtonText}>
-            {endDate ? formatDate(endDate) : 'Select end date (optional)'}
-          </Text>
-        </TouchableOpacity>
-        {showEndPicker && (
-          <DateTimePicker
-            value={endDate || startDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={onEndDateChange}
-            minimumDate={startDate}
-          />
-        )}
+        <DateInput
+          label="End date (optional)"
+          value={endDate}
+          onChange={setEndDate}
+          minimumDate={startDate}
+          placeholder="YYYY-MM-DD (optional)"
+        />
 
         {/* Has Contest */}
         <Text style={styles.fieldLabel}>Has a cosplay contest?</Text>
@@ -319,22 +271,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundLight,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  dateButtonText: {
-    ...typography.body,
-    color: colors.textPrimary,
   },
   chipRow: {
     flexDirection: 'row',
