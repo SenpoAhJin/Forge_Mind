@@ -33,10 +33,14 @@ export const DateInput: React.FC<DateInputProps> = ({
 }) => {
   const [showPicker, setShowPicker] = useState(false);
 
-  // Convert YYYY-MM-DD string to Date object for native picker
+  // Convert YYYY-MM-DD string to Date object for native picker (LOCAL date, no UTC shift)
   const stringToDate = (dateStr: string): Date => {
     if (!dateStr) return new Date();
-    return new Date(dateStr + 'T00:00:00');
+    const parts = dateStr.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // months are 0-indexed
+    const day = parseInt(parts[2], 10);
+    return new Date(year, month, day);
   };
 
   // Convert Date object to YYYY-MM-DD string
@@ -47,15 +51,17 @@ export const DateInput: React.FC<DateInputProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-  // Handle native picker value change (new API)
-  const onValueChange = (event: any, selectedDate?: Date) => {
-    if (selectedDate) {
-      const dateStr = dateToString(selectedDate);
-      onChange(dateStr);
+  // Handle native picker value change (date is required, not optional)
+  const onValueChange = (event: any, selectedDate: Date) => {
+    const dateStr = dateToString(selectedDate);
+    onChange(dateStr);
+    // iOS: keep picker open until dismissed. Android: auto-closes, so close state here
+    if (Platform.OS === 'android') {
+      setShowPicker(false);
     }
   };
 
-  // Handle picker dismiss (Android auto-dismisses, iOS needs manual control)
+  // Handle picker dismiss (user cancelled without picking)
   const onDismiss = () => {
     setShowPicker(false);
   };
