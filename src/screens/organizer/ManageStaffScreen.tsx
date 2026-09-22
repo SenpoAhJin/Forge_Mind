@@ -29,7 +29,7 @@ type NavigationProp = NativeStackNavigationProp<any>;
 export const ManageStaffScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useUser();
-  const { entries, assignEntry } = useLogistics();
+  const { entries, assignEntry, getEligibleStaff } = useLogistics();
   const { events } = useEvents();
 
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -56,7 +56,6 @@ export const ManageStaffScreen: React.FC = () => {
   const loadStaff = async () => {
     setLoading(true);
     try {
-      const { getEligibleStaff } = useLogistics();
       const eligible = await getEligibleStaff();
       setStaff(eligible);
     } catch (error) {
