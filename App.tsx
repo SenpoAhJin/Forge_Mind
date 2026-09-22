@@ -50,16 +50,16 @@ export default function App() {
               <MarketplaceProvider>
                 <OffersProvider>
                   <ChatProvider>
-                    <EventsProvider>
-                      <ContestProvider>
-                        <LogisticsProvider>
-                          <CommitmentLogProvider>
+                    <CommitmentLogProvider>
+                      <EventsProvider>
+                        <ContestProvider>
+                          <LogisticsProvider>
                             <RootNavigator />
                             <StatusBar style="auto" />
-                          </CommitmentLogProvider>
-                        </LogisticsProvider>
-                      </ContestProvider>
-                    </EventsProvider>
+                          </LogisticsProvider>
+                        </ContestProvider>
+                      </EventsProvider>
+                    </CommitmentLogProvider>
                   </ChatProvider>
                 </OffersProvider>
               </MarketplaceProvider>
