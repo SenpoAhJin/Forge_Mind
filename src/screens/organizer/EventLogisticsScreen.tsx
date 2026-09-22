@@ -27,7 +27,7 @@ type LogisticsStackParamList = {
 type NavigationProp = NativeStackNavigationProp<LogisticsStackParamList, 'EventLogistics'>;
 type RouteProps = RouteProp<LogisticsStackParamList, 'EventLogistics'>;
 
-type FilterChip = 'all' | 'needs_info' | 'complete' | 'withdrawn';
+type FilterChip = 'all' | 'needs_info' | 'complete' | 'withdrawn' | 'assigned_to_me' | 'unassigned';
 
 export const EventLogisticsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -42,6 +42,7 @@ export const EventLogisticsScreen: React.FC = () => {
 
   const isHeadOrganizer = user?.organizer_role === 'head';
   const today = getTodayLocal();
+  const myEmail = user?.email;
 
   const event = events.find(e => e.id === eventId);
 
@@ -59,6 +60,12 @@ export const EventLogisticsScreen: React.FC = () => {
   const filteredEntries = eventEntries.filter(entry => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'withdrawn') return entry.status === 'withdrawn';
+    if (activeFilter === 'assigned_to_me') {
+      return entry.status === 'active' && entry.assigned_to_email === myEmail;
+    }
+    if (activeFilter === 'unassigned') {
+      return entry.status === 'active' && !entry.assigned_to_email;
+    }
     if (activeFilter === 'complete') {
       const completion = checkCompletion(entry);
       return entry.status === 'active' && completion.isComplete;
@@ -124,6 +131,28 @@ export const EventLogisticsScreen: React.FC = () => {
               Withdrawn ({eventEntries.filter(e => e.status === 'withdrawn').length})
             </Text>
           </TouchableOpacity>
+
+          {!isHeadOrganizer && (
+            <TouchableOpacity
+              style={[styles.chip, activeFilter === 'assigned_to_me' && styles.chipActive]}
+              onPress={() => setActiveFilter('assigned_to_me')}
+            >
+              <Text style={[styles.chipText, activeFilter === 'assigned_to_me' && styles.chipTextActive]}>
+                Assigned to Me ({eventEntries.filter(e => e.status === 'active' && e.assigned_to_email === myEmail).length})
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {isHeadOrganizer && (
+            <TouchableOpacity
+              style={[styles.chip, activeFilter === 'unassigned' && styles.chipActive]}
+              onPress={() => setActiveFilter('unassigned')}
+            >
+              <Text style={[styles.chipText, activeFilter === 'unassigned' && styles.chipTextActive]}>
+                Unassigned ({eventEntries.filter(e => e.status === 'active' && !e.assigned_to_email).length})
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
 
@@ -205,6 +234,11 @@ export const EventLogisticsScreen: React.FC = () => {
                         : `${completion.missingFields.length} missing`}
                     </Text>
                   </View>
+                  <Text style={styles.assignmentText} numberOfLines={1}>
+                    {entry.assigned_to_email
+                      ? `Assigned: ${entry.assigned_to_email}`
+                      : 'Unassigned'}
+                  </Text>
                 </StandardCard>
               </TouchableOpacity>
             );
@@ -231,6 +265,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   chipBar: {
+    height: 56,
     backgroundColor: colors.backgroundLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -326,6 +361,11 @@ const styles = StyleSheet.create({
   detailText: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  assignmentText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   errorText: {
     ...typography.body,
