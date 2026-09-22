@@ -6,7 +6,9 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Project, Task, BudgetLineItem, ProjectStatus, TaskStatus, BudgetCategory } from '../types/projects';
+import { ProjectMilestone } from '../types/milestones';
 import { projects as seedProjects, tasks as seedTasks, budgetItems as seedBudgetItems } from '../data';
+import { useEvents } from './EventsContext';
 
 interface NewProjectInput {
   character_id: string;
@@ -30,12 +32,17 @@ interface ProjectsContextValue {
   projects: Project[];
   tasks: Task[];
   budgetItems: BudgetLineItem[];
+  milestones: ProjectMilestone[];
   addProject: (input: NewProjectInput) => Project;
   addTask: (projectId: string, description: string) => void;
   setTaskStatus: (taskId: string, status: TaskStatus) => void;
   addBudgetItem: (projectId: string, input: NewBudgetInput) => void;
+  setLinkedEvent: (projectId: string, eventId: string | null) => { success: boolean; error?: string };
+  addMilestone: (projectId: string, label: string, targetDate: string) => { success: boolean; error?: string };
+  toggleMilestone: (milestoneId: string) => void;
   getTasksForProject: (projectId: string) => Task[];
   getBudgetForProject: (projectId: string) => BudgetLineItem[];
+  getMilestonesForProject: (projectId: string) => ProjectMilestone[];
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | undefined>(undefined);
@@ -46,6 +53,9 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [projects, setProjects] = useState<Project[]>(seedProjects);
   const [tasks, setTasks] = useState<Task[]>(seedTasks);
   const [budgetItems, setBudgetItems] = useState<BudgetLineItem[]>(seedBudgetItems);
+  const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
+  
+  const { getEventById } = useEvents();
 
   const addProject = (input: NewProjectInput): Project => {
     const project: Project = {
@@ -122,18 +132,97 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const getBudgetForProject = (projectId: string) =>
     budgetItems.filter((b) => b.project_id === projectId);
 
+  const setLinkedEvent = (projectId: string, eventId: string | null): { success: boolean; error?: string } => {
+    // Validate event exists and is confirmed if eventId provided
+    if (eventId) {
+      const event = getEventById(eventId);
+      if (!event) {
+        return { success: false, error: 'Event not found' };
+      }
+      if (event.status !== 'confirmed') {
+        return { success: false, error: 'Can only link to confirmed events' };
+      }
+    }
+
+    // Update project
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.project_id === projectId
+          ? { ...p, linked_event_id: eventId, updated_at: nowIso() }
+          : p
+      )
+    );
+
+    return { success: true };
+  };
+
+  const addMilestone = (
+    projectId: string,
+    label: string,
+    targetDate: string
+  ): { success: boolean; error?: string } => {
+    const project = projects.find((p) => p.project_id === projectId);
+    if (!project) {
+      return { success: false, error: 'Project not found' };
+    }
+
+    if (!project.linked_event_id) {
+      return { success: false, error: 'Project must be linked to an event to add milestones' };
+    }
+
+    const event = getEventById(project.linked_event_id);
+    if (!event) {
+      return { success: false, error: 'Linked event not found' };
+    }
+
+    // Validate target_date <= event start_date
+    if (targetDate > event.start_date) {
+      return { success: false, error: `Milestone date must be on or before event start (${event.start_date})` };
+    }
+
+    const milestone: ProjectMilestone = {
+      milestone_id: `milestone-${Date.now()}`,
+      project_id: projectId,
+      label,
+      target_date: targetDate,
+      is_complete: false,
+      created_at: nowIso(),
+    };
+
+    setMilestones((prev) => [...prev, milestone]);
+    return { success: true };
+  };
+
+  const toggleMilestone = (milestoneId: string) => {
+    setMilestones((prev) =>
+      prev.map((m) =>
+        m.milestone_id === milestoneId ? { ...m, is_complete: !m.is_complete } : m
+      )
+    );
+  };
+
+  const getMilestonesForProject = (projectId: string) =>
+    milestones
+      .filter((m) => m.project_id === projectId)
+      .sort((a, b) => a.target_date.localeCompare(b.target_date));
+
   return (
     <ProjectsContext.Provider
       value={{
         projects,
         tasks,
         budgetItems,
+        milestones,
         addProject,
         addTask,
         setTaskStatus,
         addBudgetItem,
+        setLinkedEvent,
+        addMilestone,
+        toggleMilestone,
         getTasksForProject,
         getBudgetForProject,
+        getMilestonesForProject,
       }}
     >
       {children}
