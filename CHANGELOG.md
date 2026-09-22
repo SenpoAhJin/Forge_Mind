@@ -26,6 +26,91 @@ The app currently has a complete **design foundation** (a consistent look-and-fe
 
 ## 3. Session History
 
+## Session — Wednesday, Sept 16, 2026, 22:00 (FE-8 Step 1: Cosplayer Event Planner — Link Project to Event + Milestones)
+
+### What we built
+
+**Step 1 of 3** (Step 2 = itinerary, Step 3 = readiness recompute — both out of scope for this session).
+
+**Feature:** Link a Project to a confirmed Event and add Milestones (countdown checkpoints leading up to the event).
+
+**Implemented:**
+
+1. **Data model** — `src/types/milestones.ts`
+   - `ProjectMilestone`: milestone_id, project_id, label, target_date (YYYY-MM-DD, must be <= linked event's start_date), is_complete, created_at
+   - Storage: extended ProjectsContext with separate `milestones` array (same pattern as Tasks/BudgetItems — flat array linked by project_id)
+   - Zero seed data (user-generated milestones only, consistent with offers/chat pattern)
+
+2. **ProjectsContext mutations**
+   - `setLinkedEvent(projectId, eventId | null)` — validates eventId refers to a CONFIRMED event (draft/cancelled refused with error), null unlinks
+   - `addMilestone(projectId, label, targetDate)` — validates target_date <= linked event's start_date, requires project to be linked to an event
+   - `toggleMilestone(milestoneId)` — toggles `is_complete` boolean
+   - `getMilestonesForProject(projectId)` — returns sorted by target_date ascending
+
+3. **CreateProjectScreen** — Optional event picker (confirmed events only)
+   - Chip bar with "None" + list of confirmed events
+   - Automatically links selected event when project is created
+
+4. **ProjectDashboardScreen** — Link/unlink UI + Milestones section
+   - **Linked Event section** — Shows event name/date with Unlink button (reuses event-context display code from prior session)
+   - **Event picker** — Button reveals list of confirmed events to link
+   - **Milestones section** — Only shown if project has linked event (hidden if unlinked)
+     - List of milestones sorted by target_date, tap to toggle complete
+     - Add milestone form: label (required), target_date (validated <= event start_date), error display for validation failures
+     - DateInput maxDate set to linked event's start_date
+
+### Behavior
+
+- **Draft/cancelled events cannot be linked** — `setLinkedEvent` returns error if event.status !== 'confirmed'
+- **Milestone target_date validated** — Cannot add milestone with date > event start_date
+- **Unlinking preserves milestones (orphaned)** — Milestones array is NOT deleted when event is unlinked; they remain in storage and reappear if project is re-linked to any event. Milestones section is hidden via ternary (`linkedEvent ? <Section/> : null`) when no event linked.
+
+### Commits
+
+- `91451e5` — Data model + ProjectsContext mutations (setLinkedEvent, addMilestone, toggleMilestone)
+- `6609385` — Event linking UI (CreateProjectScreen + ProjectDashboardScreen with milestones section)
+
+### Verified
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0) for both commits  
+✅ Zero `Alert.alert` or `cond && <Text/>` patterns  
+✅ Readiness.ts has zero diff (not touched)  
+✅ Draft/cancelled event linking refused by validation  
+✅ Milestone past event date refused by validation  
+✅ Unlinking preserves milestones (orphaned, hidden until relinked)
+
+### NOT TESTED (desktop web steps for user)
+
+1. **Create project with event link:**
+   - Login as cosplayer
+   - Browse characters → pick variant → Create Project
+   - In "Link to event" section, select a confirmed event (or None)
+   - Confirm project created with linked event
+
+2. **Add milestones on linked project:**
+   - Open project dashboard for a project linked to an event
+   - Scroll to Milestones section (below event info)
+   - Add milestone with label "Finish wig styling" and target date 3 days before event
+   - Tap milestone to toggle complete
+   - Confirm checkmark appears and text strikes through
+
+3. **Validation tests:**
+   - Try to add milestone with date AFTER event start_date → confirm error message "Milestone date must be on or before event start..."
+   - Try to link project to a draft event → confirm validation error (note: event picker only shows confirmed events, so this requires direct API call or temporarily marking confirmed event as draft)
+
+4. **Unlink/relink:**
+   - Unlink event from project → confirm Milestones section disappears
+   - Confirm milestones NOT deleted from storage (check context state if possible)
+   - Re-link same or different event → confirm orphaned milestones reappear
+
+### Out of scope (explicitly flagged)
+
+- **Step 2 (day-of itinerary)** — NOT built in this session
+- **Step 3 (readiness forecast recompute)** — NOT built in this session
+- **Readiness.ts modifications** — Intentionally not touched (zero diff)
+
+---
+
 ## Session — FE-1 (project setup & design foundation)
 
 What we did:
