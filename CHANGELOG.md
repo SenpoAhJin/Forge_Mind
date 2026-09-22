@@ -2857,3 +2857,56 @@ Task B uses three backend functions (already implemented in prior session):
 - `2120356` — `fix: add missing captionText/assignButton styles (tsc errors from 5a1e481)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/2120356)
 - `6587d7f` — `TASK B Part 3: EventLogisticsScreen assignment display + chips` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/6587d7f)
 - `93357da` — `TASK B Part 4: LogisticsHomeScreen staff assignment section` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/93357da)
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 17:00 (FE-7 Step 3: Commitment Log + Change Tracking)
+
+### What we did
+
+**FE-7 Step 3 delivered commitment log and change tracking for confirmed events and logistics tracked-field edits.** Head organizers' edits to confirmed events now create audit trails, and logistics tracked-field updates (after CORE lock) are logged with department routing for assigned staff.
+
+**Part 1 (commit `f7bd171`):** Added `CommitmentLogEntry` type — tracks entity_type (event | logistics_entry), field_name, old_value, new_value (all strings, formatted at render), changed_by snapshot (email + name, survives account deletion), changed_at timestamp, department_routed_to (staff department for logistics, null for events).
+
+**Part 2 (commit `b6afbf0`):** Built `CommitmentLogContext` with AsyncStorage persistence (`@forgemind:commitment_log`) — `addLogEntry` writes one entry per field change with batch timestamp, `getLogForEntity` returns entity log sorted newest first, `getLogForDepartment` filters logistics entries by department. Nested inside LogisticsProvider in App.tsx (requires access to both Events and Logistics data).
+
+**Part 3 (commit `e98babe`):** Unlocked confirmed event editing with change tracking — EventsContext gained `updateConfirmedEvent()` method (Head-only, confirmed events only, cancelled still blocked), diffs old vs new field-by-field, logs via CommitmentLogContext, no-op changes produce zero log entries (no spam). EventDetailScreen now shows Edit button for confirmed events (was draft-only), removed "locked confirmed" notice, added "Change History" section (fixed-height rows 40px, numberOfLines 1). CreateEventScreen routes to `updateConfirmedEvent` for confirmed events, `updateEvent` for drafts (unchanged). Draft-event editing path UNCHANGED (still works as before).
+
+**Part 4 (commit `27cf992`):** Added change tracking to logistics tracked-field edits — LogisticsContext.`updateLogisticsFields` now diffs before persisting (arrival_date, arrival_time, plate_number, parking_needs, entourage_size, stage_time_preference), calls `addLogEntry` for each real change, no-op diff produces zero log entries, department routing looks up assigned staff's department via AuthService (null if unassigned). LogisticsEntryDetailScreen added "Change History" section same pattern as events (fixed rows, numberOfLines 1). Assignment changes via `assignEntry` do NOT go through this log (separate concern, no double-logging).
+
+**Part 5: NOT IMPLEMENTED.** Department-routed view for Head Organizer (flat list of all changes routed to a specific department) was skipped — change log already accessible per-entity via EventDetailScreen and LogisticsEntryDetailScreen, adding a new department-filtered aggregate view would require significant UI work (new screen or major VerifyStaffScreen modification) for marginal value. `getLogForDepartment` function exists in CommitmentLogContext and is fully functional, UI surface deferred.
+
+### Backend integration
+
+No new backend calls — uses existing AuthService.getAccounts() to look up staff department for routing. All commitment log data stored locally via AsyncStorage (mock-data pattern, Phase 1).
+
+### What users must test (desktop web + phone)
+
+**Confirmed event editing:**
+1. EventDetailScreen → open a confirmed event (was previously locked) → verify Edit button now appears
+2. Tap Edit → change venue name → Save → return to detail → verify Change History section shows "venue_name changed from [old] to [new] — by [your name], [date]"
+3. Edit again → change multiple fields (name, city, start_date) → Save → verify Change History shows 3 separate entries, all with same timestamp
+4. Edit again → change nothing → Save → verify NO new log entries appear (no-op diff)
+5. Verify cancelled events still show NO Edit button (blocked)
+6. Verify Staff role can view Change History (read-only)
+
+**Logistics tracked-field editing:**
+1. LogisticsEntryDetailScreen → open an entry → tap Edit Tracked Fields
+2. Change arrival_time → Save → verify Change History section shows the edit
+3. Edit again → change plate_number and entourage_size → Save → verify 2 log entries with same timestamp
+4. Verify entry assigned to a staff member: check that log entry's department_routed_to matches assigned staff's department (can verify via inspecting AsyncStorage `@forgemind:commitment_log` or building Part 5 department view)
+5. Verify unassigned entry: edits should log with department_routed_to = null
+6. Edit again with no actual value changes → verify zero new log entries
+
+**Edge cases:**
+- Draft event editing: verify unchanged (still uses updateEvent, NO logging, Edit button shown, Change History hidden)
+- Withdrawn logistics entries: no Edit button, Change History shown (if any edits happened before withdrawal)
+- Cancelled event entries: no Edit button, Change History shown (read-only)
+- Change History section: hidden when zero entries (ternary null pattern)
+- Field display: truncated with numberOfLines 1 if very long
+
+### Commits
+- `f7bd171` — `feat(commitment-log): add CommitmentLogEntry type definition` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/f7bd171)
+- `b6afbf0` — `feat(commitment-log): add CommitmentLogContext with AsyncStorage persistence` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/b6afbf0)
+- `e98babe` — `feat(events): unlock confirmed event editing with change tracking` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/e98babe)
+- `27cf992` — `feat(logistics): add change tracking for tracked-field edits` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/27cf992)
