@@ -5,11 +5,10 @@
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import {
-  ProjectsScreen,
-  ProjectDashboardScreen,
-  CreateProjectScreen,
-} from '../screens/cosplayer';
+import { ProjectsScreen } from '../screens/cosplayer/ProjectsScreen';
+import { ProjectDashboardScreen } from '../screens/cosplayer/ProjectDashboardScreen';
+import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
+import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
 import { getProjectById } from '../data';
 import { colors, typography } from '../theme';
 
@@ -17,6 +16,7 @@ export type ProjectStackParamList = {
   ProjectsList: undefined;
   ProjectDashboard: { projectId: string };
   CreateProject: undefined;
+  ContestsList: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProjectStackParamList>();
@@ -38,8 +38,13 @@ export const ProjectStackNavigator: React.FC = () => {
             onStartProject={() => navigation.navigate('CreateProject')}
             onBrowseCharacters={() => navigation.getParent()?.navigate('Characters')}
             onOpenProject={(projectId) => navigation.navigate('ProjectDashboard', { projectId })}
+            onOpenContests={() => navigation.navigate('ContestsList')}
           />
         )}
+      </Stack.Screen>
+
+      <Stack.Screen name="ContestsList" options={{ title: 'Contests' }}>
+        {() => <ContestsListScreen />}
       </Stack.Screen>
 
       <Stack.Screen

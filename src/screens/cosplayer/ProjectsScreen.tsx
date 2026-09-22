@@ -20,6 +20,7 @@ interface ProjectsScreenProps {
   onStartProject: () => void;
   onBrowseCharacters: () => void;
   onOpenProject: (projectId: string) => void;
+  onOpenContests: () => void;
 }
 
 const badgeStatusFor = (status: ProjectStatus): 'pending' | 'active' | 'completed' | 'cancelled' => {
@@ -41,6 +42,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   onStartProject,
   onBrowseCharacters,
   onOpenProject,
+  onOpenContests,
 }) => {
   const { user } = useUser();
   const { selection } = useSelection();
@@ -59,6 +61,20 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
         <Text style={styles.greetingText}>Welcome back,</Text>
         <Text style={styles.nameText}>{user?.display_name ?? 'Cosplayer'}</Text>
       </View>
+
+      {/* Contests Entry Point Card */}
+      <TouchableOpacity onPress={onOpenContests} activeOpacity={0.7}>
+        <StandardCard style={styles.contestsCard}>
+          <View style={styles.contestsRow}>
+            <Ionicons name="trophy" size={24} color={colors.primary} />
+            <View style={styles.contestsText}>
+              <Text style={styles.contestsTitle}>Contest Events</Text>
+              <Text style={styles.contestsSubtitle}>View and opt into contest competitions</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </View>
+        </StandardCard>
+      </TouchableOpacity>
 
       {selection ? (
         <StandardCard style={styles.startCard}>
@@ -162,6 +178,28 @@ const styles = StyleSheet.create({
     ...typography.h1,
     color: colors.textPrimary,
     marginTop: spacing.xs,
+  },
+  contestsCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  contestsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  contestsText: {
+    flex: 1,
+  },
+  contestsTitle: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs / 2,
+  },
+  contestsSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   startCard: {
     marginBottom: spacing.xl,
