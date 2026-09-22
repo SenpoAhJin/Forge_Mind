@@ -2803,3 +2803,57 @@ Exit Code: 0
 - Form alignment fix (56587ed) from earlier session not requested but kept (AddLogisticsEntryScreen fieldContainer + spacing)
 - iOS date picker behavior NOT TESTED (iOS-specific: picker stays open after pick until user dismisses)
 
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 15:30 (Task B: Staff Assignment UI for Logistics Entries)
+
+### What we did
+
+**Task B delivered complete staff assignment UI across 4 screens in 5 commits.** Head organizers can now assign logistics entries to approved staff members; staff see their assignments highlighted in filters and in a dedicated section on the home screen.
+
+**Part 1 (commit `cce5885`):** Built `StaffPickerModal` component — modal (not Alert) with fixed-height row list, "Unassigned" option at top, empty state message, Save button disabled when no staff loaded, uses existing `getEligibleStaff()` backend.
+
+**Part 2 (commits `5a1e481`, `2120356`):** Added assignment section to `LogisticsEntryDetailScreen` — positioned after CORE fields before tracked fields, displays assignee name with "(no longer verified)" fallback for deleted accounts, Head can assign/change/unassign via StaffPickerModal, Staff see read-only assignment display, uses `assignEntry()` backend with async validation (Head-only, entry active, event not cancelled, staff approved).
+
+**Part 3 (commit `6587d7f`):** Enhanced `EventLogisticsScreen` — added assignment display line to entry cards ("Assigned: <email>" or "Unassigned", numberOfLines 1 for truncation), added "Assigned to Me" chip (staff role only, active entries), added "Unassigned" chip (head role only, active entries), both new chips exclude withdrawn entries, chip bar fixed height 56px with horizontal scroll.
+
+**Part 4 (commit `93357da`):** Enhanced `LogisticsHomeScreen` — added "Assigned to you" section for staff (positioned after banner before "Needs Attention"), shows top 3 incomplete entries assigned to current user sorted by criticality, filtered from activeEntries where assigned_to_email matches, section hidden (ternary null) when no assignments.
+
+**Fix (commit `2120356`):** Added missing `captionText` and `assignButton` styles to LogisticsEntryDetailScreen (tsc errors from commit `5a1e481`).
+
+### Backend integration
+
+Task B uses three backend functions (already implemented in prior session):
+- `assignEntry(id, staffEmail)`: Validates Head-only access, entry active, event not cancelled, staff approved; returns `{success, error?}`
+- `getEligibleStaff()`: Returns approved staff sorted by name with `{name, email, department}[]`
+- Entry fields: `assigned_to_email`, `assigned_at`, `assigned_by_email` (all optional/nullable)
+
+### What users must test (desktop web + phone)
+
+**Head organizer flow:**
+1. Open LogisticsEntryDetailScreen → tap "Assign Staff" button
+2. StaffPickerModal opens → select a staff member → tap Save → see success message → assignment displayed on detail screen
+3. Tap "Change Assignment" → select different staff or "Unassigned" → Save → verify updated
+4. EventLogisticsScreen → verify entry card shows "Assigned: <email>" (truncated if long)
+5. Tap "Unassigned" chip → verify only unassigned active entries appear (withdrawn excluded)
+
+**Staff flow:**
+1. LogisticsHomeScreen → verify "Assigned to you" section appears if entries assigned to you (hidden if none)
+2. Section shows up to 3 incomplete entries with urgency indicators
+3. EventLogisticsScreen → tap "Assigned to Me" chip → verify only your active assigned entries appear (withdrawn excluded)
+4. Tap an assigned entry → detail screen → verify assignment section shows "You" (read-only, no Assign button)
+
+**Edge cases:**
+- Staff cannot see Assign/Change Assignment buttons (Head-only)
+- Withdrawn entries: no Assign button, assignment display is read-only
+- Cancelled events: detail screen read-only notice, no assignment changes allowed
+- Deleted/unverified staff: assignee name shows "(no longer verified)" fallback
+- Empty staff list: StaffPickerModal shows "No approved staff yet" message
+
+### Commits
+- `cce5885` — `feat(logistics): add StaffPickerModal component for staff assignment` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/cce5885)
+- `5a1e481` — `feat(logistics): add staff assignment UI to LogisticsEntryDetailScreen` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/5a1e481)
+- `2120356` — `fix: add missing captionText/assignButton styles (tsc errors from 5a1e481)` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/2120356)
+- `6587d7f` — `TASK B Part 3: EventLogisticsScreen assignment display + chips` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/6587d7f)
+- `93357da` — `TASK B Part 4: LogisticsHomeScreen staff assignment section` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/93357da)
