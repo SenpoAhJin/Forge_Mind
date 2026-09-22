@@ -9,11 +9,14 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StandardCard, Button, Tag, TextInputField, StatusBadge } from '../../components';
+import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useProjects } from '../../contexts/ProjectsContext';
+import { useEvents } from '../../contexts/EventsContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, Task, TaskStatus, BudgetCategory } from '../../types/projects';
+import { getTodayLocal } from '../../utils/dateHelpers';
 
 interface ProjectDashboardScreenProps {
   projectId: string;
@@ -69,7 +72,8 @@ const formatPeso = (value: number) => {
 };
 
 export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId }) => {
-  const { projects, getTasksForProject, getBudgetForProject, addTask, setTaskStatus, addBudgetItem } = useProjects();
+  const { projects, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
+  const { events, getEventById } = useEvents();
 
   const project = projects.find((p) => p.project_id === projectId);
 
@@ -78,6 +82,14 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   const [newPlanned, setNewPlanned] = useState('');
   const [newActual, setNewActual] = useState('');
   const [newCategory, setNewCategory] = useState<BudgetCategory>('material');
+  
+  // Event linking state
+  const [showEventPicker, setShowEventPicker] = useState(false);
+  
+  // Milestone state
+  const [newMilestoneLabel, setNewMilestoneLabel] = useState('');
+  const [newMilestoneDate, setNewMilestoneDate] = useState(getTodayLocal());
+  const [milestoneError, setMilestoneError] = useState('');
 
   const projectTasks = useMemo(
     () => (project ? getTasksForProject(project.project_id) : []),
@@ -87,6 +99,13 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
     () => (project ? getBudgetForProject(project.project_id) : []),
     [project, getBudgetForProject]
   );
+  const projectMilestones = useMemo(
+    () => (project ? getMilestonesForProject(project.project_id) : []),
+    [project, getMilestonesForProject]
+  );
+
+  const confirmedEvents = events.filter((e) => e.status === 'confirmed');
+  const linkedEvent = project?.linked_event_id ? getEventById(project.linked_event_id) : null;
 
   if (!project) {
     return (
@@ -125,6 +144,30 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
     setNewActual('');
   };
 
+  const handleLinkEvent = (eventId: string | null) => {
+    const result = setLinkedEvent(projectId, eventId);
+    if (!result.success) {
+      setMilestoneError(result.error || 'Failed to link event');
+    } else {
+      setShowEventPicker(false);
+      setMilestoneError('');
+    }
+  };
+
+  const handleAddMilestone = () => {
+    const label = newMilestoneLabel.trim();
+    if (!label) return;
+    
+    const result = addMilestone(projectId, label, newMilestoneDate);
+    if (!result.success) {
+      setMilestoneError(result.error || 'Failed to add milestone');
+    } else {
+      setNewMilestoneLabel('');
+      setNewMilestoneDate(getTodayLocal());
+      setMilestoneError('');
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <StandardCard style={styles.headerCard}>
@@ -143,6 +186,117 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
           <Tag type="status" label={readiness.matched_components.length > 0 ? 'Items matched' : 'No items matched'} />
         </View>
       </StandardCard>
+
+      {/* Event Linking Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Linked Event</Text>
+        {linkedEvent ? (
+          <StandardCard style={styles.eventCard}>
+            <View style={styles.eventHeader}>
+              <View style={styles.eventInfo}>
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <View style={styles.eventTextWrap}>
+                  <Text style={styles.eventName} numberOfLines={1}>{linkedEvent.name}</Text>
+                  <Text style={styles.eventDate}>{linkedEvent.start_date}</Text>
+                </View>
+              </View>
+              <Button
+                title="Unlink"
+                variant="tertiary"
+                onPress={() => handleLinkEvent(null)}
+              />
+            </View>
+          </StandardCard>
+        ) : (
+          <>
+            <Text style={styles.sectionEmpty}>Link to a confirmed event to track milestones and build an itinerary</Text>
+            {showEventPicker ? (
+              <View style={styles.pickerWrap}>
+                {confirmedEvents.length === 0 ? (
+                  <Text style={styles.pickerEmpty}>No confirmed events available</Text>
+                ) : (
+                  <>
+                    {confirmedEvents.map((event) => (
+                      <TouchableOpacity
+                        key={event.id}
+                        style={styles.pickerOption}
+                        onPress={() => handleLinkEvent(event.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.pickerOptionText} numberOfLines={1}>{event.name}</Text>
+                        <Text style={styles.pickerOptionDate}>{event.start_date}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+                <Button
+                  title="Cancel"
+                  variant="tertiary"
+                  onPress={() => setShowEventPicker(false)}
+                  fullWidth
+                />
+              </View>
+            ) : (
+              <Button
+                title="Link Event"
+                variant="secondary"
+                onPress={() => setShowEventPicker(true)}
+                fullWidth
+              />
+            )}
+          </>
+        )}
+      </View>
+
+      {/* Milestones Section */}
+      {linkedEvent ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Milestones</Text>
+          
+          {projectMilestones.length === 0 && (
+            <Text style={styles.sectionEmpty}>No milestones yet — add your first countdown checkpoint</Text>
+          )}
+
+          {projectMilestones.map((milestone) => (
+            <StandardCard key={milestone.milestone_id} style={styles.milestoneCard}>
+              <TouchableOpacity
+                style={styles.milestoneRow}
+                onPress={() => toggleMilestone(milestone.milestone_id)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={milestone.is_complete ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={22}
+                  color={milestone.is_complete ? colors.success : colors.textSecondary}
+                />
+                <View style={styles.milestoneTextWrap}>
+                  <Text style={[styles.milestoneLabel, milestone.is_complete && styles.milestoneLabelDone]} numberOfLines={1}>
+                    {milestone.label}
+                  </Text>
+                  <Text style={styles.milestoneDate}>{milestone.target_date}</Text>
+                </View>
+              </TouchableOpacity>
+            </StandardCard>
+          ))}
+
+          <View style={styles.inlineForm}>
+            <TextInputField
+              label="Milestone label"
+              value={newMilestoneLabel}
+              onChangeText={setNewMilestoneLabel}
+              placeholder="e.g. Finish wig styling"
+            />
+            <DateInput
+              label="Target date"
+              value={newMilestoneDate}
+              onChange={setNewMilestoneDate}
+              maxDate={linkedEvent.start_date}
+            />
+            {milestoneError ? <Text style={styles.errorText}>{milestoneError}</Text> : null}
+            <Button title="Add Milestone" variant="secondary" onPress={handleAddMilestone} fullWidth />
+          </View>
+        </View>
+      ) : null}
 
       <StandardCard style={styles.readinessCard}>
         <View style={styles.readinessHeader}>
@@ -588,5 +742,88 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+  },
+  eventCard: {
+    marginBottom: spacing.sm,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  eventInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  eventTextWrap: {
+    flex: 1,
+  },
+  eventName: {
+    ...typography.bodyLarge,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  eventDate: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  pickerWrap: {
+    gap: spacing.sm,
+  },
+  pickerEmpty: {
+    ...typography.body,
+    color: colors.textDisabled,
+    textAlign: 'center',
+    padding: spacing.lg,
+  },
+  pickerOption: {
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundLight,
+  },
+  pickerOptionText: {
+    ...typography.bodyLarge,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  pickerOptionDate: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  milestoneCard: {
+    marginBottom: spacing.sm,
+  },
+  milestoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  milestoneTextWrap: {
+    flex: 1,
+  },
+  milestoneLabel: {
+    ...typography.bodyLarge,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  milestoneLabelDone: {
+    textDecorationLine: 'line-through',
+    color: colors.textSecondary,
+  },
+  milestoneDate: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  errorText: {
+    ...typography.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
 });

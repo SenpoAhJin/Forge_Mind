@@ -12,6 +12,7 @@ import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useProjects } from '../../contexts/ProjectsContext';
+import { useEvents } from '../../contexts/EventsContext';
 import { SkillLevel } from '../../types/projects';
 import { getTodayLocal } from '../../utils/dateHelpers';
 
@@ -24,7 +25,8 @@ const SKILL_OPTIONS: SkillLevel[] = ['beginner', 'intermediate', 'advanced', 'ex
 
 export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCreated, onBrowseCharacters }) => {
   const { selection } = useSelection();
-  const { addProject } = useProjects();
+  const { addProject, setLinkedEvent } = useProjects();
+  const { events } = useEvents();
 
   const [projectName, setProjectName] = useState(
     selection ? `${selection.character.character_name} — ${selection.variant.variant_name}` : ''
@@ -34,6 +36,9 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
   const [startDate, setStartDate] = useState(getTodayLocal());
   const [targetDate, setTargetDate] = useState('');
   const [optedIn, setOptedIn] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const confirmedEvents = events.filter((e) => e.status === 'confirmed');
 
   if (!selection) {
     return (
@@ -63,6 +68,12 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
       target_completion_date: targetDate || null,
       opted_in_readiness_sharing: optedIn,
     });
+
+    // Link event if selected
+    if (selectedEventId) {
+      setLinkedEvent(project.project_id, selectedEventId);
+    }
+
     onCreated(project.project_id);
   };
 
@@ -126,6 +137,30 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
         minDate={startDate || getTodayLocal()}
         optional
       />
+
+      <Text style={styles.fieldLabel}>Link to event (optional)</Text>
+      <Text style={styles.fieldDescription}>Choose a confirmed event to track milestones and build an itinerary</Text>
+      <View style={styles.chipRow}>
+        <TouchableOpacity
+          style={[styles.chip, selectedEventId === null && styles.chipActive]}
+          onPress={() => setSelectedEventId(null)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.chipText, selectedEventId === null && styles.chipTextActive]}>None</Text>
+        </TouchableOpacity>
+        {confirmedEvents.map((event) => (
+          <TouchableOpacity
+            key={event.id}
+            style={[styles.chip, selectedEventId === event.id && styles.chipActive]}
+            onPress={() => setSelectedEventId(event.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.chipText, selectedEventId === event.id && styles.chipTextActive]} numberOfLines={1}>
+              {event.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <TouchableOpacity style={styles.optInRow} onPress={() => setOptedIn(!optedIn)} activeOpacity={0.7}>
         <Ionicons
@@ -196,6 +231,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
     marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  fieldDescription: {
+    ...typography.caption,
+    color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
   chipRow: {
