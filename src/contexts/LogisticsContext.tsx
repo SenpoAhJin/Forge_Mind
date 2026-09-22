@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LogisticsEntry, ParticipantKind, ParkingNeeds, LogisticsStatus } from '../types/logistics';
 import { useUser } from './UserContext';
 import { useEvents } from './EventsContext';
+import { useCommitmentLog } from './CommitmentLogContext';
 import { getNowISO, getTodayLocal, compareDateStrings } from '../utils/dateHelpers';
 import { AuthService } from '../services/AuthService';
 
@@ -217,6 +218,7 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
   const { user } = useUser();
   const { events } = useEvents();
+  const { addLogEntry } = useCommitmentLog();
 
   // Load from AsyncStorage on mount
   useEffect(() => {
@@ -387,6 +389,79 @@ export const LogisticsProvider: React.FC<{ children: ReactNode }> = ({ children 
         return { success: false, error: 'Entourage size must be between 0 and 50' };
       }
     }
+
+    // Diff changes and prepare log entries
+    const changes: Array<{ field_name: string; old_value: string; new_value: string }> = [];
+
+    if (data.arrival_date !== undefined && data.arrival_date !== entry.arrival_date) {
+      changes.push({
+        field_name: 'arrival_date',
+        old_value: entry.arrival_date || '(none)',
+        new_value: data.arrival_date || '(none)',
+      });
+    }
+    if (data.arrival_time !== undefined && data.arrival_time !== entry.arrival_time) {
+      changes.push({
+        field_name: 'arrival_time',
+        old_value: entry.arrival_time || '(none)',
+        new_value: data.arrival_time || '(none)',
+      });
+    }
+    if (data.plate_number !== undefined) {
+      const newPlate = data.plate_number ? data.plate_number.trim().toUpperCase() : null;
+      if (newPlate !== entry.plate_number) {
+        changes.push({
+          field_name: 'plate_number',
+          old_value: entry.plate_number || '(none)',
+          new_value: newPlate || '(none)',
+        });
+      }
+    }
+    if (data.parking_needs !== undefined && data.parking_needs !== entry.parking_needs) {
+      changes.push({
+        field_name: 'parking_needs',
+        old_value: entry.parking_needs || '(none)',
+        new_value: data.parking_needs || '(none)',
+      });
+    }
+    if (data.entourage_size !== undefined && data.entourage_size !== entry.entourage_size) {
+      changes.push({
+        field_name: 'entourage_size',
+        old_value: String(entry.entourage_size ?? '(none)'),
+        new_value: String(data.entourage_size ?? '(none)'),
+      });
+    }
+    if (data.stage_time_preference !== undefined && data.stage_time_preference !== entry.stage_time_preference) {
+      changes.push({
+        field_name: 'stage_time_preference',
+        old_value: entry.stage_time_preference || '(none)',
+        new_value: data.stage_time_preference || '(none)',
+      });
+    }
+
+    // If no actual changes, skip update (no-op diff = no log spam)
+    if (changes.length === 0) {
+      return { success: true };
+    }
+
+    // Determine department routing: look up assigned staff's department
+    let departmentRoutedTo: string | null = null;
+    if (entry.assigned_to_email) {
+      const accounts = await AuthService.getAccounts();
+      const assignedStaff = accounts.find(a => a.email === entry.assigned_to_email);
+      if (assignedStaff && assignedStaff.department) {
+        departmentRoutedTo = assignedStaff.department;
+      }
+    }
+
+    // Log changes
+    await addLogEntry(
+      'logistics_entry',
+      id,
+      changes,
+      { email: user!.email, name: user!.display_name || user!.email },
+      departmentRoutedTo
+    );
 
     const now = getNowISO();
     const updated = entries.map(e =>

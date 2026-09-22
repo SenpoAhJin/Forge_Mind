@@ -19,6 +19,7 @@ import { TimePickerInput } from '../../components/inputs/TimePickerInput';
 import { useUser } from '../../contexts/UserContext';
 import { useLogistics } from '../../contexts/LogisticsContext';
 import { useEvents } from '../../contexts/EventsContext';
+import { useCommitmentLog } from '../../contexts/CommitmentLogContext';
 import { checkCompletion, getUrgency, formatParticipantKind, formatParkingNeeds, formatTime12h, getMissingFields } from '../../utils/logisticsRules';
 import { getTodayLocal } from '../../utils/dateHelpers';
 import { ParkingNeeds } from '../../types/logistics';
@@ -40,6 +41,7 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
   const { user } = useUser();
   const { entries, updateLogisticsFields, withdrawEntry, assignEntry, getEligibleStaff } = useLogistics();
   const { events } = useEvents();
+  const { getLogForEntity } = useCommitmentLog();
 
   const [isEditing, setIsEditing] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -397,6 +399,23 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
           </StandardCard>
         )}
 
+        {/* Change History */}
+        {(() => {
+          const changeLog = getLogForEntity('logistics_entry', route.params.entryId);
+          return changeLog.length > 0 ? (
+            <StandardCard>
+              <Text style={styles.sectionTitle}>Change History</Text>
+              {changeLog.map(logEntry => (
+                <View key={logEntry.id} style={styles.changeRow}>
+                  <Text style={styles.changeText} numberOfLines={1}>
+                    {logEntry.field_name} changed from {logEntry.old_value} to {logEntry.new_value} — by {logEntry.changed_by_name}, {new Date(logEntry.changed_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              ))}
+            </StandardCard>
+          ) : null;
+        })()}
+
         {/* Withdraw Button */}
         {isHeadOrganizer && entry.status === 'active' && !isEventCancelled && !isEditing && (
           <View style={styles.actions}>
@@ -532,6 +551,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     textAlign: 'center',
+  },
+  changeRow: {
+    height: 40,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  changeText: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   actions: {
     marginTop: spacing.lg,
