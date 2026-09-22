@@ -8,3 +8,4 @@ export * from './LogisticsEntryDetailScreen';
 export * from './MeetupsScreen';
 export * from './VerifyCosplayersScreen';
 export * from './VerifyStaffScreen';
+export * from './ManageStaffScreen';
