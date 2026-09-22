@@ -299,7 +299,7 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.cardTitle}>Team Management</Text>
               <TouchableOpacity
                 style={styles.manageButton}
-                onPress={() => navigation.navigate('VerifyStaff')}
+                onPress={() => navigation.navigate('ManageStaff')}
                 activeOpacity={0.7}
               >
                 <Text style={styles.manageButtonText}>Manage Staff</Text>
@@ -307,7 +307,7 @@ export const ProfileScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
             <Text style={styles.cardNote}>
-              Invite staff members to help organize your events. Assign them to departments and track their tasks.
+              Approve new staff members and assign departments with "Verify Staff by Department". View approved staff and their current assignments with "Manage Staff".
             </Text>
             {/* Verify Staff — single-department scope */}
             <TouchableOpacity
