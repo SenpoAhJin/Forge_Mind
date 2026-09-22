@@ -45,26 +45,26 @@ export default function App() {
     <SafeAreaProvider>
       <UserProvider>
         <SelectionProvider>
-          <ProjectsProvider>
-            <OwnedAttireProvider>
-              <MarketplaceProvider>
-                <OffersProvider>
-                  <ChatProvider>
-                    <CommitmentLogProvider>
-                      <EventsProvider>
+          <EventsProvider>
+            <ProjectsProvider>
+              <OwnedAttireProvider>
+                <MarketplaceProvider>
+                  <OffersProvider>
+                    <ChatProvider>
+                      <CommitmentLogProvider>
                         <ContestProvider>
                           <LogisticsProvider>
                             <RootNavigator />
                             <StatusBar style="auto" />
                           </LogisticsProvider>
                         </ContestProvider>
-                      </EventsProvider>
-                    </CommitmentLogProvider>
-                  </ChatProvider>
-                </OffersProvider>
-              </MarketplaceProvider>
-            </OwnedAttireProvider>
-          </ProjectsProvider>
+                      </CommitmentLogProvider>
+                    </ChatProvider>
+                  </OffersProvider>
+                </MarketplaceProvider>
+              </OwnedAttireProvider>
+            </ProjectsProvider>
+          </EventsProvider>
         </SelectionProvider>
       </UserProvider>
     </SafeAreaProvider>
