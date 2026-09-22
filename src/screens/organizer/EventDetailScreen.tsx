@@ -11,6 +11,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { EventsStackParamList } from '../../navigation/EventsStackNavigator';
 import { useUser } from '../../contexts/UserContext';
 import { useEvents } from '../../contexts/EventsContext';
+import { useCommitmentLog } from '../../contexts/CommitmentLogContext';
 import { Button, Tag, ConfirmationModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { formatEventStatus } from '../../utils/formatStatus';
@@ -21,6 +22,7 @@ type Props = NativeStackScreenProps<EventsStackParamList, 'EventDetail'>;
 export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const { user } = useUser();
   const { getEventById, confirmEvent, cancelEvent } = useEvents();
+  const { getLogForEntity } = useCommitmentLog();
   
   const eventId = route.params.eventId;
   const event = getEventById(eventId);
@@ -208,15 +210,24 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           ) : null}
         </View>
 
-        {/* Locked confirmed notice */}
-        {event.status === 'confirmed' && isHeadOrganizer && (
-          <View style={styles.lockedNotice}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.info} />
-            <Text style={styles.lockedText}>
-              Confirmed details can't be edited here. Logged changes are coming in a later update.
-            </Text>
-          </View>
-        )}
+        {/* Change History */}
+        {(() => {
+          const changeLog = getLogForEntity('event', eventId);
+          return changeLog.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Change History</Text>
+              {changeLog.map(entry => (
+                <View key={entry.id} style={styles.changeRow}>
+                  <Text style={styles.changeText} numberOfLines={1}>
+                    {entry.field_name} changed from {entry.old_value} to {entry.new_value} — by {entry.changed_by_name}, {new Date(entry.changed_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null;
+        })()}
+
+        {/* Locked confirmed notice - REMOVED, editing now allowed */}
 
         {/* Error display */}
         {error ? (
@@ -250,11 +261,18 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             )}
 
             {event.status === 'confirmed' && (
-              <Button
-                title="Cancel Event"
-                variant="destructive"
-                onPress={() => setShowCancelModal(true)}
-              />
+              <>
+                <Button
+                  title="Edit"
+                  variant="primary"
+                  onPress={() => navigation.navigate('CreateEvent', { eventId: event.id })}
+                />
+                <Button
+                  title="Cancel Event"
+                  variant="destructive"
+                  onPress={() => setShowCancelModal(true)}
+                />
+              </>
             )}
 
             {event.status === 'cancelled' && (
@@ -388,6 +406,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontSize: 13,
     color: colors.textPrimary,
+  },
+  changeRow: {
+    height: 40,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  changeText: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   lockedNotice: {
     flexDirection: 'row',

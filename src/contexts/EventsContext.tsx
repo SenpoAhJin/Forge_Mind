@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Event, EventStatus } from '../types/events';
+import { useCommitmentLog } from './CommitmentLogContext';
 import seedEvents from '../data/events.json';
 import { getTodayLocal, getNowISO, isDateInPast, compareDateStrings } from '../utils/dateHelpers';
 
@@ -50,6 +51,13 @@ interface EventsContextType {
     actorEmail: string,
     actorRole: 'head' | 'staff' | null
   ) => Promise<{ success: boolean; error?: string }>;
+  updateConfirmedEvent: (
+    eventId: string,
+    input: UpdateEventInput,
+    actorEmail: string,
+    actorName: string,
+    actorRole: 'head' | 'staff' | null
+  ) => Promise<{ success: boolean; error?: string }>;
   confirmEvent: (
     eventId: string,
     actorEmail: string,
@@ -67,6 +75,7 @@ const EventsContext = createContext<EventsContextType | undefined>(undefined);
 export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { addLogEntry } = useCommitmentLog();
 
   // Load events from storage on mount
   useEffect(() => {
@@ -321,6 +330,122 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return { success: true };
   };
 
+  const updateConfirmedEvent = async (
+    eventId: string,
+    input: UpdateEventInput,
+    actorEmail: string,
+    actorName: string,
+    actorRole: 'head' | 'staff' | null
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Guard: Head Organizer only
+    const roleError = requireHeadOrganizer(actorRole);
+    if (roleError) {
+      return { success: false, error: roleError };
+    }
+
+    // Find event
+    const event = getEventById(eventId);
+    if (!event) {
+      return { success: false, error: 'Event not found' };
+    }
+
+    // Guard: Can only update confirmed events (cancelled still blocked)
+    if (event.status !== 'confirmed') {
+      return { success: false, error: 'Only confirmed events can be edited here' };
+    }
+
+    // Validate input (merge with existing for validation)
+    const mergedForValidation = {
+      name: input.name !== undefined ? input.name : event.name,
+      venue_name: input.venue_name !== undefined ? input.venue_name : event.venue_name,
+      description: input.description !== undefined ? input.description : event.description,
+      start_date: input.start_date !== undefined ? input.start_date : event.start_date,
+      end_date: input.end_date !== undefined ? input.end_date : event.end_date,
+      has_contest: input.has_contest !== undefined ? input.has_contest : event.has_contest,
+    };
+
+    const validationError = validateEventInput(mergedForValidation, false);
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
+
+    // Diff changes and prepare log entries
+    const changes: Array<{ field_name: string; old_value: string; new_value: string }> = [];
+
+    if (input.name !== undefined && input.name.trim() !== event.name) {
+      changes.push({ field_name: 'name', old_value: event.name, new_value: input.name.trim() });
+    }
+    if (input.description !== undefined && (input.description?.trim() || null) !== event.description) {
+      changes.push({
+        field_name: 'description',
+        old_value: event.description || '(none)',
+        new_value: input.description?.trim() || '(none)',
+      });
+    }
+    if (input.venue_name !== undefined && input.venue_name.trim() !== event.venue_name) {
+      changes.push({ field_name: 'venue_name', old_value: event.venue_name, new_value: input.venue_name.trim() });
+    }
+    if (input.city !== undefined && (input.city?.trim() || null) !== event.city) {
+      changes.push({
+        field_name: 'city',
+        old_value: event.city || '(none)',
+        new_value: input.city?.trim() || '(none)',
+      });
+    }
+    if (input.start_date !== undefined && input.start_date !== event.start_date) {
+      changes.push({ field_name: 'start_date', old_value: event.start_date, new_value: input.start_date });
+    }
+    if (input.end_date !== undefined && (input.end_date || null) !== event.end_date) {
+      changes.push({
+        field_name: 'end_date',
+        old_value: event.end_date || '(none)',
+        new_value: input.end_date || '(none)',
+      });
+    }
+    if (input.has_contest !== undefined && input.has_contest !== event.has_contest) {
+      changes.push({
+        field_name: 'has_contest',
+        old_value: event.has_contest ? 'Yes' : 'No',
+        new_value: input.has_contest ? 'Yes' : 'No',
+      });
+    }
+
+    // If no actual changes, skip update
+    if (changes.length === 0) {
+      return { success: true };
+    }
+
+    // Log changes (events have no department routing, department_routed_to = null)
+    await addLogEntry(
+      'event',
+      eventId,
+      changes,
+      { email: actorEmail, name: actorName },
+      null
+    );
+
+    // Update event
+    const updated = events.map(e => {
+      if (e.id === eventId) {
+        return {
+          ...e,
+          ...(input.name !== undefined && { name: input.name.trim() }),
+          ...(input.description !== undefined && { description: input.description?.trim() || null }),
+          ...(input.venue_name !== undefined && { venue_name: input.venue_name.trim() }),
+          ...(input.city !== undefined && { city: input.city?.trim() || null }),
+          ...(input.start_date !== undefined && { start_date: input.start_date }),
+          ...(input.end_date !== undefined && { end_date: input.end_date || null }),
+          ...(input.has_contest !== undefined && { has_contest: input.has_contest }),
+          updated_at: getNowISO(),
+        };
+      }
+      return e;
+    });
+
+    await persistEvents(updated);
+    return { success: true };
+  };
+
   const confirmEvent = async (
     eventId: string,
     actorEmail: string,
@@ -433,6 +558,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         getEventById,
         createEvent,
         updateEvent,
+        updateConfirmedEvent,
         confirmEvent,
         cancelEvent,
       }}

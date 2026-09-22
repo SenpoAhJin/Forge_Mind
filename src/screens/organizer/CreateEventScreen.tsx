@@ -18,15 +18,15 @@ type Props = NativeStackScreenProps<EventsStackParamList, 'CreateEvent'>;
 
 export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
   const { user } = useUser();
-  const { getEventById, createEvent, updateEvent } = useEvents();
+  const { getEventById, createEvent, updateEvent, updateConfirmedEvent } = useEvents();
   
   const eventId = route.params?.eventId;
   const isEdit = !!eventId;
   const existingEvent = isEdit ? getEventById(eventId) : null;
 
-  // Route-level guard: Head Organizer only, and edit only for drafts
+  // Route-level guard: Head Organizer only, and edit allowed for draft OR confirmed (cancelled still blocked)
   const isHeadOrganizer = user?.organizer_role === 'head';
-  const canAccess = isHeadOrganizer && (!isEdit || existingEvent?.status === 'draft');
+  const canAccess = isHeadOrganizer && (!isEdit || (existingEvent?.status === 'draft' || existingEvent?.status === 'confirmed'));
 
   // Form state
   const [name, setName] = useState(existingEvent?.name || '');
@@ -55,21 +55,39 @@ export const CreateEventScreen: React.FC<Props> = ({ route, navigation }) => {
     setError(null);
 
     if (isEdit && existingEvent) {
-      // Update existing draft
-      const result = await updateEvent(
-        eventId,
-        {
-          name: name.trim(),
-          description: description.trim() || null,
-          venue_name: venueName.trim(),
-          city: city.trim() || null,
-          start_date: startDate,
-          end_date: endDate || null,
-          has_contest: hasContest,
-        },
-        user?.email || '',
-        user?.organizer_role || null
-      );
+      // Determine which update path to use
+      const isConfirmedEdit = existingEvent.status === 'confirmed';
+      
+      const result = isConfirmedEdit
+        ? await updateConfirmedEvent(
+            eventId,
+            {
+              name: name.trim(),
+              description: description.trim() || null,
+              venue_name: venueName.trim(),
+              city: city.trim() || null,
+              start_date: startDate,
+              end_date: endDate || null,
+              has_contest: hasContest,
+            },
+            user?.email || '',
+            user?.display_name || user?.email || 'Unknown',
+            user?.organizer_role || null
+          )
+        : await updateEvent(
+            eventId,
+            {
+              name: name.trim(),
+              description: description.trim() || null,
+              venue_name: venueName.trim(),
+              city: city.trim() || null,
+              start_date: startDate,
+              end_date: endDate || null,
+              has_contest: hasContest,
+            },
+            user?.email || '',
+            user?.organizer_role || null
+          );
 
       if (result.success) {
         setShowSuccessModal(true);
