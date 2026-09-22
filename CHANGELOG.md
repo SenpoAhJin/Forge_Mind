@@ -3161,3 +3161,54 @@ The "Manage Staff" button correctly navigates to VerifyStaff screen, which handl
 
 - `src/screens/organizer/ManageStaffScreen.tsx` — getEligibleStaff hook moved to top level
 - `CHANGELOG.md` — This entry
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 21:00 (Improve ManageStaffScreen UX and task clarity)
+
+### What we did
+
+**Enhanced ManageStaffScreen to explicitly show what tasks staff members are doing and improve navigation clarity.**
+
+**Changes:**
+1. **Info banner at top** — Blue informational banner explaining: *"Staff members track logistics details for event participants. Assign them to specific guests, sponsors, or performers to manage arrival times, parking, entourage sizes, and more."*
+2. **"Current Assignments" section header** — Added header + explanatory note when staff row is expanded
+3. **Task description per assignment** — Each assignment now shows: *"Task: Track arrival, parking, entourage, and other logistics details"* in blue italic text below participant name
+4. **Participant type shown** — Shows "Guest", "Sponsor", or "Performer" after participant name (e.g., "John Doe · Guest")
+5. **Clearer assignment count** — Changed from "X assignments" to "X participants" (more meaningful)
+6. **Better empty state** — When staff has no assignments, shows centered text: *"No active assignments"* + hint: *"Assign [name] to track a participant's logistics details below."*
+7. **Assignment button clarity** — Changed from "Assign to an entry" to "Assign [name] to a participant" + added hint below: *"You'll pick an event and participant to assign logistics tracking to this staff member."*
+
+### Test
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0)  
+✅ grep `Alert.alert`: 0 matches  
+✅ grep `&& <Text`: 0 matches  
+✅ Fixed ParticipantKind: `'confirmed_guest'` not `'guest'`
+
+**NOT TESTED (desktop web steps for user):**
+1. Login as Head Organizer, open Manage Staff
+2. Confirm blue info banner appears at top explaining staff management purpose
+3. Tap a staff member → confirm "Current Assignments" header + explanatory note
+4. If staff has assignments: confirm each shows "Task: Track arrival, parking..." in blue italic
+5. Confirm participant type shown (e.g., "John Doe · Guest")
+6. Confirm assignment count says "X participants" not "X assignments"
+7. If staff has no assignments: confirm empty state shows helpful hint with staff name
+8. Confirm "Assign [name] to a participant" button + hint below explaining next steps
+9. Confirm overall flow is clearer and more user-friendly
+
+### Commits
+
+- `74be09a` — feat: improve ManageStaffScreen UX with task context, info banner, and clearer labels
+
+### Files changed
+
+- `src/screens/organizer/ManageStaffScreen.tsx` — Info banner, task descriptions, clearer labels, better empty state
+- `CHANGELOG.md` — This entry
+
+### UX improvements summary
+
+**Before:** Assignments showed only event name + participant name. No context about what "assignment" meant or what the staff member's task was.
+
+**After:** Clear explanation of logistics tracking at top, explicit task description per assignment ("Track arrival, parking, entourage..."), participant type visible, clearer button labels, helpful hints for next steps. User-friendly and easy to understand what staff members do.
