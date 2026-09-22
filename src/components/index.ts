@@ -19,3 +19,4 @@ export * from './StatusNotificationModal';
 export * from './AppealModal';
 export * from './ListingBlockedModal';
 export * from './GlobalNotificationHandler';
+export * from './StaffPickerModal';
