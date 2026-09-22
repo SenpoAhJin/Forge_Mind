@@ -253,3 +253,23 @@ export const formatEventDateRange = (startDate: string, endDate: string): string
   }
   return `${startDate} to ${endDate}`;
 };
+
+/**
+ * Format missing field names for user-friendly display
+ */
+export const formatMissingFieldName = (fieldName: string): string => {
+  switch (fieldName) {
+    case 'arrival_date':
+      return 'Arrival date';
+    case 'arrival_time':
+      return 'Arrival time';
+    case 'plate_number':
+      return 'Plate number';
+    case 'entourage_size':
+      return 'Entourage size';
+    case 'stage_time_preference':
+      return 'Stage time preference';
+    default:
+      return fieldName;
+  }
+};

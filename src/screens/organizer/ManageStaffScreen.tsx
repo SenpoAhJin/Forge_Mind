@@ -15,6 +15,8 @@ import { useLogistics } from '../../contexts/LogisticsContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { ConfirmationModal, StandardCard } from '../../components';
 import { StaffDepartment, DEPARTMENT_LABELS, STAFF_DEPARTMENTS } from '../../types/organizer';
+import { checkCompletion, getUrgency, formatMissingFieldName } from '../../utils/logisticsRules';
+import { getTodayLocal } from '../../utils/dateHelpers';
 
 type DepartmentFilter = 'all' | StaffDepartment;
 
@@ -213,6 +215,14 @@ export const ManageStaffScreen: React.FC = () => {
                     ) : (
                       assignments.map(entry => {
                         const event = events.find(e => e.id === entry.event_id);
+                        const completion = checkCompletion(entry);
+                        const urgency = getUrgency(entry, getTodayLocal());
+                        const urgencyColor =
+                          urgency.level === 'critical' ? colors.error :
+                          urgency.level === 'urgent' ? colors.warning :
+                          urgency.level === 'reminder' ? colors.textSecondary :
+                          colors.success;
+
                         return (
                           <View key={entry.id} style={styles.assignmentRow}>
                             <View style={styles.assignmentInfo}>
@@ -222,9 +232,24 @@ export const ManageStaffScreen: React.FC = () => {
                               <Text style={styles.assignmentParticipant} numberOfLines={1}>
                                 {entry.participant_name} · {entry.participant_kind === 'confirmed_guest' ? 'Guest' : entry.participant_kind === 'sponsor' ? 'Sponsor' : 'Performer'}
                               </Text>
-                              <Text style={styles.assignmentTask} numberOfLines={2}>
-                                Task: Track arrival, parking, entourage, and other logistics details
-                              </Text>
+                              
+                              {/* Task status */}
+                              <View style={styles.taskStatusRow}>
+                                <View style={[styles.urgencyDot, { backgroundColor: urgencyColor }]} />
+                                <Text style={[styles.taskStatusText, { color: urgencyColor }]}>
+                                  {completion.isComplete ? 'Complete' : `${completion.missingFields.length} field${completion.missingFields.length === 1 ? '' : 's'} missing`}
+                                </Text>
+                                <Text style={styles.taskDeadline}>
+                                  · Deadline: {entry.submission_deadline} ({urgency.reason})
+                                </Text>
+                              </View>
+
+                              {/* Missing fields list */}
+                              {!completion.isComplete && (
+                                <Text style={styles.missingFieldsList} numberOfLines={2}>
+                                  Needs: {completion.missingFields.map(formatMissingFieldName).join(', ')}
+                                </Text>
+                              )}
                             </View>
                             <TouchableOpacity
                               style={styles.unassignButton}
@@ -476,6 +501,32 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
+  },
+  taskStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  urgencyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: spacing.xs,
+  },
+  taskStatusText: {
+    ...typography.caption,
+    fontWeight: '600',
+  },
+  taskDeadline: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+  },
+  missingFieldsList: {
+    ...typography.caption,
+    color: colors.error,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
   assignmentTask: {
     ...typography.caption,
