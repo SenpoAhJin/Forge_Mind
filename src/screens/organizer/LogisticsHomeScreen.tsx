@@ -34,8 +34,28 @@ export const LogisticsHomeScreen: React.FC = () => {
   const { events } = useEvents();
 
   const isHeadOrganizer = user?.organizer_role === 'head';
+  const isVerifiedStaff = user?.organizer_role === 'staff' && user?.department_verification_status === 'approved';
+  const hasAccess = isHeadOrganizer || isVerifiedStaff;
   const today = getTodayLocal();
   const myEmail = user?.email;
+
+  // Access control: Show pending approval message for unverified staff
+  if (!hasAccess) {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.permissionBanner}>
+            <Ionicons name="information-circle" size={20} color={colors.warning} />
+            <Text style={styles.permissionText}>
+              {user?.organizer_role === 'staff'
+                ? 'Your department access is pending approval. Once approved, you can view confirmed events.'
+                : 'Logistics access requires Head Organizer or approved Staff status. Please request organizer access from your profile.'}
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   // Filter active entries for confirmed events
   const confirmedEvents = events.filter(e => e.status === 'confirmed');
@@ -254,6 +274,22 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
+  },
+  permissionBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.warning + '15',
+    borderRadius: borderRadius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  permissionText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    flex: 1,
+    lineHeight: 20,
   },
   loadingText: {
     ...typography.body,
