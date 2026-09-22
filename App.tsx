@@ -16,6 +16,7 @@ import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { OffersProvider } from './src/contexts/OffersContext';
 import { ChatProvider } from './src/contexts/ChatContext';
 import { EventsProvider } from './src/contexts/EventsContext';
+import { ContestProvider } from './src/contexts/ContestContext';
 import { LogisticsProvider } from './src/contexts/LogisticsContext';
 import { CommitmentLogProvider } from './src/contexts/CommitmentLogContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -50,12 +51,14 @@ export default function App() {
                 <OffersProvider>
                   <ChatProvider>
                     <EventsProvider>
-                      <LogisticsProvider>
-                        <CommitmentLogProvider>
-                          <RootNavigator />
-                          <StatusBar style="auto" />
-                        </CommitmentLogProvider>
-                      </LogisticsProvider>
+                      <ContestProvider>
+                        <LogisticsProvider>
+                          <CommitmentLogProvider>
+                            <RootNavigator />
+                            <StatusBar style="auto" />
+                          </CommitmentLogProvider>
+                        </LogisticsProvider>
+                      </ContestProvider>
                     </EventsProvider>
                   </ChatProvider>
                 </OffersProvider>
