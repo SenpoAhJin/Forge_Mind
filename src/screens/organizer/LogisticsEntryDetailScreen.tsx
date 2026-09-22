@@ -572,4 +572,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
+  captionText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  assignButton: {
+    marginTop: spacing.md,
+  },
 });
