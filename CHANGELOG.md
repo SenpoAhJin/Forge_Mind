@@ -2910,3 +2910,106 @@ No new backend calls — uses existing AuthService.getAccounts() to look up staf
 - `b6afbf0` — `feat(commitment-log): add CommitmentLogContext with AsyncStorage persistence` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/b6afbf0)
 - `e98babe` — `feat(events): unlock confirmed event editing with change tracking` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/e98babe)
 - `27cf992` — `feat(logistics): add change tracking for tracked-field edits` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/27cf992)
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 18:30 (FE-7 Step 4: Contest Tier Opt-In + Assignment)
+
+### What we did
+
+**FE-7 Step 4 delivered contest tier opt-in for cosplayers and tier assignment for Head Organizers.** Cosplayers opt into contest events, Head defines per-event tier criteria (labels + descriptions), assigns tiers to opted-in cosplayers, and confirms/declines entries with explicit "cannot be undone" warnings. All contest-specific state is standalone (NOT tied to Projects).
+
+**Part 1 (commit `872693f`):** Added contest types — `ContestCriterion` (per-event tier definition with label + description), `ContestOptIn` (cosplayer opt-in with status pending/confirmed/declined), assigned_tier_id points to criterion (null until assigned), confirmed_by/at null until Head confirms/declines.
+
+**Part 2 (commit `514074c`):** Built `ContestContext` with AsyncStorage persistence (`@forgemind:contest`) — `addCriterion` (Head only, confirmed event + has_contest check), `removeCriterion` (blocks if assigned to any opt-in, orphan prevention), `optIn` (cosplayer only, blocks duplicates), `assignTier` (Head only, pending only, reassigning OK before confirmation), `confirmDecision` (Head only, pending only, confirms/declines FINAL, cannot confirm without assigned tier). Nested after EventsProvider, before LogisticsProvider (parallel to Logistics, needs Events for has_contest + status checks).
+
+**Part 3 (commit `ddda161`):** Cosplayer side — `ContestsListScreen` (flat list of confirmed events with has_contest, each card shows opt-in state: not opted/pending/confirmed/declined, Opt In button calls optIn + shows success modal + refreshes in place, shows assigned tier name if assignTier has run, read-only). Entry point: small card on ProjectsScreen after greeting, before start card (trophy icon, "View and opt into contest competitions"). Route name `ContestsList` (unique, verified no collisions with existing routes).
+
+**Part 4 (commit `a35b35a`):** Organizer side — `ContestManageScreen` (Criteria section: add/remove criterion with orphan guard, fixed-height rows. Opt-ins section: list each opt-in with tier assignment chips, Confirm/Decline buttons shown only after tier assigned, confirmed/declined opt-ins read-only. Zero criteria blocks UI tier assignment with "Add tiers first" message). EventDetailScreen: "Manage Contest" button for confirmed events with has_contest (Head only), positioned between Edit and Cancel Event buttons.
+
+### Backend integration
+
+No new backend calls — all contest data stored locally via AsyncStorage (mock-data pattern, Phase 1).
+
+### What users must test (desktop web + phone)
+
+**Cosplayer flow:**
+1. Home → tap "Contest Events" card → ContestsListScreen opens
+2. See confirmed events with has_contest (empty state if none)
+3. Tap "Opt In" on an event → success modal → card shows "Pending" tag
+4. Try opting in again → error "You have already opted into this contest"
+5. After Head assigns tier + confirms → revisit contest list → see "Confirmed" tag + tier name
+
+**Head Organizer flow:**
+1. EventDetailScreen → open a confirmed event with has_contest → tap "Manage Contest"
+2. ContestManageScreen → Criteria section empty → Add tier (label: "Novice", description: "First-time cosplayers")
+3. Add second tier (label: "Expert", description: "5+ years experience")
+4. Try to remove a tier → error "cannot remove criterion - it has already been assigned" (after assigning it)
+5. Opt-ins section → select tier chip for a cosplayer → chip highlights
+6. Tap "Confirm" → browser confirm popup "This cannot be undone" → confirm → status changes to "Confirmed"
+7. Try to assign tier again or confirm again → blocked (status !== pending)
+8. Try to confirm an opt-in without assigning tier first → error "Cannot confirm without assigning a tier first"
+9. Decline an opt-in → status "Declined" (FINAL, cannot change)
+
+**Edge cases:**
+- Cosplayer cannot opt into draft events (blocked by optIn guard)
+- Cosplayer cannot opt into events without has_contest (blocked)
+- Head cannot add criterion to non-confirmed or non-contest events (blocked)
+- Removing criterion that's assigned: blocked with clear error
+- Confirmed/declined opt-ins: no tier assignment controls shown (read-only)
+- Zero criteria: tier chips don't appear, message shown instead
+
+### Commits
+- `872693f` — `feat(contest): add contest types - criterion and opt-in` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/872693f)
+- `514074c` — `feat(contest): add ContestContext with AsyncStorage persistence` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/514074c)
+- `ddda161` — `feat(contest): add cosplayer ContestsListScreen + entry point` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/ddda161)
+- `a35b35a` — `feat(contest): add organizer ContestManageScreen + entry point` (GitHub: https://github.com/SenpoAhJin/Forge_Mind/commit/a35b35a)
+
+### NOT TESTED
+- Duplicate opt-in guard (need to manually trigger double opt-in attempt and verify error)
+- Confirm without tier guard (need to manually trigger confirmDecision with assigned_tier_id=null and verify error returned)
+- Reassign after confirmation guard (need to manually trigger assignTier on confirmed opt-in and verify blocked)
+- Remove assigned criterion guard (need to manually trigger removeCriterion on an assigned tier and verify error "has already been assigned")
+- Draft event opt-in guard (need cosplayer to attempt opt-in on draft event, verify blocked)
+- Existing Events/Logistics/CommitmentLog screens unchanged except Manage Contest button (manual regression check needed)
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 19:45 (Fix "Manage Staff" button)
+
+### What we did
+
+**Fixed the "Manage Staff" button on Head Organizer Profile screen.** The button previously showed a "Coming Soon FE-7" placeholder alert. Since staff verification/approval (VerifyStaffScreen) already exists and handles department assignment, the button now navigates to that screen. The "Verify Staff by Department" button remains as a secondary entry point — both lead to the same feature.
+
+### Changes
+
+**ProfileScreen updated:**
+- "Manage Staff" button `onPress` changed from `setShowComingSoonModal(true)` to `navigation.navigate('VerifyStaff')`
+- Removed `showComingSoonModal` state (no longer used)
+- Removed Coming Soon ConfirmationModal (no longer needed)
+
+**No other Profile buttons, screens, or navigation touched.**
+
+### Test
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0)  
+✅ grep "Coming Soon" in ProfileScreen.tsx: 0 matches  
+✅ grep "Manage Staff" confirmed button now calls `navigate('VerifyStaff')`
+
+**NOT TESTED (desktop web steps for user):**
+1. Login as Head Organizer
+2. Open Profile screen
+3. Tap "Manage Staff" → should open VerifyStaffScreen (department approval UI)
+4. Go back to Profile
+5. Tap "Verify Staff by Department" → should open same VerifyStaffScreen
+6. Confirm both buttons lead to identical screen
+
+### Commits
+
+- `2029b7c` — fix: ProfileScreen "Manage Staff" button now navigates to VerifyStaff instead of showing Coming Soon alert
+
+### Files changed
+
+- `src/screens/shared/ProfileScreen.tsx` — Manage Staff button onPress + removed Coming Soon modal
+- `CHANGELOG.md` — This entry

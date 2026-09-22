@@ -22,7 +22,6 @@ export const ProfileScreen: React.FC = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showReseedLogisticsModal, setShowReseedLogisticsModal] = useState(false);
-  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   // Load access request when screen is focused
   useEffect(() => {
@@ -301,7 +300,7 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.cardTitle}>Team Management</Text>
               <TouchableOpacity
                 style={styles.manageButton}
-                onPress={() => setShowComingSoonModal(true)}
+                onPress={() => navigation.navigate('VerifyStaff')}
                 activeOpacity={0.7}
               >
                 <Text style={styles.manageButtonText}>Manage Staff</Text>
@@ -483,16 +482,6 @@ export const ProfileScreen: React.FC = () => {
         confirmStyle="destructive"
         onConfirm={confirmReset}
         onCancel={() => setShowResetModal(false)}
-      />
-
-      {/* Coming Soon Modal */}
-      <ConfirmationModal
-        visible={showComingSoonModal}
-        title="Coming Soon"
-        message="Staff management features will be available in FE-7. You will be able to invite staff members, assign departments, and track their tasks."
-        confirmText="OK"
-        onConfirm={() => setShowComingSoonModal(false)}
-        onCancel={() => setShowComingSoonModal(false)}
       />
 
       {/* Reseed Logistics Confirmation Modal */}
