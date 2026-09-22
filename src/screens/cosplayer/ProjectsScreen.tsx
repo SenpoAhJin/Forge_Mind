@@ -12,9 +12,11 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useProjects } from '../../contexts/ProjectsContext';
+import { useEvents } from '../../contexts/EventsContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, ProjectStatus } from '../../types/projects';
+import { daysBetween } from '../../utils/dateHelpers';
 
 interface ProjectsScreenProps {
   onStartProject: () => void;
@@ -47,6 +49,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   const { user } = useUser();
   const { selection } = useSelection();
   const { projects, getTasksForProject, getBudgetForProject } = useProjects();
+  const { events } = useEvents();
 
   const readinessFor = (project: Project) =>
     computeReadiness({
@@ -123,6 +126,10 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
         const variant = getVariantById(project.variant_id);
         const readiness = readinessFor(project).readiness_score;
         const pct = Math.round(readiness * 100);
+        
+        // Get linked event info
+        const linkedEvent = project.linked_event_id ? events.find(e => e.id === project.linked_event_id) : null;
+        const daysUntilEvent = linkedEvent ? daysBetween(new Date().toISOString().split('T')[0], linkedEvent.start_date) : null;
 
         return (
           <StandardCard key={project.project_id} style={styles.projectCard} onPress={() => onOpenProject(project.project_id)}>
@@ -135,6 +142,19 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
                   {character?.character_name ?? 'Unknown character'}
                   {variant ? ` · ${variant.variant_name}` : ''}
                 </Text>
+                {linkedEvent && (
+                  <View style={styles.eventInfo}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                    <Text style={styles.eventText} numberOfLines={1}>
+                      {linkedEvent.name} · {linkedEvent.start_date}
+                      {daysUntilEvent !== null && daysUntilEvent >= 0 && (
+                        <Text style={[styles.eventCountdown, daysUntilEvent <= 7 && { color: colors.error }]}>
+                          {' '}· {daysUntilEvent} day{daysUntilEvent === 1 ? '' : 's'} away
+                        </Text>
+                      )}
+                    </Text>
+                  </View>
+                )}
               </View>
               <StatusBadge status={badgeStatusFor(project.status)} label={project.status} />
             </View>
@@ -302,6 +322,22 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  eventInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  eventText: {
+    ...typography.caption,
+    color: colors.primary,
+    flex: 1,
+  },
+  eventCountdown: {
+    ...typography.caption,
+    color: colors.warning,
+    fontWeight: '600',
   },
   readinessRow: {
     flexDirection: 'row',
