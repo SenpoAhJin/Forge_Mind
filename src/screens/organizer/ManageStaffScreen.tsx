@@ -114,6 +114,14 @@ export const ManageStaffScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Info banner */}
+      <View style={styles.infoBanner}>
+        <Ionicons name="information-circle-outline" size={20} color={colors.info} />
+        <Text style={styles.infoBannerText}>
+          Staff members track logistics details for event participants. Assign them to specific guests, sponsors, or performers to manage arrival times, parking, entourage sizes, and more.
+        </Text>
+      </View>
+
       {/* Department filter chips */}
       <View style={styles.chipBar}>
         <ScrollView
@@ -182,7 +190,7 @@ export const ManageStaffScreen: React.FC = () => {
                       </Text>
                     </View>
                     <Text style={styles.assignmentCount}>
-                      {assignments.length} {assignments.length === 1 ? 'assignment' : 'assignments'}
+                      {assignments.length} {assignments.length === 1 ? 'participant' : 'participants'}
                     </Text>
                     <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
                   </View>
@@ -191,8 +199,17 @@ export const ManageStaffScreen: React.FC = () => {
                 {/* Expanded: assignments list */}
                 {isExpanded && (
                   <View style={styles.expandedSection}>
+                    <Text style={styles.sectionHeader}>Current Assignments</Text>
+                    <Text style={styles.sectionNote}>
+                      Staff members track logistics details for event participants (guests, sponsors, performers).
+                    </Text>
                     {assignments.length === 0 ? (
-                      <Text style={styles.noAssignmentsText}>No active assignments</Text>
+                      <View style={styles.noAssignmentsContainer}>
+                        <Text style={styles.noAssignmentsText}>No active assignments</Text>
+                        <Text style={styles.noAssignmentsHint}>
+                          Assign {member.name.split(' ')[0]} to track a participant's logistics details below.
+                        </Text>
+                      </View>
                     ) : (
                       assignments.map(entry => {
                         const event = events.find(e => e.id === entry.event_id);
@@ -203,7 +220,10 @@ export const ManageStaffScreen: React.FC = () => {
                                 {event?.name || 'Unknown Event'}
                               </Text>
                               <Text style={styles.assignmentParticipant} numberOfLines={1}>
-                                {entry.participant_name}
+                                {entry.participant_name} · {entry.participant_kind === 'confirmed_guest' ? 'Guest' : entry.participant_kind === 'sponsor' ? 'Sponsor' : 'Performer'}
+                              </Text>
+                              <Text style={styles.assignmentTask} numberOfLines={2}>
+                                Task: Track arrival, parking, entourage, and other logistics details
                               </Text>
                             </View>
                             <TouchableOpacity
@@ -230,8 +250,11 @@ export const ManageStaffScreen: React.FC = () => {
                       activeOpacity={0.7}
                     >
                       <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                      <Text style={styles.assignButtonText}>Assign {member.name.split(' ')[0]} to an entry</Text>
+                      <Text style={styles.assignButtonText}>Assign {member.name.split(' ')[0]} to a participant</Text>
                     </TouchableOpacity>
+                    <Text style={styles.assignHint}>
+                      You'll pick an event and participant to assign logistics tracking to this staff member.
+                    </Text>
                   </View>
                 )}
               </View>
@@ -278,6 +301,21 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.md,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.info + '15',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  infoBannerText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flex: 1,
+    lineHeight: 18,
   },
   chipBar: {
     height: 56,
@@ -390,16 +428,37 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.surface,
   },
-  noAssignmentsText: {
+  sectionHeader: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  sectionNote: {
     ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+  noAssignmentsContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  noAssignmentsText: {
+    ...typography.body,
     color: colors.textDisabled,
+    marginBottom: spacing.xs,
+  },
+  noAssignmentsHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
     textAlign: 'center',
-    paddingVertical: spacing.md,
+    maxWidth: 250,
   },
   assignmentRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
+    alignItems: 'flex-start',
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -416,6 +475,13 @@ const styles = StyleSheet.create({
   assignmentParticipant: {
     ...typography.caption,
     color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  assignmentTask: {
+    ...typography.caption,
+    color: colors.primary,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
   unassignButton: {
     paddingHorizontal: spacing.sm,
@@ -433,7 +499,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     borderRadius: borderRadius.sm,
     backgroundColor: colors.primary + '10',
     gap: spacing.xs,
@@ -442,5 +508,12 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     color: colors.primary,
+  },
+  assignHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 16,
   },
 });
