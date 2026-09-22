@@ -8,12 +8,12 @@
  * - CORE fields (name, kind, deadline) are read-only for everyone
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { Button, ConfirmationModal, StandardCard, TextInputField } from '../../components';
+import { Button, ConfirmationModal, StandardCard, TextInputField, StaffPickerModal } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { TimePickerInput } from '../../components/inputs/TimePickerInput';
 import { useUser } from '../../contexts/UserContext';
@@ -22,6 +22,7 @@ import { useEvents } from '../../contexts/EventsContext';
 import { checkCompletion, getUrgency, formatParticipantKind, formatParkingNeeds, formatTime12h, getMissingFields } from '../../utils/logisticsRules';
 import { getTodayLocal } from '../../utils/dateHelpers';
 import { ParkingNeeds } from '../../types/logistics';
+import { AuthService } from '../../services/AuthService';
 
 type LogisticsStackParamList = {
   LogisticsHome: undefined;
@@ -37,12 +38,23 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScreenRouteProp>();
   const { user } = useUser();
-  const { entries, updateLogisticsFields, withdrawEntry } = useLogistics();
+  const { entries, updateLogisticsFields, withdrawEntry, assignEntry, getEligibleStaff } = useLogistics();
   const { events } = useEvents();
 
   const [isEditing, setIsEditing] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Staff assignment state
+  const [eligibleStaff, setEligibleStaff] = useState<Array<{ name: string; email: string; department: string }>>([]);
+  const [selectedStaffEmail, setSelectedStaffEmail] = useState<string | null>(null);
+  const [assignedToName, setAssignedToName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const isHeadOrganizer = user?.organizer_role === 'head';
   const entry = entries.find(e => e.id === route.params.entryId);
@@ -106,6 +118,68 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
     }
   };
 
+  // Load staff and determine assigned name
+  useEffect(() => {
+    const loadStaffData = async () => {
+      const staff = await getEligibleStaff();
+      setEligibleStaff(staff);
+
+      // Determine display name for assigned staff
+      if (!entry.assigned_to_email) {
+        setAssignedToName('Unassigned');
+      } else if (entry.assigned_to_email === user?.email) {
+        setAssignedToName('You');
+      } else {
+        // Look up name from eligible staff first
+        const staffMember = staff.find(s => s.email === entry.assigned_to_email);
+        if (staffMember) {
+          setAssignedToName(staffMember.name);
+        } else {
+          // Not found in eligible = may be deleted or no longer approved
+          const accounts = await AuthService.getAccounts();
+          const account = accounts.find(a => a.email === entry.assigned_to_email);
+          setAssignedToName(account ? `${account.display_name} (no longer verified)` : `${entry.assigned_to_email} (no longer verified)`);
+        }
+      }
+    };
+
+    loadStaffData();
+  }, [entry.assigned_to_email, user?.email]);
+
+  const handleOpenAssignModal = () => {
+    setSelectedStaffEmail(entry.assigned_to_email || null);
+    setShowAssignModal(true);
+  };
+
+  const handleAssignSave = async () => {
+    setSaving(true);
+    const result = await assignEntry(entry.id, selectedStaffEmail);
+    setSaving(false);
+
+    setShowAssignModal(false);
+
+    if (result.success) {
+      // Determine success message
+      if (!selectedStaffEmail) {
+        setSuccessMessage('Unassigned');
+      } else {
+        const staffMember = eligibleStaff.find(s => s.email === selectedStaffEmail);
+        setSuccessMessage(`Assigned to ${staffMember ? staffMember.name : selectedStaffEmail}`);
+      }
+      setShowSuccessModal(true);
+
+      // Reload to refresh assigned_to/assigned_at
+      const updatedEntry = entries.find(e => e.id === entry.id);
+      if (updatedEntry) {
+        // Trigger re-render by updating state
+        setError(''); // Small state change to force re-render
+      }
+    } else {
+      setErrorMessage(result.error || 'Failed to assign');
+      setShowErrorModal(true);
+    }
+  };
+
   const completionPercent = missingFields.length === 0 ? 100 : Math.round(((5 - missingFields.length) / 5) * 100);
 
   return (
@@ -146,12 +220,34 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
             <Text style={styles.fieldLabel}>Event</Text>
             <Text style={styles.fieldValue}>{event.name}</Text>
           </View>
-          {entry.participant_email && (
+          {entry.participant_email ? (
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Email</Text>
               <Text style={styles.fieldValue}>{entry.participant_email}</Text>
             </View>
-          )}
+          ) : null}
+        </StandardCard>
+
+        {/* Assignment Section */}
+        <StandardCard>
+          <Text style={styles.sectionTitle}>Assignment</Text>
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Assigned to</Text>
+            <Text style={styles.fieldValue}>{assignedToName}</Text>
+          </View>
+          {entry.assigned_at ? (
+            <Text style={styles.captionText}>
+              Assigned {entry.assigned_at.split('T')[0]}
+            </Text>
+          ) : null}
+          {isHeadOrganizer && !isWithdrawn && !isEventCancelled ? (
+            <Button
+              title={entry.assigned_to_email ? 'Change' : 'Assign Staff'}
+              onPress={handleOpenAssignModal}
+              variant="secondary"
+              style={styles.assignButton}
+            />
+          ) : null}
         </StandardCard>
 
         {/* Tracked Fields (Editable for Head) */}
@@ -317,6 +413,33 @@ export const LogisticsEntryDetailScreen: React.FC = () => {
         confirmStyle="destructive"
         onConfirm={confirmWithdraw}
         onCancel={() => setShowWithdrawModal(false)}
+      />
+
+      <StaffPickerModal
+        visible={showAssignModal}
+        staff={eligibleStaff}
+        selectedEmail={selectedStaffEmail}
+        onSelect={setSelectedStaffEmail}
+        onSave={handleAssignSave}
+        onCancel={() => setShowAssignModal(false)}
+        saving={saving}
+      />
+
+      <ConfirmationModal
+        visible={showSuccessModal}
+        title="Success"
+        message={successMessage}
+        onConfirm={() => setShowSuccessModal(false)}
+        onCancel={() => setShowSuccessModal(false)}
+      />
+
+      <ConfirmationModal
+        visible={showErrorModal}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setShowErrorModal(false)}
+        onCancel={() => setShowErrorModal(false)}
       />
     </View>
   );
