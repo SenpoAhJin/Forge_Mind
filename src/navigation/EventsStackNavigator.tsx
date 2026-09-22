@@ -5,13 +5,17 @@
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { EventsScreen, CreateEventScreen, EventDetailScreen } from '../screens/organizer';
+import { EventsScreen } from '../screens/organizer/EventsScreen';
+import { CreateEventScreen } from '../screens/organizer/CreateEventScreen';
+import { EventDetailScreen } from '../screens/organizer/EventDetailScreen';
+import { ContestManageScreen } from '../screens/organizer/ContestManageScreen';
 import { colors, typography } from '../theme';
 
 export type EventsStackParamList = {
   EventsHome: undefined;
   CreateEvent: { eventId?: string } | undefined;
   EventDetail: { eventId: string };
+  ContestManage: { eventId: string };
 };
 
 const Stack = createNativeStackNavigator<EventsStackParamList>();
@@ -40,6 +44,11 @@ export const EventsStackNavigator: React.FC = () => (
       name="EventDetail"
       component={EventDetailScreen}
       options={{ title: 'Event Details' }}
+    />
+    <Stack.Screen
+      name="ContestManage"
+      component={ContestManageScreen}
+      options={{ title: 'Manage Contest' }}
     />
   </Stack.Navigator>
 );

@@ -267,6 +267,13 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   variant="primary"
                   onPress={() => navigation.navigate('CreateEvent', { eventId: event.id })}
                 />
+                {event.has_contest ? (
+                  <Button
+                    title="Manage Contest"
+                    variant="secondary"
+                    onPress={() => navigation.navigate('ContestManage', { eventId: event.id })}
+                  />
+                ) : null}
                 <Button
                   title="Cancel Event"
                   variant="destructive"
