@@ -3013,3 +3013,51 @@ No new backend calls — all contest data stored locally via AsyncStorage (mock-
 
 - `src/screens/shared/ProfileScreen.tsx` — Manage Staff button onPress + removed Coming Soon modal
 - `CHANGELOG.md` — This entry
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 20:00 (ProfileScreen fixes: Head department + marketplace access)
+
+### What we did
+
+**Fixed Head Organizer Profile display and marketplace access visibility.**
+
+**Changes:**
+1. **Head Organizer now shows department** — Added department display using `head_organizer_department` field with DEPARTMENT_LABELS formatting (e.g., "Programs Department")
+2. **Marketplace Access section now cosplayer-only** — Changed condition from `(user?.organizer_role === 'head' || user?.verification_status === 'verified')` to `user?.is_cosplayer` only
+3. **Marketplace Management section added for Head Organizers** — New card after "Team Management" with "Verify Cosplayers for Marketplace" button (moved from Marketplace Access section)
+
+**Structure:**
+- **All users:** Organizer Access (shows role + department for Head)
+- **Cosplayers only:** Marketplace Access (verification status)
+- **Head Organizers only:** Events You Organize, Team Management, **Marketplace Management** (new), Logistics Overview
+
+### Test
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0)  
+✅ grep confirmed `user?.is_cosplayer &&` guards Marketplace Access  
+✅ grep confirmed `head_organizer_department` displayed with DEPARTMENT_LABELS  
+✅ grep confirmed "Marketplace Management" section exists for Head Organizers
+
+**NOT TESTED (desktop web steps for user):**
+1. Login as Head Organizer (e.g., Programs department)
+2. Open Profile → confirm "Organizer Access" shows "Department: Programs Department"
+3. Scroll down → confirm "Marketplace Access" section is NOT visible
+4. Confirm "Marketplace Management" section shows with "Verify Cosplayers for Marketplace" button
+5. Logout, login as Cosplayer
+6. Open Profile → confirm "Marketplace Access" section IS visible with verification status
+7. Confirm "Marketplace Management" section is NOT visible
+
+### Commits
+
+- `02c71d6` — fix: ProfileScreen shows Head Organizer department, marketplace access now cosplayer-only, added Marketplace Management section for Head
+
+### Files changed
+
+- `src/screens/shared/ProfileScreen.tsx` — Head department display, marketplace access visibility, new Marketplace Management section
+- `CHANGELOG.md` — This entry
+
+### Note on "Manage Staff"
+
+The "Manage Staff" button correctly navigates to VerifyStaff screen, which handles staff approval and department assignment. There is no separate "task tracking" feature yet — that would be a future enhancement (e.g., assigning specific logistics entries to staff, tracking completion). The current VerifyStaff screen IS the staff management interface.

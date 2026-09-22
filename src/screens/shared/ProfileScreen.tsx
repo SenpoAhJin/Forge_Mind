@@ -156,6 +156,18 @@ export const ProfileScreen: React.FC = () => {
                   {user?.organizer_role === 'head' ? 'Head Organizer' : 'Staff Member'}
                 </Text>
               </View>
+              
+              {/* Head Organizer: Show department */}
+              {user?.organizer_role === 'head' && user?.head_organizer_department && (
+                <View style={styles.detailRow}>
+                  <Ionicons name="briefcase-outline" size={18} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>Department</Text>
+                  <Text style={styles.detailValue}>
+                    {DEPARTMENT_LABELS[user.head_organizer_department]}
+                  </Text>
+                </View>
+              )}
+              
               <Text style={styles.cardNote}>
                 {user?.organizer_role === 'head'
                   ? 'You have access to create and manage events.'
@@ -227,7 +239,8 @@ export const ProfileScreen: React.FC = () => {
       )}
 
       {/* Marketplace Verification — Head Organizers can verify cosplayers */}
-      {(user?.organizer_role === 'head' || user?.verification_status === 'verified') && (
+      {/* Marketplace Access - COSPLAYERS ONLY */}
+      {user?.is_cosplayer && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Marketplace Access</Text>
           <View style={styles.detailRow}>
@@ -241,14 +254,12 @@ export const ProfileScreen: React.FC = () => {
             ]}>
               {user?.verification_status
                 ? formatVerificationStatus(user.verification_status)
-                : 'Pending'}
+                : 'Not Submitted'}
             </Text>
           </View>
           <Text style={styles.cardNote}>
             {user?.verification_status === 'verified'
               ? 'You can list items for sale and trade in the marketplace.'
-              : user?.organizer_role === 'head'
-              ? 'As a Head Organizer, you can verify cosplayers for marketplace access.'
               : 'Verification required to sell or trade items.'}
           </Text>
 
@@ -263,18 +274,6 @@ export const ProfileScreen: React.FC = () => {
                 {user.marketplace_registration.rejection_reason}
               </Text>
             </View>
-          )}
-          
-          {/* Head Organizer: Verify Users button */}
-          {user?.organizer_role === 'head' && (
-            <TouchableOpacity
-              style={styles.cardButton}
-              onPress={() => navigation.navigate('VerifyCosplayers')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cardButtonText}>Verify Cosplayers for Marketplace</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-            </TouchableOpacity>
           )}
         </View>
       )}
@@ -317,6 +316,22 @@ export const ProfileScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <Text style={styles.cardButtonText}>Verify Staff by Department</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Marketplace Management */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Marketplace Management</Text>
+            <Text style={styles.cardNote}>
+              Verify cosplayers for marketplace access. Review their registration details and approve or reject their requests.
+            </Text>
+            <TouchableOpacity
+              style={styles.cardButton}
+              onPress={() => navigation.navigate('VerifyCosplayers')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cardButtonText}>Verify Cosplayers for Marketplace</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
