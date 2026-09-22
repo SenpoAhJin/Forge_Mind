@@ -35,6 +35,7 @@ export const LogisticsHomeScreen: React.FC = () => {
 
   const isHeadOrganizer = user?.organizer_role === 'head';
   const today = getTodayLocal();
+  const myEmail = user?.email;
 
   // Filter active entries for confirmed events
   const confirmedEvents = events.filter(e => e.status === 'confirmed');
@@ -49,6 +50,18 @@ export const LogisticsHomeScreen: React.FC = () => {
     return !completion.isComplete;
   });
   const needsAttention = sortedIncomplete.slice(0, 3);
+
+  // Staff: Get top 3 incomplete entries assigned to me
+  const myIncompleteAssignedEntries = !isHeadOrganizer
+    ? sortByCriticality(
+        activeEntries.filter(entry => {
+          const completion = checkCompletion(entry);
+          return entry.assigned_to_email === myEmail && !completion.isComplete;
+        }),
+        events,
+        today
+      ).slice(0, 3)
+    : [];
 
   if (loading) {
     return (
@@ -68,6 +81,54 @@ export const LogisticsHomeScreen: React.FC = () => {
             Reminders are in-app. Scheduled push notifications need the backend.
           </Text>
         </View>
+
+        {/* Staff: Assigned to you */}
+        {!isHeadOrganizer && myIncompleteAssignedEntries.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Assigned to you</Text>
+            {myIncompleteAssignedEntries.map(entry => {
+              const event = events.find(e => e.id === entry.event_id);
+              if (!event) return null;
+
+              const urgency = getUrgency(entry, today);
+              const completion = checkCompletion(entry);
+
+              const urgencyColor =
+                urgency.level === 'critical'
+                  ? colors.error
+                  : urgency.level === 'urgent'
+                  ? colors.warning
+                  : colors.textSecondary;
+
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  style={styles.attentionCard}
+                  onPress={() => navigation.navigate('LogisticsEntryDetail', { entryId: entry.id })}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.attentionHeader}>
+                    <View style={[styles.urgencyDot, { backgroundColor: urgencyColor }]} />
+                    <Text style={styles.attentionName} numberOfLines={1}>
+                      {entry.participant_name}
+                    </Text>
+                  </View>
+                  <Text style={styles.attentionEvent} numberOfLines={1}>
+                    {event.name}
+                  </Text>
+                  <View style={styles.attentionFooter}>
+                    <Text style={[styles.attentionDeadline, urgency.level === 'critical' && styles.attentionDeadlineCritical]}>
+                      {urgency.daysUntilDeadline < 0 ? 'Past deadline' : urgency.reason}
+                    </Text>
+                    <Text style={styles.attentionMissing}>
+                      {completion.missingFields.length} missing
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* Needs Attention Panel */}
         {needsAttention.length > 0 && (
