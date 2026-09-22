@@ -3212,3 +3212,87 @@ The "Manage Staff" button correctly navigates to VerifyStaff screen, which handl
 **Before:** Assignments showed only event name + participant name. No context about what "assignment" meant or what the staff member's task was.
 
 **After:** Clear explanation of logistics tracking at top, explicit task description per assignment ("Track arrival, parking, entourage..."), participant type visible, clearer button labels, helpful hints for next steps. User-friendly and easy to understand what staff members do.
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 21:30 (Add task details for staff + event context for cosplayer projects)
+
+### What we did
+
+**Fixed two critical planning gaps: staff didn't know what specific tasks to do, and cosplayers couldn't see which events their projects were for.**
+
+**Fix 1: Staff Task Details (commit `c063211`)**
+Enhanced ManageStaffScreen to show exactly what staff members need to do:
+- **Completion status** per assignment (e.g., "3 fields missing" or "Complete")
+- **Urgency indicator** with color-coded dot (red = critical, yellow = urgent, gray = reminder, green = complete)
+- **Submission deadline** with countdown (e.g., "Deadline: 2026-11-10 (3 days left)")
+- **Missing fields list** (e.g., "Needs: Arrival date, Arrival time, Plate number")
+- Used existing `checkCompletion()`, `getUrgency()`, and `getMissingFields()` from logisticsRules.ts
+- Added `formatMissingFieldName()` helper for user-friendly field labels
+
+**Before:** Assignment just showed "Track arrival, parking, entourage..." (vague, no actionable info)
+**After:** Shows "3 fields missing · Deadline: 2026-11-10 (3 days left) · Needs: Arrival date, Arrival time, Plate number" (clear, actionable)
+
+**Fix 2: Event Context for Projects (commit `42f6808`)**
+Added event information to cosplayer ProjectsScreen cards:
+- **Event name** with calendar icon (e.g., "Manila CosCon 2026")
+- **Event date** (start_date from linked event)
+- **Countdown** with urgency coloring (e.g., "45 days away" in yellow if ≤7 days, red if critical)
+- Uses existing `project.linked_event_id` field (was in schema but unused)
+- Only shows for projects that have a linked event (graceful for projects without events)
+
+**Before:** No event info visible, cosplayers couldn't plan around event dates
+**After:** "Manila CosCon 2026 · 2026-11-15 · 45 days away" shows on project card, connects project timeline to actual event
+
+### Test
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0) for both commits  
+✅ Fix 1 reuses existing completion/urgency logic from logisticsRules.ts  
+✅ Fix 2 reuses existing `linked_event_id` field from Project schema
+
+**NOT TESTED (desktop web steps for user):**
+
+**Fix 1 - Staff Task Details:**
+1. Login as Head Organizer, create logistics entry for a participant
+2. Assign entry to staff member (some fields incomplete, deadline approaching)
+3. Open Manage Staff → tap staff member → expand assignments
+4. Confirm shows: "[X] fields missing" status
+5. Confirm shows: "Deadline: YYYY-MM-DD (X days left)" with urgency color
+6. Confirm shows: "Needs: [list of missing field names]"
+7. As deadline gets closer: confirm urgency dot color changes (green → gray → yellow → red)
+8. Complete all fields for an entry → confirm shows "Complete" with green dot
+
+**Fix 2 - Event Context for Projects:**
+1. Create a project linked to an event (set `linked_event_id` when creating project)
+2. Login as cosplayer, open Projects screen
+3. Confirm project card shows event name with calendar icon
+4. Confirm shows event date
+5. Confirm shows countdown (e.g., "45 days away")
+6. If event is soon (≤7 days): confirm countdown appears in red (urgent)
+7. Project without linked event: confirm no event info shows (graceful)
+
+### Commits
+
+- `c063211` — feat: add detailed task status to staff assignments (completion, deadline, missing fields, urgency)
+- `42f6808` — feat: show event context on project cards (event name, date, countdown with urgency color)
+
+### Files changed
+
+- `src/utils/logisticsRules.ts` — Added `formatMissingFieldName()` helper
+- `src/screens/organizer/ManageStaffScreen.tsx` — Task status display with completion/urgency/missing fields
+- `src/screens/cosplayer/ProjectsScreen.tsx` — Event info on project cards with countdown
+- `CHANGELOG.md` — This entry
+
+### Design decisions
+
+**Fix 1:**
+- Reused existing completion/urgency logic rather than duplicating
+- Color coding matches LogisticsEntryDetailScreen urgency scheme (critical=red, urgent=yellow, reminder=gray, complete=green)
+- Missing fields shown as comma-separated list with human-friendly names (not database field names)
+
+**Fix 2:**
+- Event context only shows if `project.linked_event_id` exists (graceful for non-event projects)
+- Countdown color: red if ≤7 days (urgent planning), yellow otherwise
+- Calendar icon provides visual cue that this is event-related info
+- Used existing schema field (`linked_event_id`) — no schema changes needed
