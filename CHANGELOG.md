@@ -3129,3 +3129,35 @@ The "Manage Staff" button correctly navigates to VerifyStaff screen, which handl
 - **Navigate to LogisticsHome** (not per-entry screen): assignment flow starts at event selection, so LogisticsHome is the natural entry point; Head picks event → entry → uses existing StaffPickerModal there
 - **Zero-assignment staff visible**: requested explicitly ("Zero-assignment staff still show... not hidden")
 - **VerifyStaffScreen untouched**: approval flow completely separate, as required
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 20:45 (Fix ManageStaffScreen staff loading bug)
+
+### What we fixed
+
+**ManageStaffScreen was showing "No approved staff" even when approved staff existed.** The bug: `getEligibleStaff()` hook was called INSIDE `loadStaff()` function instead of at component top level, violating React hooks rules. This caused the function to fail silently and staff list stayed empty.
+
+**Fix:** Moved `getEligibleStaff` to top-level `useLogistics()` destructuring alongside `entries` and `assignEntry`. Now `loadStaff()` just calls `await getEligibleStaff()` without re-declaring the hook.
+
+### Test
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0)
+
+**NOT TESTED (desktop web steps for user):**
+1. Login as Head Organizer (Programs department)
+2. Ensure at least one staff member approved (e.g., Asta, Programs, status: Approved)
+3. Open Profile → tap "Manage Staff"
+4. Confirm staff list now shows approved staff (e.g., "Asta" with "Programs" department tag and "0 assignments")
+5. Confirm department chips show "All (1)" and "Programs (1)" (or actual counts)
+6. Confirm empty state is gone
+
+### Commits
+
+- `1b2e747` — fix: ManageStaffScreen getEligibleStaff hook called at top level (was breaking staff loading)
+
+### Files changed
+
+- `src/screens/organizer/ManageStaffScreen.tsx` — getEligibleStaff hook moved to top level
+- `CHANGELOG.md` — This entry
