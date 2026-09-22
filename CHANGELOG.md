@@ -3061,3 +3061,71 @@ No new backend calls — all contest data stored locally via AsyncStorage (mock-
 ### Note on "Manage Staff"
 
 The "Manage Staff" button correctly navigates to VerifyStaff screen, which handles staff approval and department assignment. There is no separate "task tracking" feature yet — that would be a future enhancement (e.g., assigning specific logistics entries to staff, tracking completion). The current VerifyStaff screen IS the staff management interface.
+
+
+---
+
+## Session — Wednesday, Sept 16, 2026, 20:30 (Fix "Manage Staff" — staff roster/assignment screen)
+
+### What we did
+
+**Built ManageStaffScreen to distinguish "Manage Staff" from "Verify Staff by Department".** Previously both buttons navigated to VerifyStaffScreen (approval flow). Now "Manage Staff" opens a roster view showing approved staff with their current logistics assignments, allowing unassignment and navigation to the existing per-entry assignment flow. Approval workflow remains untouched.
+
+**Part 1 (commit `d706379`):** Created ManageStaffScreen
+- Head Organizer only (route-level guard, early return pattern from AddLogisticsEntryScreen)
+- Department filter chips (All + departments with approved staff), outer View h56 overflow hidden, horizontal ScrollView
+- Staff list: name, email, department tag, assignment count (filtered client-side: `entries.filter(e => e.status === 'active' && e.assigned_to_email === staffEmail)`)
+- Tapping staff row expands inline to show assigned entries (event name + participant name + "Unassign" button)
+- Unassign calls `assignEntry(entryId, null)` behind ConfirmationModal with destructive style
+- "Assign [name] to an entry" button navigates to LogisticsHome (existing flow, NOT a new picker)
+- Zero-assignment staff show "0 assignments" (not hidden)
+- Empty state: round-icon pattern (people-outline icon)
+- Reuses LogisticsContext.entries, getEligibleStaff(), assignEntry() — no new context methods
+
+**Part 2 (commit `d7d18d7`):** Wired ManageStaff route
+- ProfileScreen: "Manage Staff" button → `navigation.navigate('ManageStaff')`
+- "Verify Staff by Department" button → `navigation.navigate('VerifyStaff')` (unchanged)
+- Updated card description: *"Approve new staff members and assign departments with 'Verify Staff by Department'. View approved staff and their current assignments with 'Manage Staff'."*
+- ProfileStackNavigator: added `ManageStaff` route (unique, checked ContestManage exists in EventsStackNavigator)
+
+### Test
+
+✅ TypeScript clean (exit 0) before each commit  
+✅ grep `Alert.alert` in ManageStaffScreen.tsx: 0 matches  
+✅ grep `&& <Text` in ManageStaffScreen.tsx: 0 matches  
+✅ "Manage Staff" button → `navigate('ManageStaff')` confirmed  
+✅ "Verify Staff by Department" button → `navigate('VerifyStaff')` unchanged  
+✅ VerifyStaffScreen: zero diff (untouched)
+
+**NOT TESTED (desktop web steps for user):**
+1. Login as Head Organizer (Programs department with approved staff)
+2. Open Profile → Team Management section
+3. Tap "Manage Staff" → confirm ManageStaffScreen opens (NOT VerifyStaffScreen approval screen)
+4. Confirm department filter chips appear (All + departments with staff)
+5. Tap a staff member row → confirm expands showing current assignments
+6. If staff has assignments: tap "Unassign" → confirm modal appears → confirm → verify entry clears assigned_to_email
+7. Tap "Assign [name] to an entry" → confirm navigates to LogisticsHome (existing flow)
+8. Confirm staff with zero assignments still appear in roster with "0 assignments"
+9. Go back to Profile → tap "Verify Staff by Department" → confirm VerifyStaffScreen opens (approval flow unchanged)
+10. Trace unassign: ManageStaffScreen unassign button → ConfirmationModal → assignEntry(entryId, null) → entry.assigned_to_email cleared, staff assignment count updates on re-render
+
+### Commits
+
+- `d706379` — feat: add ManageStaffScreen (staff roster with assignments and unassign flow)
+- `d7d18d7` — feat: wire ManageStaff route and update ProfileScreen description to distinguish the two buttons
+
+### Files changed
+
+- `src/screens/organizer/ManageStaffScreen.tsx` — New screen (448 lines)
+- `src/screens/organizer/index.ts` — Export ManageStaffScreen
+- `src/navigation/ProfileStackNavigator.tsx` — Added ManageStaff route
+- `src/screens/shared/ProfileScreen.tsx` — Manage Staff button onPress + updated description
+- `CHANGELOG.md` — This entry
+
+### Design decisions
+
+- **Inline expansion** (not modal): staff rows expand inline to show assignments, keeps UI simpler than per-staff modals
+- **Client-side assignment count**: filtered from entries array (`entries.filter(...)`) — no new backend aggregation needed
+- **Navigate to LogisticsHome** (not per-entry screen): assignment flow starts at event selection, so LogisticsHome is the natural entry point; Head picks event → entry → uses existing StaffPickerModal there
+- **Zero-assignment staff visible**: requested explicitly ("Zero-assignment staff still show... not hidden")
+- **VerifyStaffScreen untouched**: approval flow completely separate, as required
