@@ -19,6 +19,7 @@ import { EventsProvider } from './src/contexts/EventsContext';
 import { ContestProvider } from './src/contexts/ContestContext';
 import { LogisticsProvider } from './src/contexts/LogisticsContext';
 import { CommitmentLogProvider } from './src/contexts/CommitmentLogContext';
+import { CalendarProvider } from './src/contexts/CalendarContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
@@ -54,8 +55,10 @@ export default function App() {
                       <ChatProvider>
                         <ContestProvider>
                           <LogisticsProvider>
-                            <RootNavigator />
-                            <StatusBar style="auto" />
+                            <CalendarProvider>
+                              <RootNavigator />
+                              <StatusBar style="auto" />
+                            </CalendarProvider>
                           </LogisticsProvider>
                         </ContestProvider>
                       </ChatProvider>
