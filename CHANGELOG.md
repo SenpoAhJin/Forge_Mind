@@ -26,6 +26,100 @@ The app currently has a complete **design foundation** (a consistent look-and-fe
 
 ## 3. Session History
 
+## Session — Wednesday, Sept 16, 2026, 22:30 (Public Event Calendar — Community Listings)
+
+### What we built
+
+**Feature:** Public Event Calendar — a cosplay.ph-style community event directory, staff-submitted, visible to all cosplayers.
+
+**Scope:** Standalone feature, separate from the existing organizer-only EventsContext (draft/confirmed/cancelled events with logistics/staff/contest). That system is untouched.
+
+**Implemented:**
+
+1. **Data model** — `src/types/calendarEntries.ts`
+   - `CalendarEntry`: id, title, organizer_name (free text, not validated), venue_name, city, start_date, end_date (optional), description (max 500 chars), external_link (optional URL), submitted_by_email, submitted_by_name (snapshot), created_at, updated_at
+   - Storage: new CalendarContext with own AsyncStorage key (`@forgemind:calendar_entries`)
+   - Zero seed data (starts empty, staff-generated content only)
+
+2. **Guards & Validation**
+   - **Create**: approved staff (any department) OR Head Organizer
+   - **Edit/Delete**: original submitter OR any Head Organizer
+   - Validation: title 3-100 chars, dates YYYY-MM-DD, end_date >= start_date if present, external_link plausible URL pattern if present
+
+3. **Staff-side screens** — `CalendarManageScreen`
+   - List all listings (fixed-height cards, sorted by start_date descending)
+   - Add/Edit form (all fields, inline validation, error display)
+   - Edit/Delete buttons only visible to submitter or Head Organizer
+   - Empty state with round icon
+   - Access guard: approved staff (any department) OR Head Organizer
+   - Routed via ProfileStackNavigator → `CalendarManage` route
+   - Link added to ProfileScreen under "Community Event Calendar" (shows for organizer role)
+
+4. **Cosplayer-side screens** — `CalendarBrowseScreen`
+   - Read-only list of all listings, sorted by start_date ascending
+   - Filter: upcoming events only (past events hidden, compareDate >= today)
+   - Fixed-height cards: title, organizer_name, venue/city, date range, description preview, external link (tappable, opens via Linking.openURL)
+   - Disclaimer at bottom: "Community listings are staff-submitted. ForgeMind does not verify organizers or endorse events."
+   - Routed via ProjectStackNavigator → `CalendarBrowse` route
+   - Entry card added to ProjectsScreen (below Contest Events card, same visual pattern with calendar icon)
+
+### Behavior
+
+- **No moderation queue** — submissions go live immediately (moderation-by-authority, not by queue)
+- **No readiness computation, no project linkage** — pure directory, separate from Cosplayer Event Planner (Milestones/Itinerary)
+- **External links** — tappable, open in external browser via `Linking.openURL`
+- **Past events hidden** — browse screen filters to upcoming only (end_date or start_date >= today)
+
+### Commits
+
+- `8ae1348` — Data model + CalendarContext + CalendarProvider wired into App.tsx
+- `a7dc0ad` — CalendarManageScreen for staff submissions + ProfileStackNavigator route + ProfileScreen link
+- `05bcca8` — CalendarBrowseScreen for cosplayers + ProjectStackNavigator route + ProjectsScreen entry card
+
+### Verified
+
+✅ TypeScript clean (`npx tsc --noEmit` exit 0) for all 3 commits  
+✅ Zero `Alert.alert` or `&&.*<Text` patterns in new files  
+✅ EventsContext, EventsScreen, EventDetailScreen, CreateEventScreen have ZERO diff (git diff --stat exit 0)  
+✅ Edit/delete guards: staff can only edit own, Head can edit any (context validation lines 166, 230)  
+✅ Cosplayer browse: no create/edit/delete UI (CalendarBrowseScreen is read-only, no guards needed)
+
+### NOT TESTED (desktop web steps for user)
+
+1. **Staff submission flow:**
+   - Login as approved Staff (any department)
+   - Profile → Community Calendar → Add New Listing
+   - Fill form: title "AnimeCon 2026", organizer "Cosplay.ph", venue "SMX", city "Manila", dates, link
+   - Confirm listing appears immediately on staff list
+   - Logout → Login as Cosplayer → Projects → Community Events card → confirm listing visible
+
+2. **Edit/delete permissions:**
+   - As Staff A (Department A), submit a listing
+   - Logout → Login as Staff B (Department B)
+   - Profile → Community Calendar → confirm you CAN see the listing but NO edit/delete buttons
+   - Logout → Login as Head Organizer → confirm you CAN see edit/delete buttons → edit the listing → confirm update succeeds
+
+3. **Cosplayer browse:**
+   - Login as Cosplayer (no organizer role)
+   - Projects → Community Events card → tap
+   - Confirm calendar opens with upcoming listings
+   - Tap an external_link → confirm it attempts to open in browser
+   - Confirm NO create/edit/delete UI visible
+
+4. **Past events hidden:**
+   - As Staff, submit a listing with end_date in the past
+   - As Cosplayer, browse calendar → confirm past listing NOT shown
+   - As Staff, view manage screen → confirm past listing IS shown (no filter on manage side)
+
+### Out of scope (explicitly flagged)
+
+- **Moderation queue** — not built (submissions go live immediately)
+- **Readiness computation** — not integrated (this is a directory, not a planner)
+- **Project linkage** — not integrated (separate from Cosplayer Event Planner Milestones/Itinerary feature)
+- **Verification badges** — no "verified organizer" concept (follows Cosplay.ph disclaimer model)
+
+---
+
 ## Session — Wednesday, Sept 16, 2026, 22:00 (FE-8 Step 1: Cosplayer Event Planner — Link Project to Event + Milestones)
 
 ### What we built
