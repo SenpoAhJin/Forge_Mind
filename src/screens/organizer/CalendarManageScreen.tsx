@@ -127,12 +127,17 @@ export const CalendarManageScreen: React.FC = () => {
         user.email,
         user.display_name,
         user.organizer_role,
-        user.department_verification_status || null
+        user.department_verification_status || null,
+        user.department || null  // Pass department for routing approval
       );
       if (!result.success) {
         setFormError(result.error || 'Failed to create listing');
       } else {
         resetForm();
+        // Show success message based on role
+        if (user.organizer_role === 'staff') {
+          setFormError('✓ Submission sent to your Head Organizer for approval');
+        }
       }
     }
   };

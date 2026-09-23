@@ -16,10 +16,13 @@ export const CalendarBrowseScreen: React.FC = () => {
   const { entries, isLoading } = useCalendar();
   const today = getTodayLocal();
 
-  // Filter: show upcoming events, hide past (end_date or start_date < today)
+  // Filter: show approved upcoming events only
   const upcomingEntries = useMemo(() => {
     return entries
       .filter((e) => {
+        // Only show approved listings
+        if (e.status !== 'approved') return false;
+        
         const compareDate = e.end_date || e.start_date;
         return compareDate >= today;
       })
