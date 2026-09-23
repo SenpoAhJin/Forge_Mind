@@ -82,8 +82,13 @@ interface UserContextType {
   // Holder verification (FE-4.5 - persists across logout/login)
   updateVerification: (isVerified: boolean, status: User['verification_status']) => Promise<void>;
   
-  // Notification system (FE-7 fix)
-  pendingNotification: { type: 'marketplace' | 'staff'; status: 'verified' | 'approved' | 'rejected' } | null;
+  // Notification system (FE-7 fix + event cancellation notices)
+  pendingNotification: { 
+    type: 'marketplace' | 'staff' | 'event_cancelled'; 
+    status: 'verified' | 'approved' | 'rejected' | 'cancelled';
+    eventId?: string;
+    eventName?: string;
+  } | null;
   clearPendingNotification: () => Promise<void>;
   
   isOnboardingComplete: boolean;
@@ -96,8 +101,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingNotification, setPendingNotification] = useState<{ 
-    type: 'marketplace' | 'staff'; 
-    status: 'verified' | 'approved' | 'rejected' 
+    type: 'marketplace' | 'staff' | 'event_cancelled'; 
+    status: 'verified' | 'approved' | 'rejected' | 'cancelled';
+    eventId?: string;
+    eventName?: string;
   } | null>(null);
 
   // Track last seen verification statuses to detect changes
@@ -191,6 +198,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         seen.marketplace = user.verification_status;
       } else if (pendingNotification.type === 'staff') {
         seen.staff = user.department_verification_status;
+      } else if (pendingNotification.type === 'event_cancelled' && pendingNotification.eventId) {
+        // Track seen cancelled events by ID
+        if (!seen.cancelled_events) seen.cancelled_events = [];
+        if (!seen.cancelled_events.includes(pendingNotification.eventId)) {
+          seen.cancelled_events.push(pendingNotification.eventId);
+        }
       }
 
       await AsyncStorage.setItem(storedKey, JSON.stringify(seen));
