@@ -13,6 +13,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
+import { useCalendar } from '../../contexts/CalendarContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, ProjectStatus } from '../../types/projects';
@@ -52,6 +53,13 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   const { selection } = useSelection();
   const { projects, getTasksForProject, getBudgetForProject } = useProjects();
   const { events } = useEvents();
+  const { entries } = useCalendar();
+
+  // Get approved community calendar events, sorted by start date
+  const upcomingCommunityEvents = entries
+    .filter(entry => entry.status === 'approved')
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    .slice(0, 3); // Show max 3 upcoming events
 
   const readinessFor = (project: Project) =>
     computeReadiness({
@@ -66,6 +74,62 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
         <Text style={styles.greetingText}>Welcome back,</Text>
         <Text style={styles.nameText}>{user?.display_name ?? 'Cosplayer'}</Text>
       </View>
+
+      {/* Upcoming Community Events Section */}
+      {upcomingCommunityEvents.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <TouchableOpacity onPress={onOpenCalendar} activeOpacity={0.7}>
+              <Text style={styles.seeAllLink}>See All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {upcomingCommunityEvents.map((entry) => {
+            const daysUntil = daysBetween(new Date().toISOString().split('T')[0], entry.start_date);
+            const isPast = daysUntil < 0;
+            const isToday = daysUntil === 0;
+            const isSoon = daysUntil <= 7 && daysUntil > 0;
+
+            return (
+              <StandardCard key={entry.id} style={styles.eventCard}>
+                <View style={styles.eventHeader}>
+                  <View style={styles.eventIconWrap}>
+                    <Ionicons name="calendar" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.communityEventInfo}>
+                    <Text style={styles.eventTitle} numberOfLines={1}>
+                      {entry.title}
+                    </Text>
+                    <Text style={styles.eventOrganizer} numberOfLines={1}>
+                      By {entry.organizer_name}
+                    </Text>
+                    <Text style={styles.eventLocation} numberOfLines={1}>
+                      {entry.venue_name}, {entry.city}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.eventDateRow}>
+                  <Text style={styles.eventDate}>
+                    {entry.start_date}
+                    {entry.end_date && ` - ${entry.end_date}`}
+                  </Text>
+                  {!isPast && (
+                    <Text style={[
+                      styles.eventCountdownBadge,
+                      isToday && styles.eventCountdownToday,
+                      isSoon && styles.eventCountdownSoon,
+                    ]}>
+                      {isToday ? 'Today!' : `${daysUntil} day${daysUntil === 1 ? '' : 's'}`}
+                    </Text>
+                  )}
+                </View>
+              </StandardCard>
+            );
+          })}
+        </>
+      )}
 
       {/* Contests Entry Point Card */}
       <TouchableOpacity onPress={onOpenContests} activeOpacity={0.7}>
@@ -302,6 +366,77 @@ const styles = StyleSheet.create({
   sectionCount: {
     ...typography.bodyLarge,
     color: colors.textSecondary,
+  },
+  seeAllLink: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  eventCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  eventIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  communityEventInfo: {
+    flex: 1,
+  },
+  eventTitle: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  eventOrganizer: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  eventLocation: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  eventDateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  eventDate: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  eventCountdownBadge: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.sm,
+  },
+  eventCountdownToday: {
+    backgroundColor: colors.success,
+    color: colors.backgroundLight,
+  },
+  eventCountdownSoon: {
+    backgroundColor: colors.warning,
+    color: colors.backgroundLight,
   },
   emptyState: {
     alignItems: 'center',
