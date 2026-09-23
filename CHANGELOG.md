@@ -64,7 +64,8 @@ Ensures **visual consistency** across all user-generated content. Every event na
 - Works for all existing screens and will automatically apply to future text inputs
 
 ### Commits
-- (to be committed)
+- `b9e8223` - fix: replace ConfirmationModal children with custom rejection modal
+- `2e59306` - feat: add automatic proper case formatting to all text inputs
 
 ---
 
