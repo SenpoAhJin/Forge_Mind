@@ -389,6 +389,24 @@ export const ProfileScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Calendar Approval Queue - Head Organizers only */}
+      {user?.is_organizer && user?.organizer_role === 'head' && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Calendar Moderation</Text>
+          <Text style={styles.cardNote}>
+            Review and approve calendar submissions from staff members in your department before they become visible to cosplayers.
+          </Text>
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => navigation.navigate('CalendarApproval')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardButtonText}>Approval Queue</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {user?.is_organizer && user?.organizer_role === 'staff' && (
         <>
           {/* Staff Assignment Info */}

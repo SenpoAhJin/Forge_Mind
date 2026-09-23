@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Modal, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StandardCard, Button, TextInputField, ConfirmationModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
@@ -98,24 +98,55 @@ export const CalendarApprovalScreen: React.FC = () => {
 
       {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 
-      {showRejectModal ? (
-        <ConfirmationModal
-          visible={true}
-          title="Reject Submission"
-          message="Provide a reason for rejection:"
-          confirmText="Reject"
-          cancelText="Cancel"
-          onConfirm={handleReject}
-          onCancel={() => { setShowRejectModal(false); setSelectedEntry(null); setRejectionReason(''); }}
-        >
-          <TextInputField
-            label="Reason"
-            value={rejectionReason}
-            onChangeText={setRejectionReason}
-            placeholder="e.g. Incomplete information, duplicate event..."
-          />
-        </ConfirmationModal>
-      ) : null}
+      {/* Custom Rejection Modal with Text Input */}
+      <Modal
+        visible={showRejectModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setShowRejectModal(false); setSelectedEntry(null); setRejectionReason(''); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modal}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Ionicons name="close-circle-outline" size={32} color={colors.error} />
+                <Text style={styles.modalTitle}>Reject Submission</Text>
+                <Text style={styles.modalMessage}>Provide a reason for rejection:</Text>
+              </View>
+
+              {/* Input Field */}
+              <View style={styles.modalContent}>
+                <TextInputField
+                  label="Reason"
+                  value={rejectionReason}
+                  onChangeText={setRejectionReason}
+                  placeholder="e.g. Incomplete information, duplicate event..."
+                />
+              </View>
+
+              {/* Actions */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => { setShowRejectModal(false); setSelectedEntry(null); setRejectionReason(''); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.rejectButton]}
+                  onPress={handleReject}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.rejectButtonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -173,5 +204,73 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '90%',
+    maxWidth: 400,
+  },
+  modal: {
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  modalContent: {
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelButtonText: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  rejectButton: {
+    backgroundColor: colors.error,
+  },
+  rejectButtonText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.backgroundLight,
   },
 });
