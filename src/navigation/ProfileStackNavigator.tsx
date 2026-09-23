@@ -6,6 +6,7 @@ import HolderReviewQueueScreen from '../screens/holder/HolderReviewQueueScreen';
 import { VerifyCosplayersScreen } from '../screens/organizer';
 import { VerifyStaffScreen } from '../screens/organizer';
 import { ManageStaffScreen } from '../screens/organizer';
+import { CalendarManageScreen } from '../screens/organizer/CalendarManageScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -15,6 +16,7 @@ export type ProfileStackParamList = {
   VerifyCosplayers: undefined;
   VerifyStaff: undefined;
   ManageStaff: undefined;
+  CalendarManage: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -59,6 +61,11 @@ export const ProfileStackNavigator: React.FC = () => {
         name="ManageStaff"
         component={ManageStaffScreen}
         options={{ title: 'Manage Staff' }}
+      />
+      <Stack.Screen
+        name="CalendarManage"
+        component={CalendarManageScreen}
+        options={{ title: 'Community Calendar' }}
       />
     </Stack.Navigator>
   );
