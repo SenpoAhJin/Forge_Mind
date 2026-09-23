@@ -26,6 +26,91 @@ The app currently has a complete **design foundation** (a consistent look-and-fe
 
 ## 3. Session History
 
+## Session — Wednesday, Sept 16, 2026, 23:00 (Events Fix Pack — visibility/sort/notifications)
+
+### What we fixed
+
+**Three scoped fixes to existing Events functionality — internal data model unchanged.**
+
+**Fix 1: Community Calendar entry-point visibility**
+- **Problem:** Calendar link added in prior session was nested inside Head-only conditional (ProfileScreen line 282), making it invisible to Staff
+- **Solution:** Moved link OUT of Head-only block, gave it own guard: `organizer_role === 'head' OR (organizer_role === 'staff' AND department_verification_status === 'approved')`
+- **Pattern matched:** CalendarContext's own create permission check (line 114: `actorRole === 'staff' && actorStatus === 'approved'`)
+
+**Fix 2: EventsScreen "All" tab sort order**
+- **Problem:** Date-only sort showed Cancelled (Oct 30) above Confirmed (Nov 15) — status ignored
+- **Solution:** Sort by status priority (confirmed=0, draft=1, cancelled=2) ascending, then start_date ascending as tiebreaker
+- **Implementation:** Added statusPriority helper in getFilteredEvents function (EventsScreen.tsx lines 45-67)
+- **Single-status tabs unaffected** in practice (only one status present) but use same sort function for consistency
+
+**Fix 3: Staff notification when event cancelled**
+- **Problem:** Cancelled events filtered out of staff view with no explanation — event simply vanishes
+- **Solution:** Extended GlobalNotificationHandler to detect confirmed→cancelled flips for approved staff
+- **Scope:** ALL approved staff org-wide (not limited to assigned staff) — explicit design decision, can be narrowed later if needed
+- **Head Organizers do NOT get notices** (they initiate cancellations)
+- **Tracking:** Once per (email, event_id) via `shown_decisions` AsyncStorage key with new `cancelled_events` array field
+- **UI:** Reused existing ConfirmationModal (OK-only), message: "Event cancelled by Head Organizer. You will no longer see this event."
+
+### Commits
+
+- `359f0ae` — Move Calendar link outside Head-only block
+- `ec56fbd` — Add status priority sort to EventsScreen
+- `4d6898d` — Add event cancellation notifications for staff
+
+### Verified
+
+**TypeScript:**
+```
+npx tsc --noEmit: Exit 0 (clean)
+```
+
+**grep Alert.alert:**
+```
+ProfileScreen.tsx: No matches found
+EventsScreen.tsx: No matches found
+GlobalNotificationHandler.tsx: No matches found
+```
+
+**grep `&&.*<Text`:**
+```
+ProfileScreen.tsx: No matches found
+EventsScreen.tsx: No matches found  
+GlobalNotificationHandler.tsx: No matches found
+```
+
+**Calendar feature untouched:**
+```
+git diff --stat HEAD~3 -- src/contexts/CalendarContext.tsx src/screens/organizer/CalendarManageScreen.tsx src/screens/cosplayer/CalendarBrowseScreen.tsx
+(empty output = zero diff)
+```
+
+### NOT TESTED (desktop web steps for user)
+
+1. **Staff visibility fix:**
+   - Login as approved Staff (any department, NOT Head)
+   - Profile screen → confirm "Community Event Calendar" card is now visible
+   - Tap → confirm CalendarManageScreen opens
+
+2. **Sort order fix:**
+   - Login as Head Organizer
+   - Events → "All" tab
+   - With test data: Davao cancelled Oct 30, Manila confirmed Nov 15-17, Cebu draft Dec 20-21
+   - Expected order: Manila (Confirmed Nov 15) → Cebu (Draft Dec 20) → Davao (Cancelled Oct 30)
+
+3. **Cancellation notice:**
+   - As Head: cancel a confirmed event
+   - Logout → Login as different approved Staff account
+   - Confirm modal appears once: "Event cancelled by Head Organizer..."
+   - Tap OK → logout → login again → confirm notice does NOT reappear
+
+### Out of scope (explicitly preserved)
+
+- **EventsContext data model** — unchanged (create/confirm/cancel mutations untouched except for notification hook)
+- **LogisticsContext** — unchanged (not involved in these fixes)
+- **Calendar feature internals** — CalendarContext/Manage/Browse screens have zero diff
+
+---
+
 ## Session — Wednesday, Sept 16, 2026, 22:30 (Public Event Calendar — Community Listings)
 
 ### What we built
