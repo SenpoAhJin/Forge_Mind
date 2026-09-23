@@ -12,7 +12,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CalendarEntry } from '../types/calendarEntries';
+import { CalendarEntry, CalendarEntryStatus } from '../types/calendarEntries';
 
 const STORAGE_KEY = '@forgemind:calendar_entries';
 
@@ -46,7 +46,8 @@ interface CalendarContextType {
     actorEmail: string,
     actorName: string,
     actorRole: 'head' | 'staff' | null,
-    actorStatus: string | null
+    actorStatus: string | null,
+    actorDepartment?: string | null
   ) => Promise<{ success: boolean; entryId?: string; error?: string }>;
   updateEntry: (
     entryId: string,
@@ -58,6 +59,19 @@ interface CalendarContextType {
     entryId: string,
     actorEmail: string,
     actorRole: 'head' | 'staff' | null
+  ) => Promise<{ success: boolean; error?: string }>;
+  approveEntry: (
+    entryId: string,
+    actorEmail: string,
+    actorRole: 'head' | 'staff' | null,
+    actorDepartment?: string | null
+  ) => Promise<{ success: boolean; error?: string }>;
+  rejectEntry: (
+    entryId: string,
+    reason: string,
+    actorEmail: string,
+    actorRole: 'head' | 'staff' | null,
+    actorDepartment?: string | null
   ) => Promise<{ success: boolean; error?: string }>;
   getEntryById: (id: string) => CalendarEntry | null;
 }
@@ -107,7 +121,8 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
     actorEmail: string,
     actorName: string,
     actorRole: 'head' | 'staff' | null,
-    actorStatus: string | null
+    actorStatus: string | null,
+    actorDepartment?: string | null
   ): Promise<{ success: boolean; entryId?: string; error?: string }> => {
     // Guard: must be approved staff OR Head Organizer
     if (actorRole === 'staff' && actorStatus !== 'approved') {
@@ -149,6 +164,8 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
       external_link: input.external_link?.trim() || null,
       submitted_by_email: actorEmail,
       submitted_by_name: actorName,
+      submitted_by_department: actorRole === 'staff' ? actorDepartment || null : null,
+      status: actorRole === 'head' ? 'approved' : 'pending',  // Head submissions auto-approved, Staff go to pending
       created_at: nowIso(),
       updated_at: nowIso(),
     };
@@ -240,6 +257,92 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const getEntryById = (id: string) => entries.find((e) => e.id === id) || null;
 
+  const approveEntry = async (
+    entryId: string,
+    actorEmail: string,
+    actorRole: 'head' | 'staff' | null,
+    actorDepartment?: string | null
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Guard: Head Organizer only
+    if (actorRole !== 'head') {
+      return { success: false, error: 'Only Head Organizers can approve listings' };
+    }
+
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) {
+      return { success: false, error: 'Entry not found' };
+    }
+
+    // Department scope: Head can only approve submissions from their own department
+    if (entry.submitted_by_department && entry.submitted_by_department !== actorDepartment) {
+      return { success: false, error: 'You can only approve listings from your own department' };
+    }
+
+    if (entry.status !== 'pending') {
+      return { success: false, error: 'Entry is not pending approval' };
+    }
+
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === entryId
+          ? {
+              ...e,
+              status: 'approved' as CalendarEntryStatus,
+              reviewed_by_email: actorEmail,
+              reviewed_at: nowIso(),
+              updated_at: nowIso(),
+            }
+          : e
+      )
+    );
+
+    return { success: true };
+  };
+
+  const rejectEntry = async (
+    entryId: string,
+    reason: string,
+    actorEmail: string,
+    actorRole: 'head' | 'staff' | null,
+    actorDepartment?: string | null
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Guard: Head Organizer only
+    if (actorRole !== 'head') {
+      return { success: false, error: 'Only Head Organizers can reject listings' };
+    }
+
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) {
+      return { success: false, error: 'Entry not found' };
+    }
+
+    // Department scope: Head can only reject submissions from their own department
+    if (entry.submitted_by_department && entry.submitted_by_department !== actorDepartment) {
+      return { success: false, error: 'You can only reject listings from your own department' };
+    }
+
+    if (entry.status !== 'pending') {
+      return { success: false, error: 'Entry is not pending approval' };
+    }
+
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === entryId
+          ? {
+              ...e,
+              status: 'rejected' as CalendarEntryStatus,
+              reviewed_by_email: actorEmail,
+              reviewed_at: nowIso(),
+              rejection_reason: reason.trim() || null,
+              updated_at: nowIso(),
+            }
+          : e
+      )
+    );
+
+    return { success: true };
+  };
+
   return (
     <CalendarContext.Provider
       value={{
@@ -248,6 +351,8 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
         createEntry,
         updateEntry,
         deleteEntry,
+        approveEntry,
+        rejectEntry,
         getEntryById,
       }}
     >

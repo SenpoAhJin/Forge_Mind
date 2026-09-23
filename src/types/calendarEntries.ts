@@ -4,6 +4,8 @@
  * Separate from organizer-only EventsContext (draft/confirmed/logistics/contest system)
  */
 
+export type CalendarEntryStatus = 'pending' | 'approved' | 'rejected';
+
 export interface CalendarEntry {
   id: string;
   title: string;                    // 3-100 chars, required
@@ -16,6 +18,11 @@ export interface CalendarEntry {
   external_link?: string | null;    // Optional URL (website/social link)
   submitted_by_email: string;       // Submitter's email
   submitted_by_name: string;        // Snapshot of submitter's name (survives account deletion)
+  submitted_by_department?: string | null;  // Department of staff submitter (for routing approval to correct Head)
+  status: CalendarEntryStatus;      // pending (staff) / approved (after Head review or direct Head submission) / rejected
+  reviewed_by_email?: string | null;  // Head who approved/rejected
+  reviewed_at?: string | null;      // Timestamp of approval/rejection
+  rejection_reason?: string | null; // Optional reason if rejected
   created_at: string;               // ISO timestamp
   updated_at: string;               // ISO timestamp
 }
