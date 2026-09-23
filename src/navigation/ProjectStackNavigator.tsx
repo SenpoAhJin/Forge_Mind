@@ -9,6 +9,7 @@ import { ProjectsScreen } from '../screens/cosplayer/ProjectsScreen';
 import { ProjectDashboardScreen } from '../screens/cosplayer/ProjectDashboardScreen';
 import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
 import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
+import { CalendarBrowseScreen } from '../screens/cosplayer/CalendarBrowseScreen';
 import { getProjectById } from '../data';
 import { colors, typography } from '../theme';
 
@@ -17,6 +18,7 @@ export type ProjectStackParamList = {
   ProjectDashboard: { projectId: string };
   CreateProject: undefined;
   ContestsList: undefined;
+  CalendarBrowse: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProjectStackParamList>();
@@ -39,12 +41,17 @@ export const ProjectStackNavigator: React.FC = () => {
             onBrowseCharacters={() => navigation.getParent()?.navigate('Characters')}
             onOpenProject={(projectId) => navigation.navigate('ProjectDashboard', { projectId })}
             onOpenContests={() => navigation.navigate('ContestsList')}
+            onOpenCalendar={() => navigation.navigate('CalendarBrowse')}
           />
         )}
       </Stack.Screen>
 
       <Stack.Screen name="ContestsList" options={{ title: 'Contests' }}>
         {() => <ContestsListScreen />}
+      </Stack.Screen>
+
+      <Stack.Screen name="CalendarBrowse" options={{ title: 'Community Calendar' }}>
+        {() => <CalendarBrowseScreen />}
       </Stack.Screen>
 
       <Stack.Screen

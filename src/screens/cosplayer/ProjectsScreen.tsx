@@ -23,6 +23,7 @@ interface ProjectsScreenProps {
   onBrowseCharacters: () => void;
   onOpenProject: (projectId: string) => void;
   onOpenContests: () => void;
+  onOpenCalendar: () => void;
 }
 
 const badgeStatusFor = (status: ProjectStatus): 'pending' | 'active' | 'completed' | 'cancelled' => {
@@ -45,6 +46,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   onBrowseCharacters,
   onOpenProject,
   onOpenContests,
+  onOpenCalendar,
 }) => {
   const { user } = useUser();
   const { selection } = useSelection();
@@ -73,6 +75,20 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
             <View style={styles.contestsText}>
               <Text style={styles.contestsTitle}>Contest Events</Text>
               <Text style={styles.contestsSubtitle}>View and opt into contest competitions</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </View>
+        </StandardCard>
+      </TouchableOpacity>
+
+      {/* Community Calendar Entry Point Card */}
+      <TouchableOpacity onPress={onOpenCalendar} activeOpacity={0.7}>
+        <StandardCard style={styles.contestsCard}>
+          <View style={styles.contestsRow}>
+            <Ionicons name="calendar" size={24} color={colors.primary} />
+            <View style={styles.contestsText}>
+              <Text style={styles.contestsTitle}>Community Events</Text>
+              <Text style={styles.contestsSubtitle}>Discover upcoming cons and cosplay events</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </View>
