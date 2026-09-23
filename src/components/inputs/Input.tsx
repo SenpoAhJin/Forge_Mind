@@ -1,6 +1,7 @@
 /**
  * ForgeMind Design System - Input Components
  * Types: Text Input, Text Area, Dropdown, Photo Upload
+ * Auto-applies proper case (title case) to all text inputs
  */
 
 import React, { useState } from 'react';
@@ -13,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { colors, typography, borderRadius, spacing } from '../../theme';
+import { toProperCase } from '../../utils/textFormatting';
 
 // Text Input: Rounded 8px, border 1px, focus state with primary color border
 interface TextInputFieldProps {
@@ -38,6 +40,15 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
+  const handleTextChange = (text: string) => {
+    // Auto-apply proper case unless it's a password, email field, or numeric field
+    if (secureTextEntry || keyboardType === 'email-address' || keyboardType === 'numeric' || keyboardType === 'phone-pad') {
+      onChangeText(text);
+    } else {
+      onChangeText(toProperCase(text));
+    }
+  };
+
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -48,7 +59,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
           error && styles.textInputError,
         ]}
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={handleTextChange}
         placeholder={placeholder}
         placeholderTextColor={colors.textDisabled}
         secureTextEntry={secureTextEntry}
@@ -82,6 +93,11 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
+  const handleTextChange = (text: string) => {
+    // Auto-apply proper case to text areas
+    onChangeText(toProperCase(text));
+  };
+
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -93,7 +109,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
           error && styles.textInputError,
         ]}
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={handleTextChange}
         placeholder={placeholder}
         placeholderTextColor={colors.textDisabled}
         multiline

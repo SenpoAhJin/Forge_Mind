@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { toProperCase } from '../utils/textFormatting';
 
 interface RejectionReasonModalProps {
   visible: boolean;
@@ -79,7 +80,7 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
                 style={[styles.input, error ? styles.inputError : null]}
                 value={reason}
                 onChangeText={(text) => {
-                  setReason(text);
+                  setReason(toProperCase(text));
                   if (error) setError('');
                 }}
                 placeholder="e.g., Incomplete information, policy violation, etc."

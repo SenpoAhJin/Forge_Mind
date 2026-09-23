@@ -20,11 +20,53 @@ It is being built **mobile-first** (a phone app) using Expo (a tool that lets on
 
 ## 2. Current Status (one paragraph)
 
-The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), **owned-item logging** (photo/text/voice input with AI categorization), **staff/Head Organizer verification** (pending/approved/rejected department access requests), and a **full marketplace** (create listings, browse with category screener, make/receive purchase/trade/commission offers, transaction-scoped chat between buyers and sellers). Everything still uses **demo (mock) data** — there is no real server or AI yet, by design.
+The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), **owned-item logging** (photo/text/voice input with AI categorization), **staff/Head Organizer verification** (pending/approved/rejected department access requests), and a **full marketplace** (create listings, browse with category screener, make/receive purchase/trade/commission offers, transaction-scoped chat between buyers and sellers). All text inputs now automatically apply **proper case formatting** (first letter of each word capitalized) for consistency across the app. Everything still uses **demo (mock) data** — there is no real server or AI yet, by design.
 
 ---
 
 ## 3. Session History
+
+## Session — Wednesday, Sept 17, 2026, 00:30 (Auto Proper Case for All Text Inputs)
+
+### What we built
+
+**Global text formatting system that automatically capitalizes all user input.**
+
+**Text Formatting Utility**
+- Created `toProperCase()` utility function (src/utils/textFormatting.ts)
+- Converts text to title case: first letter of each word capitalized, rest lowercase
+- Handles hyphenated words (e.g., "spider-man" → "Spider-Man")
+- Preserves spacing and punctuation
+
+**Component Updates**
+- Updated `TextInputField` component to auto-apply proper case on all text input
+- Updated `TextAreaField` component to auto-apply proper case on multiline text
+- Updated `AppealModal` to apply proper case to appeal messages
+- Updated `RejectionReasonModal` to apply proper case to rejection reasons
+
+**Exceptions (fields that DON'T auto-capitalize)**
+- Password fields (`secureTextEntry={true}`)
+- Email address fields (`keyboardType="email-address"`)
+- Numeric fields (`keyboardType="numeric"`)
+- Phone number fields (`keyboardType="phone-pad"`)
+- Chat messages (intentionally left natural for conversational flow)
+
+**Testing**
+- Added comprehensive test suite (src/utils/__tests__/textFormatting.test.ts)
+- Tests cover: basic capitalization, uppercase conversion, mixed case, hyphenated words, special characters, numbers
+
+### Why this matters
+Ensures **visual consistency** across all user-generated content. Every event name, calendar entry, project title, task description, rejection reason, and appeal message will follow the same capitalization pattern, making the app look more polished and professional.
+
+### Technical details
+- Formatting applied at input level (real-time as user types)
+- Stored data is already formatted (no post-processing needed)
+- Works for all existing screens and will automatically apply to future text inputs
+
+### Commits
+- (to be committed)
+
+---
 
 ## Session — Wednesday, Sept 16, 2026, 23:00 (Events Fix Pack — visibility/sort/notifications)
 
