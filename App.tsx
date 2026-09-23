@@ -20,6 +20,8 @@ import { ContestProvider } from './src/contexts/ContestContext';
 import { LogisticsProvider } from './src/contexts/LogisticsContext';
 import { CommitmentLogProvider } from './src/contexts/CommitmentLogContext';
 import { CalendarProvider } from './src/contexts/CalendarContext';
+import { ThemeProvider } from './src/contexts/ThemeContext';
+import { DiaryProvider } from './src/contexts/DiaryContext';
 import { ConsentBanner } from './src/components';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
@@ -46,31 +48,35 @@ export default function App() {
   const appContent = (
     <SafeAreaProvider>
       <UserProvider>
-        <SelectionProvider>
-          <CommitmentLogProvider>
-            <EventsProvider>
-              <ProjectsProvider>
-                <OwnedAttireProvider>
-                  <MarketplaceProvider>
-                    <OffersProvider>
-                      <ChatProvider>
-                        <ContestProvider>
-                          <LogisticsProvider>
-                            <CalendarProvider>
-                              <RootNavigator />
-                              <ConsentBanner />
-                              <StatusBar style="auto" />
-                            </CalendarProvider>
-                          </LogisticsProvider>
-                        </ContestProvider>
-                      </ChatProvider>
-                    </OffersProvider>
-                  </MarketplaceProvider>
-                </OwnedAttireProvider>
-              </ProjectsProvider>
-            </EventsProvider>
-          </CommitmentLogProvider>
-        </SelectionProvider>
+        <ThemeProvider>
+          <DiaryProvider>
+            <SelectionProvider>
+              <CommitmentLogProvider>
+                <EventsProvider>
+                  <ProjectsProvider>
+                    <OwnedAttireProvider>
+                      <MarketplaceProvider>
+                        <OffersProvider>
+                          <ChatProvider>
+                            <ContestProvider>
+                              <LogisticsProvider>
+                                <CalendarProvider>
+                                  <RootNavigator />
+                                  <ConsentBanner />
+                                  <StatusBar style="auto" />
+                                </CalendarProvider>
+                              </LogisticsProvider>
+                            </ContestProvider>
+                          </ChatProvider>
+                        </OffersProvider>
+                      </MarketplaceProvider>
+                    </OwnedAttireProvider>
+                  </ProjectsProvider>
+                </EventsProvider>
+              </CommitmentLogProvider>
+            </SelectionProvider>
+          </DiaryProvider>
+        </ThemeProvider>
       </UserProvider>
     </SafeAreaProvider>
   );

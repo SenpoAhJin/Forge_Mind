@@ -9,6 +9,8 @@ import { ManageStaffScreen } from '../screens/organizer';
 import { CalendarManageScreen } from '../screens/organizer/CalendarManageScreen';
 import { CalendarApprovalScreen } from '../screens/organizer/CalendarApprovalScreen';
 import { ShareableCardScreen } from '../screens/shared/ShareableCardScreen';
+import { AppearanceHubScreen } from '../screens/shared/AppearanceHubScreen';
+import { CosplayDiaryScreen } from '../screens/cosplayer/CosplayDiaryScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -21,6 +23,8 @@ export type ProfileStackParamList = {
   CalendarManage: undefined;
   CalendarApproval: undefined;
   ShareableCard: undefined;
+  AppearanceHub: undefined;
+  CosplayDiary: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -80,6 +84,16 @@ export const ProfileStackNavigator: React.FC = () => {
         name="ShareableCard"
         component={ShareableCardScreen}
         options={{ title: 'Shareable Cards' }}
+      />
+      <Stack.Screen
+        name="AppearanceHub"
+        component={AppearanceHubScreen}
+        options={{ title: 'Appearance Hub' }}
+      />
+      <Stack.Screen
+        name="CosplayDiary"
+        component={CosplayDiaryScreen}
+        options={{ title: 'Cosplay Diary' }}
       />
     </Stack.Navigator>
   );

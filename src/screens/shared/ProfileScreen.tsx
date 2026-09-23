@@ -509,6 +509,40 @@ export const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Appearance Hub - Available to all users */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Appearance Hub</Text>
+        <Text style={styles.cardNote}>
+          Customize your app's color theme and visual preferences
+        </Text>
+        <TouchableOpacity
+          style={styles.cardButton}
+          onPress={() => navigation.navigate('AppearanceHub')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cardButtonText}>Customize Theme</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Cosplay Diary - Cosplayers only */}
+      {user?.is_cosplayer && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Cosplay Diary</Text>
+          <Text style={styles.cardNote}>
+            Personal photo journal for your completed cosplay projects
+          </Text>
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => navigation.navigate('CosplayDiary')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardButtonText}>View Your Diary</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Logout */}
       <View style={styles.logoutWrap}>
         <Button
