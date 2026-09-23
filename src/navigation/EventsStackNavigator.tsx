@@ -9,6 +9,7 @@ import { EventsScreen } from '../screens/organizer/EventsScreen';
 import { CreateEventScreen } from '../screens/organizer/CreateEventScreen';
 import { EventDetailScreen } from '../screens/organizer/EventDetailScreen';
 import { ContestManageScreen } from '../screens/organizer/ContestManageScreen';
+import { GroupMeetupScreen } from '../screens/organizer/GroupMeetupScreen';
 import { colors, typography } from '../theme';
 
 export type EventsStackParamList = {
@@ -16,6 +17,7 @@ export type EventsStackParamList = {
   CreateEvent: { eventId?: string } | undefined;
   EventDetail: { eventId: string };
   ContestManage: { eventId: string };
+  GroupMeetup: { eventId: string };
 };
 
 const Stack = createNativeStackNavigator<EventsStackParamList>();
@@ -49,6 +51,11 @@ export const EventsStackNavigator: React.FC = () => (
       name="ContestManage"
       component={ContestManageScreen}
       options={{ title: 'Manage Contest' }}
+    />
+    <Stack.Screen
+      name="GroupMeetup"
+      component={GroupMeetupScreen}
+      options={{ title: 'Group Meetup' }}
     />
   </Stack.Navigator>
 );

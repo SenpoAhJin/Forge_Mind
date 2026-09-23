@@ -275,6 +275,11 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   />
                 ) : null}
                 <Button
+                  title="Group Meetup Coordinator"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('GroupMeetup', { eventId: event.id })}
+                />
+                <Button
                   title="Cancel Event"
                   variant="destructive"
                   onPress={() => setShowCancelModal(true)}
