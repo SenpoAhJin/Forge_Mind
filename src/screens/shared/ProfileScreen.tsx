@@ -320,30 +320,6 @@ export const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Community Calendar */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Community Event Calendar</Text>
-            <Text style={styles.cardNote}>
-              {user.organizer_role === 'head' 
-                ? 'Submit and manage community event listings visible to all cosplayers. Moderated by staff and Head Organizers.'
-                : user.organizer_role === 'staff' && user.department_verification_status === 'approved'
-                ? 'Submit and manage community event listings for cosplayers to discover upcoming events.'
-                : 'View community event listings submitted by staff and organizers.'}
-            </Text>
-            <TouchableOpacity
-              style={styles.cardButton}
-              onPress={() => navigation.navigate('CalendarManage')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cardButtonText}>
-                {user.organizer_role === 'head' || (user.organizer_role === 'staff' && user.department_verification_status === 'approved')
-                  ? 'Manage Calendar Listings'
-                  : 'Browse Calendar'}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-
           {/* Marketplace Management */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Marketplace Management</Text>
@@ -385,6 +361,32 @@ export const ProfileScreen: React.FC = () => {
             </View>
           </View>
         </>
+      )}
+
+      {/* Community Calendar - visible to approved staff and Head Organizers */}
+      {user?.is_organizer && (user?.organizer_role === 'head' || (user?.organizer_role === 'staff' && user?.department_verification_status === 'approved')) && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Community Event Calendar</Text>
+          <Text style={styles.cardNote}>
+            {user.organizer_role === 'head' 
+              ? 'Submit and manage community event listings visible to all cosplayers. Moderated by staff and Head Organizers.'
+              : user.organizer_role === 'staff' && user.department_verification_status === 'approved'
+              ? 'Submit and manage community event listings for cosplayers to discover upcoming events.'
+              : 'View community event listings submitted by staff and organizers.'}
+          </Text>
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => navigation.navigate('CalendarManage')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardButtonText}>
+              {user.organizer_role === 'head' || (user.organizer_role === 'staff' && user.department_verification_status === 'approved')
+                ? 'Manage Calendar Listings'
+                : 'Browse Calendar'}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       )}
 
       {user?.is_organizer && user?.organizer_role === 'staff' && (
