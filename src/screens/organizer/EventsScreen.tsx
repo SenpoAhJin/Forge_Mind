@@ -40,8 +40,22 @@ export const EventsScreen: React.FC = () => {
       filtered = filtered.filter(e => e.status === selectedStatus);
     }
 
-    // Sort by start_date ascending
-    return filtered.sort((a, b) => a.start_date.localeCompare(b.start_date));
+    // Status priority: confirmed=0, draft=1, cancelled=2
+    const statusPriority = (status: EventStatus): number => {
+      switch (status) {
+        case 'confirmed': return 0;
+        case 'draft': return 1;
+        case 'cancelled': return 2;
+        default: return 3;
+      }
+    };
+
+    // Sort by status priority ascending, then start_date ascending
+    return filtered.sort((a, b) => {
+      const priorityDiff = statusPriority(a.status) - statusPriority(b.status);
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.start_date.localeCompare(b.start_date);
+    });
   };
 
   // Helper: Check if event is in the past
