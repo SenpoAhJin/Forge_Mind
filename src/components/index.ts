@@ -20,3 +20,4 @@ export * from './AppealModal';
 export * from './ListingBlockedModal';
 export * from './GlobalNotificationHandler';
 export * from './StaffPickerModal';
+export * from './ConsentBanner';

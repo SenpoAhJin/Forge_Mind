@@ -20,6 +20,7 @@ import { ContestProvider } from './src/contexts/ContestContext';
 import { LogisticsProvider } from './src/contexts/LogisticsContext';
 import { CommitmentLogProvider } from './src/contexts/CommitmentLogContext';
 import { CalendarProvider } from './src/contexts/CalendarContext';
+import { ConsentBanner } from './src/components';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
@@ -57,6 +58,7 @@ export default function App() {
                           <LogisticsProvider>
                             <CalendarProvider>
                               <RootNavigator />
+                              <ConsentBanner />
                               <StatusBar style="auto" />
                             </CalendarProvider>
                           </LogisticsProvider>

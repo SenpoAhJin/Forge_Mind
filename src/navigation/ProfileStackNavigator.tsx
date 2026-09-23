@@ -8,6 +8,7 @@ import { VerifyStaffScreen } from '../screens/organizer';
 import { ManageStaffScreen } from '../screens/organizer';
 import { CalendarManageScreen } from '../screens/organizer/CalendarManageScreen';
 import { CalendarApprovalScreen } from '../screens/organizer/CalendarApprovalScreen';
+import { ShareableCardScreen } from '../screens/shared/ShareableCardScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -19,6 +20,7 @@ export type ProfileStackParamList = {
   ManageStaff: undefined;
   CalendarManage: undefined;
   CalendarApproval: undefined;
+  ShareableCard: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -73,6 +75,11 @@ export const ProfileStackNavigator: React.FC = () => {
         name="CalendarApproval"
         component={CalendarApprovalScreen}
         options={{ title: 'Approve Calendar Listings' }}
+      />
+      <Stack.Screen
+        name="ShareableCard"
+        component={ShareableCardScreen}
+        options={{ title: 'Shareable Cards' }}
       />
     </Stack.Navigator>
   );
