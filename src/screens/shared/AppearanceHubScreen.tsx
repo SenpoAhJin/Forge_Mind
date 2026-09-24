@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StandardCard, Button } from '../../components';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius } from '../../theme';
 import { useTheme, ThemePreset } from '../../contexts/ThemeContext';
 
 const themeInfo: Record<ThemePreset, { name: string; description: string; icon: string }> = {
@@ -49,8 +49,11 @@ export const AppearanceHubScreen: React.FC = () => {
 
   const hasChanges = selectedTheme !== currentTheme;
 
+  // Use theme colors from context
+  const colors = themeColors;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: '#F5F5F7' }]} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Appearance Hub</Text>
@@ -117,7 +120,7 @@ export const AppearanceHubScreen: React.FC = () => {
                 <Ionicons
                   name={info.icon as any}
                   size={40}
-                  color={isSelected ? colors.primary : colors.textSecondary}
+                  color={isSelected ? colors.primary : '#6B6B6B'}
                 />
                 <Text style={[styles.themeName, isSelected && styles.themeNameSelected]}>
                   {info.name}
@@ -144,14 +147,14 @@ export const AppearanceHubScreen: React.FC = () => {
             fullWidth
           />
           <Text style={styles.applyNote}>
-            Note: Theme changes are currently visual only. Full theme integration in progress.
+            Theme changes apply to color swatches in this screen only. Full app theming requires rewiring 50+ component files.
           </Text>
         </View>
       )}
 
       {/* Info Notice */}
       <View style={styles.infoNotice}>
-        <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+        <Ionicons name="information-circle-outline" size={20} color={'#6B6B6B'} />
         <Text style={styles.infoText}>
           Your theme preference is personal and won't affect other users' experience. More customization options coming soon!
         </Text>
@@ -163,7 +166,6 @@ export const AppearanceHubScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
   },
   content: {
     padding: spacing.lg,
@@ -174,11 +176,11 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-    color: colors.textPrimary,
+    color: '#2C2C2C',
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: '#6B6B6B',
     marginTop: spacing.xs,
   },
   previewCard: {
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
+    color: '#2C2C2C',
     marginBottom: spacing.md,
   },
   currentTheme: {
@@ -201,11 +203,11 @@ const styles = StyleSheet.create({
   },
   currentThemeName: {
     ...typography.h3,
-    color: colors.textPrimary,
+    color: '#2C2C2C',
   },
   currentThemeDesc: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#6B6B6B',
     marginTop: spacing.xs / 2,
   },
   colorSwatches: {
@@ -213,7 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#E0E0E0',
   },
   swatch: {
     alignItems: 'center',
@@ -231,7 +233,7 @@ const styles = StyleSheet.create({
   },
   swatchLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#6B6B6B',
   },
   section: {
     marginBottom: spacing.xl,
@@ -241,44 +243,44 @@ const styles = StyleSheet.create({
   },
   themeCard: {
     padding: spacing.lg,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: '#E0E0E0',
     alignItems: 'center',
     position: 'relative',
   },
   themeCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
+    borderColor: '#6B4CE6',
+    backgroundColor: '#6B4CE610',
   },
   currentBadge: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    backgroundColor: colors.success,
+    backgroundColor: '#4CAF50',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
     borderRadius: borderRadius.full,
   },
   currentBadgeText: {
     ...typography.caption,
-    color: colors.backgroundLight,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 10,
   },
   themeName: {
     ...typography.body,
-    color: colors.textPrimary,
+    color: '#2C2C2C',
     fontWeight: '600',
     marginTop: spacing.sm,
   },
   themeNameSelected: {
-    color: colors.primary,
+    color: '#6B4CE6',
   },
   themeDesc: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#6B6B6B',
     textAlign: 'center',
     marginTop: spacing.xs / 2,
   },
@@ -292,7 +294,7 @@ const styles = StyleSheet.create({
   },
   applyNote: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#6B6B6B',
     textAlign: 'center',
     marginTop: spacing.md,
     fontStyle: 'italic',
@@ -302,14 +304,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.md,
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+    borderLeftColor: '#6B4CE6',
   },
   infoText: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#6B6B6B',
     flex: 1,
     lineHeight: 18,
   },
