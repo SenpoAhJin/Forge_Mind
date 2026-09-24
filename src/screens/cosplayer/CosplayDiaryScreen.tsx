@@ -6,17 +6,59 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { StandardCard, Button, TextAreaField } from '../../components';
-import { colors, typography, spacing, borderRadius } from '../../theme';
-import { useDiary, DiaryEntry } from '../../contexts/DiaryContext';
+import { Button, TextAreaField, ConfirmationModal } from '../../components';
+import { typography, spacing, borderRadius } from '../../theme';
+import { useDiary } from '../../contexts/DiaryContext';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { getCharacterById, getVariantById } from '../../data';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
+
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  container: { backgroundColor: themeColors.surface },
+  title: { color: themeColors.textPrimary },
+  subtitle: { color: themeColors.textSecondary },
+  ctaCard: { backgroundColor: themeColors.primary + '10', borderColor: themeColors.primary + '30' },
+  ctaTitle: { color: themeColors.primary },
+  ctaSubtitle: { color: themeColors.textSecondary },
+  emptyTitle: { color: themeColors.textPrimary },
+  emptySub: { color: themeColors.textSecondary },
+  sectionTitle: { color: themeColors.textPrimary },
+  entryCard: { backgroundColor: themeColors.backgroundLight },
+  entryProject: { color: themeColors.textPrimary },
+  entryCharacter: { color: themeColors.textSecondary },
+  entryDate: { color: themeColors.textDisabled },
+  ratingText: { color: themeColors.textSecondary },
+  photoPlaceholder: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+  photoLabel: { color: themeColors.textDisabled },
+  morePhotos: { color: themeColors.textSecondary },
+  notesSection: { borderTopColor: themeColors.border },
+  notesLabel: { color: themeColors.textSecondary },
+  notesText: { color: themeColors.textPrimary },
+  entryActions: { borderTopColor: themeColors.border },
+  actionButton: { backgroundColor: themeColors.surface },
+  actionText: { color: themeColors.primary },
+  actionTextDelete: { color: themeColors.error },
+  infoNotice: { backgroundColor: themeColors.backgroundLight, borderLeftColor: themeColors.primary },
+  infoText: { color: themeColors.textSecondary },
+  modalContainer: { backgroundColor: themeColors.surface },
+  modalTitle: { color: themeColors.textPrimary },
+  formLabel: { color: themeColors.textPrimary },
+  projectChip: { backgroundColor: themeColors.backgroundLight, borderColor: themeColors.border },
+  projectChipSelected: { backgroundColor: themeColors.primary + '20', borderColor: themeColors.primary },
+  projectChipText: { color: themeColors.textSecondary },
+  projectChipTextSelected: { color: themeColors.primary },
+  addPhotoButton: { backgroundColor: themeColors.backgroundLight, borderColor: themeColors.border },
+  addPhotoText: { color: themeColors.primary },
+  removePhotoButton: { backgroundColor: themeColors.backgroundLight },
+});
 
 export const CosplayDiaryScreen: React.FC = () => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
   const navigation = useNavigation<any>();
   const { entries, createEntry } = useDiary();
   const { projects } = useProjects();
@@ -29,6 +71,13 @@ export const CosplayDiaryScreen: React.FC = () => {
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Confirmation modals
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showNoProjectsModal, setShowNoProjectsModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   // Get completed projects without diary entries (can create entry)
   const completedProjects = projects.filter((p) => p.status === 'completed');
   const projectsWithoutEntry = completedProjects.filter(
@@ -38,7 +87,7 @@ export const CosplayDiaryScreen: React.FC = () => {
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
+      setShowPermissionModal(true);
       return;
     }
 
@@ -60,7 +109,7 @@ export const CosplayDiaryScreen: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     if (projectsWithoutEntry.length === 0) {
-      Alert.alert('No Projects Available', 'Complete a project first to create a diary entry.');
+      setShowNoProjectsModal(true);
       return;
     }
     setSelectedProject(projectsWithoutEntry[0].project_id);
@@ -72,7 +121,8 @@ export const CosplayDiaryScreen: React.FC = () => {
 
   const handleCreateEntry = async () => {
     if (!selectedProject) {
-      Alert.alert('Error', 'Please select a project.');
+      setErrorMessage('Please select a project.');
+      setShowErrorModal(true);
       return;
     }
 
@@ -96,9 +146,10 @@ export const CosplayDiaryScreen: React.FC = () => {
       });
 
       setShowCreateModal(false);
-      Alert.alert('Success', 'Diary entry created successfully!');
+      setShowSuccessModal(true);
     } catch (error) {
-      Alert.alert('Error', 'Failed to create diary entry. Please try again.');
+      setErrorMessage('Failed to create diary entry. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -112,7 +163,7 @@ export const CosplayDiaryScreen: React.FC = () => {
             key={star}
             name={star <= rating ? 'star' : 'star-outline'}
             size={20}
-            color={star <= rating ? colors.warning : colors.textDisabled}
+            color={star <= rating ? themeColors.warning : themeColors.textDisabled}
           />
         ))}
       </View>
@@ -120,23 +171,23 @@ export const CosplayDiaryScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, dynamicStyles.container]} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Cosplay Diary</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, dynamicStyles.title]}>Cosplay Diary</Text>
+        <Text style={[styles.subtitle, dynamicStyles.subtitle]}>
           Your personal journal for completed looks. Photos, ratings, and memories.
         </Text>
       </View>
 
       {/* Create Entry CTA */}
       {projectsWithoutEntry.length > 0 && (
-        <StandardCard style={styles.ctaCard}>
+        <View style={[styles.ctaCard, dynamicStyles.ctaCard]}>
           <View style={styles.ctaHeader}>
-            <Ionicons name="add-circle" size={32} color={colors.primary} />
+            <Ionicons name="add-circle" size={32} color={themeColors.primary} />
             <View style={styles.ctaText}>
-              <Text style={styles.ctaTitle}>Document Your Cosplays</Text>
-              <Text style={styles.ctaSubtitle}>
+              <Text style={[styles.ctaTitle, dynamicStyles.ctaTitle]}>Document Your Cosplays</Text>
+              <Text style={[styles.ctaSubtitle, dynamicStyles.ctaSubtitle]}>
                 {projectsWithoutEntry.length} completed project{projectsWithoutEntry.length > 1 ? 's' : ''} waiting to be journaled
               </Text>
             </View>
@@ -147,65 +198,65 @@ export const CosplayDiaryScreen: React.FC = () => {
             onPress={handleOpenCreateModal}
             fullWidth
           />
-        </StandardCard>
+        </View>
       )}
 
       {/* Diary Entries */}
       {entries.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="book-outline" size={64} color={colors.textDisabled} />
-          <Text style={styles.emptyTitle}>No Diary Entries Yet</Text>
-          <Text style={styles.emptySub}>
+          <Ionicons name="book-outline" size={64} color={themeColors.textDisabled} />
+          <Text style={[styles.emptyTitle, dynamicStyles.emptyTitle]}>No Diary Entries Yet</Text>
+          <Text style={[styles.emptySub, dynamicStyles.emptySub]}>
             Complete a project and document your cosplay journey with photos and notes
           </Text>
         </View>
       ) : (
         <View style={styles.entriesSection}>
-          <Text style={styles.sectionTitle}>Your Entries ({entries.length})</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Your Entries ({entries.length})</Text>
           {entries.map((entry) => {
             const isExpanded = expandedEntry === entry.id;
             
             return (
               <TouchableOpacity
                 key={entry.id}
-                style={styles.entryCard}
+                style={[styles.entryCard, dynamicStyles.entryCard]}
                 onPress={() => setExpandedEntry(isExpanded ? null : entry.id)}
                 activeOpacity={0.7}
               >
                 {/* Entry Header */}
                 <View style={styles.entryHeader}>
                   <View style={styles.entryInfo}>
-                    <Text style={styles.entryProject}>{entry.project_name}</Text>
-                    <Text style={styles.entryCharacter}>
+                    <Text style={[styles.entryProject, dynamicStyles.entryProject]}>{entry.project_name}</Text>
+                    <Text style={[styles.entryCharacter, dynamicStyles.entryCharacter]}>
                       {entry.character_name} - {entry.variant_name}
                     </Text>
-                    <Text style={styles.entryDate}>{entry.completion_date}</Text>
+                    <Text style={[styles.entryDate, dynamicStyles.entryDate]}>{entry.completion_date}</Text>
                   </View>
                   <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
                     size={24}
-                    color={colors.textSecondary}
+                    color={themeColors.textSecondary}
                   />
                 </View>
 
                 {/* Rating */}
                 <View style={styles.entryRating}>
                   {renderStars(entry.rating)}
-                  <Text style={styles.ratingText}>{entry.rating}/5</Text>
+                  <Text style={[styles.ratingText, dynamicStyles.ratingText]}>{entry.rating}/5</Text>
                 </View>
 
                 {/* Photos Grid (collapsed: show first 3) */}
                 {entry.photos.length > 0 && (
                   <View style={styles.photosGrid}>
                     {entry.photos.slice(0, isExpanded ? entry.photos.length : 3).map((photo, index) => (
-                      <View key={index} style={styles.photoPlaceholder}>
-                        <Ionicons name="image" size={32} color={colors.textDisabled} />
-                        <Text style={styles.photoLabel}>Photo {index + 1}</Text>
+                      <View key={index} style={[styles.photoPlaceholder, dynamicStyles.photoPlaceholder]}>
+                        <Ionicons name="image" size={32} color={themeColors.textDisabled} />
+                        <Text style={[styles.photoLabel, dynamicStyles.photoLabel]}>Photo {index + 1}</Text>
                       </View>
                     ))}
                     {!isExpanded && entry.photos.length > 3 && (
-                      <View style={styles.photoPlaceholder}>
-                        <Text style={styles.morePhotos}>+{entry.photos.length - 3}</Text>
+                      <View style={[styles.photoPlaceholder, dynamicStyles.photoPlaceholder]}>
+                        <Text style={[styles.morePhotos, dynamicStyles.morePhotos]}>+{entry.photos.length - 3}</Text>
                       </View>
                     )}
                   </View>
@@ -213,22 +264,22 @@ export const CosplayDiaryScreen: React.FC = () => {
 
                 {/* Notes (expanded only) */}
                 {isExpanded && entry.notes && (
-                  <View style={styles.notesSection}>
-                    <Text style={styles.notesLabel}>Notes:</Text>
-                    <Text style={styles.notesText}>{entry.notes}</Text>
+                  <View style={[styles.notesSection, dynamicStyles.notesSection]}>
+                    <Text style={[styles.notesLabel, dynamicStyles.notesLabel]}>Notes:</Text>
+                    <Text style={[styles.notesText, dynamicStyles.notesText]}>{entry.notes}</Text>
                   </View>
                 )}
 
                 {/* Actions (expanded only) */}
                 {isExpanded && (
-                  <View style={styles.entryActions}>
-                    <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-                      <Ionicons name="create-outline" size={20} color={colors.primary} />
-                      <Text style={styles.actionText}>Edit</Text>
+                  <View style={[styles.entryActions, dynamicStyles.entryActions]}>
+                    <TouchableOpacity style={[styles.actionButton, dynamicStyles.actionButton]} activeOpacity={0.7}>
+                      <Ionicons name="create-outline" size={20} color={themeColors.primary} />
+                      <Text style={[styles.actionText, dynamicStyles.actionText]}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-                      <Ionicons name="trash-outline" size={20} color={colors.error} />
-                      <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
+                    <TouchableOpacity style={[styles.actionButton, dynamicStyles.actionButton]} activeOpacity={0.7}>
+                      <Ionicons name="trash-outline" size={20} color={themeColors.error} />
+                      <Text style={[styles.actionText, dynamicStyles.actionTextDelete]}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -239,9 +290,9 @@ export const CosplayDiaryScreen: React.FC = () => {
       )}
 
       {/* Info Notice */}
-      <View style={styles.infoNotice}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-        <Text style={styles.infoText}>
+      <View style={[styles.infoNotice, dynamicStyles.infoNotice]}>
+        <Ionicons name="information-circle-outline" size={16} color={themeColors.textSecondary} />
+        <Text style={[styles.infoText, dynamicStyles.infoText]}>
           Your diary is personal and private. It's separate from the AI matching system and only visible to you.
         </Text>
       </View>
@@ -253,30 +304,38 @@ export const CosplayDiaryScreen: React.FC = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowCreateModal(false)}
       >
-        <ScrollView style={styles.modalContainer} contentContainerStyle={styles.modalContent}>
+        <ScrollView style={[styles.modalContainer, dynamicStyles.modalContainer]} contentContainerStyle={styles.modalContent}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowCreateModal(false)} activeOpacity={0.7}>
-              <Ionicons name="close" size={28} color={colors.textPrimary} />
+              <Ionicons name="close" size={28} color={themeColors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>New Diary Entry</Text>
+            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>New Diary Entry</Text>
             <View style={{ width: 28 }} />
           </View>
 
           {/* Project Picker */}
           <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Select Project</Text>
+            <Text style={[styles.formLabel, dynamicStyles.formLabel]}>Select Project</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.projectPicker}>
               {projectsWithoutEntry.map((project) => {
                 const isSelected = selectedProject === project.project_id;
                 return (
                   <TouchableOpacity
                     key={project.project_id}
-                    style={[styles.projectChip, isSelected && styles.projectChipSelected]}
+                    style={[
+                      styles.projectChip,
+                      dynamicStyles.projectChip,
+                      isSelected && dynamicStyles.projectChipSelected
+                    ]}
                     onPress={() => setSelectedProject(project.project_id)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.projectChipText, isSelected && styles.projectChipTextSelected]}>
+                    <Text style={[
+                      styles.projectChipText,
+                      dynamicStyles.projectChipText,
+                      isSelected && dynamicStyles.projectChipTextSelected
+                    ]}>
                       {project.project_name}
                     </Text>
                   </TouchableOpacity>
@@ -287,21 +346,21 @@ export const CosplayDiaryScreen: React.FC = () => {
 
           {/* Photo Upload */}
           <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Photos ({photoUris.length})</Text>
+            <Text style={[styles.formLabel, dynamicStyles.formLabel]}>Photos ({photoUris.length})</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosList}>
-              <TouchableOpacity style={styles.addPhotoButton} onPress={handlePickImage} activeOpacity={0.7}>
-                <Ionicons name="camera" size={32} color={colors.primary} />
-                <Text style={styles.addPhotoText}>Add Photo</Text>
+              <TouchableOpacity style={[styles.addPhotoButton, dynamicStyles.addPhotoButton]} onPress={handlePickImage} activeOpacity={0.7}>
+                <Ionicons name="camera" size={32} color={themeColors.primary} />
+                <Text style={[styles.addPhotoText, dynamicStyles.addPhotoText]}>Add Photo</Text>
               </TouchableOpacity>
               {photoUris.map((uri, index) => (
                 <View key={index} style={styles.photoPreview}>
                   <Image source={{ uri }} style={styles.photoImage} />
                   <TouchableOpacity
-                    style={styles.removePhotoButton}
+                    style={[styles.removePhotoButton, dynamicStyles.removePhotoButton]}
                     onPress={() => handleRemovePhoto(index)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="close-circle" size={24} color={colors.error} />
+                    <Ionicons name="close-circle" size={24} color={themeColors.error} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -310,14 +369,14 @@ export const CosplayDiaryScreen: React.FC = () => {
 
           {/* Rating */}
           <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Rating</Text>
+            <Text style={[styles.formLabel, dynamicStyles.formLabel]}>Rating</Text>
             <View style={styles.ratingPicker}>
               {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
                   <Ionicons
                     name={star <= rating ? 'star' : 'star-outline'}
                     size={40}
-                    color={star <= rating ? colors.warning : colors.textDisabled}
+                    color={star <= rating ? themeColors.warning : themeColors.textDisabled}
                   />
                 </TouchableOpacity>
               ))}
@@ -326,7 +385,7 @@ export const CosplayDiaryScreen: React.FC = () => {
 
           {/* Notes */}
           <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Notes (Optional)</Text>
+            <Text style={[styles.formLabel, dynamicStyles.formLabel]}>Notes (Optional)</Text>
             <TextAreaField
               value={notes}
               onChangeText={setNotes}
@@ -344,6 +403,43 @@ export const CosplayDiaryScreen: React.FC = () => {
           />
         </ScrollView>
       </Modal>
+
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        visible={showPermissionModal}
+        title="Permission Required"
+        message="We need access to your photo library to add photos to your diary entries."
+        confirmText="OK"
+        onConfirm={() => setShowPermissionModal(false)}
+        onCancel={() => setShowPermissionModal(false)}
+      />
+
+      <ConfirmationModal
+        visible={showNoProjectsModal}
+        title="No Projects Available"
+        message="You don't have any completed projects without diary entries yet. Complete a project first!"
+        confirmText="OK"
+        onConfirm={() => setShowNoProjectsModal(false)}
+        onCancel={() => setShowNoProjectsModal(false)}
+      />
+
+      <ConfirmationModal
+        visible={showErrorModal}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setShowErrorModal(false)}
+        onCancel={() => setShowErrorModal(false)}
+      />
+
+      <ConfirmationModal
+        visible={showSuccessModal}
+        title="Success!"
+        message="Your diary entry has been created successfully."
+        confirmText="Great!"
+        onConfirm={() => setShowSuccessModal(false)}
+        onCancel={() => setShowSuccessModal(false)}
+      />
     </ScrollView>
   );
 };
@@ -351,7 +447,6 @@ export const CosplayDiaryScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
   },
   content: {
     padding: spacing.lg,
@@ -362,19 +457,21 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-    color: colors.textPrimary,
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   ctaCard: {
     marginBottom: spacing.xl,
     padding: spacing.lg,
-    backgroundColor: colors.primary + '10',
     borderWidth: 2,
-    borderColor: colors.primary + '30',
+    borderRadius: borderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   ctaHeader: {
     flexDirection: 'row',
@@ -387,11 +484,9 @@ const styles = StyleSheet.create({
   },
   ctaTitle: {
     ...typography.h3,
-    color: colors.primary,
   },
   ctaSubtitle: {
     ...typography.caption,
-    color: colors.textSecondary,
     marginTop: spacing.xs / 2,
   },
   emptyState: {
@@ -400,12 +495,10 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
     marginTop: spacing.md,
   },
   emptySub: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xl,
@@ -415,11 +508,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   entryCard: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
@@ -440,16 +531,13 @@ const styles = StyleSheet.create({
   },
   entryProject: {
     ...typography.h3,
-    color: colors.textPrimary,
   },
   entryCharacter: {
     ...typography.body,
-    color: colors.textSecondary,
     marginTop: spacing.xs / 2,
   },
   entryDate: {
     ...typography.caption,
-    color: colors.textDisabled,
     marginTop: spacing.xs / 2,
   },
   entryRating: {
@@ -464,7 +552,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   photosGrid: {
@@ -476,39 +563,32 @@ const styles = StyleSheet.create({
   photoPlaceholder: {
     width: 80,
     height: 80,
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
   },
   photoLabel: {
     ...typography.caption,
-    color: colors.textDisabled,
     fontSize: 10,
     marginTop: spacing.xs / 2,
   },
   morePhotos: {
     ...typography.h3,
-    color: colors.textSecondary,
   },
   notesSection: {
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     marginBottom: spacing.md,
   },
   notesLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
   notesText: {
     ...typography.body,
-    color: colors.textPrimary,
     lineHeight: 22,
   },
   entryActions: {
@@ -516,7 +596,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   actionButton: {
     flexDirection: 'row',
@@ -524,12 +603,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
   },
   actionText: {
     ...typography.caption,
-    color: colors.primary,
     fontWeight: '600',
   },
   infoNotice: {
@@ -537,20 +614,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.md,
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
   },
   infoText: {
     ...typography.caption,
-    color: colors.textSecondary,
     flex: 1,
     lineHeight: 18,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.surface,
   },
   modalContent: {
     padding: spacing.lg,
@@ -565,14 +638,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...typography.h2,
-    color: colors.textPrimary,
   },
   formSection: {
     marginBottom: spacing.xl,
   },
   formLabel: {
     ...typography.body,
-    color: colors.textPrimary,
     fontWeight: '600',
     marginBottom: spacing.sm,
   },
@@ -582,23 +653,19 @@ const styles = StyleSheet.create({
   projectChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.full,
     borderWidth: 2,
-    borderColor: colors.border,
     marginRight: spacing.sm,
   },
   projectChipSelected: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
+    // Dynamic styles applied via getDynamicStyles
   },
   projectChipText: {
     ...typography.body,
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   projectChipTextSelected: {
-    color: colors.primary,
+    // Dynamic styles applied via getDynamicStyles
   },
   photosList: {
     flexDirection: 'row',
@@ -606,10 +673,8 @@ const styles = StyleSheet.create({
   addPhotoButton: {
     width: 100,
     height: 100,
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.md,
     borderWidth: 2,
-    borderColor: colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -617,7 +682,6 @@ const styles = StyleSheet.create({
   },
   addPhotoText: {
     ...typography.caption,
-    color: colors.primary,
     marginTop: spacing.xs,
     fontWeight: '600',
   },
@@ -636,7 +700,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: colors.backgroundLight,
     borderRadius: 12,
   },
   ratingPicker: {
