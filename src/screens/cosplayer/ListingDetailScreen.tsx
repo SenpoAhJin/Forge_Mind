@@ -126,7 +126,22 @@ export const ListingDetailScreen: React.FC = () => {
     commission: 'Request Commission',
   };
 
-  const formattedPrice = formatPHP(listing.price);
+  const formattedPrice = listing.transaction_type === 'trade' 
+    ? 'Trade Only' 
+    : formatPHP(listing.price);
+  
+  const transactionTypeLabels = {
+    buy: 'Buy Only',
+    trade: 'Trade Only',
+    both: 'Buy or Trade'
+  };
+
+  const transactionTypeIcons = {
+    buy: 'cash-outline',
+    trade: 'swap-horizontal-outline',
+    both: 'options-outline'
+  };
+
   const formattedDate = new Date(listing.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -145,6 +160,18 @@ export const ListingDetailScreen: React.FC = () => {
               {CONDITION_LABELS[listing.condition]}
             </Text>
           </View>
+        </View>
+        
+        {/* Transaction Type Badge */}
+        <View style={styles.transactionTypeBadge}>
+          <Ionicons 
+            name={transactionTypeIcons[listing.transaction_type] as any} 
+            size={16} 
+            color={colors.primary} 
+          />
+          <Text style={styles.transactionTypeText}>
+            {transactionTypeLabels[listing.transaction_type]}
+          </Text>
         </View>
       </View>
 
@@ -296,6 +323,22 @@ const styles = StyleSheet.create({
   conditionText: {
     ...typography.caption,
     color: colors.secondary,
+    fontWeight: '600',
+  },
+  transactionTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  transactionTypeText: {
+    ...typography.caption,
+    color: colors.primary,
     fontWeight: '600',
   },
   infoRow: {

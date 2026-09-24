@@ -9,6 +9,8 @@ export type MarketplaceCondition = 'new' | 'like_new' | 'good' | 'fair' | 'well_
 
 export type ListingStatus = 'active' | 'sold' | 'cancelled' | 'blocked';
 
+export type TransactionType = 'buy' | 'trade' | 'both';
+
 // Outcome of the permitted-category screener for a listing (FE-6 Step 2).
 // 'blocked' = failed the screen at the point of posting and never went public.
 export type ScreeningResult = 'passed' | 'blocked';
@@ -22,7 +24,8 @@ export interface Listing {
   title: string;
   description: string;
   category: string;                    // From permitted-category list
-  price: number;
+  transaction_type: TransactionType;   // Buy (monetary), Trade (barter), or Both
+  price: number;                       // Required for 'buy'/'both', can be 0 for 'trade'
   condition: MarketplaceCondition;
   photos: string[];                    // Mock: can be empty array or placeholder URLs
   status: ListingStatus;
@@ -37,6 +40,7 @@ export interface CreateListingInput {
   title: string;
   description: string;
   category: string;
+  transaction_type: TransactionType;
   price: number;
   condition: MarketplaceCondition;
   photos: string[];

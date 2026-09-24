@@ -21,7 +21,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { TextInputField, TextAreaField, Button, AppealModal, ListingBlockedModal, ConfirmationModal } from '../../components';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
-import { MarketplaceCondition, Listing } from '../../types/marketplace';
+import { MarketplaceCondition, Listing, TransactionType } from '../../types/marketplace';
 import { screenListing } from '../../utils/listingScreener';
 
 interface CreateListingScreenProps {
@@ -36,12 +36,14 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [transactionType, setTransactionType] = useState<TransactionType | ''>('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<MarketplaceCondition | ''>('');
 
   const [titleError, setTitleError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
   const [categoryError, setCategoryError] = useState('');
+  const [transactionTypeError, setTransactionTypeError] = useState('');
   const [priceError, setPriceError] = useState('');
   const [conditionError, setConditionError] = useState('');
   const [globalError, setGlobalError] = useState('');
@@ -60,6 +62,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
     setTitleError('');
     setDescriptionError('');
     setCategoryError('');
+    setTransactionTypeError('');
     setPriceError('');
     setConditionError('');
     setGlobalError('');
@@ -88,14 +91,22 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
       isValid = false;
     }
 
-    // Price
+    // Transaction Type
+    if (!transactionType) {
+      setTransactionTypeError('Please select transaction type');
+      isValid = false;
+    }
+
+    // Price (required for 'buy' or 'both', optional for 'trade')
     const priceNum = parseFloat(price);
-    if (!price.trim()) {
-      setPriceError('Price is required');
-      isValid = false;
-    } else if (isNaN(priceNum) || priceNum <= 0) {
-      setPriceError('Please enter a valid price greater than 0');
-      isValid = false;
+    if (transactionType === 'buy' || transactionType === 'both') {
+      if (!price.trim()) {
+        setPriceError('Price is required for Buy transactions');
+        isValid = false;
+      } else if (isNaN(priceNum) || priceNum <= 0) {
+        setPriceError('Please enter a valid price greater than 0');
+        isValid = false;
+      }
     }
 
     // Condition
@@ -122,7 +133,8 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
       title: title.trim(),
       description: description.trim(),
       category,
-      price: parseFloat(price),
+      transaction_type: transactionType as TransactionType,
+      price: transactionType === 'trade' ? 0 : parseFloat(price),
       condition: condition as MarketplaceCondition,
       photos: [], // No photo upload in Step 1
     };
@@ -259,12 +271,112 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
             {categoryError ? <Text style={styles.errorText}>{categoryError}</Text> : null}
           </View>
 
+          {/* Transaction Type */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Transaction Type *</Text>
+            <Text style={styles.helperText}>How do you want to receive payment?</Text>
+            <View style={styles.transactionTypeContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.transactionTypeButton,
+                  transactionType === 'buy' && styles.transactionTypeButtonSelected,
+                ]}
+                onPress={() => {
+                  setTransactionType('buy');
+                  setTransactionTypeError('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="cash-outline" 
+                  size={24} 
+                  color={transactionType === 'buy' ? colors.backgroundLight : colors.textSecondary} 
+                />
+                <Text style={[
+                  styles.transactionTypeText,
+                  transactionType === 'buy' && styles.transactionTypeTextSelected,
+                ]}>
+                  Buy
+                </Text>
+                <Text style={[
+                  styles.transactionTypeSubtext,
+                  transactionType === 'buy' && styles.transactionTypeSubtextSelected,
+                ]}>
+                  Monetary payment
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.transactionTypeButton,
+                  transactionType === 'trade' && styles.transactionTypeButtonSelected,
+                ]}
+                onPress={() => {
+                  setTransactionType('trade');
+                  setTransactionTypeError('');
+                  setPrice(''); // Clear price for trade-only
+                  setPriceError('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="swap-horizontal-outline" 
+                  size={24} 
+                  color={transactionType === 'trade' ? colors.backgroundLight : colors.textSecondary} 
+                />
+                <Text style={[
+                  styles.transactionTypeText,
+                  transactionType === 'trade' && styles.transactionTypeTextSelected,
+                ]}>
+                  Trade
+                </Text>
+                <Text style={[
+                  styles.transactionTypeSubtext,
+                  transactionType === 'trade' && styles.transactionTypeSubtextSelected,
+                ]}>
+                  Item exchange
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.transactionTypeButton,
+                  transactionType === 'both' && styles.transactionTypeButtonSelected,
+                ]}
+                onPress={() => {
+                  setTransactionType('both');
+                  setTransactionTypeError('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="options-outline" 
+                  size={24} 
+                  color={transactionType === 'both' ? colors.backgroundLight : colors.textSecondary} 
+                />
+                <Text style={[
+                  styles.transactionTypeText,
+                  transactionType === 'both' && styles.transactionTypeTextSelected,
+                ]}>
+                  Both
+                </Text>
+                <Text style={[
+                  styles.transactionTypeSubtext,
+                  transactionType === 'both' && styles.transactionTypeSubtextSelected,
+                ]}>
+                  Open to either
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {transactionTypeError ? <Text style={styles.errorText}>{transactionTypeError}</Text> : null}
+          </View>
+
           {/* Price */}
           <TextInputField
-            label="Price (₱) *"
+            label={transactionType === 'trade' ? 'Price (₱) - Optional for Trade' : 'Price (₱) *'}
             value={price}
             onChangeText={setPrice}
-            placeholder="0.00"
+            placeholder={transactionType === 'trade' ? 'N/A for trade-only' : '0.00'}
             keyboardType="numeric"
             error={priceError}
           />
@@ -405,6 +517,47 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  helperText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  transactionTypeContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  transactionTypeButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: spacing.xs,
+  },
+  transactionTypeButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  transactionTypeText: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  transactionTypeTextSelected: {
+    color: colors.backgroundLight,
+  },
+  transactionTypeSubtext: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  transactionTypeSubtextSelected: {
+    color: colors.backgroundLight,
+    opacity: 0.9,
   },
   chipContainer: {
     flexDirection: 'row',

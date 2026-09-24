@@ -93,6 +93,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       title: input.title,
       description: input.description,
       category: input.category,
+      transaction_type: input.transaction_type,
       price: input.price,
       condition: input.condition,
       photos: input.photos,

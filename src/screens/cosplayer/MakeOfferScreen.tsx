@@ -257,7 +257,27 @@ export const MakeOfferScreen: React.FC = () => {
         <View style={styles.listingCard}>
           <Text style={styles.listingLabel}>Listing</Text>
           <Text style={styles.listingTitle}>{listing.title}</Text>
-          <Text style={styles.listingPrice}>{formatPHP(listing.price)}</Text>
+          <View style={styles.listingRow}>
+            <Text style={styles.listingPrice}>
+              {listing.transaction_type === 'trade' ? 'Trade Only' : formatPHP(listing.price)}
+            </Text>
+            <View style={styles.transactionTypeBadge}>
+              <Ionicons 
+                name={
+                  listing.transaction_type === 'buy' ? 'cash-outline' :
+                  listing.transaction_type === 'trade' ? 'swap-horizontal-outline' :
+                  'options-outline'
+                } 
+                size={14} 
+                color={colors.primary} 
+              />
+              <Text style={styles.transactionTypeText}>
+                {listing.transaction_type === 'buy' ? 'Buy Only' :
+                 listing.transaction_type === 'trade' ? 'Trade Only' :
+                 'Buy or Trade'}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Seller Portfolio (commission offers only) */}
@@ -284,6 +304,19 @@ export const MakeOfferScreen: React.FC = () => {
 
         {/* Form */}
         <View style={styles.form}>
+          {/* Transaction type mismatch warning */}
+          {((offerType === 'purchase' && listing.transaction_type === 'trade') ||
+            (offerType === 'trade' && listing.transaction_type === 'buy')) && (
+            <View style={styles.warningBox}>
+              <Ionicons name="alert-circle" size={18} color={colors.warning} />
+              <Text style={styles.warningText}>
+                {offerType === 'purchase' 
+                  ? 'This listing is trade-only. The seller may not accept monetary offers.'
+                  : 'This listing is buy-only. The seller may not accept trade offers.'}
+              </Text>
+            </View>
+          )}
+
           {offerType === 'purchase' && (
             <TextInputField
               label="Offer price (₱) *"
@@ -490,6 +523,44 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.tertiary,
     fontWeight: '700',
+  },
+  listingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  transactionTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  transactionTypeText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.warning + '12',
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  warningText: {
+    ...typography.caption,
+    color: colors.warning,
+    flex: 1,
+    lineHeight: 18,
   },
   portfolioSection: {
     marginBottom: spacing.lg,
