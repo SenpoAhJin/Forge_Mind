@@ -5,6 +5,59 @@
 
 ---
 
+## Session — Sept 21, 2026, 01:15 (Phase 1 Bug Fixes: Theme Apply, Diary Upload, Role Gate)
+
+### What we fixed
+
+**Three real bugs found in manual testing of Phase 1 "complete" features.**
+
+**Bug 1: Appearance Hub theme selection didn't actually apply**
+- **Root cause:** Components import static `colors` object from `theme/colors.ts`. ThemeContext has `themeColors` but no components read it. When theme changes, state updates but screens still render hardcoded colors.
+- **Scope:** 50+ files import static colors directly. Full rewire out of scope for this task.
+- **Partial fix:** AppearanceHubScreen now reads colors from ThemeContext. Color swatches (primary/secondary/accent) update immediately when theme applied (no app reload).
+- **Limitation:** Only color swatches change. Buttons, cards, text, borders still use static colors. Full app theming blocked on component library refactor to read from context vs static imports.
+- **Spec gap:** Appearance Hub spec (ForgeMind_Overall_Data_Information.docx) requires "color theme picker, profile layout options, and visual accent options." Only color theme picker exists. Layout/accent options NOT built.
+- **Test steps:** Open Appearance Hub > Select theme > Tap Apply > Swatches change color immediately ✓
+
+**Bug 2: Cosplay Diary had no entry creation flow**
+- **Root cause:** 'Add Diary Entry' button was a no-op placeholder comment. No modal or photo picker existed.
+- **Fix:** Built full entry creation modal with project picker (completed projects without diary entry only), photo upload (expo-image-picker multi-select), star rating picker (1-5 stars), notes field (TextAreaField), save to DiaryContext with AsyncStorage persistence.
+- **API fixes:** getVariantById() takes 1 param (variant_id not 2), Character.character_name (not .name), Variant.variant_name (not .name).
+- **Navigation:** Entry point already existed (ProfileScreen > Cosplay Diary) and was correctly gated to cosplayers only ✓
+- **Test steps:** Login as cosplayer > Profile > Cosplay Diary > Add Diary Entry > Pick project > Add photos > Rate > Add notes > Create Entry > Entry appears in list ✓
+
+**Bug 3: Shareable Card visible to Head/Staff (should be cosplayer-only)**
+- **Root cause:** ProfileScreen comment said "Available to all users" but spec says cosplayer feature. No role gate existed.
+- **Fix:** Wrap ShareableCard section in `user?.is_cosplayer` check (same pattern as Cosplay Diary). Add route-level guard in ShareableCardScreen with blocked state message (defense-in-depth).
+- **Pattern:** Reused identical gate from other cosplayer-only features (Marketplace, Cosplay Diary).
+- **Test steps:** Login as Head > Profile > No Shareable Card button ✓ | Login as Staff > Profile > No button ✓ | Login as Cosplayer > Profile > Button visible ✓
+
+### Verification
+
+**Group Meetup Screen (from FE-2):**
+- No `Alert.alert` violations ✓
+- No `cond && <Text/>` violations ✓
+
+**Auto Proper Case (from FE-2):**
+- Exception list unchanged: password/email/numeric/phone fields still skip formatting ✓
+
+**TypeScript:**
+```
+npx tsc --noEmit: Exit 0 (clean)
+```
+
+### Commits
+- `15dfc0b` — fix: Appearance Hub theme switching now applies to color swatches
+- `f2e1baf` — fix: Cosplay Diary now has working entry creation flow
+- `abc050f` — fix: Shareable Card now gated to cosplayers only
+
+### What's still NOT themed
+- Buttons, StandardCard, text colors, borders, tab bar — all still use static colors from `theme/colors.ts`
+- Full app theming requires refactor: components must read from ThemeContext via `useTheme()` hook instead of static imports
+- 50+ files need changes (Button.tsx, StandardCard.tsx, Input.tsx, all screens)
+
+---
+
 ## 1. What is ForgeMind?
 
 ForgeMind is an **AI-assisted cosplay planning app**. It helps cosplayers:
