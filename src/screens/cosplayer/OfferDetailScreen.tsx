@@ -3,7 +3,7 @@
  * Full read-out of a structured offer with accept/decline/withdraw actions and messaging
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useOffers } from '../../contexts/OffersContext';
 import { useChat } from '../../contexts/ChatContext';
+import { useCommissionMilestones } from '../../contexts/CommissionMilestonesContext';
 import { Button, ConfirmationModal } from '../../components';
 import { OfferStatus } from '../../types/offers';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
@@ -48,6 +49,7 @@ export const OfferDetailScreen: React.FC = () => {
   const { user } = useUser();
   const { getOfferById, acceptOffer, declineOffer, withdrawOffer } = useOffers();
   const { getOrCreateThread } = useChat();
+  const { createMilestonesForOffer, getProgressPercentage } = useCommissionMilestones();
 
   const [confirmAcceptVisible, setConfirmAcceptVisible] = useState(false);
   const [confirmDeclineVisible, setConfirmDeclineVisible] = useState(false);
@@ -60,6 +62,16 @@ export const OfferDetailScreen: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const offer = getOfferById(route.params.offerId);
+
+  // Auto-create milestones when commission offer is accepted
+  useEffect(() => {
+    const initializeMilestones = async () => {
+      if (offer && offer.offer_type === 'commission' && offer.status === 'accepted') {
+        await createMilestonesForOffer(offer);
+      }
+    };
+    initializeMilestones();
+  }, [offer?.status, offer?.offer_type]);
 
   if (!offer) {
     return (
@@ -312,6 +324,18 @@ export const OfferDetailScreen: React.FC = () => {
             title="Message"
             onPress={handleMessage}
             variant="secondary"
+            fullWidth
+          />
+        </View>
+      )}
+
+      {/* Track Progress button (Commission Milestones) */}
+      {offer.offer_type === 'commission' && offer.status === 'accepted' && isParticipant && (
+        <View style={styles.messageButtonContainer}>
+          <Button
+            title={`Track Progress (${getProgressPercentage(offer.id)}% Complete)`}
+            onPress={() => navigation.navigate('CommissionProgress', { offerId: offer.id })}
+            variant="primary"
             fullWidth
           />
         </View>

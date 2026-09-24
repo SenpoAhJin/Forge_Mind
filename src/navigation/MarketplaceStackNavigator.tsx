@@ -15,6 +15,7 @@ import {
   OfferDetailScreen,
   ChatListScreen,
   ChatThreadScreen,
+  CommissionProgressScreen,
 } from '../screens/cosplayer';
 import { typography } from '../theme';
 import { OfferType } from '../types/offers';
@@ -28,6 +29,7 @@ export type MarketplaceStackParamList = {
   MakeOffer: { listingId: string; offerType: OfferType };
   OfferLog: { initialTab?: 'sent' | 'received' } | undefined;
   OfferDetail: { offerId: string };
+  CommissionProgress: { offerId: string };
   ChatList: undefined;
   ChatThread: { threadId: string };
 };
@@ -91,6 +93,11 @@ export const MarketplaceStackNavigator: React.FC = () => {
       name="OfferDetail"
       component={OfferDetailScreen}
       options={{ title: 'Offer Details' }}
+    />
+    <Stack.Screen
+      name="CommissionProgress"
+      component={CommissionProgressScreen}
+      options={{ title: 'Commission Progress' }}
     />
     <Stack.Screen
       name="ChatList"

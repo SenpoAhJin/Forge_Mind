@@ -15,6 +15,7 @@ import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
 import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { OffersProvider } from './src/contexts/OffersContext';
 import { ChatProvider } from './src/contexts/ChatContext';
+import { CommissionMilestonesProvider } from './src/contexts/CommissionMilestonesContext';
 import { EventsProvider } from './src/contexts/EventsContext';
 import { ContestProvider } from './src/contexts/ContestContext';
 import { LogisticsProvider } from './src/contexts/LogisticsContext';
@@ -57,17 +58,19 @@ export default function App() {
                     <OwnedAttireProvider>
                       <MarketplaceProvider>
                         <OffersProvider>
-                          <ChatProvider>
-                            <ContestProvider>
-                              <LogisticsProvider>
-                                <CalendarProvider>
-                                  <RootNavigator />
-                                  <ConsentBanner />
-                                  <StatusBar style="auto" />
-                                </CalendarProvider>
-                              </LogisticsProvider>
-                            </ContestProvider>
-                          </ChatProvider>
+                          <CommissionMilestonesProvider>
+                            <ChatProvider>
+                              <ContestProvider>
+                                <LogisticsProvider>
+                                  <CalendarProvider>
+                                    <RootNavigator />
+                                    <ConsentBanner />
+                                    <StatusBar style="auto" />
+                                  </CalendarProvider>
+                                </LogisticsProvider>
+                              </ContestProvider>
+                            </ChatProvider>
+                          </CommissionMilestonesProvider>
                         </OffersProvider>
                       </MarketplaceProvider>
                     </OwnedAttireProvider>

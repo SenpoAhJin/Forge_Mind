@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useOffers } from '../../contexts/OffersContext';
+import { useCommissionMilestones } from '../../contexts/CommissionMilestonesContext';
 import { Offer, OfferStatus } from '../../types/offers';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { formatOfferStatus, formatOfferType } from '../../utils/formatStatus';
@@ -63,6 +64,7 @@ export const OfferLogScreen: React.FC = () => {
   const route = useRoute<OfferLogRouteProp>();
   const { user } = useUser();
   const { getOffersSentBy, getOffersReceivedFor, isLoading } = useOffers();
+  const { getProgressPercentage } = useCommissionMilestones();
 
   const role = user?.marketplace_registration?.marketplace_role;
   const canReceive = role === 'seller' || role === 'both';
@@ -99,6 +101,10 @@ export const OfferLogScreen: React.FC = () => {
       return `${offer.commission_description ?? ''} · ${formatPHP(offer.offered_price ?? 0)}`;
     };
 
+    // Get progress for accepted commission offers
+    const isAcceptedCommission = offer.offer_type === 'commission' && offer.status === 'accepted';
+    const progress = isAcceptedCommission ? getProgressPercentage(offer.id) : null;
+
     return (
       <TouchableOpacity
         style={styles.offerCard}
@@ -120,6 +126,16 @@ export const OfferLogScreen: React.FC = () => {
 
         <Text style={styles.listingTitle} numberOfLines={2}>{offer.listing_title}</Text>
         <Text style={styles.detailLine} numberOfLines={2}>{detailLine()}</Text>
+
+        {/* Progress indicator for accepted commission offers */}
+        {isAcceptedCommission && progress !== null && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{progress}% Complete</Text>
+          </View>
+        )}
 
         <View style={styles.cardFooter}>
           <Text style={styles.counterparty} numberOfLines={1}>
@@ -393,6 +409,26 @@ const styles = StyleSheet.create({
   cardDate: {
     ...typography.caption,
     color: colors.textDisabled,
+  },
+  progressSection: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
+  },
+  progressText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,

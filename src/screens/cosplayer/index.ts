@@ -12,6 +12,7 @@ export * from './OfferDetailScreen';
 export * from './ChatListScreen';
 export * from './ChatThreadScreen';
 export * from './PortfolioManagementScreen';
+export * from './CommissionProgressScreen';
 export * from './ProjectDashboardScreen';
 export * from './CreateProjectScreen';
 export * from './EntryMethodScreen';
