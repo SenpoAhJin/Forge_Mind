@@ -6,6 +6,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LogisticsHomeScreen, AddLogisticsEntryScreen, LogisticsEntryDetailScreen, EventLogisticsScreen } from '../screens/organizer';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type LogisticsStackParamList = {
   LogisticsHome: undefined;
@@ -17,17 +18,15 @@ export type LogisticsStackParamList = {
 const Stack = createNativeStackNavigator<LogisticsStackParamList>();
 
 export const LogisticsStackNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: true,
-        headerStyle: {
-          backgroundColor: '#F8F8F8',
-        },
-        headerTintColor: '#1A1A1A',
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
+        headerStyle: { backgroundColor: themeColors.secondary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { fontWeight: '600', color: themeColors.backgroundLight },
       }}
     >
       <Stack.Screen

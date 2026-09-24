@@ -11,7 +11,8 @@ import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
 import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
 import { CalendarBrowseScreen } from '../screens/cosplayer/CalendarBrowseScreen';
 import { getProjectById } from '../data';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type ProjectStackParamList = {
   ProjectsList: undefined;
@@ -24,14 +25,16 @@ export type ProjectStackParamList = {
 const Stack = createNativeStackNavigator<ProjectStackParamList>();
 
 export const ProjectStackNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
+        headerStyle: { backgroundColor: themeColors.primary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: colors.backgroundLight },
+        contentStyle: { backgroundColor: themeColors.backgroundLight },
       }}
     >
       <Stack.Screen name="ProjectsList" options={{ title: 'Projects' }}>

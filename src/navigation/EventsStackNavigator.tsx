@@ -10,7 +10,8 @@ import { CreateEventScreen } from '../screens/organizer/CreateEventScreen';
 import { EventDetailScreen } from '../screens/organizer/EventDetailScreen';
 import { ContestManageScreen } from '../screens/organizer/ContestManageScreen';
 import { GroupMeetupScreen } from '../screens/organizer/GroupMeetupScreen';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type EventsStackParamList = {
   EventsHome: undefined;
@@ -22,16 +23,19 @@ export type EventsStackParamList = {
 
 const Stack = createNativeStackNavigator<EventsStackParamList>();
 
-export const EventsStackNavigator: React.FC = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerStyle: { backgroundColor: colors.secondary },
-      headerTintColor: colors.backgroundLight,
-      headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
-      headerBackTitle: 'Back',
-      contentStyle: { backgroundColor: colors.surface },
-    }}
-  >
+export const EventsStackNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: themeColors.secondary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
+        headerBackTitle: 'Back',
+        contentStyle: { backgroundColor: themeColors.surface },
+      }}
+    >
     <Stack.Screen
       name="EventsHome"
       component={EventsScreen}
@@ -58,4 +62,5 @@ export const EventsStackNavigator: React.FC = () => (
       options={{ title: 'Group Meetup' }}
     />
   </Stack.Navigator>
-);
+  );
+};

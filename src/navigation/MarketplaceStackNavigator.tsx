@@ -16,8 +16,9 @@ import {
   ChatListScreen,
   ChatThreadScreen,
 } from '../screens/cosplayer';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
 import { OfferType } from '../types/offers';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type MarketplaceStackParamList = {
   MarketplaceHome: undefined;
@@ -33,16 +34,19 @@ export type MarketplaceStackParamList = {
 
 const Stack = createNativeStackNavigator<MarketplaceStackParamList>();
 
-export const MarketplaceStackNavigator: React.FC = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerStyle: { backgroundColor: colors.primary },
-      headerTintColor: colors.backgroundLight,
-      headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
-      headerBackTitle: 'Back',
-      contentStyle: { backgroundColor: colors.backgroundLight },
-    }}
-  >
+export const MarketplaceStackNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: themeColors.primary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
+        headerBackTitle: 'Back',
+        contentStyle: { backgroundColor: themeColors.backgroundLight },
+      }}
+    >
     <Stack.Screen
       name="MarketplaceHome"
       component={MarketplaceScreen}
@@ -99,4 +103,5 @@ export const MarketplaceStackNavigator: React.FC = () => (
       options={{ title: 'Chat' }}
     />
   </Stack.Navigator>
-);
+  );
+};

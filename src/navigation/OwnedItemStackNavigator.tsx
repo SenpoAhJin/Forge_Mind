@@ -15,9 +15,10 @@ import {
   ItemConfirmationScreen,
   OwnedItemDetail,
 } from '../screens/cosplayer';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
 import { OwnedAttireDraft } from '../screens/cosplayer/ItemConfirmationScreen';
 import { EntryMethod } from '../types/owned-attire';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type OwnedItemStackParamList = {
   OwnedList: undefined;
@@ -31,14 +32,17 @@ export type OwnedItemStackParamList = {
 
 const Stack = createNativeStackNavigator<OwnedItemStackParamList>();
 
-export const OwnedItemStackNavigator: React.FC = () => (
-  <Stack.Navigator
+export const OwnedItemStackNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
+  return (
+    <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
+        headerStyle: { backgroundColor: themeColors.primary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: colors.backgroundLight },
+        contentStyle: { backgroundColor: themeColors.backgroundLight },
       }}
     >
       <Stack.Screen name="OwnedList" options={{ title: 'My Items' }}>
@@ -115,4 +119,5 @@ export const OwnedItemStackNavigator: React.FC = () => (
         )}
       </Stack.Screen>
     </Stack.Navigator>
-);
+  );
+};

@@ -11,7 +11,8 @@ import { CalendarApprovalScreen } from '../screens/organizer/CalendarApprovalScr
 import { ShareableCardScreen } from '../screens/shared/ShareableCardScreen';
 import { AppearanceHubScreen } from '../screens/shared/AppearanceHubScreen';
 import { CosplayDiaryScreen } from '../screens/cosplayer/CosplayDiaryScreen';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -30,14 +31,16 @@ export type ProfileStackParamList = {
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
 export const ProfileStackNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
+        headerStyle: { backgroundColor: themeColors.primary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: colors.backgroundLight },
+        contentStyle: { backgroundColor: themeColors.backgroundLight },
       }}
     >
       <Stack.Screen
