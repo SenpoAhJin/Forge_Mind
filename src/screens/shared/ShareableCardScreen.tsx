@@ -31,6 +31,21 @@ export const ShareableCardScreen: React.FC = () => {
   
   const cardRef = useRef<View>(null);
 
+  // Route guard: Cosplayers only
+  if (!user?.is_cosplayer) {
+    return (
+      <View style={[styles.container, { padding: spacing.xl, justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="lock-closed-outline" size={64} color={colors.textDisabled} />
+        <Text style={[typography.h2, { color: colors.textPrimary, marginTop: spacing.lg, textAlign: 'center' }]}>
+          Cosplayers Only
+        </Text>
+        <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.lg }]}>
+          Shareable cards are available to cosplayers who have projects and event itineraries to share.
+        </Text>
+      </View>
+    );
+  }
+
   // Get user's upcoming events (linked to projects)
   const upcomingEvents = projects
     .filter(p => p.linked_event_id)

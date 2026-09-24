@@ -493,21 +493,23 @@ export const ProfileScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Shareable Cards - Available to all users */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Shareable Cards</Text>
-        <Text style={styles.cardNote}>
-          Generate and share your profile or event itinerary with QR codes
-        </Text>
-        <TouchableOpacity
-          style={styles.cardButton}
-          onPress={() => navigation.navigate('ShareableCard')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.cardButtonText}>Create Shareable Card</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      {/* Shareable Cards - Cosplayers only */}
+      {user?.is_cosplayer && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Shareable Cards</Text>
+          <Text style={styles.cardNote}>
+            Generate and share your profile or event itinerary with QR codes
+          </Text>
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => navigation.navigate('ShareableCard')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardButtonText}>Create Shareable Card</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Appearance Hub - Available to all users */}
       <View style={styles.card}>
