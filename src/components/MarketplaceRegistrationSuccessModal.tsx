@@ -14,7 +14,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface MarketplaceRegistrationSuccessModalProps {
   visible: boolean;
@@ -27,6 +28,21 @@ interface MarketplaceRegistrationSuccessModalProps {
   onEditSubmission: () => void;
 }
 
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  modal: { backgroundColor: themeColors.backgroundLight },
+  title: { color: themeColors.accent },
+  subtitle: { color: themeColors.textSecondary },
+  recapSection: { backgroundColor: themeColors.surface },
+  recapTitle: { color: themeColors.textPrimary },
+  recapRow: { borderBottomColor: themeColors.border },
+  recapLabel: { color: themeColors.textSecondary },
+  recapValue: { color: themeColors.textPrimary },
+  primaryButton: { backgroundColor: themeColors.accent },
+  primaryButtonText: { color: themeColors.backgroundLight },
+  secondaryButton: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+  secondaryButtonText: { color: themeColors.textSecondary },
+});
+
 export const MarketplaceRegistrationSuccessModal: React.FC<MarketplaceRegistrationSuccessModalProps> = ({
   visible,
   marketplaceRole,
@@ -37,6 +53,9 @@ export const MarketplaceRegistrationSuccessModal: React.FC<MarketplaceRegistrati
   onBackToMarketplace,
   onEditSubmission,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
   const roleLabel =
     marketplaceRole === 'buyer'
       ? 'Buyer'
@@ -56,50 +75,50 @@ export const MarketplaceRegistrationSuccessModal: React.FC<MarketplaceRegistrati
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <ScrollView
-            contentContainerStyle={styles.modal}
+            contentContainerStyle={[styles.modal, dynamicStyles.modal]}
             showsVerticalScrollIndicator={false}
           >
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.iconContainer}>
-                <Ionicons name="checkmark-circle" size={48} color={colors.tertiary} />
+                <Ionicons name="checkmark-circle" size={48} color={themeColors.accent} />
               </View>
-              <Text style={styles.title}>Marketplace Registration Submitted</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, dynamicStyles.title]}>Marketplace Registration Submitted</Text>
+              <Text style={[styles.subtitle, dynamicStyles.subtitle]}>
                 Your application is now pending review by a Head Organizer. You'll be notified once it's approved.
               </Text>
             </View>
 
             {/* Submission recap */}
-            <View style={styles.recapSection}>
-              <Text style={styles.recapTitle}>Submission Summary</Text>
+            <View style={[styles.recapSection, dynamicStyles.recapSection]}>
+              <Text style={[styles.recapTitle, dynamicStyles.recapTitle]}>Submission Summary</Text>
 
-              <View style={styles.recapRow}>
-                <Text style={styles.recapLabel}>Role</Text>
-                <Text style={styles.recapValue}>{roleLabel}</Text>
+              <View style={[styles.recapRow, dynamicStyles.recapRow]}>
+                <Text style={[styles.recapLabel, dynamicStyles.recapLabel]}>Role</Text>
+                <Text style={[styles.recapValue, dynamicStyles.recapValue]}>{roleLabel}</Text>
               </View>
 
-              <View style={styles.recapRow}>
-                <Text style={styles.recapLabel}>Display Name</Text>
-                <Text style={styles.recapValue}>{sellerDisplayName}</Text>
+              <View style={[styles.recapRow, dynamicStyles.recapRow]}>
+                <Text style={[styles.recapLabel, dynamicStyles.recapLabel]}>Display Name</Text>
+                <Text style={[styles.recapValue, dynamicStyles.recapValue]}>{sellerDisplayName}</Text>
               </View>
 
-              <View style={styles.recapRow}>
-                <Text style={styles.recapLabel}>Contact Email</Text>
-                <Text style={styles.recapValue}>{contactEmail}</Text>
+              <View style={[styles.recapRow, dynamicStyles.recapRow]}>
+                <Text style={[styles.recapLabel, dynamicStyles.recapLabel]}>Contact Email</Text>
+                <Text style={[styles.recapValue, dynamicStyles.recapValue]}>{contactEmail}</Text>
               </View>
 
               {contactPhone ? (
-                <View style={styles.recapRow}>
-                  <Text style={styles.recapLabel}>Contact Phone</Text>
-                  <Text style={styles.recapValue}>{contactPhone}</Text>
+                <View style={[styles.recapRow, dynamicStyles.recapRow]}>
+                  <Text style={[styles.recapLabel, dynamicStyles.recapLabel]}>Contact Phone</Text>
+                  <Text style={[styles.recapValue, dynamicStyles.recapValue]}>{contactPhone}</Text>
                 </View>
               ) : null}
 
               {requiresPayoutInfo && payoutMethodLabel ? (
-                <View style={styles.recapRow}>
-                  <Text style={styles.recapLabel}>Payout Method</Text>
-                  <Text style={styles.recapValue}>{payoutMethodLabel}</Text>
+                <View style={[styles.recapRow, dynamicStyles.recapRow]}>
+                  <Text style={[styles.recapLabel, dynamicStyles.recapLabel]}>Payout Method</Text>
+                  <Text style={[styles.recapValue, dynamicStyles.recapValue]}>{payoutMethodLabel}</Text>
                 </View>
               ) : null}
             </View>
@@ -107,19 +126,19 @@ export const MarketplaceRegistrationSuccessModal: React.FC<MarketplaceRegistrati
             {/* Actions */}
             <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
+                style={[styles.button, styles.primaryButton, dynamicStyles.primaryButton]}
                 onPress={onBackToMarketplace}
                 activeOpacity={0.7}
               >
-                <Text style={styles.primaryButtonText}>Back to Marketplace</Text>
+                <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>Back to Marketplace</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
+                style={[styles.button, styles.secondaryButton, dynamicStyles.secondaryButton]}
                 onPress={onEditSubmission}
                 activeOpacity={0.7}
               >
-                <Text style={styles.secondaryButtonText}>Edit Submission</Text>
+                <Text style={[styles.secondaryButtonText, dynamicStyles.secondaryButtonText]}>Edit Submission</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -143,7 +162,6 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   modal: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     shadowColor: '#000',
@@ -161,25 +179,21 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
-    color: colors.tertiary,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   recapSection: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     marginBottom: spacing.xl,
   },
   recapTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   recapRow: {
@@ -187,16 +201,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   recapLabel: {
     ...typography.body,
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   recapValue: {
     ...typography.body,
-    color: colors.textPrimary,
     flex: 1,
     textAlign: 'right',
     marginLeft: spacing.md,
@@ -210,22 +221,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButton: {
-    backgroundColor: colors.tertiary,
-  },
+  primaryButton: {},
   primaryButtonText: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.backgroundLight,
   },
   secondaryButton: {
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   secondaryButtonText: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.textSecondary,
   },
 });

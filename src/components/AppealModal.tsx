@@ -17,8 +17,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
 import { toProperCase } from '../utils/textFormatting';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface AppealModalProps {
   visible: boolean;
@@ -27,12 +28,29 @@ interface AppealModalProps {
   onSubmit: (message: string) => void;
 }
 
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  modal: { backgroundColor: themeColors.backgroundLight },
+  title: { color: themeColors.textPrimary },
+  subtitle: { color: themeColors.textSecondary },
+  label: { color: themeColors.textPrimary },
+  input: { backgroundColor: themeColors.surface, borderColor: themeColors.border, color: themeColors.textPrimary },
+  inputError: { borderColor: themeColors.error },
+  errorText: { color: themeColors.error },
+  hint: { color: themeColors.textSecondary },
+  cancelButton: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+  cancelButtonText: { color: themeColors.textSecondary },
+  submitButton: { backgroundColor: themeColors.accent },
+  submitButtonText: { color: themeColors.backgroundLight },
+});
+
 export const AppealModal: React.FC<AppealModalProps> = ({
   visible,
   listingTitle,
   onCancel,
   onSubmit,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -65,21 +83,21 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modal}>
+          <View style={[styles.modal, dynamicStyles.modal]}>
             {/* Header */}
             <View style={styles.header}>
-              <Ionicons name="shield-outline" size={32} color={colors.warning} />
-              <Text style={styles.title}>Appeal This Decision</Text>
-              <Text style={styles.subtitle}>
+              <Ionicons name="shield-outline" size={32} color={themeColors.warning} />
+              <Text style={[styles.title, dynamicStyles.title]}>Appeal This Decision</Text>
+              <Text style={[styles.subtitle, dynamicStyles.subtitle]}>
                 Tell us why you believe "{listingTitle}" should be published.
               </Text>
             </View>
 
             {/* Appeal input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Appeal Message *</Text>
+              <Text style={[styles.label, dynamicStyles.label]}>Appeal Message *</Text>
               <TextInput
-                style={[styles.input, error ? styles.inputError : null]}
+                style={[styles.input, dynamicStyles.input, error ? dynamicStyles.inputError : null]}
                 value={message}
                 onChangeText={(text) => {
                   setMessage(toProperCase(text));
@@ -91,8 +109,8 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 textAlignVertical="top"
                 maxLength={500}
               />
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              <Text style={styles.hint}>
+              {error ? <Text style={[styles.errorText, dynamicStyles.errorText]}>{error}</Text> : null}
+              <Text style={[styles.hint, dynamicStyles.hint]}>
                 Your appeal will be submitted for review by a Holder.
               </Text>
             </View>
@@ -100,19 +118,19 @@ export const AppealModal: React.FC<AppealModalProps> = ({
             {/* Actions */}
             <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.button, styles.cancelButton, dynamicStyles.cancelButton]}
                 onPress={handleCancel}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, dynamicStyles.cancelButtonText]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.submitButton]}
+                style={[styles.button, styles.submitButton, dynamicStyles.submitButton]}
                 onPress={handleSubmit}
                 activeOpacity={0.7}
               >
-                <Text style={styles.submitButtonText}>Submit Appeal</Text>
+                <Text style={[styles.submitButtonText, dynamicStyles.submitButtonText]}>Submit Appeal</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -134,7 +152,6 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   modal: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     shadowColor: '#000',
@@ -149,14 +166,12 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
-    color: colors.textPrimary,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
   inputContainer: {
@@ -165,30 +180,22 @@ const styles = StyleSheet.create({
   label: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   input: {
     ...typography.body,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     minHeight: 100,
-    color: colors.textPrimary,
   },
-  inputError: {
-    borderColor: colors.error,
-  },
+  inputError: {},
   errorText: {
     ...typography.caption,
-    color: colors.error,
     marginTop: spacing.xs,
   },
   hint: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: spacing.xs,
   },
@@ -204,21 +211,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   cancelButtonText: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.textSecondary,
   },
-  submitButton: {
-    backgroundColor: colors.tertiary,
-  },
+  submitButton: {},
   submitButtonText: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.backgroundLight,
   },
 });
