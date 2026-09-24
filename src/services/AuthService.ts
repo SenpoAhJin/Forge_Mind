@@ -51,6 +51,9 @@ export interface StoredAccount {
     rejection_reason?: string;             // NEW: organizer's reason for rejecting (shown to cosplayer)
   };
 
+  // PORTFOLIO PHOTOS (for sellers/crafters to showcase past work)
+  portfolio_photos?: string[];            // Array of photo URIs, empty by default
+
   // STAFF DEPARTMENT VERIFICATION (FE-*: single-department scoping)
   // Only populated when staff registers with a department selected.
   // department is the ONE department this staff account is verified for.

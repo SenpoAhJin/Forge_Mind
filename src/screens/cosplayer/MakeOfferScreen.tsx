@@ -4,7 +4,7 @@
  * Price/fairness suggestions are explicitly out of scope (AI layer later).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -22,6 +23,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { useOffers } from '../../contexts/OffersContext';
+import { AuthService } from '../../services/AuthService';
 import { TextInputField, TextAreaField, Button, ConfirmationModal } from '../../components';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { OfferType } from '../../types/offers';
@@ -65,8 +67,28 @@ export const MakeOfferScreen: React.FC = () => {
   const [successVisible, setSuccessVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [sellerPortfolio, setSellerPortfolio] = useState<string[]>([]);
 
   const listing = getListingById(listingId);
+
+  // Load seller's portfolio for commission offers
+  useEffect(() => {
+    const loadSellerPortfolio = async () => {
+      if (!listing || offerType !== 'commission') return;
+
+      try {
+        const accounts = await AuthService.getAccounts();
+        const sellerAccount = accounts.find(acc => acc.email === listing.seller_email);
+        if (sellerAccount?.portfolio_photos) {
+          setSellerPortfolio(sellerAccount.portfolio_photos);
+        }
+      } catch (error) {
+        console.error('Failed to load seller portfolio:', error);
+      }
+    };
+
+    loadSellerPortfolio();
+  }, [listing, offerType]);
 
   const isSeller = user ? listing?.seller_email === user.email : false;
   const roleIsSellerOnly = user?.marketplace_registration?.marketplace_role === 'seller';
@@ -237,6 +259,28 @@ export const MakeOfferScreen: React.FC = () => {
           <Text style={styles.listingTitle}>{listing.title}</Text>
           <Text style={styles.listingPrice}>{formatPHP(listing.price)}</Text>
         </View>
+
+        {/* Seller Portfolio (commission offers only) */}
+        {offerType === 'commission' && sellerPortfolio.length > 0 && (
+          <View style={styles.portfolioSection}>
+            <Text style={styles.portfolioTitle}>Crafter's Portfolio</Text>
+            <Text style={styles.portfolioSubtitle}>
+              {sellerPortfolio.length} {sellerPortfolio.length === 1 ? 'example' : 'examples'} of past work
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.portfolioScroll}
+              contentContainerStyle={styles.portfolioContent}
+            >
+              {sellerPortfolio.map((photoUri, index) => (
+                <View key={index} style={styles.portfolioCard}>
+                  <Image source={{ uri: photoUri }} style={styles.portfolioImage} />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Form */}
         <View style={styles.form}>
@@ -446,6 +490,42 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.tertiary,
     fontWeight: '700',
+  },
+  portfolioSection: {
+    marginBottom: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  portfolioTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  portfolioSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  portfolioScroll: {
+    marginHorizontal: -spacing.lg,
+  },
+  portfolioContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  portfolioCard: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  portfolioImage: {
+    width: '100%',
+    height: '100%',
   },
   form: {
     gap: spacing.lg,

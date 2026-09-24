@@ -3,13 +3,14 @@
  * Shows full listing details with offer buttons and messaging
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -18,6 +19,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { useChat } from '../../contexts/ChatContext';
+import { AuthService } from '../../services/AuthService';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Button } from '../../components';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
@@ -37,8 +39,35 @@ export const ListingDetailScreen: React.FC = () => {
 
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [sellerPortfolio, setSellerPortfolio] = useState<string[]>([]);
 
   const listing = getListingById(route.params.listingId);
+
+  // Load seller's portfolio for commission/service listings
+  useEffect(() => {
+    const loadSellerPortfolio = async () => {
+      if (!listing) return;
+      
+      // Only load portfolio for commission/service categories
+      const isCommissionCategory = 
+        listing.category === 'Commissions & Crafting Services' ||
+        listing.category === 'Photography Services';
+      
+      if (!isCommissionCategory) return;
+
+      try {
+        const accounts = await AuthService.getAccounts();
+        const sellerAccount = accounts.find(acc => acc.email === listing.seller_email);
+        if (sellerAccount?.portfolio_photos) {
+          setSellerPortfolio(sellerAccount.portfolio_photos);
+        }
+      } catch (error) {
+        console.error('Failed to load seller portfolio:', error);
+      }
+    };
+
+    loadSellerPortfolio();
+  }, [listing]);
 
   if (!listing) {
     return (
@@ -142,6 +171,26 @@ export const ListingDetailScreen: React.FC = () => {
           <Text style={styles.sellerName}>{listing.seller_email.split('@')[0]}</Text>
         </View>
       </View>
+
+      {/* Seller Portfolio (for commission/service categories only) */}
+      {sellerPortfolio.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portfolio ({sellerPortfolio.length} {sellerPortfolio.length === 1 ? 'photo' : 'photos'})</Text>
+          <Text style={styles.portfolioSubtitle}>Examples of past work</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.portfolioScroll}
+            contentContainerStyle={styles.portfolioContent}
+          >
+            {sellerPortfolio.map((photoUri, index) => (
+              <View key={index} style={styles.portfolioCard}>
+                <Image source={{ uri: photoUri }} style={styles.portfolioImage} />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Listed Date */}
       <View style={styles.infoRow}>
@@ -298,6 +347,31 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     fontWeight: '600',
+  },
+  portfolioSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  portfolioScroll: {
+    marginHorizontal: -spacing.lg,
+  },
+  portfolioContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  portfolioCard: {
+    width: 150,
+    height: 150,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  portfolioImage: {
+    width: '100%',
+    height: '100%',
   },
   offerSection: {
     gap: spacing.sm,

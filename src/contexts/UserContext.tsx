@@ -51,6 +51,9 @@ interface User {
     rejection_reason?: string;             // NEW: organizer's reason for rejecting (shown to cosplayer)
   };
   
+  // Portfolio photos (for sellers/crafters to showcase past work)
+  portfolio_photos?: string[];            // Array of photo URIs, empty by default
+  
   // STAFF DEPARTMENT VERIFICATION
   department?: StaffDepartment | null;                 // The ONE department selected at registration
   department_verification_status?: DepartmentVerificationStatus; // pending | approved | rejected
@@ -93,6 +96,10 @@ interface UserContextType {
   
   isOnboardingComplete: boolean;
   resetOnboarding: () => Promise<void>;
+  
+  // Portfolio management (for sellers/crafters)
+  addPortfolioPhoto: (photoUri: string) => Promise<void>;
+  removePortfolioPhoto: (photoUri: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -318,6 +325,31 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  // Portfolio management
+  const addPortfolioPhoto = async (photoUri: string) => {
+    if (!user) return;
+
+    const updatedUser = {
+      ...user,
+      portfolio_photos: [...(user.portfolio_photos || []), photoUri],
+    };
+
+    setUser(updatedUser);
+    await AuthService.updateUser(updatedUser);
+  };
+
+  const removePortfolioPhoto = async (photoUri: string) => {
+    if (!user) return;
+
+    const updatedUser = {
+      ...user,
+      portfolio_photos: (user.portfolio_photos || []).filter((uri) => uri !== photoUri),
+    };
+
+    setUser(updatedUser);
+    await AuthService.updateUser(updatedUser);
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -334,6 +366,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         resetOnboarding,
         pendingNotification,
         clearPendingNotification,
+        addPortfolioPhoto,
+        removePortfolioPhoto,
       }}
     >
       {children}

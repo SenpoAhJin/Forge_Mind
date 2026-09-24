@@ -278,6 +278,36 @@ export const ProfileScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Portfolio - SELLERS AND 'BOTH' ONLY */}
+      {user?.is_cosplayer && 
+       user?.verification_status === 'verified' &&
+       user?.marketplace_registration?.marketplace_role &&
+       (user.marketplace_registration.marketplace_role === 'seller' || user.marketplace_registration.marketplace_role === 'both') && (
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>My Portfolio</Text>
+            <TouchableOpacity
+              style={styles.manageButton}
+              onPress={() => navigation.navigate('PortfolioManagement')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.manageButtonText}>Edit Portfolio</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="images-outline" size={18} color={colors.textSecondary} />
+            <Text style={styles.detailLabel}>Portfolio Photos</Text>
+            <Text style={styles.detailValue}>
+              {user?.portfolio_photos?.length || 0} {(user?.portfolio_photos?.length || 0) === 1 ? 'photo' : 'photos'}
+            </Text>
+          </View>
+          <Text style={styles.cardNote}>
+            Showcase your past work to attract commission requests and build trust with buyers.
+          </Text>
+        </View>
+      )}
+
       {/* Organizer-specific content */}
       {user?.is_organizer && user?.organizer_role === 'head' && (
         <>
