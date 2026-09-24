@@ -12,7 +12,8 @@ import {
   ViewStyle,
   TouchableOpacity,
 } from 'react-native';
-import { colors, typography, borderRadius, spacing } from '../../theme';
+import { typography, borderRadius, spacing } from '../../theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Tag } from '../tags';
 
 // Standard Card: White background, 12px rounded corners, 2px elevation shadow
@@ -23,7 +24,10 @@ interface StandardCardProps {
 }
 
 export const StandardCard: React.FC<StandardCardProps> = ({ children, style, onPress }) => {
-  const content = <View style={[styles.standardCard, style]}>{children}</View>;
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
+  const content = <View style={[dynamicStyles.standardCard, styles.standardCard, style]}>{children}</View>;
 
   if (onPress) {
     return (
@@ -52,15 +56,18 @@ export const ItemCard: React.FC<ItemCardProps> = ({
   condition,
   onPress,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
   return (
-    <TouchableOpacity style={styles.itemCard} onPress={onPress} activeOpacity={0.8}>
-      <Image source={{ uri: photoUrl }} style={styles.itemImage} />
+    <TouchableOpacity style={[dynamicStyles.itemCard, styles.itemCard]} onPress={onPress} activeOpacity={0.8}>
+      <Image source={{ uri: photoUrl }} style={[dynamicStyles.itemImage, styles.itemImage]} />
       <View style={styles.itemContent}>
-        <Text style={styles.itemTitle} numberOfLines={2}>
+        <Text style={[dynamicStyles.itemTitle, styles.itemTitle]} numberOfLines={2}>
           {title}
         </Text>
         <View style={styles.itemFooter}>
-          <Text style={styles.itemPrice}>₱{price.toFixed(2)}</Text>
+          <Text style={[dynamicStyles.itemPrice, styles.itemPrice]}>₱{price.toFixed(2)}</Text>
           <Tag type="status" label={`Condition: ${condition}/5`} />
         </View>
       </View>
@@ -86,29 +93,64 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   componentCount,
   onPress,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
   return (
-    <TouchableOpacity style={styles.matchCard} onPress={onPress} activeOpacity={0.8}>
-      <Image source={{ uri: thumbnailUrl }} style={styles.matchThumbnail} />
+    <TouchableOpacity style={[dynamicStyles.matchCard, styles.matchCard]} onPress={onPress} activeOpacity={0.8}>
+      <Image source={{ uri: thumbnailUrl }} style={[dynamicStyles.matchThumbnail, styles.matchThumbnail]} />
       <View style={styles.matchContent}>
         <View style={styles.matchHeader}>
-          <Text style={styles.characterName} numberOfLines={1}>
+          <Text style={[dynamicStyles.characterName, styles.characterName]} numberOfLines={1}>
             {characterName}
           </Text>
           <Tag type="match" rating={matchRating} />
         </View>
-        <Text style={styles.variantName} numberOfLines={1}>
+        <Text style={[dynamicStyles.variantName, styles.variantName]} numberOfLines={1}>
           {variantName}
         </Text>
-        <Text style={styles.componentCount}>{componentCount} components</Text>
+        <Text style={[dynamicStyles.componentCount, styles.componentCount]}>{componentCount} components</Text>
       </View>
     </TouchableOpacity>
   );
 };
 
+const getDynamicStyles = (themeColors: { primary: string; secondary: string; accent: string }) => ({
+  standardCard: {
+    backgroundColor: '#FFFFFF',
+  },
+  itemCard: {
+    backgroundColor: '#FFFFFF',
+  },
+  itemImage: {
+    backgroundColor: '#F5F5F7',
+  },
+  itemTitle: {
+    color: '#2C2C2C',
+  },
+  itemPrice: {
+    color: themeColors.primary,
+  },
+  matchCard: {
+    backgroundColor: '#FFFFFF',
+  },
+  matchThumbnail: {
+    backgroundColor: '#F5F5F7',
+  },
+  characterName: {
+    color: '#2C2C2C',
+  },
+  variantName: {
+    color: '#6B6B6B',
+  },
+  componentCount: {
+    color: '#6B6B6B',
+  },
+});
+
 const styles = StyleSheet.create({
   // Standard Card
   standardCard: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     shadowColor: '#000',
@@ -120,7 +162,6 @@ const styles = StyleSheet.create({
 
   // Item Card (Marketplace)
   itemCard: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -133,14 +174,12 @@ const styles = StyleSheet.create({
   itemImage: {
     width: '100%',
     height: 150,
-    backgroundColor: colors.surface,
   },
   itemContent: {
     padding: spacing.md,
   },
   itemTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   itemFooter: {
@@ -151,12 +190,10 @@ const styles = StyleSheet.create({
   itemPrice: {
     ...typography.bodyLarge,
     fontWeight: '700',
-    color: colors.primary,
   },
 
   // Match Card (Character)
   matchCard: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     flexDirection: 'row',
     overflow: 'hidden',
@@ -170,7 +207,6 @@ const styles = StyleSheet.create({
   matchThumbnail: {
     width: 100,
     height: 100,
-    backgroundColor: colors.surface,
   },
   matchContent: {
     flex: 1,
@@ -184,18 +220,15 @@ const styles = StyleSheet.create({
   },
   characterName: {
     ...typography.h3,
-    color: colors.textPrimary,
     flex: 1,
     marginRight: spacing.sm,
   },
   variantName: {
     ...typography.body,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   componentCount: {
     ...typography.caption,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
 });
