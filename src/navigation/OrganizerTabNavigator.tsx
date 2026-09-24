@@ -7,7 +7,8 @@ import {
 import { ProfileStackNavigator } from './ProfileStackNavigator';
 import { EventsStackNavigator } from './EventsStackNavigator';
 import { LogisticsStackNavigator } from './LogisticsStackNavigator';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,14 +22,16 @@ const iconMap: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocus
 };
 
 export const OrganizerTabNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.secondary,
-        tabBarInactiveTintColor: colors.textDisabled,
+        tabBarActiveTintColor: themeColors.secondary,
+        tabBarInactiveTintColor: themeColors.textDisabled,
         tabBarStyle: {
-          backgroundColor: colors.backgroundLight,
-          borderTopColor: colors.border,
+          backgroundColor: themeColors.backgroundLight,
+          borderTopColor: themeColors.border,
           paddingBottom: 6,
           paddingTop: 4,
           height: 60,
@@ -38,9 +41,9 @@ export const OrganizerTabNavigator: React.FC = () => {
           fontWeight: '600',
           fontSize: 11,
         },
-        headerStyle: { backgroundColor: colors.secondary },
-        headerTintColor: colors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
+        headerStyle: { backgroundColor: themeColors.secondary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
         tabBarIcon: ({ focused, color }) => {
           const names = iconMap[route.name];
           const iconName = focused ? names.focused : names.unfocused;

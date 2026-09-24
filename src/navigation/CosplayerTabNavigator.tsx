@@ -6,7 +6,8 @@ import { ProjectStackNavigator } from './ProjectStackNavigator';
 import { OwnedItemStackNavigator } from './OwnedItemStackNavigator';
 import { MarketplaceStackNavigator } from './MarketplaceStackNavigator';
 import { ProfileStackNavigator } from './ProfileStackNavigator';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,14 +22,16 @@ const iconMap: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocus
 };
 
 export const CosplayerTabNavigator: React.FC = () => {
+  const { themeColors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textDisabled,
+        tabBarActiveTintColor: themeColors.primary,
+        tabBarInactiveTintColor: themeColors.textDisabled,
         tabBarStyle: {
-          backgroundColor: colors.backgroundLight,
-          borderTopColor: colors.border,
+          backgroundColor: themeColors.backgroundLight,
+          borderTopColor: themeColors.border,
           paddingBottom: 6,
           paddingTop: 4,
           height: 60,
@@ -38,9 +41,9 @@ export const CosplayerTabNavigator: React.FC = () => {
           fontWeight: '600',
           fontSize: 11,
         },
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: colors.backgroundLight },
+        headerStyle: { backgroundColor: themeColors.primary },
+        headerTintColor: themeColors.backgroundLight,
+        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
         tabBarIcon: ({ focused, color }) => {
           const names = iconMap[route.name];
           const iconName = focused ? names.focused : names.unfocused;
