@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { typography, borderRadius, spacing } from '../../theme';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive';
 

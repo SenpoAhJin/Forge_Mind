@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { typography, borderRadius, spacing } from '../../theme';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 import { Tag } from '../tags';
 
 // Standard Card: White background, 12px rounded corners, 2px elevation shadow
