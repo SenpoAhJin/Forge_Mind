@@ -13,7 +13,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface ConfirmationModalProps {
   visible: boolean;
@@ -26,6 +27,42 @@ interface ConfirmationModalProps {
   onCancel: () => void;
 }
 
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  overlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modal: {
+    backgroundColor: themeColors.backgroundLight,
+  },
+  iconColor: themeColors.primary,
+  iconDestructiveColor: themeColors.error,
+  title: {
+    color: themeColors.textPrimary,
+  },
+  message: {
+    color: themeColors.textSecondary,
+  },
+  cancelButton: {
+    backgroundColor: themeColors.surface,
+    borderColor: themeColors.border,
+  },
+  cancelButtonText: {
+    color: themeColors.textSecondary,
+  },
+  confirmButton: {
+    backgroundColor: themeColors.primary,
+  },
+  confirmButtonText: {
+    color: themeColors.backgroundLight,
+  },
+  destructiveButton: {
+    backgroundColor: themeColors.error,
+  },
+  destructiveButtonText: {
+    color: themeColors.backgroundLight,
+  },
+});
+
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   visible,
   title,
@@ -36,6 +73,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+
   return (
     <Modal
       visible={visible}
@@ -43,18 +83,18 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, dynamicStyles.overlay]}>
         <View style={styles.modalContainer}>
-          <View style={styles.modal}>
+          <View style={[styles.modal, dynamicStyles.modal]}>
             {/* Header */}
             <View style={styles.header}>
               <Ionicons
                 name={confirmStyle === 'destructive' ? 'alert-circle-outline' : 'checkmark-circle-outline'}
                 size={32}
-                color={confirmStyle === 'destructive' ? colors.error : colors.primary}
+                color={confirmStyle === 'destructive' ? dynamicStyles.iconDestructiveColor : dynamicStyles.iconColor}
               />
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.message}>{message}</Text>
+              <Text style={[styles.title, dynamicStyles.title]}>{title}</Text>
+              <Text style={[styles.message, dynamicStyles.message]}>{message}</Text>
             </View>
 
             {/* Actions */}
@@ -62,18 +102,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               {/* Only render cancel button if cancelText is provided */}
               {cancelText ? (
                 <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
+                  style={[styles.button, styles.cancelButton, dynamicStyles.cancelButton]}
                   onPress={onCancel}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.cancelButtonText}>{cancelText}</Text>
+                  <Text style={[styles.cancelButtonText, dynamicStyles.cancelButtonText]}>{cancelText}</Text>
                 </TouchableOpacity>
               ) : null}
 
               <TouchableOpacity
                 style={[
                   styles.button,
-                  confirmStyle === 'destructive' ? styles.destructiveButton : styles.confirmButton,
+                  confirmStyle === 'destructive' 
+                    ? [styles.destructiveButton, dynamicStyles.destructiveButton]
+                    : [styles.confirmButton, dynamicStyles.confirmButton],
                 ]}
                 onPress={onConfirm}
                 activeOpacity={0.7}
@@ -81,8 +123,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <Text
                   style={
                     confirmStyle === 'destructive'
-                      ? styles.destructiveButtonText
-                      : styles.confirmButtonText
+                      ? [styles.destructiveButtonText, dynamicStyles.destructiveButtonText]
+                      : [styles.confirmButtonText, dynamicStyles.confirmButtonText]
                   }
                 >
                   {confirmText}
@@ -99,7 +141,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -108,7 +149,6 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   modal: {
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     shadowColor: '#000',
@@ -123,14 +163,12 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
-    color: colors.textPrimary,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
   message: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -146,29 +184,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   cancelButtonText: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.textSecondary,
   },
-  confirmButton: {
-    backgroundColor: colors.primary,
-  },
+  confirmButton: {},
   confirmButtonText: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.backgroundLight,
   },
-  destructiveButton: {
-    backgroundColor: colors.error,
-  },
+  destructiveButton: {},
   destructiveButtonText: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.backgroundLight,
   },
 });
