@@ -63,7 +63,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'destructive' ? '#FFFFFF' : themeColors.primary}
+          color={variant === 'primary' || variant === 'destructive' ? themeColors.backgroundLight : themeColors.primary}
         />
       ) : (
         <Text style={textStyle}>{variant === 'primary' ? title.toUpperCase() : title}</Text>
@@ -72,23 +72,23 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-const getDynamicStyles = (themeColors: { primary: string; secondary: string; accent: string }) => ({
+const getDynamicStyles = (colors: ThemeColors) => ({
   // Primary: Filled with primary color, white text, rounded 8px
   primary: {
-    backgroundColor: themeColors.primary,
+    backgroundColor: colors.primary,
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: colors.backgroundLight,
     ...typography.buttonText,
   },
   // Secondary: Outlined with primary color, primary text, rounded 8px
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: themeColors.primary,
+    borderColor: colors.primary,
   },
   secondaryText: {
-    color: themeColors.primary,
+    color: colors.primary,
     ...typography.buttonText,
   },
   // Tertiary: Text-only, primary text, no border
@@ -96,19 +96,19 @@ const getDynamicStyles = (themeColors: { primary: string; secondary: string; acc
     backgroundColor: 'transparent',
   },
   tertiaryText: {
-    color: themeColors.primary,
+    color: colors.primary,
     ...typography.buttonText,
   },
   // Destructive: Filled with error color, white text, rounded 8px
   destructive: {
-    backgroundColor: '#F44336', // error color (not themed)
+    backgroundColor: colors.error,
   },
   destructiveText: {
-    color: '#FFFFFF',
+    color: colors.backgroundLight,
     ...typography.buttonText,
   },
   disabledText: {
-    color: '#B0B0B0', // textDisabled (not themed)
+    color: colors.textDisabled,
   },
 });
 

@@ -115,36 +115,36 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   );
 };
 
-const getDynamicStyles = (themeColors: { primary: string; secondary: string; accent: string }) => ({
+const getDynamicStyles = (colors: ThemeColors) => ({
   standardCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.backgroundLight,
   },
   itemCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.backgroundLight,
   },
   itemImage: {
-    backgroundColor: '#F5F5F7',
+    backgroundColor: colors.surface,
   },
   itemTitle: {
-    color: '#2C2C2C',
+    color: colors.textPrimary,
   },
   itemPrice: {
-    color: themeColors.primary,
+    color: colors.primary,
   },
   matchCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.backgroundLight,
   },
   matchThumbnail: {
-    backgroundColor: '#F5F5F7',
+    backgroundColor: colors.surface,
   },
   characterName: {
-    color: '#2C2C2C',
+    color: colors.textPrimary,
   },
   variantName: {
-    color: '#6B6B6B',
+    color: colors.textSecondary,
   },
   componentCount: {
-    color: '#6B6B6B',
+    color: colors.textSecondary,
   },
 });
 
