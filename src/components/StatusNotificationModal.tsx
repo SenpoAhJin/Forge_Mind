@@ -14,7 +14,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface StatusNotificationModalProps {
   visible: boolean;
@@ -25,6 +26,22 @@ interface StatusNotificationModalProps {
   onAppeal?: () => void;
 }
 
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  container: { backgroundColor: themeColors.backgroundLight },
+  iconCircleSuccess: { backgroundColor: themeColors.success + '15' },
+  iconCircleError: { backgroundColor: themeColors.error + '15' },
+  title: { color: themeColors.textPrimary },
+  message: { color: themeColors.textSecondary },
+  rejectionLabel: { color: themeColors.textSecondary },
+  reasonScroll: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+  reasonText: { color: themeColors.textPrimary },
+  appealHint: { color: themeColors.textSecondary },
+  appealButton: { backgroundColor: themeColors.secondary },
+  appealButtonText: { color: themeColors.backgroundLight },
+  closeButton: { backgroundColor: themeColors.primary },
+  closeButtonText: { color: themeColors.backgroundLight },
+});
+
 export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = ({
   visible,
   onClose,
@@ -33,6 +50,9 @@ export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = (
   rejectionReason,
   onAppeal,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
   const isApproved = status === 'approved';
   const isMarketplace = type === 'marketplace';
 
@@ -44,21 +64,21 @@ export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = (
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.container}>
+        <View style={[styles.container, dynamicStyles.container]}>
           {/* Icon */}
           <View style={[
             styles.iconCircle,
-            isApproved ? styles.iconCircleSuccess : styles.iconCircleError
+            isApproved ? dynamicStyles.iconCircleSuccess : dynamicStyles.iconCircleError
           ]}>
             <Ionicons
               name={isApproved ? 'checkmark-circle' : 'close-circle'}
               size={48}
-              color={isApproved ? colors.success : colors.error}
+              color={isApproved ? themeColors.success : themeColors.error}
             />
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>
+          <Text style={[styles.title, dynamicStyles.title]}>
             {isApproved
               ? `${isMarketplace ? 'Marketplace' : 'Staff'} Access Approved!`
               : `Application ${isMarketplace ? 'Marketplace' : 'Staff'} Rejected`
@@ -67,7 +87,7 @@ export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = (
 
           {/* Message */}
           {isApproved ? (
-            <Text style={styles.message}>
+            <Text style={[styles.message, dynamicStyles.message]}>
               {isMarketplace
                 ? 'You can now list items, request commissions, and trade in the marketplace.'
                 : 'You now have access to your assigned department. Check your profile for details.'
@@ -75,11 +95,11 @@ export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = (
             </Text>
           ) : (
             <View style={styles.rejectionSection}>
-              <Text style={styles.rejectionLabel}>Reason for rejection:</Text>
-              <ScrollView style={styles.reasonScroll} contentContainerStyle={styles.reasonContent}>
-                <Text style={styles.reasonText}>{rejectionReason || 'No reason provided'}</Text>
+              <Text style={[styles.rejectionLabel, dynamicStyles.rejectionLabel]}>Reason for rejection:</Text>
+              <ScrollView style={[styles.reasonScroll, dynamicStyles.reasonScroll]} contentContainerStyle={styles.reasonContent}>
+                <Text style={[styles.reasonText, dynamicStyles.reasonText]}>{rejectionReason || 'No reason provided'}</Text>
               </ScrollView>
-              <Text style={styles.appealHint}>
+              <Text style={[styles.appealHint, dynamicStyles.appealHint]}>
                 You can update your information and submit a new application, or contact a Head Organizer for clarification.
               </Text>
             </View>
@@ -89,19 +109,19 @@ export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = (
           <View style={styles.actions}>
             {!isApproved && onAppeal && (
               <TouchableOpacity
-                style={[styles.button, styles.appealButton]}
+                style={[styles.button, styles.appealButton, dynamicStyles.appealButton]}
                 onPress={onAppeal}
                 activeOpacity={0.7}
               >
-                <Text style={styles.appealButtonText}>Update & Resubmit</Text>
+                <Text style={[styles.appealButtonText, dynamicStyles.appealButtonText]}>Update & Resubmit</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.button, styles.closeButton]}
+              style={[styles.button, styles.closeButton, dynamicStyles.closeButton]}
               onPress={onClose}
               activeOpacity={0.7}
             >
-              <Text style={styles.closeButtonText}>
+              <Text style={[styles.closeButtonText, dynamicStyles.closeButtonText]}>
                 {isApproved ? 'Got it!' : 'Close'}
               </Text>
             </TouchableOpacity>
@@ -123,7 +143,6 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     alignItems: 'center',
@@ -141,22 +160,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  iconCircleSuccess: {
-    backgroundColor: colors.success + '15',
-  },
-  iconCircleError: {
-    backgroundColor: colors.error + '15',
-  },
+  iconCircleSuccess: {},
+  iconCircleError: {},
   title: {
     ...typography.h2,
-    color: colors.textPrimary,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   message: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: spacing.xl,
@@ -167,7 +180,6 @@ const styles = StyleSheet.create({
   },
   rejectionLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -175,22 +187,18 @@ const styles = StyleSheet.create({
   },
   reasonScroll: {
     maxHeight: 120,
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   reasonContent: {
     padding: spacing.md,
   },
   reasonText: {
     ...typography.body,
-    color: colors.textPrimary,
     lineHeight: 22,
   },
   appealHint: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: spacing.sm,
     lineHeight: 18,
@@ -206,20 +214,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  appealButton: {
-    backgroundColor: colors.secondary,
-  },
+  appealButton: {},
   appealButtonText: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.backgroundLight,
   },
-  closeButton: {
-    backgroundColor: colors.primary,
-  },
+  closeButton: {},
   closeButtonText: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.backgroundLight,
   },
 });

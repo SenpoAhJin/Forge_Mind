@@ -15,7 +15,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface RegistrationSuccessModalProps {
   visible: boolean;
@@ -38,6 +39,20 @@ interface RegistrationSuccessModalProps {
 
 const { width } = Dimensions.get('window');
 
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  modal: { backgroundColor: themeColors.backgroundLight },
+  checkmarkCircle: { backgroundColor: themeColors.success, shadowColor: themeColors.success },
+  title: { color: themeColors.textPrimary },
+  subtitle: { color: themeColors.textSecondary },
+  detailsCard: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+  detailLabel: { color: themeColors.textSecondary },
+  detailValue: { color: themeColors.textPrimary },
+  infoBox: { backgroundColor: themeColors.info + '10', borderLeftColor: themeColors.info },
+  infoText: { color: themeColors.textPrimary },
+  continueButton: { backgroundColor: themeColors.primary, shadowColor: themeColors.primary },
+  continueButtonText: { color: themeColors.backgroundLight },
+});
+
 export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
   visible,
   displayName,
@@ -51,6 +66,9 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
   onSecondary,
   recapFields,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const checkmarkAnim = useRef(new Animated.Value(0)).current;
@@ -103,6 +121,7 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
         <Animated.View
           style={[
             styles.modal,
+            dynamicStyles.modal,
             {
               transform: [
                 {
@@ -135,28 +154,28 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
               },
             ]}
           >
-            <View style={styles.checkmarkCircle}>
-              <Ionicons name="checkmark" size={48} color={colors.backgroundLight} />
+            <View style={[styles.checkmarkCircle, dynamicStyles.checkmarkCircle]}>
+              <Ionicons name="checkmark" size={48} color={themeColors.backgroundLight} />
             </View>
           </Animated.View>
 
           {/* Success Message */}
-          <Text style={styles.title}>{title ?? 'Welcome to ForgeMind!'}</Text>
-          <Text style={styles.subtitle}>{subtitle ?? 'Your account has been created successfully'}</Text>
+          <Text style={[styles.title, dynamicStyles.title]}>{title ?? 'Welcome to ForgeMind!'}</Text>
+          <Text style={[styles.subtitle, dynamicStyles.subtitle]}>{subtitle ?? 'Your account has been created successfully'}</Text>
 
           {/* Account Details */}
-          <View style={styles.detailsCard}>
+          <View style={[styles.detailsCard, dynamicStyles.detailsCard]}>
             <View style={styles.detailRow}>
-              <Ionicons name="person-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.detailLabel}>Display Name</Text>
+              <Ionicons name="person-circle-outline" size={20} color={themeColors.primary} />
+              <Text style={[styles.detailLabel, dynamicStyles.detailLabel]}>Display Name</Text>
             </View>
-            <Text style={styles.detailValue}>{displayName}</Text>
+            <Text style={[styles.detailValue, dynamicStyles.detailValue]}>{displayName}</Text>
 
             <View style={[styles.detailRow, { marginTop: spacing.md }]}>
-              <Ionicons name="mail-outline" size={20} color={colors.primary} />
-              <Text style={styles.detailLabel}>Email</Text>
+              <Ionicons name="mail-outline" size={20} color={themeColors.primary} />
+              <Text style={[styles.detailLabel, dynamicStyles.detailLabel]}>Email</Text>
             </View>
-            <Text style={styles.detailValue}>{email}</Text>
+            <Text style={[styles.detailValue, dynamicStyles.detailValue]}>{email}</Text>
 
             {/* Optional recap rows (STEP 3 - e.g. marketplace submission recap). 
                 Each iteration is wrapped in a Fragment so rows render as one parent unit. */}
@@ -166,31 +185,31 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
                   <Ionicons
                     name={field.icon ?? 'information-circle-outline'}
                     size={20}
-                    color={colors.primary}
+                    color={themeColors.primary}
                   />
-                  <Text style={styles.detailLabel}>{field.label}</Text>
+                  <Text style={[styles.detailLabel, dynamicStyles.detailLabel]}>{field.label}</Text>
                 </View>
-                <Text style={styles.detailValue}>{field.value}</Text>
+                <Text style={[styles.detailValue, dynamicStyles.detailValue]}>{field.value}</Text>
               </React.Fragment>
             ))}
           </View>
 
           {/* Info Note */}
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle-outline" size={18} color={colors.info} />
-            <Text style={styles.infoText}>
+          <View style={[styles.infoBox, dynamicStyles.infoBox]}>
+            <Ionicons name="information-circle-outline" size={18} color={themeColors.info} />
+            <Text style={[styles.infoText, dynamicStyles.infoText]}>
               Please use your email and password to log in and start building your cosplay projects!
             </Text>
           </View>
 
           {/* Continue Button */}
           <TouchableOpacity
-            style={styles.continueButton}
+            style={[styles.continueButton, dynamicStyles.continueButton]}
             onPress={onContinue}
             activeOpacity={0.8}
           >
-            <Text style={styles.continueButtonText}>{primaryButtonLabel ?? 'Continue to Login'}</Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.backgroundLight} />
+            <Text style={[styles.continueButtonText, dynamicStyles.continueButtonText]}>{primaryButtonLabel ?? 'Continue to Login'}</Text>
+            <Ionicons name="arrow-forward" size={20} color={themeColors.backgroundLight} />
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
@@ -209,7 +228,6 @@ const styles = StyleSheet.create({
   modal: {
     width: width - spacing.xl * 2,
     maxWidth: 400,
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     alignItems: 'center',
@@ -226,10 +244,8 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.success,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -237,25 +253,21 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
-    color: colors.textPrimary,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
   detailsCard: {
     width: '100%',
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   detailRow: {
     flexDirection: 'row',
@@ -265,29 +277,24 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   detailValue: {
     ...typography.body,
-    color: colors.textPrimary,
     fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.info + '10',
     borderRadius: borderRadius.md,
     padding: spacing.md,
     gap: spacing.sm,
     marginBottom: spacing.xl,
     borderLeftWidth: 3,
-    borderLeftColor: colors.info,
   },
   infoText: {
     ...typography.caption,
-    color: colors.textPrimary,
     flex: 1,
     lineHeight: 18,
   },
@@ -296,12 +303,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.lg,
     gap: spacing.sm,
-    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -309,7 +314,6 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     ...typography.body,
-    color: colors.backgroundLight,
     fontWeight: '700',
   },
 });

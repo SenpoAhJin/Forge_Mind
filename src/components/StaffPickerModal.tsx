@@ -6,9 +6,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
 import { Button } from './buttons';
 import { DEPARTMENT_LABELS } from '../types/organizer';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface Staff {
   name: string;
@@ -26,6 +27,19 @@ interface StaffPickerModalProps {
   saving: boolean;
 }
 
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  modalContainer: { backgroundColor: themeColors.surface },
+  header: { borderBottomColor: themeColors.border },
+  title: { color: themeColors.textPrimary },
+  row: { borderBottomColor: themeColors.border },
+  rowSelected: { backgroundColor: themeColors.backgroundLight },
+  staffName: { color: themeColors.textPrimary },
+  staffEmail: { color: themeColors.textSecondary },
+  staffDepartment: { color: themeColors.textSecondary },
+  emptyText: { color: themeColors.textSecondary },
+  footer: { borderTopColor: themeColors.border },
+});
+
 export const StaffPickerModal: React.FC<StaffPickerModalProps> = ({
   visible,
   staff,
@@ -35,6 +49,8 @@ export const StaffPickerModal: React.FC<StaffPickerModalProps> = ({
   onCancel,
   saving,
 }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
   const isEmpty = staff.length === 0;
 
   return (
@@ -45,33 +61,33 @@ export const StaffPickerModal: React.FC<StaffPickerModalProps> = ({
       onRequestClose={onCancel}
     >
       <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Assign Staff</Text>
+        <View style={[styles.modalContainer, dynamicStyles.modalContainer]}>
+          <View style={[styles.header, dynamicStyles.header]}>
+            <Text style={[styles.title, dynamicStyles.title]}>Assign Staff</Text>
             <TouchableOpacity onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close" size={24} color={themeColors.textPrimary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.listContainer}>
             {/* Unassigned option */}
             <TouchableOpacity
-              style={[styles.row, selectedEmail === null && styles.rowSelected]}
+              style={[styles.row, dynamicStyles.row, selectedEmail === null ? dynamicStyles.rowSelected : null]}
               onPress={() => onSelect(null)}
               activeOpacity={0.7}
             >
               <View style={styles.rowContent}>
-                <Text style={styles.staffName}>Unassigned</Text>
+                <Text style={[styles.staffName, dynamicStyles.staffName]}>Unassigned</Text>
               </View>
               {selectedEmail === null ? (
-                <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                <Ionicons name="checkmark-circle" size={24} color={themeColors.primary} />
               ) : null}
             </TouchableOpacity>
 
             {/* Staff list */}
             {isEmpty ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
+                <Text style={[styles.emptyText, dynamicStyles.emptyText]}>
                   No approved staff yet. Approve staff in Verify Staff first.
                 </Text>
               </View>
@@ -83,23 +99,23 @@ export const StaffPickerModal: React.FC<StaffPickerModalProps> = ({
                 return (
                   <TouchableOpacity
                     key={member.email}
-                    style={[styles.row, isSelected && styles.rowSelected]}
+                    style={[styles.row, dynamicStyles.row, isSelected ? dynamicStyles.rowSelected : null]}
                     onPress={() => onSelect(member.email)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.rowContent}>
-                      <Text style={styles.staffName} numberOfLines={1}>
+                      <Text style={[styles.staffName, dynamicStyles.staffName]} numberOfLines={1}>
                         {member.name}
                       </Text>
-                      <Text style={styles.staffEmail} numberOfLines={1}>
+                      <Text style={[styles.staffEmail, dynamicStyles.staffEmail]} numberOfLines={1}>
                         {member.email}
                       </Text>
-                      <Text style={styles.staffDepartment} numberOfLines={1}>
+                      <Text style={[styles.staffDepartment, dynamicStyles.staffDepartment]} numberOfLines={1}>
                         {deptLabel}
                       </Text>
                     </View>
                     {isSelected ? (
-                      <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                      <Ionicons name="checkmark-circle" size={24} color={themeColors.primary} />
                     ) : null}
                   </TouchableOpacity>
                 );
@@ -107,7 +123,7 @@ export const StaffPickerModal: React.FC<StaffPickerModalProps> = ({
             )}
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, dynamicStyles.footer]}>
             <Button
               title="Cancel"
               onPress={onCancel}
@@ -136,7 +152,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   modalContainer: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     width: '100%',
     maxWidth: 500,
@@ -148,11 +163,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   title: {
     ...typography.h2,
-    color: colors.textPrimary,
   },
   listContainer: {
     maxHeight: 400,
@@ -163,12 +176,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     minHeight: 72,
   },
-  rowSelected: {
-    backgroundColor: colors.backgroundLight,
-  },
+  rowSelected: {},
   rowContent: {
     flex: 1,
     marginRight: spacing.sm,
@@ -176,17 +186,14 @@ const styles = StyleSheet.create({
   staffName: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: 2,
   },
   staffEmail: {
     ...typography.caption,
-    color: colors.textSecondary,
     marginBottom: 2,
   },
   staffDepartment: {
     ...typography.caption,
-    color: colors.textSecondary,
   },
   emptyState: {
     padding: spacing.xl,
@@ -194,14 +201,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',
     padding: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     gap: spacing.md,
   },
   button: {
