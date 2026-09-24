@@ -10,13 +10,31 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { StandardCard, Button, TextInputField, ConfirmationModal } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { getTodayLocal } from '../../utils/dateHelpers';
 import { CalendarEntry } from '../../types/calendarEntries';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
+
+const getDynamicStyles = (themeColors: ThemeColors) => ({
+  container: { backgroundColor: themeColors.surface },
+  loadingText: { color: themeColors.textSecondary },
+  noAccessTitle: { color: themeColors.textPrimary },
+  noAccessBody: { color: themeColors.textSecondary },
+  formTitle: { color: themeColors.textPrimary },
+  errorText: { color: themeColors.error },
+  emptyTitle: { color: themeColors.textPrimary },
+  emptyBody: { color: themeColors.textSecondary },
+  entryTitle: { color: themeColors.textPrimary },
+  entryOrganizer: { color: themeColors.textSecondary },
+  entryDetailText: { color: themeColors.textSecondary },
+  submitterText: { color: themeColors.textDisabled },
+});
 
 export const CalendarManageScreen: React.FC = () => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
   const { user } = useUser();
   const { entries, isLoading, createEntry, updateEntry, deleteEntry } = useCalendar();
 
@@ -154,19 +172,19 @@ export const CalendarManageScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading calendar...</Text>
+      <View style={[styles.container, dynamicStyles.container]}>
+        <Text style={[styles.loadingText, dynamicStyles.loadingText]}>Loading calendar...</Text>
       </View>
     );
   }
 
   if (!canSubmit) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, dynamicStyles.container]}>
         <StandardCard style={styles.noAccessCard}>
-          <Ionicons name="lock-closed" size={40} color={colors.textDisabled} />
-          <Text style={styles.noAccessTitle}>Access Restricted</Text>
-          <Text style={styles.noAccessBody}>
+          <Ionicons name="lock-closed" size={40} color={themeColors.textDisabled} />
+          <Text style={[styles.noAccessTitle, dynamicStyles.noAccessTitle]}>Access Restricted</Text>
+          <Text style={[styles.noAccessBody, dynamicStyles.noAccessBody]}>
             Only approved staff or Head Organizers can submit community event listings.
           </Text>
         </StandardCard>
@@ -175,13 +193,13 @@ export const CalendarManageScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, dynamicStyles.container]} contentContainerStyle={styles.content}>
       {showForm ? (
         <StandardCard style={styles.formCard}>
           <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>{editingId ? 'Edit Listing' : 'New Listing'}</Text>
+            <Text style={[styles.formTitle, dynamicStyles.formTitle]}>{editingId ? 'Edit Listing' : 'New Listing'}</Text>
             <TouchableOpacity onPress={resetForm} activeOpacity={0.7}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
+              <Ionicons name="close" size={24} color={themeColors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -233,7 +251,7 @@ export const CalendarManageScreen: React.FC = () => {
             placeholder="https://event-website.com"
           />
 
-          {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+          {formError ? <Text style={[styles.errorText, dynamicStyles.errorText]}>{formError}</Text> : null}
 
           <View style={styles.formActions}>
             <Button
@@ -259,9 +277,9 @@ export const CalendarManageScreen: React.FC = () => {
 
           {sortedEntries.length === 0 ? (
             <StandardCard style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={40} color={colors.textDisabled} />
-              <Text style={styles.emptyTitle}>No listings yet</Text>
-              <Text style={styles.emptyBody}>
+              <Ionicons name="calendar-outline" size={40} color={themeColors.textDisabled} />
+              <Text style={[styles.emptyTitle, dynamicStyles.emptyTitle]}>No listings yet</Text>
+              <Text style={[styles.emptyBody, dynamicStyles.emptyBody]}>
                 Submit the first community event listing for cosplayers to discover.
               </Text>
             </StandardCard>
@@ -270,17 +288,17 @@ export const CalendarManageScreen: React.FC = () => {
               <StandardCard key={entry.id} style={styles.entryCard}>
                 <View style={styles.entryHeader}>
                   <View style={styles.entryMeta}>
-                    <Text style={styles.entryTitle} numberOfLines={1}>{entry.title}</Text>
-                    <Text style={styles.entryOrganizer} numberOfLines={1}>{entry.organizer_name}</Text>
+                    <Text style={[styles.entryTitle, dynamicStyles.entryTitle]} numberOfLines={1}>{entry.title}</Text>
+                    <Text style={[styles.entryOrganizer, dynamicStyles.entryOrganizer]} numberOfLines={1}>{entry.organizer_name}</Text>
                   </View>
                   {canEdit(entry) ? (
                     <View style={styles.entryActions}>
                       <TouchableOpacity onPress={() => loadEntryForEdit(entry)} activeOpacity={0.7}>
-                        <Ionicons name="pencil" size={20} color={colors.primary} />
+                        <Ionicons name="pencil" size={20} color={themeColors.primary} />
                       </TouchableOpacity>
                       {canDelete(entry) ? (
                         <TouchableOpacity onPress={() => setDeleteConfirm(entry)} activeOpacity={0.7}>
-                          <Ionicons name="trash-outline" size={20} color={colors.error} />
+                          <Ionicons name="trash-outline" size={20} color={themeColors.error} />
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -288,24 +306,24 @@ export const CalendarManageScreen: React.FC = () => {
                 </View>
                 <View style={styles.entryDetails}>
                   <View style={styles.entryRow}>
-                    <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.entryDetailText} numberOfLines={1}>
+                    <Ionicons name="location-outline" size={16} color={themeColors.textSecondary} />
+                    <Text style={[styles.entryDetailText, dynamicStyles.entryDetailText]} numberOfLines={1}>
                       {entry.venue_name}, {entry.city}
                     </Text>
                   </View>
                   <View style={styles.entryRow}>
-                    <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.entryDetailText}>
+                    <Ionicons name="calendar-outline" size={16} color={themeColors.textSecondary} />
+                    <Text style={[styles.entryDetailText, dynamicStyles.entryDetailText]}>
                       {entry.start_date}{entry.end_date ? ` - ${entry.end_date}` : ''}
                     </Text>
                   </View>
                   {entry.external_link ? (
                     <View style={styles.entryRow}>
-                      <Ionicons name="link-outline" size={16} color={colors.textSecondary} />
-                      <Text style={styles.entryDetailText} numberOfLines={1}>{entry.external_link}</Text>
+                      <Ionicons name="link-outline" size={16} color={themeColors.textSecondary} />
+                      <Text style={[styles.entryDetailText, dynamicStyles.entryDetailText]} numberOfLines={1}>{entry.external_link}</Text>
                     </View>
                   ) : null}
-                  <Text style={styles.submitterText}>
+                  <Text style={[styles.submitterText, dynamicStyles.submitterText]}>
                     Submitted by {entry.submitted_by_name}
                   </Text>
                 </View>
@@ -333,7 +351,6 @@ export const CalendarManageScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
   },
   content: {
     padding: spacing.md,
@@ -341,7 +358,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xl,
   },
@@ -354,11 +370,9 @@ const styles = StyleSheet.create({
   },
   noAccessTitle: {
     ...typography.h2,
-    color: colors.textPrimary,
   },
   noAccessBody: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
   formCard: {
@@ -373,7 +387,6 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     ...typography.h2,
-    color: colors.textPrimary,
   },
   formActions: {
     flexDirection: 'row',
@@ -383,7 +396,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...typography.caption,
-    color: colors.error,
   },
   emptyCard: {
     alignItems: 'center',
@@ -392,11 +404,9 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
   },
   emptyBody: {
     ...typography.body,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
   entryCard: {
@@ -413,11 +423,9 @@ const styles = StyleSheet.create({
   },
   entryTitle: {
     ...typography.h3,
-    color: colors.textPrimary,
   },
   entryOrganizer: {
     ...typography.body,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   entryActions: {
@@ -435,12 +443,10 @@ const styles = StyleSheet.create({
   },
   entryDetailText: {
     ...typography.caption,
-    color: colors.textSecondary,
     flex: 1,
   },
   submitterText: {
     ...typography.caption,
-    color: colors.textDisabled,
     fontStyle: 'italic',
     marginTop: spacing.xs,
   },
