@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '../../theme';
+import { typography, spacing } from '../../theme';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 type BadgeStatus = 'active' | 'pending' | 'completed' | 'blocked' | 'cancelled' | 'verified' | 'rejected';
 
@@ -16,20 +17,22 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
+  const { themeColors } = useTheme();
+  
   const getStatusColor = (status: BadgeStatus) => {
     switch (status) {
       case 'active':
       case 'completed':
       case 'verified':
-        return colors.success;
+        return themeColors.success;
       case 'pending':
-        return colors.warning;
+        return themeColors.warning;
       case 'blocked':
       case 'cancelled':
       case 'rejected':
-        return colors.error;
+        return themeColors.error;
       default:
-        return colors.textSecondary;
+        return themeColors.textSecondary;
     }
   };
 
