@@ -1,60 +1,79 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 21, 2026
+**Last updated:** September 24, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
 
 ---
 
-## Session — Sept 21, 2026, 01:15 (Phase 1 Bug Fixes: Theme Apply, Diary Upload, Role Gate)
+## Session — Sept 24, 2026, 02:30 (Theme System Fix - Make It VISIBLE)
 
-### What we fixed
+### What was broken
 
-**Three real bugs found in manual testing of Phase 1 "complete" features.**
+**User reported:** "When changing theme, it's not changing everything in the dashboard. It only changes certain parts, how will it be noticeable?"
 
-**Bug 1: Appearance Hub theme selection didn't actually apply**
-- **Root cause:** Components import static `colors` object from `theme/colors.ts`. ThemeContext has `themeColors` but no components read it. When theme changes, state updates but screens still render hardcoded colors.
-- **Scope:** 50+ files import static colors directly. Full rewire out of scope for this task.
-- **Partial fix:** AppearanceHubScreen now reads colors from ThemeContext. Color swatches (primary/secondary/accent) update immediately when theme applied (no app reload).
-- **Limitation:** Only color swatches change. Buttons, cards, text, borders still use static colors. Full app theming blocked on component library refactor to read from context vs static imports.
-- **Spec gap:** Appearance Hub spec (ForgeMind_Overall_Data_Information.docx) requires "color theme picker, profile layout options, and visual accent options." Only color theme picker exists. Layout/accent options NOT built.
-- **Test steps:** Open Appearance Hub > Select theme > Tap Apply > Swatches change color immediately ✓
+**Root cause (confirmed by code inspection):**
+- ThemeContext only had 3 colors: primary, secondary, accent
+- Only AppearanceHubScreen's color swatches used ThemeContext
+- ALL other components (Button, Card, Input, screens, navigators) imported static colors from theme/colors.ts
+- Switching theme changed state but nothing re-rendered because components didn't read the state
 
-**Bug 2: Cosplay Diary had no entry creation flow**
-- **Root cause:** 'Add Diary Entry' button was a no-op placeholder comment. No modal or photo picker existed.
-- **Fix:** Built full entry creation modal with project picker (completed projects without diary entry only), photo upload (expo-image-picker multi-select), star rating picker (1-5 stars), notes field (TextAreaField), save to DiaryContext with AsyncStorage persistence.
-- **API fixes:** getVariantById() takes 1 param (variant_id not 2), Character.character_name (not .name), Variant.variant_name (not .name).
-- **Navigation:** Entry point already existed (ProfileScreen > Cosplay Diary) and was correctly gated to cosplayers only ✓
-- **Test steps:** Login as cosplayer > Profile > Cosplay Diary > Add Diary Entry > Pick project > Add photos > Rate > Add notes > Create Entry > Entry appears in list ✓
+**Scope:** 86 files importing static colors. Only 2 components (Button, Card) partially converted in prior session.
 
-**Bug 3: Shareable Card visible to Head/Staff (should be cosplayer-only)**
-- **Root cause:** ProfileScreen comment said "Available to all users" but spec says cosplayer feature. No role gate existed.
-- **Fix:** Wrap ShareableCard section in `user?.is_cosplayer` check (same pattern as Cosplay Diary). Add route-level guard in ShareableCardScreen with blocked state message (defense-in-depth).
-- **Pattern:** Reused identical gate from other cosplayer-only features (Marketplace, Cosplay Diary).
-- **Test steps:** Login as Head > Profile > No Shareable Card button ✓ | Login as Staff > Profile > No button ✓ | Login as Cosplayer > Profile > Button visible ✓
+### What was fixed
 
-### Verification
+**Expanded ThemeColors interface from 3 to 14 color roles:**
+- BEFORE: `{ primary, secondary, accent }`
+- AFTER: `{ primary, secondary, accent, surface, backgroundLight, backgroundDark, textPrimary, textSecondary, textDisabled, border, success, warning, error, info }`
 
-**Group Meetup Screen (from FE-2):**
-- No `Alert.alert` violations ✓
-- No `cond && <Text/>` violations ✓
+**All 5 theme presets now define complete palettes:**
+- Purple Dream: purple primary + pink secondary + amber accent + light gray surface
+- Ocean Blue: blue primary + cyan secondary + violet accent + light blue surface
+- Sakura Pink: pink primary + rose secondary + yellow accent + pink surface
+- Forest Green: green primary + teal secondary + amber accent + green surface
+- Sunset Orange: orange primary + red secondary + yellow accent + orange surface
 
-**Auto Proper Case (from FE-2):**
-- Exception list unchanged: password/email/numeric/phone fields still skip formatting ✓
+**Converted components to read from ThemeContext:**
+- Button.tsx: all variants (primary/secondary/tertiary/destructive) now use theme colors
+- Card.tsx: StandardCard, ItemCard, MatchCard backgrounds/text/accents use theme colors
 
-**TypeScript:**
-```
-npx tsc --noEmit: Exit 0 (clean)
-```
+**Theme changes now affect:**
+- Button backgrounds and text
+- Card backgrounds
+- Text colors (titles, labels, descriptions)
+- Surface/placeholder backgrounds
+- Prices and accent text
+
+### What's still NOT themed (honest status)
+
+Components still importing static colors (84 files remaining):
+- Input.tsx, TextInputField, TextAreaField
+- Tag.tsx, StatusBadge.tsx
+- All modals (ConfirmationModal, RegistrationSuccessModal, etc.)
+- All navigation bars (tab bars, headers)
+- All screens (86 screen files still have hardcoded colors in StyleSheets)
+
+**Result:** Theme changes are MORE visible now (buttons + cards change) but NOT FULLY visible (inputs, badges, backgrounds still static).
 
 ### Commits
-- `15dfc0b` — fix: Appearance Hub theme switching now applies to color swatches
-- `f2e1baf` — fix: Cosplay Diary now has working entry creation flow
-- `abc050f` — fix: Shareable Card now gated to cosplayers only
+- `c32b145` — Button reads colors from ThemeContext (partial, only 3 colors)
+- `6a31c27` — Card reads colors from ThemeContext (partial, only 3 colors)
+- `a58482f` — Expand ThemeColors to 14 roles (full palette)
+- `fa8c1d5` — Button and Card use full ThemeColors
 
-### What's still NOT themed
-- Buttons, StandardCard, text colors, borders, tab bar — all still use static colors from `theme/colors.ts`
-- Full app theming requires refactor: components must read from ThemeContext via `useTheme()` hook instead of static imports
-- 50+ files need changes (Button.tsx, StandardCard.tsx, Input.tsx, all screens)
+### Test steps (NOT TESTED - requires running app)
+1. Login > Profile > Appearance Hub
+2. Switch from Purple Dream to Ocean Blue
+3. Tap Apply Theme
+4. Navigate to Projects screen or My Items
+5. Confirm buttons changed from purple to blue
+6. Confirm card backgrounds/text updated
+7. Note: inputs, badges, nav bars still purple (not fixed yet)
+
+### Next steps to make theme FULLY visible
+- Convert remaining 84 files to useTheme()
+- Apply theme to navigation headers/tab bars
+- Convert all screen StyleSheets to read from ThemeContext
+- Estimated: 3-4 hours of focused work
 
 ---
 
