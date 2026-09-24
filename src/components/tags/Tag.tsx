@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { colors, typography, borderRadius, spacing } from '../../theme';
+import { typography, borderRadius, spacing } from '../../theme';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 type MatchRating = 'exact' | 'close' | 'loose';
 type TagType = 'match' | 'status' | 'category';
@@ -18,16 +19,19 @@ interface TagProps {
 }
 
 export const Tag: React.FC<TagProps> = ({ type, label, rating, style }) => {
+  const { themeColors } = useTheme();
+  const dynamicStyles = getDynamicStyles(themeColors);
+  
   const getMatchRatingColor = (rating: MatchRating) => {
     switch (rating) {
       case 'exact':
-        return colors.exactMatch;
+        return themeColors.success; // exactMatch -> success
       case 'close':
-        return colors.closeMatch;
+        return themeColors.warning; // closeMatch -> warning
       case 'loose':
-        return colors.looseMatch;
+        return '#FF9800'; // looseMatch (not in ThemeColors, hardcoded)
       default:
-        return colors.textSecondary;
+        return themeColors.textSecondary;
     }
   };
 
@@ -48,29 +52,47 @@ export const Tag: React.FC<TagProps> = ({ type, label, rating, style }) => {
     const bgColor = getMatchRatingColor(rating);
     return (
       <View style={[styles.matchTag, { backgroundColor: bgColor }, style]}>
-        <Text style={styles.matchTagText}>{getMatchRatingLabel(rating)}</Text>
+        <Text style={[dynamicStyles.matchTagText, styles.matchTagText]}>{getMatchRatingLabel(rating)}</Text>
       </View>
     );
   }
 
   if (type === 'status') {
     return (
-      <View style={[styles.statusTag, style]}>
-        <Text style={styles.statusTagText}>{label}</Text>
+      <View style={[dynamicStyles.statusTag, styles.statusTag, style]}>
+        <Text style={[dynamicStyles.statusTagText, styles.statusTagText]}>{label}</Text>
       </View>
     );
   }
 
   if (type === 'category') {
     return (
-      <View style={[styles.categoryTag, style]}>
-        <Text style={styles.categoryTagText}>{label}</Text>
+      <View style={[dynamicStyles.categoryTag, styles.categoryTag, style]}>
+        <Text style={[dynamicStyles.categoryTagText, styles.categoryTagText]}>{label}</Text>
       </View>
     );
   }
 
   return null;
 };
+
+const getDynamicStyles = (colors: ThemeColors) => ({
+  matchTagText: {
+    color: colors.backgroundLight,
+  },
+  statusTag: {
+    backgroundColor: colors.info,
+  },
+  statusTagText: {
+    color: colors.backgroundLight,
+  },
+  categoryTag: {
+    backgroundColor: colors.surface,
+  },
+  categoryTagText: {
+    color: colors.textPrimary,
+  },
+});
 
 const styles = StyleSheet.create({
   // Match Rating Tags: Pill-shaped, 16px height, match-color background, white text
@@ -83,7 +105,6 @@ const styles = StyleSheet.create({
   },
   matchTagText: {
     ...typography.caption,
-    color: colors.backgroundLight,
     fontWeight: '600',
   },
 
@@ -92,13 +113,11 @@ const styles = StyleSheet.create({
     height: 24,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.info,
     justifyContent: 'center',
     alignItems: 'center',
   },
   statusTagText: {
     ...typography.caption,
-    color: colors.backgroundLight,
     fontWeight: '600',
   },
 
@@ -107,13 +126,11 @@ const styles = StyleSheet.create({
     height: 24,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   categoryTagText: {
     ...typography.caption,
-    color: colors.textPrimary,
     fontWeight: '500',
   },
 });
