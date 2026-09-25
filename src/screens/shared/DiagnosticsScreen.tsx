@@ -62,7 +62,7 @@ export const DiagnosticsScreen: React.FC = () => {
         <Button title="Log All Data to Console" onPress={handleLogAll} variant="secondary" />
         <Button title="Check Events Storage" onPress={handleCheckEvents} variant="secondary" />
         <Button title="Check Projects Storage" onPress={handleCheckProjects} variant="secondary" />
-        <Button title="Clear All Data" onPress={handleClearAll} variant="danger" />
+        <Button title="Clear All Data" onPress={handleClearAll} variant="tertiary" />
       </View>
 
       {output && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ProfileScreen } from '../screens/shared';
+import { ProfileScreen, DiagnosticsScreen } from '../screens/shared';
 import RequestOrganizerAccessScreen from '../screens/organizer/RequestOrganizerAccessScreen';
 import HolderReviewQueueScreen from '../screens/holder/HolderReviewQueueScreen';
 import { VerifyCosplayersScreen } from '../screens/organizer';
@@ -28,6 +28,7 @@ export type ProfileStackParamList = {
   AppearanceHub: undefined;
   CosplayDiary: undefined;
   PortfolioManagement: undefined;
+  Diagnostics: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -104,6 +105,11 @@ export const ProfileStackNavigator: React.FC = () => {
         name="PortfolioManagement"
         component={PortfolioManagementScreen}
         options={{ title: 'Portfolio' }}
+      />
+      <Stack.Screen
+        name="Diagnostics"
+        component={DiagnosticsScreen}
+        options={{ title: 'Diagnostics' }}
       />
     </Stack.Navigator>
   );

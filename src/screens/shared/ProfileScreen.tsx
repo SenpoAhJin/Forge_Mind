@@ -521,6 +521,16 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.detailLabel}>Mode</Text>
           <Text style={styles.detailValue}>Demo (mock data)</Text>
         </View>
+        
+        {/* Diagnostics tool */}
+        <TouchableOpacity
+          style={styles.cardButton}
+          onPress={() => navigation.navigate('Diagnostics')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cardButtonText}>Diagnostics & Reset Data</Text>
+          <Ionicons name="construct-outline" size={16} color={colors.error} />
+        </TouchableOpacity>
       </View>
 
       {/* Shareable Cards - Cosplayers only */}
