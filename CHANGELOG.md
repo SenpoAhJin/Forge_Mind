@@ -5,6 +5,36 @@
 
 ---
 
+## Session — Sept 16, 2026 (Diary Test Entry Button Added)
+
+### What was done
+
+**Fixed Cosplay Diary empty state (no way to add entries):**
+- Original design only showed "Add Entry" button when completed projects existed
+- This created a chicken-and-egg problem for testing (couldn't test diary without projects)
+- Added "Create Test Entry" button to empty state for testing purposes
+- Button appears when: no diary entries exist AND no completed projects exist
+- Test entries use placeholder data: "Test Cosplay Entry" / "Test Character" / "Original"
+- Real workflow remains intact: complete project → diary button appears → link entry to project
+- Modal adapts intelligently:
+  - With completed projects: shows project picker (original behavior)
+  - Without projects: shows info notice explaining test entry
+- Users can now:
+  - Add test diary entries immediately to see how the feature works
+  - Add photos, ratings (1-5 stars), and notes to test entries
+  - See entries display in the new horizontal card layout
+  - Later create real entries once they have completed projects
+
+**Alignment with ForgeMind spec:**
+- Diary is "per completed look" (spec requirement) - real entries still require projects
+- Test button is a development/testing affordance, not production feature
+- Consider adding explicit "linked to project" badge to distinguish test vs real entries in future
+
+### Commits
+- `d5f3ed9` FIX: Add test entry button to Cosplay Diary empty state
+
+---
+
 ## Session — Sept 16, 2026 (Real Data Restored - Portfolio & Diary Working)
 
 ### What was done
