@@ -112,6 +112,17 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   const confirmedEvents = events.filter((e) => e.status === 'confirmed');
   const linkedEvent = project?.linked_event_id ? getEventById(project.linked_event_id) : null;
 
+  // Debug logging
+  console.log('[ProjectDashboard] Project:', project?.project_name);
+  console.log('[ProjectDashboard] Project linked_event_id:', project?.linked_event_id);
+  console.log('[ProjectDashboard] Linked event found:', linkedEvent ? { id: linkedEvent.id, name: linkedEvent.name, date: linkedEvent.start_date } : 'null');
+  console.log('[ProjectDashboard] All confirmed events:', confirmedEvents.map(e => ({ id: e.id, name: e.name, date: e.start_date })));
+  
+  // Validation: if linked event ID exists but event not found, show error
+  if (project?.linked_event_id && !linkedEvent) {
+    console.error('[ProjectDashboard] ERROR: Project has linked_event_id but event not found!', project.linked_event_id);
+  }
+
   if (!project) {
     return (
       <View style={styles.container}>
@@ -150,7 +161,9 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   };
 
   const handleLinkEvent = (eventId: string | null) => {
+    console.log('[ProjectDashboard] Linking event ID:', eventId);
     const result = setLinkedEvent(projectId, eventId);
+    console.log('[ProjectDashboard] Link result:', result);
     if (!result.success) {
       setMilestoneError(result.error || 'Failed to link event');
     } else {
