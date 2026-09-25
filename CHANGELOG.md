@@ -5,6 +5,32 @@
 
 ---
 
+## Session — Sept 16, 2026 (Deprecation Warnings Fix)
+
+### What was done
+
+**Fixed expo-image-picker MediaTypeOptions deprecation:**
+- Replaced `ImagePicker.MediaTypeOptions.Images` with `['images']` array format
+- Updated in PortfolioManagementScreen and CosplayDiaryScreen
+- Per expo-image-picker v57 API (uses array of MediaType strings, not enum)
+- Functionally equivalent (still restricts to images-only)
+
+**pointerEvents deprecation:**
+- Investigated - no source code usage found
+- Warning originates from React Native library components (ScrollView/TouchableOpacity)
+- Cannot be fixed in application code - requires React Native library update
+- No changes made
+
+**Persistence diagnostics (answered for future task planning):**
+- Portfolio photos: PERSISTED via UserContext → AuthService.updateUser → AsyncStorage (@forgemind:current_user)
+- Diary entries: PERSISTED via DiaryContext → AsyncStorage (@forgemind:diary_entries) after every state change
+- Both features retain data across app reloads
+
+### Commits
+- `da90799` FIX: Replace deprecated MediaTypeOptions with mediaTypes array
+
+---
+
 ## Session — Sept 16, 2026 (Visual Design Pass: Portfolio & Diary)
 
 ### What was done
