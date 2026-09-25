@@ -1,7 +1,45 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 16, 2026
+**Last updated:** September 25, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Friday, September 25, 2026, 20:55 (Projects Upcoming Events Source Fix)
+
+### What was fixed
+
+**Corrected the data source for Projects → Upcoming Events:**
+- The old section read approved Community Calendar listings from `CalendarContext`, so it displayed entries shaped like `Egwgw Etyw` instead of the event linked to the user's project.
+- The section now starts from the current user's projects, keeps projects with a `linked_event_id`, resolves those IDs through `EventsContext`, and displays the linked organizer event.
+- Project ownership now uses the active user's email. Project-scoped mock state resets together when the active account changes so one account cannot inherit another account's in-memory task, budget, or milestone edits.
+- Only confirmed events whose `end_date` or `start_date` is today or later appear. Past linked events no longer keep the Upcoming Events section visible.
+- The section uses a ternary `null` when the user has no upcoming linked events.
+- The misleading `See All` link was removed from Upcoming Events. The separate Community Events entry card still opens Community Calendar as before.
+- Event cards now open the project dashboard that owns the linked event.
+- Local-date helpers are used for the current date and countdown calculations.
+
+**Community Calendar remains separate and unchanged:**
+- `CalendarContext`, `CalendarBrowseScreen`, and `CalendarManageScreen` were not modified.
+- Community Calendar still shows `No upcoming events` for the stale September 23–24 test listing because that date range is past.
+
+### Verification
+
+- Reproduced the screenshot scenario in an isolated Chrome profile: linked `Event ToyCon` (`2026-10-03`) from the Gojo project dashboard, returned to Projects, and confirmed Upcoming Events displayed `Event ToyCon` and its dates instead of `Egwgw Etyw`.
+- Confirmed the section is absent before any project is linked and after linking a confirmed event whose date range is past.
+- Confirmed Upcoming Events has no `See All` link and does not contain `Egwgw Etyw`.
+- `npx tsc --noEmit` passed.
+- Fresh Expo web export passed.
+- Fresh Expo Android bundle export passed.
+- Physical Android execution is still pending because no device or `adb` connection was detected after the requested USB-debugging connection.
+
+### Optional demo cleanup
+
+The garbled `Egwgw Etyw` record is not in source or seed data. A read-only scan confirms it is still present in the normal Chrome Profile 2 Local Storage LevelDB. It can be manually removed later for a cleaner demo or defense test, but it was not changed as part of this fix because it is separate stale test data.
+
+### Commits
+
+- `f3094fa` — fix(projects): source upcoming events from linked events
 
 ---
 
