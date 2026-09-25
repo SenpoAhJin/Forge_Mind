@@ -17,68 +17,6 @@ import { useProjects } from '../../contexts/ProjectsContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
-// ============================================================================
-// TEMP MOCK DATA - DELETE IN CODING PASS
-// ============================================================================
-const MOCK_DIARY_ENTRIES = [
-  {
-    id: 'diary-mock-1',
-    project_id: 'project-1',
-    project_name: 'Gojo Satoru - JJK',
-    character_name: 'Gojo Satoru',
-    variant_name: 'Uniform Ver.',
-    rating: 5,
-    completion_date: '2026-09-10',
-    photos: ['https://via.placeholder.com/400x400/8B5CF6/FFFFFF?text=Gojo+Satoru'],
-    notes: 'Amazing experience! The white wig was challenging to style but the final look was worth it. Got so many compliments at the con.',
-    created_at: '2026-09-10T15:30:00Z',
-  },
-  {
-    id: 'diary-mock-2',
-    project_id: 'project-2',
-    project_name: 'Hatsune Miku - Classic',
-    character_name: 'Hatsune Miku',
-    variant_name: 'Original',
-    rating: 4,
-    completion_date: '2026-08-25',
-    photos: [
-      'https://via.placeholder.com/400x400/EC4899/FFFFFF?text=Miku+1',
-      'https://via.placeholder.com/400x400/F472B6/FFFFFF?text=Miku+2',
-    ],
-    notes: 'The twin tails were a workout! Next time I need better wig clips. Photoshoot turned out great though.',
-    created_at: '2026-08-25T10:00:00Z',
-  },
-  {
-    id: 'diary-mock-3',
-    project_id: 'project-3',
-    project_name: 'Chainsaw Man - Power',
-    character_name: 'Power',
-    variant_name: 'Default',
-    rating: 5,
-    completion_date: '2026-08-15',
-    photos: [
-      'https://via.placeholder.com/400x400/EF4444/FFFFFF?text=Power+1',
-      'https://via.placeholder.com/400x400/F87171/FFFFFF?text=Power+2',
-      'https://via.placeholder.com/400x400/FCA5A5/FFFFFF?text=Power+3',
-    ],
-    notes: 'Absolutely loved this build! The horns were made from EVA foam and painted perfectly. Blood effects came out exactly as I imagined.',
-    created_at: '2026-08-15T14:20:00Z',
-  },
-  {
-    id: 'diary-mock-4',
-    project_id: 'project-4',
-    project_name: 'Link - TOTK',
-    character_name: 'Link',
-    variant_name: 'Tears of the Kingdom',
-    rating: 3,
-    completion_date: '2026-07-30',
-    photos: ['https://via.placeholder.com/400x400/10B981/FFFFFF?text=Link'],
-    notes: 'Good first attempt but the arm details need work. Will revisit this costume next year with better materials.',
-    created_at: '2026-07-30T09:45:00Z',
-  },
-];
-// ============================================================================
-
 const getDynamicStyles = (themeColors: ThemeColors) => ({
   container: { backgroundColor: themeColors.surface },
   title: { color: themeColors.textPrimary },
@@ -125,9 +63,6 @@ export const CosplayDiaryScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { entries, createEntry } = useDiary();
   const { projects } = useProjects();
-
-  // TEMP: Use mock data for visual preview
-  const displayEntries = MOCK_DIARY_ENTRIES;
 
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -268,7 +203,7 @@ export const CosplayDiaryScreen: React.FC = () => {
       )}
 
       {/* Diary Entries */}
-      {displayEntries.length === 0 ? (
+      {entries.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="book-outline" size={64} color={themeColors.textDisabled} />
           <Text style={[styles.emptyTitle, dynamicStyles.emptyTitle]}>No Diary Entries Yet</Text>
@@ -278,8 +213,8 @@ export const CosplayDiaryScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.entriesSection}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Your Entries ({displayEntries.length})</Text>
-          {displayEntries.map((entry) => {
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Your Entries ({entries.length})</Text>
+          {entries.map((entry) => {
             const isExpanded = expandedEntry === entry.id;
             
             return (

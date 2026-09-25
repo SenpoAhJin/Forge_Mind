@@ -14,19 +14,6 @@ import { typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
-// ============================================================================
-// TEMP MOCK DATA - DELETE IN CODING PASS
-// ============================================================================
-const MOCK_PORTFOLIO_PHOTOS = [
-  { uri: 'https://via.placeholder.com/400x400/8B5CF6/FFFFFF?text=Gojo+Wig', caption: 'Gojo Satoru - white wig styling' },
-  { uri: 'https://via.placeholder.com/400x400/EC4899/FFFFFF?text=Miku+Costume', caption: 'Hatsune Miku - full costume' },
-  { uri: 'https://via.placeholder.com/400x400/10B981/FFFFFF?text=Link+Props', caption: 'Legend of Zelda - prop sword & shield' },
-  { uri: 'https://via.placeholder.com/400x400/F59E0B/FFFFFF?text=Armor+Build', caption: 'EVA foam armor build' },
-  { uri: 'https://via.placeholder.com/400x400/6366F1/FFFFFF?text=Wig+Commission', caption: 'Custom pink wig commission' },
-  { uri: 'https://via.placeholder.com/400x400/EF4444/FFFFFF?text=Photoshoot', caption: 'Convention photoshoot sample' },
-];
-// ============================================================================
-
 const getDynamicStyles = (themeColors: ThemeColors) => ({
   container: { backgroundColor: themeColors.surface },
   title: { color: themeColors.textPrimary },
@@ -53,8 +40,7 @@ export const PortfolioManagementScreen: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
 
-  // TEMP: Use mock data for visual preview
-  const portfolioPhotos = MOCK_PORTFOLIO_PHOTOS;
+  const portfolioPhotos = user?.portfolio_photos || [];
 
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -128,38 +114,44 @@ export const PortfolioManagementScreen: React.FC = () => {
 
           {/* Photo Grid */}
           <View style={styles.photoGrid}>
-            {portfolioPhotos.map((photo, index) => (
-              <View key={index} style={[styles.photoCard, dynamicStyles.photoCard]}>
-                <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-                
-                {/* Caption overlay */}
-                {photo.caption ? (
-                  <View style={styles.captionOverlay}>
-                    <Text style={[styles.photoCaption, dynamicStyles.photoCaption]} numberOfLines={2}>
-                      {photo.caption}
-                    </Text>
-                  </View>
-                ) : null}
+            {portfolioPhotos.map((photo, index) => {
+              // Support both string URIs (current storage) and future {uri, caption} objects
+              const photoUri = typeof photo === 'string' ? photo : (photo as any).uri;
+              const photoCaption = typeof photo === 'string' ? null : (photo as any).caption;
+              
+              return (
+                <View key={index} style={[styles.photoCard, dynamicStyles.photoCard]}>
+                  <Image source={{ uri: photoUri }} style={styles.photoImage} />
+                  
+                  {/* Caption overlay - only if caption exists */}
+                  {photoCaption ? (
+                    <View style={styles.captionOverlay}>
+                      <Text style={[styles.photoCaption, dynamicStyles.photoCaption]} numberOfLines={2}>
+                        {photoCaption}
+                      </Text>
+                    </View>
+                  ) : null}
 
-                {/* Edit button (static, no-op for now) */}
-                <TouchableOpacity
-                  style={[styles.editButton, dynamicStyles.editButton]}
-                  onPress={() => {}}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="pencil" size={16} color={themeColors.textPrimary} />
-                </TouchableOpacity>
+                  {/* Edit button (static, no-op for now - future: edit caption) */}
+                  <TouchableOpacity
+                    style={[styles.editButton, dynamicStyles.editButton]}
+                    onPress={() => {}}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pencil" size={16} color={themeColors.textPrimary} />
+                  </TouchableOpacity>
 
-                {/* Delete button */}
-                <TouchableOpacity
-                  style={[styles.deleteButton, dynamicStyles.deleteButton]}
-                  onPress={() => handleDeletePress(photo.uri)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close-circle" size={24} color={themeColors.error} />
-                </TouchableOpacity>
-              </View>
-            ))}
+                  {/* Delete button */}
+                  <TouchableOpacity
+                    style={[styles.deleteButton, dynamicStyles.deleteButton]}
+                    onPress={() => handleDeletePress(photoUri)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close-circle" size={24} color={themeColors.error} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         </>
       )}
