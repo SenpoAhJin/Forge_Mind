@@ -5,6 +5,44 @@
 
 ---
 
+## Session — Sept 16, 2026 (Visual Design Pass: Portfolio & Diary)
+
+### What was done
+
+**COSMETIC-ONLY refinements to Portfolio and Diary screens with mock data:**
+
+**Portfolio Management Screen:**
+- Added 6 mock portfolio photos with captions (TEMP hardcoded data for visual preview)
+- Moved "Add Photo" button to first grid cell (dashed border, camera icon)
+- Added caption overlay at bottom of each photo (dark translucent background)
+- Added static edit button (pencil icon, top-left, no-op for now)
+- Delete button remains top-right
+- Info banner stays above grid
+- numberOfLines applied to captions
+
+**Cosplay Diary Screen:**
+- Added 4 mock diary entries with photos/notes (TEMP hardcoded data for visual preview)
+- Fixed height cards (160px) with horizontal layout
+- Cover photo left (140px wide), content right side
+- Title, character, and star rating row at top
+- Completion date and note preview (truncated to 2 lines) below
+- Removed expandable accordion - cards now static, tap does nothing
+- "Personal and private" banner stays above list
+- numberOfLines applied to note previews
+
+**Technical notes:**
+- Zero Context/AsyncStorage/type changes — render layer only
+- No Alert.alert usage (ConfirmationModal already in place from prior work)
+- No conditional && <Text patterns (ternary + null throughout)
+- TEMP MOCK DATA clearly commented for deletion in future coding pass
+- Real data wiring is a separate follow-up task
+
+### Commits
+- `05b947e` COSMETIC: Portfolio populated state with mock data
+- `e157696` COSMETIC: Diary populated state with mock entries
+
+---
+
 ## Session — Sept 16, 2026 (Theme System FIX COMPLETE - Everything Now Responds)
 
 ### What was done
