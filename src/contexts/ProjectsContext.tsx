@@ -4,11 +4,12 @@
  * Mutations: create project, add task, change task status, add budget line item.
  */
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Project, Task, BudgetLineItem, ProjectStatus, TaskStatus, BudgetCategory } from '../types/projects';
 import { ProjectMilestone } from '../types/milestones';
 import { projects as seedProjects, tasks as seedTasks, budgetItems as seedBudgetItems } from '../data';
 import { useEvents } from './EventsContext';
+import { useUser } from './UserContext';
 
 interface NewProjectInput {
   character_id: string;
@@ -50,17 +51,29 @@ const ProjectsContext = createContext<ProjectsContextValue | undefined>(undefine
 const nowIso = () => new Date().toISOString();
 
 export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [projects, setProjects] = useState<Project[]>(seedProjects);
+  const { user } = useUser();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>(seedTasks);
   const [budgetItems, setBudgetItems] = useState<BudgetLineItem[]>(seedBudgetItems);
   const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
   
   const { getEventById } = useEvents();
 
+  useEffect(() => {
+    setProjects(
+      user
+        ? seedProjects.map(project => ({ ...project, user_id: user.email }))
+        : []
+    );
+    setTasks(seedTasks);
+    setBudgetItems(seedBudgetItems);
+    setMilestones([]);
+  }, [user?.email]);
+
   const addProject = (input: NewProjectInput): Project => {
     const project: Project = {
       project_id: `proj-${Date.now()}`,
-      user_id: 'demo-user-1',
+      user_id: user?.email ?? 'demo-user-1',
       character_id: input.character_id,
       variant_id: input.variant_id,
       project_name: input.project_name,

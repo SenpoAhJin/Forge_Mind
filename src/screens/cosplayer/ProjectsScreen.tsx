@@ -13,11 +13,10 @@ import { useUser } from '../../contexts/UserContext';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
-import { useCalendar } from '../../contexts/CalendarContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, ProjectStatus } from '../../types/projects';
-import { daysBetween } from '../../utils/dateHelpers';
+import { daysBetween, getTodayLocal } from '../../utils/dateHelpers';
 
 interface ProjectsScreenProps {
   onStartProject: () => void;
@@ -53,13 +52,24 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   const { selection } = useSelection();
   const { projects, getTasksForProject, getBudgetForProject } = useProjects();
   const { events } = useEvents();
-  const { entries } = useCalendar();
+  const today = getTodayLocal();
+  const currentUserProjects = user
+    ? projects.filter(project => project.user_id === user.email)
+    : [];
 
-  // Get approved community calendar events, sorted by start date
-  const upcomingCommunityEvents = entries
-    .filter(entry => entry.status === 'approved')
-    .sort((a, b) => a.start_date.localeCompare(b.start_date))
-    .slice(0, 3); // Show max 3 upcoming events
+  const upcomingProjectEvents = currentUserProjects
+    .flatMap(project => {
+      const event = project.linked_event_id
+        ? events.find(candidate => candidate.id === project.linked_event_id)
+        : undefined;
+
+      return event ? [{ project, event }] : [];
+    })
+    .filter(({ event }) =>
+      event.status === 'confirmed' && (event.end_date || event.start_date) >= today
+    )
+    .sort((a, b) => a.event.start_date.localeCompare(b.event.start_date))
+    .slice(0, 3);
 
   const readinessFor = (project: Project) =>
     computeReadiness({
@@ -75,45 +85,45 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
         <Text style={styles.nameText}>{user?.display_name ?? 'Cosplayer'}</Text>
       </View>
 
-      {/* Upcoming Community Events Section */}
-      {upcomingCommunityEvents.length > 0 && (
+      {upcomingProjectEvents.length > 0 ? (
         <>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <TouchableOpacity onPress={onOpenCalendar} activeOpacity={0.7}>
-              <Text style={styles.seeAllLink}>See All</Text>
-            </TouchableOpacity>
           </View>
 
-          {upcomingCommunityEvents.map((entry) => {
-            const daysUntil = daysBetween(new Date().toISOString().split('T')[0], entry.start_date);
+          {upcomingProjectEvents.map(({ project, event }) => {
+            const daysUntil = daysBetween(today, event.start_date);
             const isPast = daysUntil < 0;
             const isToday = daysUntil === 0;
             const isSoon = daysUntil <= 7 && daysUntil > 0;
 
             return (
-              <StandardCard key={entry.id} style={styles.eventCard}>
+              <StandardCard
+                key={`${project.project_id}-${event.id}`}
+                style={styles.eventCard}
+                onPress={() => onOpenProject(project.project_id)}
+              >
                 <View style={styles.eventHeader}>
                   <View style={styles.eventIconWrap}>
                     <Ionicons name="calendar" size={20} color={colors.primary} />
                   </View>
                   <View style={styles.communityEventInfo}>
                     <Text style={styles.eventTitle} numberOfLines={1}>
-                      {entry.title}
+                      {event.name}
                     </Text>
                     <Text style={styles.eventOrganizer} numberOfLines={1}>
-                      By {entry.organizer_name}
+                      Project: {project.project_name}
                     </Text>
                     <Text style={styles.eventLocation} numberOfLines={1}>
-                      {entry.venue_name}, {entry.city}
+                      {event.venue_name}{event.city ? `, ${event.city}` : ''}
                     </Text>
                   </View>
                 </View>
                 
                 <View style={styles.eventDateRow}>
                   <Text style={styles.eventDate}>
-                    {entry.start_date}
-                    {entry.end_date && ` - ${entry.end_date}`}
+                    {event.start_date}
+                    {event.end_date && ` - ${event.end_date}`}
                   </Text>
                   {!isPast && (
                     <Text style={[
@@ -129,7 +139,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
             );
           })}
         </>
-      )}
+      ) : null}
 
       {/* Contests Entry Point Card */}
       <TouchableOpacity onPress={onOpenContests} activeOpacity={0.7}>
@@ -188,10 +198,10 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>My Projects</Text>
-        <Text style={styles.sectionCount}>{projects.length}</Text>
+        <Text style={styles.sectionCount}>{currentUserProjects.length}</Text>
       </View>
 
-      {projects.length === 0 && (
+      {currentUserProjects.length === 0 && (
         <View style={styles.emptyState}>
           <Ionicons name="folder-open-outline" size={36} color={colors.textDisabled} />
           <Text style={styles.emptyTitle}>No projects yet</Text>
@@ -201,7 +211,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
         </View>
       )}
 
-      {projects.map((project) => {
+      {currentUserProjects.map((project) => {
         const character = getCharacterById(project.character_id);
         const variant = getVariantById(project.variant_id);
         const readiness = readinessFor(project).readiness_score;
@@ -209,7 +219,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
         
         // Get linked event info
         const linkedEvent = project.linked_event_id ? events.find(e => e.id === project.linked_event_id) : null;
-        const daysUntilEvent = linkedEvent ? daysBetween(new Date().toISOString().split('T')[0], linkedEvent.start_date) : null;
+        const daysUntilEvent = linkedEvent ? daysBetween(today, linkedEvent.start_date) : null;
 
         return (
           <StandardCard key={project.project_id} style={styles.projectCard} onPress={() => onOpenProject(project.project_id)}>
@@ -366,11 +376,6 @@ const styles = StyleSheet.create({
   sectionCount: {
     ...typography.bodyLarge,
     color: colors.textSecondary,
-  },
-  seeAllLink: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '600',
   },
   eventCard: {
     marginBottom: spacing.md,
