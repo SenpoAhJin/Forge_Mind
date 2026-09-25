@@ -14,6 +14,19 @@ import { typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
+// ============================================================================
+// TEMP MOCK DATA - DELETE IN CODING PASS
+// ============================================================================
+const MOCK_PORTFOLIO_PHOTOS = [
+  { uri: 'https://via.placeholder.com/400x400/8B5CF6/FFFFFF?text=Gojo+Wig', caption: 'Gojo Satoru - white wig styling' },
+  { uri: 'https://via.placeholder.com/400x400/EC4899/FFFFFF?text=Miku+Costume', caption: 'Hatsune Miku - full costume' },
+  { uri: 'https://via.placeholder.com/400x400/10B981/FFFFFF?text=Link+Props', caption: 'Legend of Zelda - prop sword & shield' },
+  { uri: 'https://via.placeholder.com/400x400/F59E0B/FFFFFF?text=Armor+Build', caption: 'EVA foam armor build' },
+  { uri: 'https://via.placeholder.com/400x400/6366F1/FFFFFF?text=Wig+Commission', caption: 'Custom pink wig commission' },
+  { uri: 'https://via.placeholder.com/400x400/EF4444/FFFFFF?text=Photoshoot', caption: 'Convention photoshoot sample' },
+];
+// ============================================================================
+
 const getDynamicStyles = (themeColors: ThemeColors) => ({
   container: { backgroundColor: themeColors.surface },
   title: { color: themeColors.textPrimary },
@@ -23,6 +36,8 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   emptyTitle: { color: themeColors.textPrimary },
   emptySub: { color: themeColors.textSecondary },
   photoCard: { backgroundColor: themeColors.backgroundLight, borderColor: themeColors.border },
+  photoCaption: { color: themeColors.textPrimary },
+  editButton: { backgroundColor: themeColors.backgroundLight + 'CC' },
   addButton: { backgroundColor: themeColors.backgroundLight, borderColor: themeColors.border },
   addButtonText: { color: themeColors.primary },
   deleteButton: { backgroundColor: themeColors.backgroundLight },
@@ -38,7 +53,8 @@ export const PortfolioManagementScreen: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
 
-  const portfolioPhotos = user?.portfolio_photos || [];
+  // TEMP: Use mock data for visual preview
+  const portfolioPhotos = MOCK_PORTFOLIO_PHOTOS;
 
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -99,31 +115,56 @@ export const PortfolioManagementScreen: React.FC = () => {
           </Text>
         </View>
       ) : (
-        <View style={styles.photoGrid}>
-          {portfolioPhotos.map((photoUri, index) => (
-            <View key={index} style={[styles.photoCard, dynamicStyles.photoCard]}>
-              <Image source={{ uri: photoUri }} style={styles.photoImage} />
-              <TouchableOpacity
-                style={[styles.deleteButton, dynamicStyles.deleteButton]}
-                onPress={() => handleDeletePress(photoUri)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="close-circle" size={24} color={themeColors.error} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        <>
+          {/* Add Photo - First Cell */}
+          <TouchableOpacity
+            style={[styles.addButtonCell, dynamicStyles.addButton]}
+            onPress={handlePickImage}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="camera" size={32} color={themeColors.primary} />
+            <Text style={[styles.addButtonText, dynamicStyles.addButtonText]}>Add Photo</Text>
+          </TouchableOpacity>
+
+          {/* Photo Grid */}
+          <View style={styles.photoGrid}>
+            {portfolioPhotos.map((photo, index) => (
+              <View key={index} style={[styles.photoCard, dynamicStyles.photoCard]}>
+                <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                
+                {/* Caption overlay */}
+                {photo.caption ? (
+                  <View style={styles.captionOverlay}>
+                    <Text style={[styles.photoCaption, dynamicStyles.photoCaption]} numberOfLines={2}>
+                      {photo.caption}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {/* Edit button (static, no-op for now) */}
+                <TouchableOpacity
+                  style={[styles.editButton, dynamicStyles.editButton]}
+                  onPress={() => {}}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="pencil" size={16} color={themeColors.textPrimary} />
+                </TouchableOpacity>
+
+                {/* Delete button */}
+                <TouchableOpacity
+                  style={[styles.deleteButton, dynamicStyles.deleteButton]}
+                  onPress={() => handleDeletePress(photo.uri)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle" size={24} color={themeColors.error} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        </>
       )}
 
-      {/* Add photo button */}
-      <TouchableOpacity
-        style={[styles.addButton, dynamicStyles.addButton]}
-        onPress={handlePickImage}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="camera" size={32} color={themeColors.primary} />
-        <Text style={[styles.addButtonText, dynamicStyles.addButtonText]}>Add Photo</Text>
-      </TouchableOpacity>
+      {/* Add photo button removed - now first cell in grid */}
 
       {/* Photo count */}
       <Text style={[styles.subtitle, dynamicStyles.subtitle, { textAlign: 'center', marginTop: spacing.md }]}>
@@ -220,11 +261,41 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  captionOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: spacing.sm,
+  },
+  photoCaption: {
+    ...typography.caption,
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  editButton: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    padding: 6,
+    borderRadius: borderRadius.sm,
+  },
   deleteButton: {
     position: 'absolute',
     top: 8,
     right: 8,
     borderRadius: 12,
+  },
+  addButtonCell: {
+    width: '47%',
+    aspectRatio: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   addButton: {
     width: '100%',
