@@ -5,6 +5,28 @@
 
 ---
 
+## Session — Sept 16, 2026 (Real Data Restored - Portfolio & Diary Working)
+
+### What was done
+
+**Fixed broken functionality from visual design pass:**
+- Portfolio and Diary screens were accidentally hardcoded with TEMP MOCK DATA in the prior visual pass, breaking add/delete functionality
+- Restored real data sources while keeping improved visual design:
+  - Portfolio: Now reads from `user.portfolio_photos` (persisted via UserContext → AsyncStorage)
+  - Diary: Now reads from `entries` (persisted via DiaryContext → AsyncStorage)
+- Users can now:
+  - Add photos to portfolio (ImagePicker working again)
+  - Delete portfolio photos (delete button functional)
+  - Create diary entries (modal was working all along, just hidden by mock data)
+  - View their actual saved data instead of placeholder images
+- Portfolio photos display correctly (currently stored as simple URI strings)
+- Future-proofed portfolio rendering to support {uri, caption} objects when caption editing is added
+
+### Commits
+- `473771c` FIX: Restore real data sources for Portfolio and Diary
+
+---
+
 ## Session — Sept 16, 2026 (Deprecation Warnings Fix)
 
 ### What was done
