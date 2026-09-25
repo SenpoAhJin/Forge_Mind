@@ -110,10 +110,11 @@ export const CosplayDiaryScreen: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     if (projectsWithoutEntry.length === 0) {
-      setShowNoProjectsModal(true);
-      return;
+      // Allow creating test entries without projects
+      setSelectedProject(null);
+    } else {
+      setSelectedProject(projectsWithoutEntry[0].project_id);
     }
-    setSelectedProject(projectsWithoutEntry[0].project_id);
     setPhotoUris([]);
     setRating(5);
     setNotes('');
@@ -121,25 +122,19 @@ export const CosplayDiaryScreen: React.FC = () => {
   };
 
   const handleCreateEntry = async () => {
-    if (!selectedProject) {
-      setErrorMessage('Please select a project.');
-      setShowErrorModal(true);
-      return;
-    }
-
-    const project = projects.find((p) => p.project_id === selectedProject);
-    if (!project) return;
-
-    const character = getCharacterById(project.character_id);
-    const variant = getVariantById(project.variant_id);
+    // For test entries without projects, use placeholder data
+    const project = selectedProject ? projects.find((p) => p.project_id === selectedProject) : null;
+    
+    const character = project ? getCharacterById(project.character_id) : null;
+    const variant = project ? getVariantById(project.variant_id) : null;
 
     setIsSubmitting(true);
     try {
       await createEntry({
-        project_id: project.project_id,
-        project_name: project.project_name,
-        character_name: character?.character_name || 'Unknown',
-        variant_name: variant?.variant_name || 'Default',
+        project_id: project?.project_id || `test-${Date.now()}`,
+        project_name: project?.project_name || 'Test Cosplay Entry',
+        character_name: character?.character_name || 'Test Character',
+        variant_name: variant?.variant_name || 'Original',
         photos: photoUris,
         rating,
         notes,
@@ -182,7 +177,7 @@ export const CosplayDiaryScreen: React.FC = () => {
       </View>
 
       {/* Create Entry CTA */}
-      {projectsWithoutEntry.length > 0 && (
+      {projectsWithoutEntry.length > 0 ? (
         <View style={[styles.ctaCard, dynamicStyles.ctaCard]}>
           <View style={styles.ctaHeader}>
             <Ionicons name="add-circle" size={32} color={themeColors.primary} />
@@ -200,7 +195,25 @@ export const CosplayDiaryScreen: React.FC = () => {
             fullWidth
           />
         </View>
-      )}
+      ) : entries.length === 0 ? (
+        <View style={[styles.ctaCard, dynamicStyles.ctaCard]}>
+          <View style={styles.ctaHeader}>
+            <Ionicons name="information-circle-outline" size={32} color={themeColors.textSecondary} />
+            <View style={styles.ctaText}>
+              <Text style={[styles.ctaTitle, dynamicStyles.ctaTitle]}>No Completed Projects Yet</Text>
+              <Text style={[styles.ctaSubtitle, dynamicStyles.ctaSubtitle]}>
+                Complete a project first, then document it in your diary
+              </Text>
+            </View>
+          </View>
+          <Button
+            title="Create Test Entry"
+            variant="secondary"
+            onPress={() => setShowCreateModal(true)}
+            fullWidth
+          />
+        </View>
+      ) : null}
 
       {/* Diary Entries */}
       {entries.length === 0 ? (
@@ -289,35 +302,44 @@ export const CosplayDiaryScreen: React.FC = () => {
             <View style={{ width: 28 }} />
           </View>
 
-          {/* Project Picker */}
-          <View style={styles.formSection}>
-            <Text style={[styles.formLabel, dynamicStyles.formLabel]}>Select Project</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.projectPicker}>
-              {projectsWithoutEntry.map((project) => {
-                const isSelected = selectedProject === project.project_id;
-                return (
-                  <TouchableOpacity
-                    key={project.project_id}
-                    style={[
-                      styles.projectChip,
-                      dynamicStyles.projectChip,
-                      isSelected && dynamicStyles.projectChipSelected
-                    ]}
-                    onPress={() => setSelectedProject(project.project_id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.projectChipText,
-                      dynamicStyles.projectChipText,
-                      isSelected && dynamicStyles.projectChipTextSelected
-                    ]}>
-                      {project.project_name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          {/* Project Picker - Only show if projects exist */}
+          {projectsWithoutEntry.length > 0 ? (
+            <View style={styles.formSection}>
+              <Text style={[styles.formLabel, dynamicStyles.formLabel]}>Select Project</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.projectPicker}>
+                {projectsWithoutEntry.map((project) => {
+                  const isSelected = selectedProject === project.project_id;
+                  return (
+                    <TouchableOpacity
+                      key={project.project_id}
+                      style={[
+                        styles.projectChip,
+                        dynamicStyles.projectChip,
+                        isSelected && dynamicStyles.projectChipSelected
+                      ]}
+                      onPress={() => setSelectedProject(project.project_id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.projectChipText,
+                        dynamicStyles.projectChipText,
+                        isSelected && dynamicStyles.projectChipTextSelected
+                      ]}>
+                        {project.project_name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : (
+            <View style={[styles.infoNotice, dynamicStyles.infoNotice]}>
+              <Ionicons name="information-circle-outline" size={16} color={themeColors.textSecondary} />
+              <Text style={[styles.infoText, dynamicStyles.infoText]}>
+                Creating a test entry without a linked project. Complete actual projects to document real cosplays.
+              </Text>
+            </View>
+          )}
 
           {/* Photo Upload */}
           <View style={styles.formSection}>
@@ -374,7 +396,7 @@ export const CosplayDiaryScreen: React.FC = () => {
             variant="primary"
             onPress={handleCreateEntry}
             fullWidth
-            disabled={isSubmitting || !selectedProject}
+            disabled={isSubmitting}
           />
         </ScrollView>
       </Modal>
