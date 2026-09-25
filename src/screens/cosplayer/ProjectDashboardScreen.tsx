@@ -8,11 +8,12 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StandardCard, Button, Tag, TextInputField, StatusBadge } from '../../components';
+import { StandardCard, Button, Tag, TextInputField, StatusBadge, BodySizeSlider, ThreeDPreview } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
+import { useUser } from '../../contexts/UserContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, Task, TaskStatus, BudgetCategory } from '../../types/projects';
@@ -74,6 +75,7 @@ const formatPeso = (value: number) => {
 export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId }) => {
   const { projects, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
   const { events, getEventById } = useEvents();
+  const { user, setUserBody } = useUser();
 
   const project = projects.find((p) => p.project_id === projectId);
 
@@ -82,6 +84,9 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   const [newPlanned, setNewPlanned] = useState('');
   const [newActual, setNewActual] = useState('');
   const [newCategory, setNewCategory] = useState<BudgetCategory>('material');
+  
+  // 3D Preview body size state (synced with user profile)
+  const [localBodySize, setLocalBodySize] = useState(user?.body_size_slider ?? 0.5);
   
   // Event linking state
   const [showEventPicker, setShowEventPicker] = useState(false);
@@ -329,12 +334,33 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>3D Preview</Text>
-        <View style={styles.previewSlot}>
-          <Ionicons name="cube-outline" size={40} color={colors.textDisabled} />
-          <Text style={styles.previewTitle}>3D preview coming in a later stage</Text>
-          <Text style={styles.previewSub}>
-            Static slot only — the renderer is blocked on the Phase 2 (Unity/Expo-3D) decision. The selected variant's
-            appearance will be previewed here when that layer lands.
+        <Text style={styles.sectionDescription}>
+          Procedural placeholder showing selected variant with your body representation. 
+          Drag to rotate, pinch to zoom.
+        </Text>
+        
+        <View style={styles.previewContainer}>
+          <ThreeDPreview 
+            bodySizeValue={localBodySize} 
+            width={300} 
+            height={400} 
+          />
+        </View>
+
+        <View style={styles.sliderSection}>
+          <BodySizeSlider
+            value={localBodySize}
+            onValueChange={(newValue) => {
+              setLocalBodySize(newValue);
+              // Sync to user profile in real-time
+              if (user) {
+                setUserBody(user.base_body_selection, newValue);
+              }
+            }}
+            label="Adjust Body Size"
+          />
+          <Text style={styles.previewNote}>
+            Slider controls body deformation · Garment placeholder attached to procedural body
           </Text>
         </View>
       </View>
@@ -569,26 +595,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
-  previewSlot: {
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
+  previewContainer: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    marginBottom: spacing.lg,
   },
-  previewTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
+  sliderSection: {
+    paddingHorizontal: spacing.md,
   },
-  previewSub: {
-    ...typography.body,
+  previewNote: {
+    ...typography.caption,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
+  },
+  sectionDescription: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 20,
   },
   taskCard: {
