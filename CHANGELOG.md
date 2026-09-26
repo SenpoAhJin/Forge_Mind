@@ -5,6 +5,38 @@
 
 ---
 
+## Session — Saturday, September 26, 2026 (Smart Proper-Case Fix)
+
+### Auto proper-case now only triggers when input is all-lowercase
+
+**Old behavior:** Every keystroke forced proper case, turning "USA" into "Usa" and "heLlo" into "Hello" regardless of what the user typed.
+
+**New behavior:** Auto proper-case only applies when the current text is entirely lowercase. The moment ANY uppercase letter exists, user's casing is preserved exactly as typed. This means:
+- Typing "hello" → auto-cased to "Hello" ✓
+- Typing "USA" → stays "USA" ✓
+- Typing "heLlo" → stays "heLlo" ✓
+- Typing "spider-man" → auto-cased to "Spider-Man" ✓
+
+**How it works:** New `isAllLowercase()` helper checks if text contains at least one letter and all letters are lowercase (ignoring digits, spaces, punctuation). Only then does `toProperCase()` apply.
+
+**Applied to:**
+- TextInputField (general text input)
+- TextAreaField (multi-line text)
+- AppealModal (appeal message)
+- RejectionReasonModal (rejection reason)
+
+**Unchanged:** Password, email, numeric, and phone fields still bypass proper-case completely (via `secureTextEntry` and `keyboardType` checks).
+
+**Files changed:**
+- `src/utils/textFormatting.ts` (added `isAllLowercase` helper)
+- `src/components/inputs/Input.tsx` (TextInputField + TextAreaField)
+- `src/components/AppealModal.tsx`
+- `src/components/RejectionReasonModal.tsx`
+
+**Commits:** 68fd9a2, db04b70
+
+---
+
 ## Session — Saturday, September 26, 2026 (Organizer Approach Chosen for Meetup Feature — Recorded for Next Phase)
 
 **This entry is a design decision only. Nothing was built in this session.** It records *how organizers should use the meetup feature*, so the plan is settled before anyone writes code for it.
