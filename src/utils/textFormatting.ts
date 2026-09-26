@@ -4,6 +4,38 @@
  */
 
 /**
+ * Check if a string contains only lowercase letters
+ * - Ignores digits, spaces, punctuation, emoji (not letters)
+ * - Returns false if there are no letters at all (nothing to reformat)
+ * - Returns true if there is at least one letter AND all letters are lowercase
+ * - Returns false if ANY letter is uppercase
+ * 
+ * Examples:
+ * "hello world" → true
+ * "Hello world" → false
+ * "HELLO" → false
+ * "usa" → true
+ * "USA" → false
+ * "123 456" → false (no letters)
+ * "" → false
+ * "spider-man" → true
+ * "Spider-Man" → false
+ * "hello USA" → false (mixed)
+ */
+export const isAllLowercase = (text: string): boolean => {
+  if (!text) return false;
+  
+  // Extract only letters (ignore digits, spaces, punctuation, etc)
+  const letters = text.replace(/[^a-zA-Z]/g, '');
+  
+  // If no letters at all, return false (nothing to reformat)
+  if (letters.length === 0) return false;
+  
+  // Check if all letters are lowercase
+  return letters === letters.toLowerCase();
+};
+
+/**
  * Convert text to proper case (title case)
  * - First letter of each word capitalized
  * - Rest of letters lowercase
