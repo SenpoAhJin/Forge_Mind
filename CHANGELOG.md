@@ -1,7 +1,57 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 26, 2026
+**Last updated:** September 16, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Sprint 0: Foundation — Step 1 Complete (Development Environment Baseline)
+
+**Date:** Wednesday, September 16, 2026
+
+> **Note:** Sprint 0 (Unity WebGL integration foundation) has its own detailed changelog at **CHANGELOG_V2.md**. This entry is a summary only.
+
+### What we verified
+
+**Established and documented the complete development environment baseline before beginning Unity integration work.**
+
+**Environment Versions:**
+- Node.js: v24.19.0 ✓
+- Python: 3.14.7 ✓
+- Git LFS: 3.7.1 ✓
+
+**Python Virtual Environment:**
+- Created Python virtual environment at `forgemind-mobile/venv`
+- Environment uses Python 3.14.7
+- Ready for future ML dependencies (Sprint 5: AI Assistant)
+
+**Git Setup:**
+- Git LFS initialized and tracking configured
+- Created baseline tag: `v0.6-baseline`
+- Tag marks the foundation point before Unity WebGL integration begins
+
+**Purpose:**
+This step establishes a known-good baseline. Before we add Unity WebGL builds, WebView components, or 3D rendering code, we have a clean checkpoint we can return to if needed. The `v0.6-baseline` tag marks exactly where we started Sprint 0.
+
+---
+
+## Sprint 0: Foundation — Step 2 Complete (react-native-webview Installed)
+
+**Date:** Wednesday, September 16, 2026
+
+> **Note:** See **CHANGELOG_V2.md** for full Sprint 0 details.
+
+**What was installed:**
+- Package: `react-native-webview` v13.16.1
+- Compatible with Expo SDK 57.0.0
+- No native linking required ✓
+- No config plugins needed ✓
+- Works in Expo Go out of the box ✓
+
+**Purpose:**
+WebView component is now available for rendering Unity WebGL builds. Since it requires no native code, it will work in Expo Go — critical for testing on real devices without building custom dev clients.
+
+**Next:** Sprint 0 Step 3 — Verify Unity 2022.3 LTS installation (currently blocked - Unity not installed on system).
 
 ---
 
