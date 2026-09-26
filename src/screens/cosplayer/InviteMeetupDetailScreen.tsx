@@ -120,18 +120,22 @@ export const InviteMeetupDetailScreen: React.FC<InviteMeetupDetailScreenProps> =
         </View>
 
         <View style={styles.codeActions}>
-          <Button
-            title="Copy Code"
-            onPress={handleCopyCode}
-            variant="secondary"
-            fullWidth
-          />
-          <Button
-            title="Share"
-            onPress={handleShare}
-            variant="secondary"
-            fullWidth
-          />
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Copy Code"
+              onPress={handleCopyCode}
+              variant="secondary"
+              fullWidth
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Share"
+              onPress={handleShare}
+              variant="secondary"
+              fullWidth
+            />
+          </View>
         </View>
       </StandardCard>
 
@@ -240,31 +244,37 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   codeLabel: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   code: {
     ...typography.h1,
     color: colors.primary,
     fontWeight: '700',
     letterSpacing: 4,
+    fontSize: 32,
   },
   qrContainer: {
     alignItems: 'center',
-    padding: spacing.md,
+    padding: spacing.lg,
     backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   codeActions: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  buttonContainer: {
+    flex: 1,
   },
   participantsCard: {
     padding: spacing.lg,
@@ -273,10 +283,10 @@ const styles = StyleSheet.create({
   participantRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    gap: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.surface,
   },
   participantAvatar: {
     width: 40,

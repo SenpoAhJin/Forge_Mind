@@ -211,6 +211,7 @@ export const CreateInviteMeetupScreen: React.FC<CreateInviteMeetupScreenProps> =
               variant="primary"
               fullWidth
             />
+            <View style={styles.buttonSpacer} />
             <Button
               title="Done"
               onPress={handleDone}
@@ -293,24 +294,30 @@ const styles = StyleSheet.create({
   inviteCodeLabel: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   inviteCode: {
     ...typography.h1,
     color: colors.primary,
     fontWeight: '700',
     letterSpacing: 4,
+    fontSize: 32,
   },
   qrBox: {
     padding: spacing.lg,
     backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    alignItems: 'center',
   },
   modalNote: {
     ...typography.caption,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.lg,
+  },
+  buttonSpacer: {
+    height: spacing.md,
   },
 });
