@@ -1,7 +1,55 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 25, 2026
+**Last updated:** September 26, 2026
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, September 26, 2026 (Organizer Approach Chosen for Meetup Feature — Recorded for Next Phase)
+
+**This entry is a design decision only. Nothing was built in this session.** It records *how organizers should use the meetup feature*, so the plan is settled before anyone writes code for it.
+
+### The short version
+
+Cosplayers and organizers need **two different features**, and they should not be built as one.
+
+- **Cosplayers** use the feature to *find each other at the convention* — a live map, distance readouts, and invitations. That is what the reference picture shows, and it is already written up as a full specification.
+- **Organizers** do **not** need that. Organizers already have radios or group chats for their own department, and they already have a runner (the "call-boy") who physically walks to another department to deliver something about how the event is flowing. Building organizers a map would duplicate the radios and solve nothing.
+
+### The problem this creates, and the recommended answer
+
+If organizers are handed the same meetup feature as cosplayers, they will either ignore it or use it as a second, competing chat channel — which is exactly the open-messaging problem the app has avoided everywhere else so far.
+
+The genuine gap is not *"where is my fellow organizer?"* The radios already answer that. The gap is:
+
+1. **Did it actually arrive?** A message being sent is not a message landing. Nobody currently confirms receipt.
+2. **Is that department able to help at all?** On a radio you can hear that someone in Programs is busy. You cannot tell that all of Programs is unavailable for the next twenty minutes.
+
+**Recommended approach: a per-event, per-department Dispatch Board** — a shared board of "things that need physically carrying between departments," replacing the runner's memory and the radio's ambiguity.
+
+How it should work:
+
+- **Organized by department, not by person.** The six departments in the app (`logistics`, `programs`, `sponsorship`, `secretariat`, `technical_production`, `marketing`) are the unit organizers actually work in. Staff see their own department's board. The Head Organizer sees all six at once.
+- **A dispatch item** records: which department it came from, which department it is going to, what is needed (structured fields, not a free-text message), how urgent it is, and who is carrying it.
+- **Two-step hand-off, because that is what a real run is.** The item moves through: *open → assigned → picked up → delivered → acknowledged*. The last step is the important one and the whole point — **the receiving department has to confirm it landed.** This is the one thing a radio genuinely cannot do.
+- **Carrying should be opt-in, per item.** Walking between departments is physically tiring. Being asked to run something should be an explicit, per-item, say-no-able offer — never an implied "you're free, so you go."
+- **Coarse status, not live location.** A small fixed set — *Available*, *On a run*, *At post*, *Off duty* — plus a last-check-in time. The radios already answer "where are you," so a staff map adds nothing, and live staff tracking raises its own fairness problem. The check-in time has a second useful job: it tells the Head when a board is going stale.
+- **No open chat.** Consistent with every other part of the app. A dispatch item is a structured form, not a message thread.
+- **Reuse what already exists** rather than building new systems: the same urgency ladder and criticality sorting already used for event logistics, the existing commitment log for the audit trail of who took what and when, and the same department grouping already used in Manage Staff. One real addition is needed — the commitment log currently only understands `event` and `logistics_entry`, so it would need to understand a `dispatch_item` too. Its existing "department routed to" field is already exactly the right home for the origin-to-destination hop.
+
+### Where the existing organizer meetup mock belongs
+
+The existing `GroupMeetupScreen` mock (schedule-conflict and best-time planning for organizers) contains one genuinely useful idea: matching staff to time slots. That should survive **only** as a Head-Organizer-only staffing planner showing *aggregate* availability — "who is free to cover a rush" — never as a per-person display. In its current form it shows individual names and a readiness bar for each person, which is precisely the kind of per-person exposure the new aggregate readiness signal was built to avoid. It should be retired rather than connected to real data.
+
+### Splitting the data, on purpose
+
+Organizer meetups and cosplayer meetups need **separate data models and separate screens**. The only things they should share are the fixed status vocabulary and the urgency rules. Building one generic "meetup" concept that stretches across both roles is how the app ends up with two half-working screens speaking to each other.
+
+### Phasing
+
+- **Next phase — FE-7 Step 6, organizer side:** the Dispatch Board core. Dispatch items, offering and accepting a carry, pickup and delivery acknowledgement, each department's own board, and the Head's all-departments roll-up. This is the piece that replaces the runner, and it is the part worth building first.
+- **Later phase — cosplayer live layer:** the full written specification — live map and position sharing with a per-event opt-in, two-party consent on invites, the fixed status broadcast, and block/report. Block stays a private action; Report routes to the Holder queue, consistent with how every other report in the app is handled. The specification also calls for a visible fallback when venue connectivity drops, offering a schedule-based meetup suggestion instead of a frozen map — this matters because the ToyCon interview confirmed venue connectivity is unreliable.
+- **Open decision, still open:** whether members can keep a lightweight list of people they've met at past events, or whether all connections reset per event. Per-event is safer because it can never grow into a general social network, but it means reconnecting with the same people at every convention. **Recommended: per-event for cosplayers.** For organizers, department membership already lives on the account and persists, but availability and dispatch state stay strictly per-event.
 
 ---
 
@@ -945,6 +993,8 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
    - Step 3: Commitment log + department-routed change alerts
    - Step 4: Contest tier view (opt-in history, organizer criteria, human confirmation)
    - Step 5: Group meetups + aggregate readiness signal
+   - **Step 6 (NEXT): Organizer Dispatch Board** — per-event, per-department board of items that need physically carrying between departments. Replaces the runner's memory and the radio's ambiguity. Dispatch item (origin dept, destination dept, what's needed, urgency), carry offered and accepted per item, two-step hand-off *picked up → delivered → acknowledged*, department board for staff and an all-departments roll-up for the Head Organizer. Coarse fixed status (Available / On a run / At post / Off duty) plus a last-check-in time — no live staff location, no open chat. Reuses the existing event-logistics urgency ladder and criticality sort, the commitment log for the audit trail (needs a new `dispatch_item` entity type), and the existing Manage Staff department grouping. Approved approach and reasoning: see the September 26, 2026 session entry at the top of this file.
+   - **Later — Cosplayer live layer:** live map with per-event opt-in, two-party invite consent, fixed status broadcast, block (private) and report (routed to the Holder queue), plus a visible fallback when venue connectivity drops. Full specification already written; deliberately deferred past Step 6 because the organizer dispatch gap is the more urgent of the two.
 6. **FE-8 — Holder verification surface:** a separate web app for vetting sellers and moderating listings.
 
 ---
