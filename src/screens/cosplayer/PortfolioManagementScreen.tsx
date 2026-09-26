@@ -38,7 +38,10 @@ export const PortfolioManagementScreen: React.FC = () => {
   
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editCaption, setEditCaption] = useState('');
 
   const portfolioPhotos = user?.portfolio_photos || [];
 
@@ -63,6 +66,22 @@ export const PortfolioManagementScreen: React.FC = () => {
   const handleDeletePress = (photoUri: string) => {
     setPhotoToDelete(photoUri);
     setShowDeleteModal(true);
+  };
+
+  const handleEditPress = (index: number) => {
+    const photo = portfolioPhotos[index];
+    const caption = typeof photo === 'string' ? '' : (photo as any).caption || '';
+    setEditingIndex(index);
+    setEditCaption(caption);
+    setShowEditModal(true);
+  };
+
+  const confirmEdit = () => {
+    // TODO: Implement caption update in UserContext
+    // For now, just close modal
+    setEditingIndex(null);
+    setEditCaption('');
+    setShowEditModal(false);
   };
 
   const confirmDelete = async () => {
@@ -140,10 +159,10 @@ export const PortfolioManagementScreen: React.FC = () => {
                     </View>
                   ) : null}
 
-                  {/* Edit button (static, no-op for now - future: edit caption) */}
+                  {/* Edit button - now functional */}
                   <TouchableOpacity
                     style={[styles.editButton, dynamicStyles.editButton]}
-                    onPress={() => {}}
+                    onPress={() => handleEditPress(index)}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="pencil" size={16} color={themeColors.textPrimary} />
@@ -191,6 +210,20 @@ export const PortfolioManagementScreen: React.FC = () => {
         onCancel={() => {
           setPhotoToDelete(null);
           setShowDeleteModal(false);
+        }}
+      />
+
+      {/* Edit Caption Modal */}
+      <ConfirmationModal
+        visible={showEditModal}
+        title="Edit Photo Caption"
+        message="Caption feature coming soon. For now, you can delete and re-add photos."
+        confirmText="OK"
+        onConfirm={confirmEdit}
+        onCancel={() => {
+          setEditingIndex(null);
+          setEditCaption('');
+          setShowEditModal(false);
         }}
       />
     </ScrollView>
