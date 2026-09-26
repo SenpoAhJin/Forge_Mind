@@ -18,7 +18,7 @@
 
 import { LogisticsEntry, ParkingNeeds, LogisticsStatus } from '../types/logistics';
 import { Event } from '../types/events';
-import { daysBetween, compareDateStrings } from './dateHelpers';
+import { daysBetween, compareDateStrings, formatCountdown } from './dateHelpers';
 
 // Rule constants - used everywhere, no hard-coded ranges elsewhere
 export const REMINDER_DAYS = 7;
@@ -84,6 +84,22 @@ export const checkCompletion = (entry: LogisticsEntry): CompletionStatus => {
 };
 
 /**
+ * Display-only phrasing for a deadline countdown.
+ * Reuses formatCountdown so long lead times read as "2 months left" instead of
+ * a raw "57 days left". The urgency LEVEL is still decided by the raw day diff
+ * above, so colour thresholds are unaffected.
+ */
+const countdownLeft = (
+  deadline: string,
+  todayLocal: string,
+  days: number
+): string => {
+  // "0 days left" is clumsy, and formatCountdown returns "Today" for 0
+  if (days === 0) return 'Due today';
+  return `${formatCountdown(deadline, todayLocal)} left`;
+};
+
+/**
  * Calculate urgency level based on days until submission_deadline
  */
 export const getUrgency = (
@@ -117,7 +133,7 @@ export const getUrgency = (
     return {
       level: 'critical',
       daysUntilDeadline: days,
-      reason: `${days} day${days === 1 ? '' : 's'} left`,
+      reason: countdownLeft(entry.submission_deadline, todayLocal, days),
     };
   }
 
@@ -126,7 +142,7 @@ export const getUrgency = (
     return {
       level: 'urgent',
       daysUntilDeadline: days,
-      reason: `${days} days left`,
+      reason: countdownLeft(entry.submission_deadline, todayLocal, days),
     };
   }
 
@@ -135,7 +151,7 @@ export const getUrgency = (
     return {
       level: 'reminder',
       daysUntilDeadline: days,
-      reason: `${days} days left`,
+      reason: countdownLeft(entry.submission_deadline, todayLocal, days),
     };
   }
 
@@ -143,7 +159,7 @@ export const getUrgency = (
   return {
     level: 'on_track',
     daysUntilDeadline: days,
-    reason: `${days} days left`,
+    reason: countdownLeft(entry.submission_deadline, todayLocal, days),
   };
 };
 

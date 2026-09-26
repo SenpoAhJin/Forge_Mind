@@ -16,7 +16,7 @@ import { useEvents } from '../../contexts/EventsContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, ProjectStatus } from '../../types/projects';
-import { daysBetween, getTodayLocal } from '../../utils/dateHelpers';
+import { daysBetween, formatCountdown, getTodayLocal } from '../../utils/dateHelpers';
 
 interface ProjectsScreenProps {
   onStartProject: () => void;
@@ -131,7 +131,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
                       isToday && styles.eventCountdownToday,
                       isSoon && styles.eventCountdownSoon,
                     ]}>
-                      {isToday ? 'Today!' : `${daysUntil} day${daysUntil === 1 ? '' : 's'}`}
+                      {formatCountdown(event.start_date, today)}
                     </Text>
                   )}
                 </View>
@@ -239,7 +239,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
                       {linkedEvent.name} · {linkedEvent.start_date}
                       {daysUntilEvent !== null && daysUntilEvent >= 0 && (
                         <Text style={[styles.eventCountdown, daysUntilEvent <= 7 && { color: colors.error }]}>
-                          {' '}· {daysUntilEvent} day{daysUntilEvent === 1 ? '' : 's'} away
+                          {' '}· {formatCountdown(linkedEvent.start_date, today)}{daysUntilEvent > 0 ? ' away' : ''}
                         </Text>
                       )}
                     </Text>
