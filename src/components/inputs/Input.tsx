@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { typography, borderRadius, spacing } from '../../theme';
 import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
-import { toProperCase } from '../../utils/textFormatting';
+import { toProperCase, isAllLowercase } from '../../utils/textFormatting';
 
 // Text Input: Rounded 8px, border 1px, focus state with primary color border
 interface TextInputFieldProps {
@@ -48,7 +48,8 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
     if (secureTextEntry || keyboardType === 'email-address' || keyboardType === 'numeric' || keyboardType === 'phone-pad') {
       onChangeText(text);
     } else {
-      onChangeText(toProperCase(text));
+      const formatted = isAllLowercase(text) ? toProperCase(text) : text;
+      onChangeText(formatted);
     }
   };
 
@@ -100,8 +101,9 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   const dynamicStyles = getDynamicStyles(themeColors);
 
   const handleTextChange = (text: string) => {
-    // Auto-apply proper case to text areas
-    onChangeText(toProperCase(text));
+    // Auto-apply proper case to text areas only if all lowercase
+    const formatted = isAllLowercase(text) ? toProperCase(text) : text;
+    onChangeText(formatted);
   };
 
   return (

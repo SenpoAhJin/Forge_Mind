@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, borderRadius } from '../theme';
-import { toProperCase } from '../utils/textFormatting';
+import { toProperCase, isAllLowercase } from '../utils/textFormatting';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 interface AppealModalProps {
@@ -100,7 +100,8 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 style={[styles.input, dynamicStyles.input, error ? dynamicStyles.inputError : null]}
                 value={message}
                 onChangeText={(text) => {
-                  setMessage(toProperCase(text));
+                  const formatted = isAllLowercase(text) ? toProperCase(text) : text;
+                  setMessage(formatted);
                   if (error) setError('');
                 }}
                 placeholder="e.g., This is a cosplay prop, not a real item..."
