@@ -51,7 +51,31 @@ This step establishes a known-good baseline. Before we add Unity WebGL builds, W
 **Purpose:**
 WebView component is now available for rendering Unity WebGL builds. Since it requires no native code, it will work in Expo Go — critical for testing on real devices without building custom dev clients.
 
-**Next:** Sprint 0 Step 3 — Verify Unity 2022.3 LTS installation (currently blocked - Unity not installed on system).
+## Sprint 0: Foundation — Step 3 Complete (React Three Fiber Alternative)
+
+**Date:** Wednesday, September 16, 2026
+
+> **Note:** See **CHANGELOG_V2.md** for full Sprint 0 details. **Alternative approach selected** — using React Three Fiber instead of Unity WebGL.
+
+**Decision:** Pivot from Unity WebGL to React Three Fiber
+- **Reason:** Body morphing complexity + Unity GUI installation barrier + faster iteration cycle
+- **Already installed:** `@react-three/fiber`, `@react-three/drei`, `expo-gl` (no new dependencies)
+- **Advantage:** Instant hot reload, full TypeScript control, works in Expo Go, zero build pipeline
+
+**What was built:**
+- `Preview3D.tsx` component — Working 3D scene with body morphing
+- `Preview3DTestScreen.tsx` — Test interface with morphing slider + camera controls
+- Body morph proof-of-concept (scale-based, 0.0 = slim to 1.0 = plus-size)
+- Test mode with animated cubes to verify rendering works
+- Accessible from Profile → "🚀 3D Preview Test (Sprint 0)"
+
+**Technical Stack:**
+- react-three-fiber (React renderer for three.js)
+- expo-gl (OpenGL bindings for native)
+- OrbitControls for camera (orbit/zoom/pan)
+- Procedural body geometry (will be replaced with Blender GLB models)
+
+**Next:** Step 4 — Test on web preview + real device via Expo Go, measure performance, document results.
 
 ---
 

@@ -12,6 +12,7 @@ import { ShareableCardScreen } from '../screens/shared/ShareableCardScreen';
 import { AppearanceHubScreen } from '../screens/shared/AppearanceHubScreen';
 import { CosplayDiaryScreen } from '../screens/cosplayer/CosplayDiaryScreen';
 import { PortfolioManagementScreen } from '../screens/cosplayer';
+import Preview3DTestScreen from '../screens/Preview3DTestScreen';
 import { typography } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -29,6 +30,7 @@ export type ProfileStackParamList = {
   CosplayDiary: undefined;
   PortfolioManagement: undefined;
   Diagnostics: undefined;
+  Preview3DTest: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -110,6 +112,11 @@ export const ProfileStackNavigator: React.FC = () => {
         name="Diagnostics"
         component={DiagnosticsScreen}
         options={{ title: 'Diagnostics' }}
+      />
+      <Stack.Screen
+        name="Preview3DTest"
+        component={Preview3DTestScreen}
+        options={{ title: '3D Preview Test (Sprint 0)' }}
       />
     </Stack.Navigator>
   );

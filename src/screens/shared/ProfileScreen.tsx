@@ -531,6 +531,16 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.cardButtonText}>Diagnostics & Reset Data</Text>
           <Ionicons name="construct-outline" size={16} color={colors.error} />
         </TouchableOpacity>
+
+        {/* 3D Preview Test (Sprint 0) */}
+        <TouchableOpacity
+          style={[styles.cardButton, { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 12, paddingTop: 12 }]}
+          onPress={() => navigation.navigate('Preview3DTest')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cardButtonText}>🚀 3D Preview Test (Sprint 0)</Text>
+          <Ionicons name="cube-outline" size={16} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Shareable Cards - Cosplayers only */}
