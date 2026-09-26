@@ -4,24 +4,30 @@
  * Staff: read-only view (confirmed events only)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { EventsStackParamList } from '../../navigation/EventsStackNavigator';
 import { useUser } from '../../contexts/UserContext';
 import { useEvents } from '../../contexts/EventsContext';
+import { useProjects } from '../../contexts/ProjectsContext';
 import { useCommitmentLog } from '../../contexts/CommitmentLogContext';
 import { Button, Tag, ConfirmationModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { formatEventStatus } from '../../utils/formatStatus';
 import { isDateInPast } from '../../utils/dateHelpers';
+import {
+  computeEventReadinessAggregate,
+  MIN_OPTED_IN,
+} from '../../utils/readinessAggregate';
 
 type Props = NativeStackScreenProps<EventsStackParamList, 'EventDetail'>;
 
 export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const { user } = useUser();
   const { getEventById, confirmEvent, cancelEvent } = useEvents();
+  const { projects, getTasksForProject, getBudgetForProject } = useProjects();
   const { getLogForEntity } = useCommitmentLog();
   
   const eventId = route.params.eventId;
@@ -33,6 +39,28 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   // Route-level guard: Staff cannot open draft/cancelled events
   const canView = isHeadOrganizer || (isVerifiedStaff && event?.status === 'confirmed');
+
+  /**
+   * FE-7 Step 5: organizer-facing aggregate readiness.
+   *
+   * Head Organizer + confirmed events only. The aggregate never contains
+   * identities and is withheld entirely below MIN_OPTED_IN opted-in cosplayers
+   * (see utils/readinessAggregate.ts for the privacy contract).
+   */
+  const readiness = useMemo(
+    () =>
+      computeEventReadinessAggregate({
+        eventId,
+        projects,
+        getTasksForProject,
+        getBudgetForProject,
+      }),
+    [eventId, projects, getTasksForProject, getBudgetForProject]
+  );
+  const showGroupReadiness = isHeadOrganizer && event?.status === 'confirmed';
+  const readinessPct = readiness.average_readiness !== null
+    ? Math.round(readiness.average_readiness * 100)
+    : 0;
 
   // Modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -228,6 +256,78 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         })()}
 
         {/* Locked confirmed notice - REMOVED, editing now allowed */}
+
+        {/* FE-7 Step 5: Group Readiness - aggregate only, no cosplayer identities */}
+        {showGroupReadiness ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Group Readiness</Text>
+
+            {readiness.isPublishable ? (
+              <>
+                <View style={styles.readinessSummary}>
+                  <View style={styles.readinessStat}>
+                    <Text style={styles.readinessStatValue}>{readiness.opted_in_count}</Text>
+                    <Text style={styles.readinessStatLabel}>Cosplayers opted in</Text>
+                  </View>
+                  <View style={styles.readinessStat}>
+                    <Text
+                      style={[
+                        styles.readinessStatValue,
+                        {
+                          color:
+                            readinessPct >= 70
+                              ? colors.success
+                              : readinessPct >= 40
+                              ? colors.warning
+                              : colors.error,
+                        },
+                      ]}
+                    >
+                      {readinessPct}%
+                    </Text>
+                    <Text style={styles.readinessStatLabel}>Average readiness</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.readinessCaption}>
+                  Averaged across {readiness.opted_in_count} opted-in cosplayers. Individual
+                  projects are never shown.
+                </Text>
+
+                {readiness.common_missing_components.length > 0 ? (
+                  <View style={styles.readinessMissing}>
+                    <Text style={styles.readinessMissingTitle}>Most commonly still missing</Text>
+                    {readiness.common_missing_components.map((component) => (
+                      <View key={component.component_id} style={styles.readinessMissingRow}>
+                        <Ionicons name="ellipse" size={8} color={colors.textSecondary} />
+                        <Text style={styles.readinessMissingText}>{component.component_id}</Text>
+                        <Text style={styles.readinessMissingCount}>
+                          {component.count} of {readiness.opted_in_count}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.readinessCaption}>
+                    No missing components reported by opted-in cosplayers.
+                  </Text>
+                )}
+              </>
+            ) : (
+              <View style={styles.readinessEmpty}>
+                <Ionicons name="stats-chart-outline" size={20} color={colors.textSecondary} />
+                <View style={styles.readinessEmptyTextWrap}>
+                  <Text style={styles.readinessEmptyTitle}>Not enough data yet</Text>
+                  <Text style={styles.readinessCaption}>
+                    {readiness.opted_in_count} of {MIN_OPTED_IN} cosplayers have opted in to share
+                    readiness for this event. Small cohorts are withheld so individual projects
+                    stay private.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : null}
 
         {/* Error display */}
         {error ? (
@@ -457,5 +557,73 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  readinessSummary: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  readinessStat: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: 2,
+  },
+  readinessStatValue: {
+    ...typography.h2,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  readinessStatLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  readinessCaption: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+  },
+  readinessMissing: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  readinessMissingTitle: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  readinessMissingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  readinessMissingText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  readinessMissingCount: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  readinessEmpty: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  readinessEmptyTextWrap: { flex: 1 },
+  readinessEmptyTitle: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
 });

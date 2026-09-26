@@ -10,6 +10,7 @@ import { ProjectDashboardScreen } from '../screens/cosplayer/ProjectDashboardScr
 import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
 import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
 import { CalendarBrowseScreen } from '../screens/cosplayer/CalendarBrowseScreen';
+import { EventMeetupsScreen } from '../screens/cosplayer/EventMeetupsScreen';
 import { getProjectById } from '../data';
 import { typography } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,6 +21,7 @@ export type ProjectStackParamList = {
   CreateProject: undefined;
   ContestsList: undefined;
   CalendarBrowse: undefined;
+  EventMeetups: { eventId: string };
 };
 
 const Stack = createNativeStackNavigator<ProjectStackParamList>();
@@ -43,6 +45,7 @@ export const ProjectStackNavigator: React.FC = () => {
             onStartProject={() => navigation.navigate('CreateProject')}
             onBrowseCharacters={() => navigation.getParent()?.navigate('Characters')}
             onOpenProject={(projectId) => navigation.navigate('ProjectDashboard', { projectId })}
+            onOpenMeetups={(eventId) => navigation.navigate('EventMeetups', { eventId })}
             onOpenContests={() => navigation.navigate('ContestsList')}
             onOpenCalendar={() => navigation.navigate('CalendarBrowse')}
           />
@@ -63,7 +66,16 @@ export const ProjectStackNavigator: React.FC = () => {
           title: getProjectById(route.params.projectId)?.project_name ?? 'Project Dashboard',
         })}
       >
-        {({ route }) => <ProjectDashboardScreen projectId={route.params.projectId} />}
+        {({ route, navigation }) => (
+          <ProjectDashboardScreen
+            projectId={route.params.projectId}
+            onOpenMeetups={(eventId) => navigation.navigate('EventMeetups', { eventId })}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="EventMeetups" options={{ title: 'Meetups' }}>
+        {({ route }) => <EventMeetupsScreen eventId={route.params.eventId} />}
       </Stack.Screen>
 
       <Stack.Screen name="CreateProject" options={{ title: 'New Project' }}>

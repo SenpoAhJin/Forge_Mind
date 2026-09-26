@@ -21,6 +21,8 @@ import { getTodayLocal } from '../../utils/dateHelpers';
 
 interface ProjectDashboardScreenProps {
   projectId: string;
+  /** FE-7 Step 5: opens the meetups for the project's linked event. */
+  onOpenMeetups?: (eventId: string) => void;
 }
 
 const badgeStatusFor = (status: Project['status']): 'pending' | 'active' | 'completed' | 'cancelled' => {
@@ -72,7 +74,7 @@ const formatPeso = (value: number) => {
   return `${sign}₱${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId }) => {
+export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId, onOpenMeetups }) => {
   const { projects, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
   const { events, getEventById } = useEvents();
   const { user, setUserBody } = useUser();
@@ -224,6 +226,15 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
                 onPress={() => handleLinkEvent(null)}
               />
             </View>
+            {/* FE-7 Step 5: entry point into the linked event's meetups */}
+            {onOpenMeetups ? (
+              <Button
+                title="Meetups"
+                variant="secondary"
+                onPress={() => onOpenMeetups(linkedEvent.id)}
+                fullWidth
+              />
+            ) : null}
           </StandardCard>
         ) : (
           <>

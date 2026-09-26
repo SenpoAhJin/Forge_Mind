@@ -13,6 +13,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
+import { useMeetups } from '../../contexts/MeetupsContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, ProjectStatus } from '../../types/projects';
@@ -24,6 +25,7 @@ interface ProjectsScreenProps {
   onOpenProject: (projectId: string) => void;
   onOpenContests: () => void;
   onOpenCalendar: () => void;
+  onOpenMeetups: (eventId: string) => void;
 }
 
 const badgeStatusFor = (status: ProjectStatus): 'pending' | 'active' | 'completed' | 'cancelled' => {
@@ -47,11 +49,13 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   onOpenProject,
   onOpenContests,
   onOpenCalendar,
+  onOpenMeetups,
 }) => {
   const { user } = useUser();
   const { selection } = useSelection();
   const { projects, getTasksForProject, getBudgetForProject } = useProjects();
   const { events } = useEvents();
+  const { meetups } = useMeetups();
   const today = getTodayLocal();
   const currentUserProjects = user
     ? projects.filter(project => project.user_id === user.email)
@@ -77,6 +81,11 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
       projectTasks: getTasksForProject(project.project_id),
       projectBudget: getBudgetForProject(project.project_id),
     });
+
+  // Meetup headcount per event, derived from the shared MeetupsContext so this
+  // card and the meetup screen can never disagree.
+  const meetupCountFor = (eventId: string) =>
+    meetups.filter((meetup) => meetup.event_id === eventId).length;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -135,6 +144,20 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
                     </Text>
                   )}
                 </View>
+
+                {/* FE-7 Step 5: entry point into the event's meetups */}
+                <TouchableOpacity
+                  style={styles.meetupButton}
+                  onPress={() => onOpenMeetups(event.id)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="people-outline" size={15} color={colors.primary} />
+                  <Text style={styles.meetupButtonText}>
+                    {meetupCountFor(event.id) === 0
+                      ? 'Propose a meetup'
+                      : `${meetupCountFor(event.id)} meetup${meetupCountFor(event.id) === 1 ? '' : 's'}`}
+                  </Text>
+                </TouchableOpacity>
               </StandardCard>
             );
           })}
@@ -442,6 +465,22 @@ const styles = StyleSheet.create({
   eventCountdownSoon: {
     backgroundColor: colors.warning,
     color: colors.backgroundLight,
+  },
+  meetupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary + '15',
+  },
+  meetupButtonText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.primary,
   },
   emptyState: {
     alignItems: 'center',

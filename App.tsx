@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider } from './src/contexts/UserContext';
 import { SelectionProvider } from './src/contexts/SelectionContext';
 import { ProjectsProvider } from './src/contexts/ProjectsContext';
+import { MeetupsProvider } from './src/contexts/MeetupsContext';
 import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
 import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { OffersProvider } from './src/contexts/OffersContext';
@@ -55,25 +56,27 @@ export default function App() {
               <CommitmentLogProvider>
                 <EventsProvider>
                   <ProjectsProvider>
-                    <OwnedAttireProvider>
-                      <MarketplaceProvider>
-                        <OffersProvider>
-                          <CommissionMilestonesProvider>
-                            <ChatProvider>
-                              <ContestProvider>
-                                <LogisticsProvider>
-                                  <CalendarProvider>
-                                    <RootNavigator />
-                                    <ConsentBanner />
-                                    <StatusBar style="auto" />
-                                  </CalendarProvider>
-                                </LogisticsProvider>
-                              </ContestProvider>
-                            </ChatProvider>
-                          </CommissionMilestonesProvider>
-                        </OffersProvider>
-                      </MarketplaceProvider>
-                    </OwnedAttireProvider>
+                    <MeetupsProvider>
+                      <OwnedAttireProvider>
+                        <MarketplaceProvider>
+                          <OffersProvider>
+                            <CommissionMilestonesProvider>
+                              <ChatProvider>
+                                <ContestProvider>
+                                  <LogisticsProvider>
+                                    <CalendarProvider>
+                                      <RootNavigator />
+                                      <ConsentBanner />
+                                      <StatusBar style="auto" />
+                                    </CalendarProvider>
+                                  </LogisticsProvider>
+                                </ContestProvider>
+                              </ChatProvider>
+                            </CommissionMilestonesProvider>
+                          </OffersProvider>
+                        </MarketplaceProvider>
+                      </OwnedAttireProvider>
+                    </MeetupsProvider>
                   </ProjectsProvider>
                 </EventsProvider>
               </CommitmentLogProvider>
