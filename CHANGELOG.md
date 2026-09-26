@@ -4122,6 +4122,21 @@ All commits passed `npx tsc --noEmit` with zero errors. No `Alert.alert` calls, 
 - **bdbcdda** — Part 2: create/detail/home screens + QR generation
 - **370e653** — Part 3: camera scan + join screen (expo-camera installed)
 - **33fd033** — Part 4: navigation routes + entry point
+- **7eaf397** — Fix: use TimePickerInput (alarm-style picker) + fix creation flow
+
+### Bug fixes (7eaf397)
+
+**Time picker improved:**
+- Replaced confusing text input with `TimePickerInput` component
+- Scrollable modal with 30-minute intervals (00:00, 00:30, 01:00...)
+- 12-hour format with AM/PM (like alarm clock apps)
+- User-friendly "Select Time" modal instead of typing "HH:MM"
+
+**Creation flow fixed:**
+- Context now returns created meetup directly (avoids timing issues)
+- Better error handling with try/catch
+- No longer fails to show success modal after creation
+- QR code displays immediately after successful creation
 
 ### What's next
 
