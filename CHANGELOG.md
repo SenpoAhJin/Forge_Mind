@@ -4014,3 +4014,123 @@ Added event information to cosplayer ProjectsScreen cards:
 - Countdown color: red if ≤7 days (urgent planning), yellow otherwise
 - Calendar icon provides visual cue that this is event-related info
 - Used existing schema field (`linked_event_id`) — no schema changes needed
+
+
+---
+
+## Session — Wednesday, September 16, 2026 (Invite Meetups — Cosplayer Casual Meetups with QR Codes)
+
+### What was built
+
+A complete **invite-code and QR-based casual meetup system** for cosplayers, entirely separate from the existing event-based meetup system. Cosplayers can now create meetups with auto-generated invite codes + QR codes, join by typing the code OR scanning a QR, see participant lists, and leave meetups. All data persists in AsyncStorage.
+
+**IMPORTANT: Two separate meetup systems now exist in the app:**
+
+1. **Event-based meetups** (`MeetupsContext` + `EventMeetupsScreen`) — tied to specific events, with RSVP status, project linkage, and event-driven workflows. Used when cosplayers want to coordinate around a specific convention event.
+
+2. **Invite meetups** (`InviteMeetupsContext` + 4 new screens) — casual, code-based meetups with no event or project requirements. Used when cosplayers want to meet up spontaneously without formal event registration. Join by typing a 6-character code (e.g. "ABC123") or scanning a QR code.
+
+**What distinguishes them:**
+- Event meetups: require `event_id`, track RSVP status, link to projects, appear in project event cards
+- Invite meetups: no event needed, join via invite code/QR, simpler participant tracking (just joined/left), accessible from Projects tab "Invite Meetups" card
+
+**Why separate:** Completely different use cases. Event meetups support structured, event-driven coordination. Invite meetups support spontaneous, ad-hoc meetups. Building them as one generic system would create half-working screens with conflicting requirements.
+
+### New screens
+
+All screens live in `src/screens/cosplayer/`:
+
+1. **InviteMeetupsHomeScreen** — lists user's joined/created meetups, buttons to create or join
+2. **CreateInviteMeetupScreen** — form (title, location, date/time, notes), generates 6-char code on submit, shows success modal with QR code
+3. **InviteMeetupDetailScreen** — shows meetup info, QR code for sharing, participant list, leave button (creator cannot leave, must wait for all to leave before auto-cleanup)
+4. **JoinInviteMeetupScreen** — manual code entry field + camera QR scanner (expo-camera with permission handling, web fallback with notice)
+
+### Data model and context
+
+**Type:** `InviteMeetup` in `src/types/inviteMeetups.ts`
+- Fields: `id`, `title`, `location`, `date_time`, `notes`, `invite_code` (6-char uppercase alphanumeric, collision-checked), `creator_id`, `created_at`, `participants` (array of `{ user_id, display_name, joined_at }`)
+
+**Context:** `InviteMeetupsContext` in `src/contexts/InviteMeetupsContext.tsx`
+- Methods: `createMeetup`, `joinMeetup`, `leaveMeetup`, `getMeetupsForUser`, `getMeetupByInviteCode`, `getMeetupById`
+- Storage key: `@forgemind:invite_meetups`
+- Auto-cleanup: deletes meetup when last participant leaves
+
+**Collision handling:** `generateInviteCode()` generates 6-char codes excluding similar characters (I/1, O/0, L), checks existing codes, retries up to 10 times if collision
+
+### QR code generation and scanning
+
+**QR generation:** Reuses `react-native-qrcode-svg@^6.3.26` (already installed for ShareableCard). QR encodes plain invite code as text (e.g. "ABC123").
+
+**QR scanning:** Uses `expo-camera@~57.0.5` (Expo SDK 57 compatible, works in Expo Go). Features:
+- `CameraView` component with `onBarcodeScanned` callback
+- `useCameraPermissions` hook for permission handling
+- Platform.OS check: camera disabled on web with notice, manual entry still works
+- Scans QR, extracts text, validates format (6 uppercase alphanumeric), joins meetup
+
+**Camera permissions:** Three-state UI: granted (show camera), denied (show "enable in settings" message + manual entry fallback), undetermined (show "grant permission" button)
+
+### Navigation
+
+**Entry point:** Projects tab (home) has new "Invite Meetups" card (qr-code icon) below "Community Events" card
+
+**Routes added to ProjectStackNavigator:**
+- `InviteMeetupsHome` — main hub
+- `CreateInviteMeetup` — create flow
+- `InviteMeetupDetail` — detail view with QR + participants
+- `JoinInviteMeetup` — join by code or scan
+
+All routes use native navigation prop passing (no callback wrappers needed).
+
+### Dependencies
+
+**New package installed:** `expo-camera@~57.0.5` (6 packages added total)
+- Reason: official Expo SDK 57 camera library, built-in barcode scanning, works in Expo Go
+- Web behavior: camera not supported on web, manual entry fallback provided
+
+**Existing packages reused:**
+- `react-native-qrcode-svg@^6.3.26` for QR generation
+- `@react-native-async-storage/async-storage` for persistence
+
+### Files created
+
+- `src/types/inviteMeetups.ts` — type definitions
+- `src/contexts/InviteMeetupsContext.tsx` — context + storage logic
+- `src/screens/cosplayer/CreateInviteMeetupScreen.tsx` — create + success modal
+- `src/screens/cosplayer/InviteMeetupsHomeScreen.tsx` — list + actions
+- `src/screens/cosplayer/InviteMeetupDetailScreen.tsx` — detail + QR + participants
+- `src/screens/cosplayer/JoinInviteMeetupScreen.tsx` — manual + camera scan
+
+### Files modified
+
+- `App.tsx` — added InviteMeetupsProvider to provider tree
+- `src/navigation/ProjectStackNavigator.tsx` — added 4 routes, updated param list
+- `src/screens/cosplayer/ProjectsScreen.tsx` — added entry point card
+- `src/screens/cosplayer/index.ts` — exported new screens
+- `package.json` / `package-lock.json` — expo-camera dependency
+
+### Files NOT modified
+
+**MeetupsContext remains untouched** (zero diff confirmed) — existing event-based meetup system continues working independently
+
+### TypeScript verification
+
+All commits passed `npx tsc --noEmit` with zero errors. No `Alert.alert` calls, no problematic conditional rendering patterns.
+
+### Commits
+
+- **bca142c** — Part 1: data model + InviteMeetupsContext + provider wiring
+- **bdbcdda** — Part 2: create/detail/home screens + QR generation
+- **370e653** — Part 3: camera scan + join screen (expo-camera installed)
+- **33fd033** — Part 4: navigation routes + entry point
+
+### What's next
+
+Manual testing recommended:
+1. Create meetup → verify QR appears in success modal
+2. Join by typing code → verify lands on detail screen
+3. Join by scanning QR (mobile only) → verify camera permission flow + scan-to-join
+4. Leave meetup → verify removed from participants
+5. Last person leaves → verify meetup auto-deleted
+6. Verify MeetupsContext (event-based) still works independently
+
+---
