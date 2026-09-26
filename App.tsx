@@ -12,6 +12,7 @@ import { UserProvider } from './src/contexts/UserContext';
 import { SelectionProvider } from './src/contexts/SelectionContext';
 import { ProjectsProvider } from './src/contexts/ProjectsContext';
 import { MeetupsProvider } from './src/contexts/MeetupsContext';
+import { InviteMeetupsProvider } from './src/contexts/InviteMeetupsContext';
 import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
 import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { OffersProvider } from './src/contexts/OffersContext';
@@ -57,7 +58,8 @@ export default function App() {
                 <EventsProvider>
                   <ProjectsProvider>
                     <MeetupsProvider>
-                      <OwnedAttireProvider>
+                      <InviteMeetupsProvider>
+                        <OwnedAttireProvider>
                         <MarketplaceProvider>
                           <OffersProvider>
                             <CommissionMilestonesProvider>
@@ -76,7 +78,8 @@ export default function App() {
                           </OffersProvider>
                         </MarketplaceProvider>
                       </OwnedAttireProvider>
-                    </MeetupsProvider>
+                    </InviteMeetupsProvider>
+                  </MeetupsProvider>
                   </ProjectsProvider>
                 </EventsProvider>
               </CommitmentLogProvider>
