@@ -26,6 +26,7 @@ interface ProjectsScreenProps {
   onOpenContests: () => void;
   onOpenCalendar: () => void;
   onOpenMeetups: (eventId: string) => void;
+  onOpenInviteMeetups?: () => void;
 }
 
 const badgeStatusFor = (status: ProjectStatus): 'pending' | 'active' | 'completed' | 'cancelled' => {
@@ -50,6 +51,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   onOpenContests,
   onOpenCalendar,
   onOpenMeetups,
+  onOpenInviteMeetups,
 }) => {
   const { user } = useUser();
   const { selection } = useSelection();
@@ -191,6 +193,22 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
           </View>
         </StandardCard>
       </TouchableOpacity>
+
+      {/* Invite Meetups Entry Point Card */}
+      {onOpenInviteMeetups && (
+        <TouchableOpacity onPress={onOpenInviteMeetups} activeOpacity={0.7}>
+          <StandardCard style={styles.contestsCard}>
+            <View style={styles.contestsRow}>
+              <Ionicons name="qr-code" size={24} color={colors.primary} />
+              <View style={styles.contestsText}>
+                <Text style={styles.contestsTitle}>Invite Meetups</Text>
+                <Text style={styles.contestsSubtitle}>Create or join casual meetups with QR codes</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </View>
+          </StandardCard>
+        </TouchableOpacity>
+      )}
 
       {selection ? (
         <StandardCard style={styles.startCard}>

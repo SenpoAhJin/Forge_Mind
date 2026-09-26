@@ -11,6 +11,10 @@ import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
 import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
 import { CalendarBrowseScreen } from '../screens/cosplayer/CalendarBrowseScreen';
 import { EventMeetupsScreen } from '../screens/cosplayer/EventMeetupsScreen';
+import { InviteMeetupsHomeScreen } from '../screens/cosplayer/InviteMeetupsHomeScreen';
+import { CreateInviteMeetupScreen } from '../screens/cosplayer/CreateInviteMeetupScreen';
+import { InviteMeetupDetailScreen } from '../screens/cosplayer/InviteMeetupDetailScreen';
+import { JoinInviteMeetupScreen } from '../screens/cosplayer/JoinInviteMeetupScreen';
 import { getProjectById } from '../data';
 import { typography } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,6 +26,10 @@ export type ProjectStackParamList = {
   ContestsList: undefined;
   CalendarBrowse: undefined;
   EventMeetups: { eventId: string };
+  InviteMeetupsHome: undefined;
+  CreateInviteMeetup: undefined;
+  InviteMeetupDetail: { meetupId: string };
+  JoinInviteMeetup: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProjectStackParamList>();
@@ -48,6 +56,7 @@ export const ProjectStackNavigator: React.FC = () => {
             onOpenMeetups={(eventId) => navigation.navigate('EventMeetups', { eventId })}
             onOpenContests={() => navigation.navigate('ContestsList')}
             onOpenCalendar={() => navigation.navigate('CalendarBrowse')}
+            onOpenInviteMeetups={() => navigation.navigate('InviteMeetupsHome')}
           />
         )}
       </Stack.Screen>
@@ -88,6 +97,14 @@ export const ProjectStackNavigator: React.FC = () => {
           />
         )}
       </Stack.Screen>
+
+      <Stack.Screen name="InviteMeetupsHome" component={InviteMeetupsHomeScreen} options={{ title: 'Invite Meetups' }} />
+
+      <Stack.Screen name="CreateInviteMeetup" component={CreateInviteMeetupScreen} options={{ title: 'Create Meetup' }} />
+
+      <Stack.Screen name="InviteMeetupDetail" component={InviteMeetupDetailScreen} options={{ title: 'Meetup Details' }} />
+
+      <Stack.Screen name="JoinInviteMeetup" component={JoinInviteMeetupScreen} options={{ title: 'Join Meetup' }} />
     </Stack.Navigator>
   );
 };
