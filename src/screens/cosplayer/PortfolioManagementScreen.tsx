@@ -99,6 +99,14 @@ export const PortfolioManagementScreen: React.FC = () => {
           <Text style={[styles.emptySub, dynamicStyles.emptySub]}>
             Add photos to showcase your skills and attract buyers
           </Text>
+          <View style={styles.emptyActionContainer}>
+            <Button
+              title="Add Your First Photo"
+              onPress={handlePickImage}
+              variant="primary"
+              fullWidth={false}
+            />
+          </View>
         </View>
       ) : (
         <>
@@ -234,6 +242,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xl,
+  },
+  emptyActionContainer: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
   },
   photoGrid: {
     flexDirection: 'row',
