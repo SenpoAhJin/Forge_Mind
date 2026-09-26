@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { StandardCard, Button, TextInputField, TextAreaField } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
+import { TimePickerInput } from '../../components/inputs/TimePickerInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useInviteMeetups } from '../../contexts/InviteMeetupsContext';
 import { useUser } from '../../contexts/UserContext';
@@ -70,28 +71,31 @@ export const CreateInviteMeetupScreen: React.FC<CreateInviteMeetupScreenProps> =
 
     setSubmitting(true);
 
-    const result = await createMeetup({
-      title: trimmedTitle,
-      description: description.trim() || null,
-      location: trimmedLocation,
-      meetup_date: meetupDate,
-      meetup_time: meetupTime,
-      created_by_email: user.email,
-      created_by_name: user.display_name,
-    });
+    try {
+      const result = await createMeetup({
+        title: trimmedTitle,
+        description: description.trim() || null,
+        location: trimmedLocation,
+        meetup_date: meetupDate,
+        meetup_time: meetupTime,
+        created_by_email: user.email,
+        created_by_name: user.display_name,
+      });
 
-    setSubmitting(false);
+      setSubmitting(false);
 
-    if (result.success && result.meetupId) {
-      // Find the created meetup from context
-      const created = meetups.find(m => m.id === result.meetupId);
-      if (created) {
-        setInviteCode(created.invite_code);
-        setCreatedMeetupId(created.id);
+      if (result.success && result.meetupId && result.meetup) {
+        // Use the meetup returned from context directly
+        setInviteCode(result.meetup.invite_code);
+        setCreatedMeetupId(result.meetup.id);
         setShowSuccessModal(true);
+      } else {
+        setDateError(result.error || 'Failed to create meetup');
       }
-    } else {
-      setDateError(result.error || 'Failed to create meetup');
+    } catch (error) {
+      setSubmitting(false);
+      setDateError('An unexpected error occurred');
+      console.error('[CreateInviteMeetup] Error:', error);
     }
   };
 
@@ -150,15 +154,13 @@ export const CreateInviteMeetupScreen: React.FC<CreateInviteMeetupScreenProps> =
           minDate={getTodayLocal()}
         />
 
-        <TextInputField
+        <TimePickerInput
           label="Time"
           value={meetupTime}
-          onChangeText={(text) => {
-            setMeetupTime(text);
+          onChange={(newTime) => {
+            setMeetupTime(newTime);
             if (dateError) setDateError('');
           }}
-          placeholder="HH:MM (24-hour)"
-          keyboardType="numeric"
         />
 
         {dateError ? <Text style={styles.errorText}>{dateError}</Text> : null}

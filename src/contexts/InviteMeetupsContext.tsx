@@ -29,7 +29,7 @@ interface InviteMeetupsContextType {
   meetups: InviteMeetupWithParticipants[];
   isLoading: boolean;
   
-  createMeetup: (input: CreateInviteMeetupInput) => Promise<{ success: boolean; meetupId?: string; error?: string }>;
+  createMeetup: (input: CreateInviteMeetupInput) => Promise<{ success: boolean; meetupId?: string; meetup?: InviteMeetupWithParticipants; error?: string }>;
   getMeetupByCode: (code: string) => InviteMeetupWithParticipants | null;
   joinMeetup: (code: string, participantEmail: string, participantName: string) => Promise<{ success: boolean; error?: string }>;
   getMeetupsForUser: (email: string) => InviteMeetupWithParticipants[];
@@ -145,7 +145,7 @@ export const InviteMeetupsProvider: React.FC<{ children: ReactNode }> = ({ child
     };
 
     await saveMeetups([...meetups, meetup]);
-    return { success: true, meetupId };
+    return { success: true, meetupId, meetup };
   };
 
   const getMeetupByCode = (code: string): InviteMeetupWithParticipants | null => {
