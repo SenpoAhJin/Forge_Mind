@@ -27,7 +27,16 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-asset",
+        {
+          "assets": [
+            "./assets/models/3D_Model_Male.glb",
+            "./assets/models/3D_Model_Female.glb"
+          ]
+        }
+      ]
     ]
   }
 }
