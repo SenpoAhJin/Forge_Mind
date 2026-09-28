@@ -1,0 +1,5 @@
+# Git LFS — binary 3D assets
+# Rigged base bodies exported from Blender (~1.3-1.4 MB each, full skeleton +
+# skinning). Kept out of the normal git object store so cloning the app repo stays
+# fast and diffs stay readable.
+*.glb filter=lfs diff=lfs merge=lfs -text
