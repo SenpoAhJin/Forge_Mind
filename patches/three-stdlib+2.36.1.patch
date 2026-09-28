@@ -1,0 +1,82 @@
+diff --git a/node_modules/three-stdlib/controls/OrbitControls.cjs b/node_modules/three-stdlib/controls/OrbitControls.cjs
+index aa73053..a5bd001 100644
+--- a/node_modules/three-stdlib/controls/OrbitControls.cjs
++++ b/node_modules/three-stdlib/controls/OrbitControls.cjs
+@@ -566,6 +566,7 @@ class OrbitControls extends EventDispatcher.EventDispatcher {
+         rotateEnd.set(event.pageX, event.pageY);
+       } else {
+         const position = getSecondPointerPosition(event);
++        if (position === null) return;
+         const x = 0.5 * (event.pageX + position.x);
+         const y = 0.5 * (event.pageY + position.y);
+         rotateEnd.set(x, y);
+@@ -583,6 +584,7 @@ class OrbitControls extends EventDispatcher.EventDispatcher {
+         panEnd.set(event.pageX, event.pageY);
+       } else {
+         const position = getSecondPointerPosition(event);
++        if (position === null) return;
+         const x = 0.5 * (event.pageX + position.x);
+         const y = 0.5 * (event.pageY + position.y);
+         panEnd.set(x, y);
+@@ -593,6 +595,7 @@ class OrbitControls extends EventDispatcher.EventDispatcher {
+     }
+     function handleTouchMoveDolly(event) {
+       const position = getSecondPointerPosition(event);
++      if (position === null) return;
+       const dx = event.pageX - position.x;
+       const dy = event.pageY - position.y;
+       const distance = Math.sqrt(dx * dx + dy * dy);
+@@ -841,8 +844,11 @@ class OrbitControls extends EventDispatcher.EventDispatcher {
+       position.set(event.pageX, event.pageY);
+     }
+     function getSecondPointerPosition(event) {
++      if (pointers.length < 2) return null;
+       const pointer = event.pointerId === pointers[0].pointerId ? pointers[1] : pointers[0];
+-      return pointerPositions[pointer.pointerId];
++      if (pointer === void 0) return null;
++      const position = pointerPositions[pointer.pointerId];
++      return position === void 0 ? null : position;
+     }
+     this.dollyIn = (dollyScale = getZoomScale()) => {
+       dollyIn(dollyScale);
+diff --git a/node_modules/three-stdlib/controls/OrbitControls.js b/node_modules/three-stdlib/controls/OrbitControls.js
+index 576ad6f..084c3ef 100644
+--- a/node_modules/three-stdlib/controls/OrbitControls.js
++++ b/node_modules/three-stdlib/controls/OrbitControls.js
+@@ -564,6 +564,7 @@ class OrbitControls extends EventDispatcher {
+         rotateEnd.set(event.pageX, event.pageY);
+       } else {
+         const position = getSecondPointerPosition(event);
++        if (position === null) return;
+         const x = 0.5 * (event.pageX + position.x);
+         const y = 0.5 * (event.pageY + position.y);
+         rotateEnd.set(x, y);
+@@ -581,6 +582,7 @@ class OrbitControls extends EventDispatcher {
+         panEnd.set(event.pageX, event.pageY);
+       } else {
+         const position = getSecondPointerPosition(event);
++        if (position === null) return;
+         const x = 0.5 * (event.pageX + position.x);
+         const y = 0.5 * (event.pageY + position.y);
+         panEnd.set(x, y);
+@@ -591,6 +593,7 @@ class OrbitControls extends EventDispatcher {
+     }
+     function handleTouchMoveDolly(event) {
+       const position = getSecondPointerPosition(event);
++      if (position === null) return;
+       const dx = event.pageX - position.x;
+       const dy = event.pageY - position.y;
+       const distance = Math.sqrt(dx * dx + dy * dy);
+@@ -839,8 +842,11 @@ class OrbitControls extends EventDispatcher {
+       position.set(event.pageX, event.pageY);
+     }
+     function getSecondPointerPosition(event) {
++      if (pointers.length < 2) return null;
+       const pointer = event.pointerId === pointers[0].pointerId ? pointers[1] : pointers[0];
+-      return pointerPositions[pointer.pointerId];
++      if (pointer === void 0) return null;
++      const position = pointerPositions[pointer.pointerId];
++      return position === void 0 ? null : position;
+     }
+     this.dollyIn = (dollyScale = getZoomScale()) => {
+       dollyIn(dollyScale);

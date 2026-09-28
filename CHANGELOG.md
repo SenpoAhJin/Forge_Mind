@@ -5,6 +5,107 @@
 
 ---
 
+## Session — Monday, September 28, 2026, 19:40 (Bug fix: 3D preview crash on pinch/zoom)
+
+**Phase:** Phase 3 (independent) — crash fix
+**Scope:** OrbitControls touch handling. No app screens changed.
+
+### The bug
+
+The 3D preview crashed during a two-finger pinch:
+
+```
+Uncaught Error: Cannot read property 'x' of undefined
+  at handleTouchMoveDolly (node_modules/three-stdlib/controls/OrbitControls.cjs:596)
+```
+
+### What was actually wrong
+
+`OrbitControls` tracks which fingers are down in one list and their coordinates in a second,
+separate list. The pinch code trusted both to always be in step, without checking.
+
+The zoom handler was the only one of the three that didn't check — the rotate and pan
+handlers both fall back to single-finger behaviour when only one finger is down, but the
+zoom handler went straight for the second finger's coordinates:
+
+| Handler | Checks before reading the 2nd finger? |
+|---|---|
+| rotate | yes |
+| pan | yes |
+| **zoom (dolly)** | **no** |
+
+That is why the crash always pointed at `handleTouchMoveDolly` and always happened on a
+pinch. The two lists desync when the browser sends a **compatibility mouse** pointer event
+(`pointerType === 'mouse'`): that pointer gets added to the "fingers down" list but never
+gets coordinates recorded, because the mouse code path skips the tracking step. A pinch
+that then reads it gets nothing back and the app tries to use it.
+
+### The first theory was wrong, and we checked
+
+The working theory was "one finger lifts mid-pinch, so the second finger is missing."
+Testing showed a **clean** lift does **not** crash — lifting a finger also resets the
+gesture state, so the next move is ignored safely. The browser's "cancelled touch" event
+is handled too. The crash needs the desync above, not a clean lift.
+
+### The fix
+
+Added the missing checks to the vendored `three-stdlib` using **patch-package**, so the fix
+is committed as a reviewable diff and automatically reapplied after every `npm install`
+(verified by deleting the package and reinstalling from scratch).
+
+- `patches/three-stdlib+2.36.1.patch`
+- `scripts/verify-orbitcontrols-patch.js` — run with `npm run verify:orbitcontrols`
+
+Why patch-package and not the alternatives:
+- **Fixing it in our own touch code is not possible** — there is no touch handler of ours in
+  between. The `PanResponder` in the crash trace belongs to React Native itself, not our code.
+- **Upgrading three-stdlib is not possible** — 2.36.1 is the newest version published.
+- Editing the installed file directly would be lost on every reinstall.
+
+The patch covers **both** the CommonJS and ESM builds of the library, because Expo bundles
+the ESM one — patching only the file named in the crash trace would not have fixed the app.
+
+### Verification
+
+Drove the real (patched) library through 400,000 randomised realistic touch-gesture orderings:
+
+| | before patch | after patch |
+|---|---|---|
+| crashes | 22,828 orderings hit the fault (2 distinct signatures) | **0** |
+
+And normal interaction still works — checked explicitly, because a fix that silently broke
+pinch-to-zoom would be worse than the crash:
+
+```
+PASS  pinch-out zooms in   [4.005 -> 2.002]
+PASS  pinch-in zooms out   [4.005 -> 6.000]
+PASS  one-finger drag rotates camera
+PASS  wheel zoom works
+PASS  pinch recovers after the bad frame
+ALL CHECKS PASSED
+```
+
+### Which screens are fixed
+
+The app has exactly **one** camera control, in `Preview3D`. Both 3D surfaces render that
+same shared scene, so the fix covers both:
+
+- the **3D Preview Test** screen
+- the **Project Dashboard** 3D preview (production)
+
+### Files changed
+
+- `patches/three-stdlib+2.36.1.patch` (new)
+- `scripts/verify-orbitcontrols-patch.js` (new)
+- `docs/3D_PINCH_CRASH_FIX.md` (new — full write-up)
+- `package.json` (added `postinstall` + `verify:orbitcontrols`)
+- `package-lock.json`
+
+Note: no app source file needed to change. No real-device verification was possible from
+this environment — the fix is verified against the real library driven by synthetic events.
+
+---
+
 ## Session — Monday, September 28, 2026, 19:13 (Phase 3 Step 1b: v2.1 Correction Pass)
 
 **Phase:** Phase 3 (Backend & Data Services) — Step 1b: correcting errors in schema v2  
