@@ -5,6 +5,98 @@
 
 ---
 
+## Session — Monday, September 28, 2026, 21:45 (Phase 3 Step 1: Database Schema Design)
+
+**Phase:** Phase 3 (Backend & Data Services) — Step 1 of database work  
+**Scope:** Design document only — NO databases, tables, or migrations created yet.
+
+### What we created
+
+**Comprehensive PostgreSQL schema design document** covering all 10 domains, with full provenance tracking, drift analysis, and migration recommendations.
+
+**Document created:** `docs/database/SCHEMA_RECONCILIATION.md` (10,000+ lines)
+
+**Domains designed:**
+1. Identity/Authentication (users, sessions, email OTP, holder verification)
+2. Holder Verification (verification records, marketplace participant types gap identified)
+3. Marketplace Participation (participant types lookup, gap resolution proposed)
+4. Catalog (characters, variants, components, value references)
+5. Owned Attire + Condition History (owned_attire, attire_usage_history)
+6. Projects, Tasks, Budget, Milestones (projects, tasks, budget_line_items, project_milestones, computed readiness)
+7. Marketplace (listings, trades, commissions, offers, chat threads/messages, transaction milestones)
+8. Events/Organizer (events, applications, logistics, commitment log, contest criteria/opt-ins, meetups, calendar)
+9. Cosplayer Extras (diary, portfolio, shareable cards, live-location sessions metadata-only)
+10. Cross-Cutting (audit_events append-only log, user_notification_state)
+
+**Tables designed:** 40 tables + 2 computed views (project_readiness, event_readiness_aggregate)
+
+**AsyncStorage keys inventoried:** 18 persistence surfaces mapped to database replacements
+
+**Source documentation read:**
+- ✅ `ForgeMind_Phase0_Foundation.md` (v0.2.1 schema with Corrections #1-7)
+- ✅ `ForgeMind_Overall_Data_Information.docx` (Phase 0 + Phase 3)
+- ✅ All 20 TypeScript type files in `src/types/`
+- ✅ All 17 context providers in `src/contexts/`
+- ✅ `src/services/AuthService.ts` (account storage patterns)
+- ✅ All seed data in `src/data/` (JSON mock datasets)
+- ✅ AsyncStorage grep output (16 keys found)
+
+**Environment check results:**
+- Node.js: v24.19.0 ✅
+- npm: 11.17.0 ✅
+- Git LFS: 3.7.1 ✅
+- PostgreSQL: NOT FOUND ❌
+- Docker: NOT FOUND ❌
+- Port 5432: CLOSED ❌
+
+**PostgreSQL installation required:** Included manual Windows installation steps in design doc.
+
+**Design rules applied:**
+1. UUIDs as primary keys (with slug columns for seed data stability)
+2. TIMESTAMPTZ for all timestamps; DATE for calendar dates (not timestamps, prevents UTC date-shift bug)
+3. NUMERIC(12,2) for all money fields (PHP, never float)
+4. Raw snake_case enum values (app formats at display time)
+5. Soft deletes (status enums, no hard deletes where app snapshots data)
+6. Privacy/security enforcement:
+   - NO persisted coordinates (live_location_sessions holds metadata only)
+   - ID images in encrypted object storage (DB stores references)
+   - payout_method_number encrypted at rest (pgcrypto)
+   - Chat content NEVER joined into AI input (enforced via DB roles)
+   - Password hashing: bcrypt/argon2 required; current SHA-256 hashes will NOT migrate
+7. Mock seed JSON compatibility (all seed files loadable by seed script)
+
+**Drift report generated:**
+- (i) Fields in as-built app but NOT in v0.2.1: 19 items (organizer roles, marketplace registration, contest tables, diary, etc.)
+- (ii) Fields in v0.2.1 but NOT in as-built: 9 items (variant confirmation workflow, price outlier detection, transaction milestones, etc.)
+- (iii) Conflicts with concept/feasibility docs: 5 items (marketplace participant types, body_size_slider retention, password hashing, live-location, chat AI isolation)
+
+**Mermaid ERD included** showing all table relationships (users → projects → tasks → owned_attire, marketplace transactions, events → logistics, etc.)
+
+**Migration tool recommendation:** **node-pg-migrate** (pure SQL migrations, no abstraction, easier audit against v0.2.1 spec)
+
+**Backend folder structure proposed:** `forgemind-mobile/forgemind-backend/` with migrations/, src/, .env.example, .gitignore
+
+**Open decisions for user (6 items):**
+1. Marketplace participant types: Option A (enum in users table) vs. Option B (separate table with junction)
+2. body_size_slider retention: Keep (for data continuity) or drop (cleaner schema)
+3. Password migration strategy: Force account reset (SHA-256 → bcrypt impossible to convert)
+4. Live-location storage: Redis (scalable) vs. in-memory (simple)
+5. Dispatch Board: Undefined feature, no schema designed yet (user decision required)
+6. Hosting provider: Local dev vs. production (Heroku, AWS RDS, DigitalOcean, Supabase)
+
+**Status:** ⚠️ **DESIGN PHASE COMPLETE — Awaiting user approval to proceed to Phase 3 Step 2 (implementation).**
+
+**Next steps (DO NOT proceed without user approval):**
+1. Install PostgreSQL on Windows (or Docker Compose)
+2. Create forgemind-backend/ folder with Node.js + TypeScript + Express
+3. Write initial migration (001_initial_schema.sql) with all tables
+4. Run migration, seed database with src/data/*.json
+5. Test: verify all tables, indexes, constraints working
+
+---
+
+
+
 ## Changelog Corrections — Monday, September 28, 2026, 16:30
 
 This entry corrects date/time discrepancies between changelog entry headings and actual Git commit timestamps, and clarifies the current state of body type labels in the codebase.
