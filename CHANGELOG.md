@@ -1,7 +1,65 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Monday, September 28, 2026  
+**Last updated:** Monday, September 28, 2026, 19:13 (v2.1 correction pass)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Monday, September 28, 2026, 19:13 (Phase 3 Step 1b: v2.1 Correction Pass)
+
+**Phase:** Phase 3 (Backend & Data Services) — Step 1b: correcting errors in schema v2  
+**Scope:** Design document only — still NO databases, tables, or migrations created.
+
+### Why this session happened
+
+The v2 report claimed *"all 10 enums validated against code."* That claim was **wrong**. The user
+re-checked four of the ten against the actual source files and found all four disagreed with the
+document. This session re-ran the checks for real and corrected them.
+
+### Four enum/CHECK domains corrected (each confirmed by raw `grep` against `src/`)
+
+| Field | v2 said (wrong) | Corrected to (matches code) | Source of truth |
+|-------|-----------------|----------------------------|-----------------|
+| `guest_logistics.participant_kind` | `guest, sponsor, performer` | **`confirmed_guest, sponsor, performer`** | `src/types/logistics.ts:6` |
+| `guest_logistics.parking_needs` | `yes, no, accessible` | **`none, standard, accessible`** | `src/types/logistics.ts:8` |
+| `events.status` | `draft, confirmed, ongoing, completed, cancelled` | **`draft, confirmed, cancelled`** | `src/types/events.ts:7` |
+| `commitment_change_log.entity_type` | `event, logistics, contest, calendar, other` | **`event, logistics_entry`** | `src/types/commitmentLog.ts:8` |
+
+- `'ongoing'` and `'completed'` on `events.status` had **no source anywhere** in the app —
+  `grep -rn "'ongoing'" src/` returns zero matches. They were invented.
+- `parking_needs` is an ordinal scale, not a yes/no flag. `src/utils/logisticsRules.ts:57` requires a
+  plate number whenever `parking_needs !== 'none'`, so a separate `'no'` value would be meaningless.
+
+### Table count 41 → 38, fully accounted for
+
+v2 said "38 tables (not 40)". Wrong baseline — the v1 body actually contains **41** tables (v1's own
+summary line said 40, so v1 was internally inconsistent). The honest arithmetic is **41 − 3 = 38**:
+
+1. `trade_proposals` — **merged** into `structured_offers` (zero references in `src/`)
+2. `commission_requests` — **merged** into `structured_offers` (zero references in `src/`)
+3. `shareable_cards` — **removed outright**; the shareable-card screen persists nothing (it builds a
+   PNG from data already in Projects/Events/User and hands it to the share sheet)
+4. `marketplace_participant_types` — **renamed** to `user_marketplace_participant_types` (not a removal)
+
+### Also fixed
+
+- Documented the previously-undocumented `shareable_cards` removal in the exclusions table.
+
+### ⚠️ Still open — three tables we did NOT silently rewrite
+
+Because the "all 10 enums validated" claim proved unreliable, every `CHECK (x IN (...))` in the whole
+document was swept against the code. That surfaced three more tables that are still wrong. They are
+**design decisions rather than typos**, so they are recorded in a new "OPEN DEFECTS" section of the
+schema doc and left for the user to rule on:
+
+- **A.** `event_participant_applications.applicant_type` — the field does not exist in the app at all
+- **B.** `group_meetups` — the app's `Meetup` type has **no `status` field**; the documented shape is
+  fictional (AI "proposed vs confirmed" columns that no code writes)
+- **C.** `meetup_members` — RSVPs are stored *inside* the meetup object in the app, not as separate
+  member rows, and the real RSVP values are `going / maybe / declined`, not `pending / attending / declined`
+
+**Consequence: the v2 table inventory should be treated as unvalidated until A/B/C are decided.**
+Schema v2.1 is **not** yet approved for migration generation.
 
 ---
 

@@ -37,7 +37,24 @@ This revision addresses all identified defects from v1 based on:
 16. Added UNIQUE constraints: contest opt-ins, chat threads, pending offers, invite codes, staff assignments
 17. Renamed `audit_events.event_id` to `audit_event_id` (avoid naming collision)
 18. Documented `default_casual_assets` as deferred (Phase 2 Unity integration)
-19. Corrected table count: 38 tables (not 40)
+19. Corrected table count: 38 tables
+    - **Reconciled in v2.1.** v2 said "38 tables (not 40)". That was the wrong baseline: the v1 body
+      (commit `aa02ecd`) actually documents **41** `### Table:` sections, even though v1's own summary
+      line claimed "40 tables + 2 computed views". v1 was internally inconsistent; the body is
+      authoritative. **41 → 38 = 3 tables removed, 0 added, 1 renamed:**
+      | # | Table | Disposition | Evidence |
+      |---|-------|-------------|----------|
+      | 1 | `trade_proposals` | Merged into `structured_offers` | `grep -rn "trade_proposals\|TradeProposal" src/` → 0 matches |
+      | 2 | `commission_requests` | Merged into `structured_offers` | `grep -rn "commission_requests\|CommissionRequest" src/` → 0 matches |
+      | 3 | `shareable_cards` | Removed outright (nothing persisted) | `ShareableCardScreen.tsx` has no storage write; renders from contexts, exports PNG |
+      | — | `marketplace_participant_types` | Renamed → `user_marketplace_participant_types` | Per user decision (junction-table approach) |
+    - Net: 41 − 3 removed = 38. The `offer_type` merge target is corroborated by
+      `src/types/offers.ts:14` (`OfferType = 'purchase' | 'trade' | 'commission'`).
+20. **[v2.1] Corrected 4 enum/CHECK domains that v2 got wrong** (each verified by `grep` against as-built code):
+    - `guest_logistics.participant_kind`: `'guest'` → **`'confirmed_guest'`** (`src/types/logistics.ts:6`)
+    - `guest_logistics.parking_needs`: `('yes','no','accessible')` → **`('none','standard','accessible')`** (`src/types/logistics.ts:8`)
+    - `events.status`: removed **`'ongoing'` and `'completed'`** → `('draft','confirmed','cancelled')` (`src/types/events.ts:7`; `grep -rn "'ongoing'" src/` → 0 matches, so v2's values had no source)
+    - `commitment_change_log.entity_type`: `('event','logistics','contest','calendar','other')` → **`('event','logistics_entry')`** (`src/types/commitmentLog.ts:8`)
 
 **User Decisions Applied:**
 - Body size slider: DROPPED from schema completely
@@ -46,6 +63,27 @@ This revision addresses all identified defects from v1 based on:
 - Password migration: Force reset (bcrypt/argon2 only, no dual-hash grace period)
 - Live-location: In-memory sessions only (no persisted coordinates)
 - Backend location: `forgemind-backend/` as sibling folder to `forgemind-mobile` at repo root
+
+---
+
+## ⚠️ OPEN DEFECTS — v2.1 AUDIT FOUND MORE UNFIXED DIVERGENCE (NOT YET RESOLVED)
+
+The v2 "A4 cross-check" claimed *"all 10 enums validated against code."* **That claim was false.**
+The four enums in item 20 above were wrong, and a follow-up sweep of **every** `CHECK (x IN (...))`
+domain in this document against `src/` found **three further tables that are still wrong.** They are
+recorded here rather than silently rewritten, because each is a *design* decision, not a typo:
+
+| # | Table / field | What this doc says | What as-built code says | Evidence |
+|---|---------------|--------------------|--------------------------|----------|
+| A | `event_participant_applications.applicant_type` | `('vendor','guest','sponsor','performer')` | **No `applicant_type` field exists.** Nor does any event-application concept. | `grep -rn "applicant\|applications" src/` → only `RejectionReasonModal` / `VerifyCosplayersScreen` / `VerifyStaffScreen`, all about cosplayer+staff verification, unrelated to events |
+| B | `group_meetups` (whole shape) | `meetup_name`, `proposed_time`, `confirmed_time`, `proposed_location`, `confirmed_location`, `status IN ('proposed','confirmed','completed','cancelled')` | `Meetup` (src/types/meetups.ts:29) has **no `status` field at all**: `meetup_id, event_id, proposed_by_email, proposed_by_name, title, purpose?, proposed_date, proposed_time, proposed_location, rsvps[], created_at, updated_at` | src/types/meetups.ts:29-42; `MeetupsContext.tsx` never reads/writes a status |
+| C | `meetup_members` (whole shape) | `priority_level IN ('must-attend','prefer-attend','flexible')`, `rsvp_status IN ('pending','attending','declined')` | `RsvpStatus = 'going' \| 'maybe' \| 'declined'` (+ `RSVP_STATUSES` const). RSVPs are **embedded in the `Meetup` object**, not a separate `meetup_members` row. `priority_level` has no counterpart. | src/types/meetups.ts:12,14,39; MeetupsContext.tsx:58,184,200 |
+
+**Consequence:** the v2 table inventory and the A4 cross-check should be treated as **unvalidated**
+until A/B/C are ruled on. Do **not** hand these tables to a migration generator as-is.
+Same question applies to `invite_meetups.status IN ('proposed','confirmed','completed','cancelled')`
+— same four-value pattern as B, and the doc cites a source file that does not exist
+(`src/types/inviteMeetup.ts`); it needs the same scrutiny.
 
 ---
 
@@ -1066,7 +1104,7 @@ CREATE INDEX idx_portfolio_photos_display_order ON portfolio_photos(user_id, dis
 
 **v2 Changes:**
 - ✅ **DEFECT #6 FIX:** Added `start_date DATE`, `end_date DATE`, `city VARCHAR(100)`, `description TEXT`, `has_contest BOOLEAN`, `confirmed_at TIMESTAMPTZ`, `cancelled_at TIMESTAMPTZ`
-- ✅ **DEFECT #6 FIX:** Changed `status` to `('draft', 'confirmed', 'ongoing', 'completed', 'cancelled')`
+- ✅ **DEFECT #6 FIX:** Changed `status` to `('draft', 'confirmed', 'cancelled')` [v2.1 CORRECTED — v2 wrongly added `'ongoing'` and `'completed'`; `src/types/events.ts:7` declares `EventStatus = 'draft' | 'confirmed' | 'cancelled'`, corroborated by `EVENT_STATUS_LABELS` (src/utils/formatStatus.ts:130-132) and the filter chips in `src/screens/organizer/EventsScreen.tsx:97-99`. `grep -rn "'ongoing'" src/` returns zero matches across the whole app]
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -1080,7 +1118,7 @@ CREATE INDEX idx_portfolio_photos_display_order ON portfolio_photos(user_id, dis
 | venue_address | TEXT | NOT NULL | |
 | description | TEXT | NULL | [v2 DEFECT #6 FIX] |
 | has_contest | BOOLEAN | NOT NULL DEFAULT false | [v2 DEFECT #6 FIX] |
-| status | VARCHAR(20) | NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'confirmed', 'ongoing', 'completed', 'cancelled')) | [v2 DEFECT #6 FIX] |
+| status | VARCHAR(20) | NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'confirmed', 'cancelled')) | [v2 DEFECT #6 FIX] [v2.1 CORRECTED] |
 | confirmed_at | TIMESTAMPTZ | NULL | [v2 DEFECT #6 FIX] |
 | cancelled_at | TIMESTAMPTZ | NULL | [v2 DEFECT #6 FIX] |
 | created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | |
@@ -1134,10 +1172,10 @@ CREATE INDEX idx_event_participant_applications_status ON event_participant_appl
 **Purpose:** Logistics information collection for confirmed participants.
 
 **v2 Changes:**
-- ✅ **DEFECT #7 FIX:** Added `participant_kind VARCHAR(20) NOT NULL CHECK (participant_kind IN ('guest', 'sponsor', 'performer'))`
+- ✅ **DEFECT #7 FIX:** Added `participant_kind VARCHAR(20) NOT NULL CHECK (participant_kind IN ('confirmed_guest', 'sponsor', 'performer'))` [v2.1 CORRECTED — v2 wrongly used `'guest'`; `src/types/logistics.ts:6` declares `ParticipantKind = 'confirmed_guest' | 'sponsor' | 'performer'`; longest value `confirmed_guest` is 15 chars, so VARCHAR(20) is still sufficient]
 - ✅ **DEFECT #7 FIX:** Changed `participant_contact_email` to NULL (optional)
 - ✅ **DEFECT #7 FIX:** Split arrival: `arrival_date DATE NULL`, `arrival_time TIME NULL`
-- ✅ **DEFECT #7 FIX:** Changed `parking_needs VARCHAR(20) NULL CHECK (parking_needs IN ('yes', 'no', 'accessible'))`
+- ✅ **DEFECT #7 FIX:** Changed `parking_needs VARCHAR(20) NULL CHECK (parking_needs IN ('none', 'standard', 'accessible'))` [v2.1 CORRECTED — v2 wrongly used `('yes','no','accessible')`; `src/types/logistics.ts:8` declares `ParkingNeeds = 'none' | 'standard' | 'accessible'`. Semantics are ordinal, not boolean: `src/utils/logisticsRules.ts:57` requires `plate_number` when `parking_needs !== 'none'`, so there is no 'no' state distinct from 'none']
 - ✅ **DEFECT #7 FIX:** Added `submission_deadline DATE NULL`
 - ✅ **DEFECT #7 FIX:** Added `status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'withdrawn'))`
 - ✅ **DEFECT #7 FIX:** Added assignment tracking columns
@@ -1147,7 +1185,7 @@ CREATE INDEX idx_event_participant_applications_status ON event_participant_appl
 | logistics_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | |
 | event_id | UUID | NOT NULL REFERENCES events(event_id) ON DELETE CASCADE | |
 | source_application_id | UUID | NULL REFERENCES event_participant_applications(application_id) ON DELETE SET NULL | Audit trail [Correction #6] |
-| participant_kind | VARCHAR(20) | NOT NULL CHECK (participant_kind IN ('guest', 'sponsor', 'performer')) | [v2 DEFECT #7 FIX] |
+| participant_kind | VARCHAR(20) | NOT NULL CHECK (participant_kind IN ('confirmed_guest', 'sponsor', 'performer')) | [v2 DEFECT #7 FIX] [v2.1 CORRECTED] Source: `src/types/logistics.ts:6` |
 | participant_name | VARCHAR(200) | NOT NULL | |
 | participant_contact_email | VARCHAR(255) | NULL | [v2 DEFECT #7 FIX] Optional |
 | arrival_date | DATE | NULL | [v2 DEFECT #7 FIX] Separate from time |
@@ -1155,7 +1193,7 @@ CREATE INDEX idx_event_participant_applications_status ON event_participant_appl
 | plate_number | VARCHAR(50) | NULL | |
 | entourage_size | INTEGER | NULL | |
 | stage_time_needs | TEXT | NULL | |
-| parking_needs | VARCHAR(20) | NULL CHECK (parking_needs IN ('yes', 'no', 'accessible')) | [v2 DEFECT #7 FIX] Enum |
+| parking_needs | VARCHAR(20) | NULL CHECK (parking_needs IN ('none', 'standard', 'accessible')) | [v2 DEFECT #7 FIX] [v2.1 CORRECTED] Enum. Source: `src/types/logistics.ts:8` |
 | submission_deadline | DATE | NULL | [v2 DEFECT #7 FIX] |
 | status | VARCHAR(20) | NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'withdrawn')) | [v2 DEFECT #7 FIX] |
 | assigned_to_staff_user_id | UUID | NULL REFERENCES users(user_id) ON DELETE SET NULL | [v2 DEFECT #7 FIX] |
@@ -1330,12 +1368,13 @@ Returns JSON with:
 - ✅ **DEFECT #8 FIX:** Changed to field-level row structure (not event-level)
 - ✅ **DEFECT #8 FIX:** Added `entity_type`, `entity_id`, `field_name`, `old_value`, `new_value`, `department_routed_to`
 - ✅ **DEFECT #13 FIX:** Changed `changed_by_user_id` to NULL (allows ON DELETE SET NULL for snapshot pattern)
+- ✅ **[v2.1 CORRECTION]** `entity_type` domain narrowed to `('event', 'logistics_entry')`. v2 listed `('event', 'logistics', 'contest', 'calendar', 'other')`; the latter three values have **no** counterpart in as-built code. Source: `src/types/commitmentLog.ts:8` (`entity_type: 'event' | 'logistics_entry'`) and `src/contexts/CommitmentLogContext.tsx:17,23,73,99,108`. Note `logistics_entry`, not `logistics`.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | log_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | |
 | event_id | UUID | NOT NULL REFERENCES events(event_id) ON DELETE CASCADE | |
-| entity_type | VARCHAR(20) | NOT NULL CHECK (entity_type IN ('event', 'logistics', 'contest', 'calendar', 'other')) | [v2 DEFECT #8 FIX] |
+| entity_type | VARCHAR(20) | NOT NULL CHECK (entity_type IN ('event', 'logistics_entry')) | [v2 DEFECT #8 FIX] [v2.1 CORRECTED] Source: `src/types/commitmentLog.ts:8` |
 | entity_id | UUID | NOT NULL | [v2 DEFECT #8 FIX] |
 | field_name | VARCHAR(100) | NOT NULL | [v2 DEFECT #8 FIX] Which field changed |
 | old_value | TEXT | NULL | [v2 DEFECT #8 FIX] Before |
@@ -1721,6 +1760,7 @@ erDiagram
 | `listings.screening_result = 'pass'` | Typo in v0.2.1 | Fixed to 'passed' per code |
 | `trade_proposals` table | As-built uses listing-centric offers | Merged into `structured_offers` with `offer_type` |
 | `commission_requests` table | As-built uses listing-centric offers | Merged into `structured_offers` with `offer_type` |
+| `shareable_cards` table | As-built screen renders cards client-side; nothing is persisted | **Removed, not merged.** `src/screens/shared/ShareableCardScreen.tsx` holds no AsyncStorage/DB write — it derives values from `useUser`/`useProjects`/`useEvents` (lines 88, 173) and serialises a PNG via `captureRef` + `expo-sharing` (lines 12–13). There is no row to store. **[v2.1 CORRECTION — this removal was undocumented in v2]** |
 | `field_completion_status` JSONB | Computed on-demand | No static JSONB; compute from NULL checks |
 
 ---
