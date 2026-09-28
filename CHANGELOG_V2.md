@@ -61,8 +61,8 @@ Changelog claims match current code state.
 ---
 
 ### Commits
-- `[pending]` — `fix: 3D touch rotation - disable ScrollView while touching canvas` (code fix)
-- `[pending]` — `docs: correct FE-7 Step 4 status + add superseded banners to Milestone 2 docs` (doc corrections)
+- `d5d3471` — `fix: 3D touch rotation - disable ScrollView while touching canvas` (code fix) — https://github.com/SenpoAhJin/Forge_Mind/commit/d5d3471
+- `4eb0036` — `docs: correct FE-7 Step 4 status + add superseded banners to Milestone 2 docs` (doc corrections) — https://github.com/SenpoAhJin/Forge_Mind/commit/4eb0036
 
 ---
 
