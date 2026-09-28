@@ -1,5 +1,10 @@
 # FE-3D Milestone 2 — Critical Bug Fixes
 
+> **⚠️ SUPERSEDED — September 28, 2026**  
+> **Body-size scaling cancelled:** The bug report's "non-functional body morphing" diagnosis is obsolete — body morphing is no longer a feature. See CHANGELOG_V2.md Sept 28 entry.  
+> **Touch constants corrected:** The ONE:2/TWO:1 assignments documented here were incorrect — OrbitControls' defaults are ONE=ROTATE, TWO=DOLLY_PAN. The later diagnostic code using these constants was removed.  
+> **Preserved for historical reference only.**
+
 **Date:** Wednesday, September 16, 2026  
 **Issues:** Three.js import warning, non-interactive 3D preview, non-functional body morphing
 

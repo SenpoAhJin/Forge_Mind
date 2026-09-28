@@ -43,7 +43,7 @@ All entries in this changelog corrections section are **documentation-only fixes
 
 **Section 4 and Section 6 Updates (verified via code inspection):**
 - **Section 4 (Screens table):** Updated Meetups entry from "Placeholder for group-meetup planning (FE-7 Step 5)" to "Group meetup scheduling with event linking, RSVP tracking, conflict detection (FE-7 Step 5)". Verification: `src/screens/organizer/MeetupsScreen.tsx` renders `EventMeetupsScreen` with full meetup functionality, not a placeholder.
-- **Section 6 (Roadmap):** Marked FE-7 Steps 1, 2, 3, and 5 as done. Step 5 (Group meetups) completed September 26, 2026 per commit `b25d16d`. Step 4 (Contest tier view) remains outstanding.
+- **Section 6 (Roadmap):** Marked FE-7 Steps 1, 2, 3, 4, and 5 as done. Step 4 (Contest tier opt-in/assignment) completed September 26, 2026 per commits `872693f`, `514074c`, `ddda161`, `a35b35a`. Step 5 (Group meetups) completed September 26, 2026 per commit `b25d16d`.
 - **CHANGELOG_V2.md scope note:** Added one-line clarification that this changelog covers Sprint 0, 3D visualization work, and AI service development (not just Sprint 0).
 
 ---

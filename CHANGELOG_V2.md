@@ -8,6 +8,64 @@
 
 ---
 
+## Session — Monday, September 28, 2026, 21:30 (3D touch rotation fix + doc corrections)
+
+**Phase:** Phase 2 (3D Visualization) — in progress  
+**Problem:** On physical devices (Expo Go), the 3D preview Canvas does not rotate by touch. Worked in earlier versions (e.g., Sprint 0 Step 3 commit 289efe7).
+
+### What we fixed
+
+**Touch rotation bug — diagnosed and patched.**
+
+**Root cause:** Parent `ScrollView` steals drag touches on native before `OrbitControls` sees them. Both `Preview3DTestScreen` and `ProjectDashboardScreen` wrap the Canvas in a ScrollView. On web, OrbitControls connects to the Canvas DOM node and receives pointer events directly. On React Native (Expo GL), the Canvas is a bridged object that does not receive RN touch responders by default — the parent ScrollView intercepts drag gestures first.
+
+**Fix applied:** Wrapped the Canvas container `<View>` with `onTouchStart` / `onTouchEnd` handlers that call `scrollViewRef.current?.setNativeProps({ scrollEnabled: false/true })`. While the user touches the canvas area, the ScrollView is disabled, allowing OrbitControls to receive the touch stream. When the touch ends, scrolling re-enables.
+
+**Files changed:**
+- `src/screens/Preview3DTestScreen.tsx` — Added `scrollViewRef` ref, touch handlers on preview container
+- `src/screens/cosplayer/ProjectDashboardScreen.tsx` — Added `scrollViewRef` ref, touch handlers on preview container
+
+**Status:** Code fix committed. **UNVERIFIED on device** — rotation requires testing on physical hardware via Expo Go.
+
+---
+
+**Changelog / documentation corrections.**
+
+Fixed three factual errors in CHANGELOG.md and added superseded banners to obsolete milestone docs:
+
+1. **FE-7 Step 4 status corrected:** CHANGELOG.md Section 6 claimed "Step 4 (Contest tier view) remains outstanding." This was incorrect — Step 4 (contest tier opt-in/assignment) is built per commits `872693f`, `514074c`, `ddda161`, `a35b35a`. Updated Section 6 to list Steps 1-5 as done.
+
+2. **Superseded banners added:** Added warning banners to `FE-3D_MILESTONE_2_VERIFICATION.md` and `FE-3D_BUGFIXES.md` stating:
+   - Body-size scaling cancelled (no more `morphFactor` / `bodySizeValue` props)
+   - Touch constants ONE:2/TWO:1 were incorrect (OrbitControls defaults are ONE=ROTATE, TWO=DOLLY_PAN)
+   - Documents preserved for historical reference only
+
+3. **CHANGELOG.md commit f40b219 verified:** Confirmed the +497/-6 diff was a legitimate documentation update (new "Changelog Corrections" section + status updates), not silent rewriting of old entries. Only 6 lines removed: old header date, outdated table/roadmap entries. No narrative text was altered.
+
+**Files changed:**
+- `CHANGELOG.md` — Corrected FE-7 Step 4 status in Section 6
+- `FE-3D_MILESTONE_2_VERIFICATION.md` — Added superseded banner
+- `FE-3D_BUGFIXES.md` — Added superseded banner
+
+---
+
+**Code verification confirmed.**
+
+Ran `grep` for all cancelled/removed code mentioned in CHANGELOG_V2.md Sept 28 entry (body-size scaling, touch diagnostics, responder overrides). **All confirmed absent:**
+- No `onStartShouldSetResponder`, `onResponderTerminationRequest`, `onResponderGrant` (touch responder wars)
+- No `eventSource`, `eventPrefix`, `CameraController`, `"Touches:"`, `touches=` (diagnostic logging)
+- No `morphFactor`, `boneScaling` (body-size scaling feature)
+
+Changelog claims match current code state.
+
+---
+
+### Commits
+- `[pending]` — `fix: 3D touch rotation - disable ScrollView while touching canvas` (code fix)
+- `[pending]` — `docs: correct FE-7 Step 4 status + add superseded banners to Milestone 2 docs` (doc corrections)
+
+---
+
 ## Sprint 0: Foundation — Overview
 
 **Goal:** Verify the complete Unity WebGL rendering pipeline works on both web preview AND real device via Expo Go before investing time in 3D content creation.

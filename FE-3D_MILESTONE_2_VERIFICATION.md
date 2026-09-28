@@ -1,5 +1,10 @@
 # FE-3D Milestone 2 Verification Guide
 
+> **⚠️ SUPERSEDED — September 28, 2026**  
+> **Body-size scaling cancelled:** Runtime bone scaling / body-size morphing is no longer a feature. The `bodySizeValue` / `morphFactor` props were removed. See CHANGELOG_V2.md Sept 28 entry.  
+> **Touch constants corrected:** The documented ONE:2/TWO:1 touch assignments were incorrect — OrbitControls' defaults are ONE=ROTATE, TWO=DOLLY_PAN (not the reverse). This document's test steps reflect the incorrect understanding.  
+> **Preserved for historical reference only.**
+
 **Status:** Implementation Complete — Awaiting Device Testing  
 **Date:** 2026-09-16  
 **Milestone:** Body Type Relabeling + Zoom/Clipping Fixes + Body-Size Slider Wiring
