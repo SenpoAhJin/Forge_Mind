@@ -1,7 +1,50 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** September 16, 2026
+**Last updated:** Monday, September 28, 2026  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Changelog Corrections — Monday, September 28, 2026, 16:30
+
+This entry corrects date/time discrepancies between changelog entry headings and actual Git commit timestamps, and clarifies the current state of body type labels in the codebase.
+
+### Misdated Entries Identified
+
+| Changelog Entry | Stated Date | Actual Commit Date | Commit Hash |
+|----------------|-------------|-------------------|-------------|
+| "Last updated" header (top of file) | September 27, 2026 | September 28, 2026 | Multiple commits |
+| CHANGELOG_V2: Step 1, 2, 3 entries | September 16, 2026 | September 26-28, 2026 | 15a23e0, 289efe7, 7bf4cd2 |
+| CHANGELOG_V2: AI System Development | September 16, 2026 | September 26, 2026 | 08a78fe |
+| CHANGELOG_V2: Phase A Character Dataset | September 16, 2026 | September 26, 2026 | 08a78fe |
+| CHANGELOG_V2: 3D Preview Improvements | September 16, 2026 | September 26-28, 2026 | Multiple commits |
+| CHANGELOG_V2: FE-3D Milestone 2 entries | September 16, 2026 | September 28, 2026 | 7bf4cd2, 8d6e461, ad77eb4 |
+
+**Explanation:** CHANGELOG_V2.md entries were written during sessions on September 26-28, 2026, but incorrectly labeled as "September 16, 2026" throughout. The actual commit dates (shown via `git log --date=format`) confirm work occurred on September 26 (Sprint 0 Steps 1-3, AI system) and September 28 (3D assets, body type selector, bug fixes, documentation).
+
+### Body Type Labels — Current State
+
+**Code inspection** (`src/constants/bodyType.ts`, verified Monday, September 28, 2026, 16:20):
+```typescript
+export const BODY_TYPE_OPTIONS: BodyTypeOption[] = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+];
+```
+
+**Current labels in production code:** Male / Female  
+**NOT Type A / Type B** — the neutral labels were never committed to the codebase.
+
+**Context:** FE-3D Milestone 2 documentation references changing labels from "Type A/Type B" back to "Male/Female", but inspection shows the code has always used "Male/Female". The Type A/B labels existed only in documentation discussions, never in committed code.
+
+### Scope Note
+
+All entries in this changelog corrections section are **documentation-only fixes**. No code changes, no feature modifications, no behavior changes. This entry exists solely to reconcile stated dates with Git commit timestamps and clarify the actual state of body type labels.
+
+**Section 4 and Section 6 Updates (verified via code inspection):**
+- **Section 4 (Screens table):** Updated Meetups entry from "Placeholder for group-meetup planning (FE-7 Step 5)" to "Group meetup scheduling with event linking, RSVP tracking, conflict detection (FE-7 Step 5)". Verification: `src/screens/organizer/MeetupsScreen.tsx` renders `EventMeetupsScreen` with full meetup functionality, not a placeholder.
+- **Section 6 (Roadmap):** Marked FE-7 Steps 1, 2, 3, and 5 as done. Step 5 (Group meetups) completed September 26, 2026 per commit `b25d16d`. Step 4 (Contest tier view) remains outstanding.
+- **CHANGELOG_V2.md scope note:** Added one-line clarification that this changelog covers Sprint 0, 3D visualization work, and AI service development (not just Sprint 0).
 
 ---
 
@@ -1056,7 +1099,7 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 | Event Logistics | Per-event logistics tracker with chip filters (All/Needs info/Complete/Withdrawn), sorted by criticality |
 | Add Logistics Entry | Create new entry (Head only) with submission deadline, participant details, arrival/parking/entourage fields |
 | Logistics Entry Detail | View/edit tracked fields (Head), completion bar, missing-field indicators, withdraw entry, CORE fields read-only |
-| Meetups | Placeholder for group-meetup planning (FE-7 Step 5) |
+| Meetups | Group meetup scheduling with event linking, RSVP tracking, conflict detection (FE-7 Step 5) |
 | Profile | User data, verification status, marketplace role, logout, Test Mode switcher |
 
 ### The design system (reusable parts)
@@ -1094,11 +1137,11 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
    - Step 3: Structured purchase/trade/commission offers with offer log
    - Step 4: Transaction-scoped chat (listing+buyer threads)
 5. **FE-7 — Organizer tools** (in progress):
-   - Step 1: Events (organizer-confirmed event details)
-   - Step 2: Logistics tracker (guests/sponsors/performers, structured fields, completion status)
-   - Step 3: Commitment log + department-routed change alerts
+   - ~~Step 1: Events (organizer-confirmed event details)~~ **(done)**
+   - ~~Step 2: Logistics tracker (guests/sponsors/performers, structured fields, completion status)~~ **(done)**
+   - ~~Step 3: Commitment log + department-routed change alerts~~ **(done)**
    - Step 4: Contest tier view (opt-in history, organizer criteria, human confirmation)
-   - Step 5: Group meetups + aggregate readiness signal
+   - ~~Step 5: Group meetups + aggregate readiness signal~~ **(done — Sept 26, 2026)**
    - **Step 6 (NEXT): Organizer Dispatch Board** — per-event, per-department board of items that need physically carrying between departments. Replaces the runner's memory and the radio's ambiguity. Dispatch item (origin dept, destination dept, what's needed, urgency), carry offered and accepted per item, two-step hand-off *picked up → delivered → acknowledged*, department board for staff and an all-departments roll-up for the Head Organizer. Coarse fixed status (Available / On a run / At post / Off duty) plus a last-check-in time — no live staff location, no open chat. Reuses the existing event-logistics urgency ladder and criticality sort, the commitment log for the audit trail (needs a new `dispatch_item` entity type), and the existing Manage Staff department grouping. Approved approach and reasoning: see the September 26, 2026 session entry at the top of this file.
    - **Later — Cosplayer live layer:** live map with per-event opt-in, two-party invite consent, fixed status broadcast, block (private) and report (routed to the Holder queue), plus a visible fallback when venue connectivity drops. Full specification already written; deliberately deferred past Step 6 because the organizer dispatch gap is the more urgent of the two.
 6. **FE-8 — Holder verification surface:** a separate web app for vetting sellers and moderating listings.
@@ -4223,3 +4266,451 @@ Manual testing recommended:
 6. Verify MeetupsContext (event-based) still works independently
 
 ---
+
+## Session - Sunday, September 27, 2026 (FE-3D Milestones 0 + 1: Real 3D Base Bodies)
+
+**Date:** Sunday, September 27, 2026
+
+**What we did:** Replaced the placeholder shapes in the 3D dress-up preview with the **real Blender base bodies**, and added a checker that proves the model files are actually usable before we rely on them.
+
+### The problem we found first
+
+The two files that were supposed to be the male and female bodies � `datasets/Male_3D_Model/3D_Model_Male.glb` and the matching female file � turned out to be **empty shells**. Each one contained a single flat mesh called `Mesh0` with no skeleton, no skin, and none of the 160 bones the body-size system needs. You cannot make those grow or shrink.
+
+The repository contained a second, correct export of each body in `forgemind-ai/models/`. Those are proper rigged models: a full Rigify skeleton, 706/707 joints, real skin weights, and every target bone still at rest size. We checked both candidates with the new script, confirmed the rigged pair passes everything, and asked before switching. **Approved and staged.**
+
+The file names stayed the same (`3D_Model_Male.glb` / `3D_Model_Female.glb`) so nothing else in the project had to change, but **the contents are now the rigged version from `forgemind-ai/models/`, not the dataset file of the same name.** This is documented in `assets/models/README.md`.
+
+### What now happens in the app
+
+- The 3D test screen has **Male** and **Female** buttons. Tapping one swaps the body on screen.
+- The bodies are loaded through the existing React Three Fiber setup, at the size they were exported at. **No resizing yet** � that is Milestone 2, and the slider on the test screen is labelled as not wired up so nobody is misled.
+- The rotating test-cube mode is untouched and still works.
+- Both files are stored with **Git LFS**, so they don't bloat the normal git history.
+
+### Asset checker (new)
+
+`scripts/verify-glb-models.mjs` � run it any time with `node scripts/verify-glb-models.mjs`. It confirms each model is a valid, complete, rigged, un-baked body. **Latest result: 15 checks passed, 0 failed.** It adds no new packages.
+
+### Verified in a real browser
+
+Exported the web build and drove it in headless Chrome: both models download successfully, the Male/Female buttons actually swap the rendered body, the result is stable on repeat, and switching to test cubes and back restores the body. **10 of 10 browser checks passed, no errors in the console.**
+
+One trap worth recording: the first browser run reported that Male and Female looked *identical*. That turned out to be a bug in our test script, not the app � it was clicking the "Base body: Male" profile row instead of the Male button. Fixed, and the buttons verified working.
+
+### Known gaps (reviewed and accepted for now)
+
+- **No textures or colours.** The models carry no materials, so they appear plain grey. Fine for this milestone; `TEXCOORD_0` is present, so textures can be added later without re-exporting.
+- **No animations.** The models are a rest pose, which is all we need right now.
+- **Bone names change once loaded.** The 3D library strips dots out of bone names, so 30 of the 31 body-size targets are renamed (e.g. `DEF-pelvis.L` becomes `DEF-pelvisL`). The checker now tests for this specifically, and Milestone 2 must apply that mapping before the slider can work � otherwise it would fail silently. This is written up in `assets/models/README.md`.
+- **The female rig has one extra helper bone** (`neutral_bone`), which does not affect the 31 shared targets.
+
+### Files created
+
+- `assets/models/3D_Model_Male.glb`, `assets/models/3D_Model_Female.glb`, `assets/models/body_size_bone_scale.json`
+- `assets/models/README.md` � provenance, rejected export, how to re-verify, known gaps
+- `scripts/verify-glb-models.mjs` � the asset checker
+- `src/components/BodyModel.tsx` � loads and renders the real bodies
+- `src/types/glb.d.ts` � typing for imported `.glb` files
+- `.gitattributes` � Git LFS tracking for `*.glb`
+
+### Files modified
+
+- `metro.config.js` � teach Metro about `.glb`
+- `app.json` � register `expo-asset` with both models so they ship inside the app
+- `package.json` / `package-lock.json` � `expo-asset` added via `npx expo install expo-asset`
+- `src/components/Preview3D.tsx` � real body replaces the placeholder; camera framing and zoom limits adjusted
+- `src/screens/Preview3DTestScreen.tsx` � Male/Female controls, and the slider now states it is Milestone 2
+- `CHANGELOG.md` � this entry
+
+### Verification
+
+- `npx tsc --noEmit` � clean, zero errors
+- `node scripts/verify-glb-models.mjs` � 15 passed, 0 failed
+- `npx expo export --platform web` � succeeds; both models emitted intact and byte-identical to the staged files
+- Headless Chrome � 10 of 10 checks passed, no console errors
+
+### Not part of this session
+
+- Body-size scaling, including reimplementing Blender's `inherit_scale = NONE` in Three.js (**Milestone 2**)
+- Materials, textures, or colours
+- Animations
+- Per-instance model cloning (only needed once Milestone 2 starts mutating bones)
+- No commits were made
+
+## Session - Sunday, September 27, 2026 (Fix: replace deprecated SafeAreaView with react-native-safe-area-context)
+
+**Date:** Sunday, September 27, 2026
+
+**What triggered it:** Opening the **3D Preview Test** screen logged a console warning:
+
+> SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead.
+
+The warning pointed at `src/screens/Preview3DTestScreen.tsx:32`. The brief was to fix it app-wide so it doesn't resurface from a different screen later.
+
+### What we found when we searched the whole app
+
+The warning turned out to come from **only one screen**, not several:
+
+| File | Status before this session |
+| --- | --- |
+| `src/screens/Preview3DTestScreen.tsx` | Used the **deprecated** `SafeAreaView` from `react-native` � **this was the only one** |
+| `src/navigation/RootNavigator.tsx` | Already correct � imported from `react-native-safe-area-context` |
+
+We also checked for sneaky indirect uses that a simple import search would miss � namespace imports (`import * as RN from 'react-native'`), property access (`RN.SafeAreaView`), and `require('react-native').SafeAreaView`. **Zero matches.** Of the app's 170 TypeScript files, exactly one was affected. `src/` is the only source directory in the project.
+
+### Two things turned out to be already in place
+
+- **`react-native-safe-area-context@^5.9.1` was already installed.** No new package was needed, so nothing was installed.
+- **`App.tsx` already had a `SafeAreaProvider`**, correctly placed as the outermost provider wrapping `RootNavigator` (and therefore `NavigationContainer`). We did **not** add a duplicate.
+
+So the whole fix was one import line.
+
+### The change
+
+`src/screens/Preview3DTestScreen.tsx` only:
+
+```diff
+- import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
++ import { View, Text, StyleSheet, ScrollView } from 'react-native';
++ import { SafeAreaView } from 'react-native-safe-area-context';
+```
+
+### Behaviour differences we checked (and deliberately did not "fix")
+
+- **`edges` prop:** we did **not** add one. The default is all four edges, which matches what the old `SafeAreaView` did on iOS. Adding `edges` would have silently changed the layout, so we left it alone.
+- **Android will look slightly different � and that's correct.** The old built-in `SafeAreaView` only applied insets on iOS and did nothing on Android. `react-native-safe-area-context` applies them on every platform. So on Android this screen will now get correct top/bottom padding where it previously had none. This is the intended effect of the migration, not a regression.
+- **iOS:** unchanged � both versions pad all four edges.
+- **Web:** unchanged � verified 0px padding (a desktop browser reports zero insets).
+- **No double-padding risk:** the `SafeAreaView` in `RootNavigator` wraps only the role-switcher bar and is a *sibling* of the navigator, never an ancestor of this screen.
+
+### Files changed
+
+- `src/screens/Preview3DTestScreen.tsx` � the import only
+- `CHANGELOG.md` � this entry
+
+Nothing else was touched. No styling, layout, or logic changes, and no other console warnings were fixed.
+
+### Verification
+
+**1. No deprecated imports remain (searched all `.ts`/`.tsx`/`.js`/`.jsx` outside `node_modules`, `venv`, `dist-*`, `.expo`):**
+```
+=== any SafeAreaView still imported from 'react-native'? ===
+NONE - zero remaining (0 matches)
+
+=== all SafeAreaView imports now (should all be safe-area-context) ===
+src\navigation\RootNavigator.tsx:4: import { SafeAreaView } from 'react-native-safe-area-context';
+src\screens\Preview3DTestScreen.tsx:3: import { SafeAreaView } from 'react-native-safe-area-context';
+```
+Indirect-access patterns (`RN.SafeAreaView`, `import * as`, `require('react-native')`, `.SafeAreaView`): **no matches** in all five checks.
+
+**2. TypeScript:**
+```
+npx tsc --noEmit
+tsc EXIT=0
+```
+
+**3. Reproduced the trigger path in a real browser** (fresh `expo export --platform web --clear`, then Chrome ? Profile ? 3D Preview Test, with every console message captured from page load):
+```
+=== RESULT ===
+  PASS  deprecation warning absent in 3D Preview Test phase
+  PASS  deprecation warning absent across all phases
+  PASS  3D Preview Test screen rendered
+  PASS  WebGL canvas present and same size as pre-fix (301.87 x 354.40)
+  PASS  no page exceptions
+5 passed, 0 failed
+
+safe-area padding applied on web: 0px 0px 0px 0px
+--- page exceptions ---
+(none)
+```
+The canvas measured **301.87 � 354.40 (drawing buffer 319 � 375)** � identical to the pre-fix build, so the layout did not shift.
+
+**4. Checked the native path too** — the web build can never emit this warning, so we exported the real iOS + Android bundles and searched the Hermes bytecode:
+```
+--- index-6617bd3b760b9651143ce966a06e859b.hbc ---
+   deprecation string (UTF-8) : True
+   'safe-area-view-deprecated' key : True
+   SafeAreaProvider symbol     : True
+   safe-area-context marker    : True
+--- index-7452b78d450d30ba2518ebb99649adac.hbc ---
+   deprecation string (UTF-8) : True
+   'safe-area-view-deprecated' key : True
+   SafeAreaProvider symbol     : True
+   safe-area-context marker    : True
+```
+This proves two things. First, the deprecation warning really is **live in the shipped native code** — so this migration was necessary, not cosmetic. Second, `SafeAreaProvider` and `react-native-safe-area-context` are correctly bundled for native, so the new import resolves properly on both platforms and both bundles build cleanly.
+
+**5. Spot-checked five screens for inset changes** (the two `SafeAreaView` consumers plus three that use none):
+```
+app content area top: 106px
+  Profile — role-switcher SafeAreaView       anchor=found leaves=107 gap= 17px savPadding=0px 0px 0px 0px
+  3D Preview Test — CHANGED screen           anchor=found leaves= 82 gap= 17px savPadding=0px 0px 0px 0px
+  Characters — no SafeAreaView               anchor=found leaves=108 gap= 17px savPadding=0px 0px 0px 0px
+  Marketplace — no SafeAreaView              anchor=found leaves=122 gap= 17px savPadding=0px 0px 0px 0px
+  Meetups — no SafeAreaView (organizer)      anchor=found leaves= 30 gap= 17px savPadding=0px 0px 0px 0px
+
+checks:
+  PASS  every screen's anchor content was actually reached (no mis-measured screens)
+  PASS  every screen rendered content
+  PASS  no content sits above the app area (nothing under the notch, no negative offset)
+  PASS  SafeAreaView roots apply 0px padding on web (insets are 0 -> no double-padding)
+  PASS  no console errors (0)
+  INFO  console warnings seen (reported, not fixed): 0
+```
+Every screen shows the **same 17px** offset below the phone frame's app area — a uniform value means no screen was uniquely shifted, and nothing is double-padded. The changed screen's WebGL canvas measured **301.87 × 354.40**, identical to the pre-fix build.
+
+
+### One limitation worth flagging
+
+The deprecation warning **cannot appear on web at all**. It is emitted by a getter on the `react-native` module, and the web runtime (`react-native-web`) ships its own `SafeAreaView` that has no such warning — so the web run above confirms the fix is clean, but could not have reproduced the original warning either way. The native bundles do contain the warning (see step 4), so this mattered.
+
+**Native (Expo Go / device) was not run in this session.** It should be confirmed by hand:
+
+1. Open the app in Expo Go with a cleared cache
+2. Go to Profile → 3D Preview Test
+3. Confirm the SafeAreaView deprecation warning no longer appears
+4. Check the Android top/bottom padding now present as described above
+
+The evidence is otherwise strong: the warning code ships in the native bundle, nothing in the app reads `SafeAreaView` off the `react-native` module any more (0 matches across 170 files and 5 indirect-access patterns), and that getter was the only thing that could emit the warning.
+
+
+### Not part of this session
+
+- No commits were made
+- No other console warnings were investigated or fixed (separate task)
+- No styling, layout, or logic changes
+
+---
+
+## Session - Sunday, September 27, 2026 (FE-3D Milestone 1b: Real 3D Body on the Production Project Screen)
+
+**Date:** Sunday, September 27, 2026
+
+**What we did:** The real Blender body only appeared on the developer test screen. The screen a cosplayer actually lands on when they open a project was still drawing fake shapes. We deleted the second renderer and pointed production at the same one the test screen uses.
+
+### What the investigation found (before any code changed)
+
+The production preview was **not** a stale prop on the shared component. There were two independent renderers:
+
+| Surface | Component | What it drew |
+| --- | --- | --- |
+| `ProjectDashboardScreen` (production) | `src/components/ThreeDPreview.tsx` | its own `<Canvas>` with a cylinder torso, sphere head/limbs, a garment box, and a fake body-size lerp |
+| `Preview3DTestScreen` (dev only) | `src/components/Preview3D.tsx` | the real `BodyModel` GLB rigs |
+
+So Milestones 0 + 1 had landed correctly, but only on the dev surface. The two 3D surfaces had silently drifted apart, which is exactly the failure mode the single shared scene is meant to prevent. `ThreeDPreview` had **one** consumer (the project dashboard) and `Preview3D` had **one** consumer (the test screen), so this was safe to consolidate.
+
+### What changed
+
+- **`src/components/ThreeDPreview.tsx`** is now a thin, sized wrapper (~50 lines) around the shared `Preview3D`. It keeps the production `width`/`height` and `borderRadius` styling and forwards the two props. All procedural geometry, the duplicate `<Canvas>`, and the fake body-size lerp are gone.
+- **Gender comes from the real profile field.** `user.base_body_selection` (`'male' | 'female'`) already existed, was set at onboarding, and was persisted by `AuthService` - so production now reads it instead of guessing. The only fallback is `?? 'male'` while `user` is still loading. **No temporary hardcoded `'female'` was needed**, because the field was not missing.
+- **The body-size slider now says so honestly.** `bodySizeValue` is still threaded through as `morphFactor` so the existing profile sync keeps working, but it is deliberately inert - scaling is Milestone 2. The note under the slider reads: *"Not wired up yet - body-size scaling is FE-3D Milestone 2. Your value is still saved to your profile."*
+- **Copy corrected.** The old text claimed the preview showed the selected variant with a *"Garment placeholder attached"*. The shared scene renders the body only, so that was a false claim; it now reads *"Your saved base body, rendered from the real Blender rig. Variant garments are not shown here yet."*
+- Unchanged on purpose: `Preview3DTestScreen`, attire/garment matching logic, the match-rating display, and the mock-AI notice.
+
+### Verification
+
+Clean `expo export --platform web`, driven through headless Chrome over CDP against seeded projects (Gojo, Makima). **14 passed, 0 failed**, no runtime errors, and the real `3D_Model_Male....glb` was fetched with HTTP 200.
+
+Because the production canvas (300x400) and the test canvas (339x398) are different sizes, the two were compared on **size-normalised silhouette geometry** rather than raw pixel diffs:
+
+```
+production  {"topPct":24.8,"widestPct":98.7,"contentPct":43.3}  (canvas 300x400)
+test screen {"topPct":24.6,"widestPct":98.8,"contentPct":42.9}  (canvas 339x398)
+normalised geometry delta: top 0.2pp, widest 0.1pp
+```
+
+A 0.2pp agreement on where the body starts and 0.1pp on the widest band means production and the dev harness are framing the same geometry. Pixel dumps of both canvases show the same humanoid silhouette (head, shoulders, torso, legs) on the ground plane.
+
+Also confirmed on the production canvas: drag-to-rotate changes the render (7.2% of pixels), wheel/pinch zoom changes it (1.5%), and dragging the body-size slider changes **nothing** (identical pixel hash before and after) - i.e. no silent scaling. The dev test screen still renders and still responds, which doubles as a control proving the harness can detect interaction.
+
+### Two harness bugs worth recording
+
+The first two verification runs reported false results, both from the test script rather than the app:
+
+1. **Stale canvases.** React Navigation keeps previous screens mounted, so `document.querySelector('canvas')` returned a hidden canvas left over from an earlier screen. Every capture came back byte-identical, which made "drag/zoom do nothing" look like a product bug. Fixed by selecting only canvases actually inside the viewport, and asserting on a known-good control screen.
+2. **Wrong clip coordinates.** `Page.captureScreenshot`'s `clip` is in *document* coordinates, but react-native-web scrolls an inner `div`, so `window.scrollY` is always `0`; a clip extending past the viewport bottom also came back garbled. The production "render" was in fact a crop of the screen's own paragraph text. Fixed by screenshotting the viewport and cropping in Node, and by ignoring the 1-2px anti-aliased seam that `borderRadius` + `overflow: hidden` leaves on the wrapper.
+
+Neither was an app defect. Both are noted because the same harness shape is likely to be reused for Milestone 2.
+
+### Not part of this session
+
+- No commits were made
+- No body-size scaling (Milestone 2)
+- No garment meshes, layering, or matching changes
+- Native/Expo Go was not run; verification was web
+
+---
+
+## Session - Sunday, September 27, 2026 (FE-3D Milestone 1c: Neutral Body Type Selector)
+
+**Date:** Sunday, September 27, 2026
+
+**What we did:** The 3D preview picked your body from `user.base_body_selection` and fell back to the male body when that was unset. Real testing showed nobody could ever change it, and that the one place it *was* labelled made it look like a question about gender. It is not one, and it is not treated as one anywhere in this app.
+
+### What we found
+
+**1. There was no way to set the field - confirmed, and worse than "buried".** A base-body toggle does exist, in `BodySliderOnboardingScreen`, and it is registered in `OnboardingNavigator`. But it is **unreachable**: `RootNavigator` gates on `isOnboardingComplete`, which flips to `true` the moment `setUserAccount` sets an email (`UserContext.tsx:318`). So the flow runs Welcome ? Role ? Account ? **straight into the main app**, skipping the body screen entirely. It was dead code. `ProfileScreen` only ever *displayed* the value and never let anyone change it, and its own onboarding copy promised "You can change this anytime in your profile settings" - which was not true of either place.
+
+**2. The field could not be persisted at all.** `setUserBody` only called `setUser`, never `AuthService.updateUser`. So even the Milestone 1b "sync to your profile in real time" wrote nothing to storage, and the onboarding toggle would not have survived a reload if it had ever been reachable. `updateVerification` shows the correct shape, so `updateBodyType` now follows it.
+
+**3. Internal values are already identity-neutral in practice, and that is why we left them alone.** The stored values are `'male' | 'female'`, bound to the shipped asset filenames (`3D_Model_Male.glb` / `3D_Model_Female.glb`) and to the persisted `User.base_body_selection` column. They are never rendered to a user. **Trade-off, flagged rather than decided:** renaming them is a schema + data migration that would orphan every already-saved account, and a rename of the .glb assets would also break the Milestone 0/1 provenance documented in `assets/models/README.md`. Out of scope for a copy fix, so the values stay and only the labels moved.
+
+### The fix
+
+- **New `src/constants/bodyType.ts`** is the single source of truth for body-type copy: `BODY_TYPE_OPTIONS`, `bodyTypeLabel()`, `DEFAULT_BASE_BODY`, and `BaseBodySelection`. The word "gender" no longer appears anywhere in the 3D rendering code - `BodyModel`, `Preview3D` and `ThreeDPreview` all take a `bodyType` prop.
+- **New `src/components/BodyTypeSelector.tsx`** - a segmented toggle used by production, the dev harness, and onboarding, so the three can never disagree again.
+- **It lives in the production 3D Preview**, right under the canvas, with a caption that says outright it "is not a question about gender or identity, and it is not stored as one". It is always visible, so an unset preference is a one-tap fix rather than a hidden assumption.
+- **`UserContext.updateBodyType()`** persists via `AuthService.updateUser` (same pattern as `updateVerification`), making the choice the standing default for every later character/variant preview.
+- **Labels changed everywhere this is shown to a user**: the dev test screen toggle and checklist, the profile card, the shareable card, and the onboarding screen. The silent `?? 'male'` in the JSX is gone; the fallback is now the named `DEFAULT_BASE_BODY` at the one place that reads the profile.
+- **Also corrected:** Milestone 1b's slider note claimed the value "is still saved to your profile". Given finding 2 that was untrue, so the claim was removed. The slider remains inert and Milestone 2.
+
+### !! "Type A" / "Type B" ARE PLACEHOLDER COPY !!
+
+They are deliberately meaningless placeholders, **not** final wording. The final labels were not chosen in this session. To change them, edit the two `label` strings in `BODY_TYPE_OPTIONS` (`src/constants/bodyType.ts`) and every screen follows - that is the only place the copy lives.
+
+### Verification
+
+Clean `expo export --platform web`, driven through headless Chrome over CDP. **15 passed, 0 failed**, no runtime errors.
+
+```
+toggle scope found : true | heading: "body type"
+Type A button rect : {"x":573,"y":779,"w":45,"h":20}
+Type B button rect : {"x":734,"y":779,"w":42,"h":20}
+user-facing "male"/"female" strings on screen: []
+
+click Type B -> {"ok":true,"label":"type b","at":{"x":734,"y":779}}
+sig 66b05af2 -> fe6face3   differing pixels = 3.85%
+stored in localStorage now: female
+  PASS  switching to Type B immediately changes which body renders  -- 3.85% of pixels changed
+  PASS  switching PERSISTS base_body_selection to storage  -- stored=female
+
+Makima render: sig=fe6face3  vs the Gojo Type-B render: 0% differing (identical canvas size)
+  PASS  the Type B choice carried over to a different character screen  -- 0% diff, stored=female
+  PASS  selector is visible on the second screen too
+
+fresh render: content=42.8%  stored=UNSET   toggle visible: true
+  PASS  a fresh/unset user STILL renders a body immediately  -- content=42.8%
+  PASS  a fresh/unset user sees the selector immediately (one-tap fix)
+  PASS  unset user can fix it in one tap  -- stored=female
+
+test screen Type A -> Type B: 3.44% differing pixels
+  PASS  test screen toggle switches the body (same relabelled control)  -- diff=3.44%
+  PASS  no user-facing "Male"/"Female" on the dev test screen  -- 0 found
+
+both real GLB rigs fetched (HTTP 200), 4 requests, no runtime errors
+```
+
+Grep confirms the only surviving `'male'` / `'female'` strings in `src/` are internal
+stored values, type unions, and comments explaining the policy - zero user-facing
+labels, and zero `gender` identifiers outside explanatory prose. The Milestone 1b
+suite was re-run as a regression: **14 passed, 0 failed** (drag, zoom, same-body
+geometry at 0.2pp, slider inertness all still green).
+
+### Two harness traps worth recording
+
+Both produced *false* results first and are noted because Milestone 2 will reuse this harness:
+
+1. **The design system uppercases the selected button's label.** `Button.tsx` renders `variant === 'primary' ? title.toUpperCase() : title`, so the chosen option reads **"TYPE A"** while the unchosen one reads "Type B". Any case-sensitive label matcher silently fails to find the selected option. (This is also a small UX inconsistency worth a look, but changing the design system was out of scope.)
+2. **On a freshly-pushed screen the selector is below the fold**, so its bounding rect is off-screen and reads as "not found" until the canvas is scrolled into view. Separately, React Navigation keeps background screens mounted, so a background screen's toggle is still in the DOM - clicks are now scoped to the innermost ancestor of the *visible* canvas that contains both buttons.
+3. **A sub-screen left mounted can make navigation look like it failed.** After the dev-screen section the harness sat on "3D Preview Test" *inside* the Profile stack, so clicking "Profile" again never reached the Profile main screen and the body row read as "not found" even though the app was fine. The profile check now reloads to the app root and asserts it actually landed before inspecting the row.
+
+### Addendum (same session) - the icon, and two things checked and deliberately left alone
+
+**A gendered icon survived the first pass.** The profile "Body Representation" card still had
+`Ionicons name="male-outline"` sitting directly beside the new "Type B" label, so that row kept
+announcing the old framing *visually* even though its text was neutral. Changed to `body-outline`
+(`male-outline` = U+F43D, `body-outline` = U+F1A0 in the Ionicons font). This one mattered more
+than it looks: **a bad Ionicons name renders as a blank glyph and does not fail `tsc`**, so the
+name was checked against the glyphMap actually shipped in `node_modules` (1357 icons) *before*
+editing, then verified on screen. Three developer comments still saying "the real male/female base
+body" were aligned at the same time.
+
+Verified after the fix: **18 passed, 0 failed** (1c suite, including 3 new icon assertions),
+1b regression **14 passed, 0 failed**, `tsc` clean.
+
+```
+Profile still shows a neutral "Base body" label  -- Body Representation Base bodyType B Size 0.50
+Body row icon renders a real glyph (not a blank/fallback)  -- U+F1A0 U+F533
+no icon-glyph warnings from Ionicons  -- none
+```
+
+**Checked, and NOT changed - do not "fix" these without a decision:**
+
+- **`useEffect` resync in `ProjectDashboardScreen` - not needed.** The lazy `useState` initializer
+  looked like a bug (if `user` loaded late the persisted choice would be ignored on first paint).
+  It is not: `RootNavigator` returns `null` while `isLoading`, and again when `!user`, so the
+  dashboard cannot mount before `user` exists. The effect would have been speculative code
+  guarding a state the navigator already prevents.
+- **`'male'` hardcoded at `UserContext.tsx:303` (signup default) and in the two organizer
+  registration screens - left as-is.** The organizer ones are commented placeholders for roles
+  that do not use a body. The signup default is the stored-value problem described above: writing
+  nothing needs a nullable column and a migration, and writing `null` unconditionally would
+  *invent* a new "never chose" state. Flagged for the schema decision, not silently changed.
+- **`textFormatting.ts` was a false positive.** An early grep reported gendered strings there; a
+  correct recursive search shows none. The count came from a PowerShell glob artifact, so the file
+  is untouched.
+
+### Not part of this session
+
+- No commits were made
+- No body-size scaling (Milestone 2), no garment layering (Milestone 5)
+- Native/Expo Go was not run; verification was web
+
+---
+
+## Session - Monday, September 28, 2026 (Body-size scaling CANCELLED - back to the proportions Blender authored)
+
+**Date:** Monday, September 28, 2026
+
+**What we decided:** The body-size slider and the bone-scaling code behind it are **cancelled**, not
+"finished later". Every extra bit this feature added made the body look *worse*, not better, and the
+honest reason is that the shapes were never ours to fix in code. The 3D bodies are Blender files
+(`assets/models/3D_Model_Male.glb`, `3D_Model_Female.glb`) with a full Rigify skeleton, and the
+proportions in those files are the correct ones. We had been stretching individual bones on top of
+them to fake a size range, which is why the models read as distorted: we were fighting our own
+artwork.
+
+### The fix
+
+> **Superseded:** the full record of this work, including the touch-interaction fix and the
+> corrections to the Milestone 2 entry, is in **CHANGELOG_V2.md** under
+> "Session - Monday, September 28, 2026 (FE-3D: restore touch interaction, cancel body-size scaling)".
+
+- **`BodyModel` no longer touches bones at all.** The scaling `useEffect`, the bone-name map, the
+  `console.log`s and the `morphFactor` prop are gone. It now just loads the .glb and renders it.
+- **The two body-size sliders are gone** — the one on the cosplayer Project Dashboard and the one on
+  the dev 3D test screen.
+- **The `bodySizeValue` / `morphFactor` / `showBoneDebug` props are gone** from `ThreeDPreview`,
+  `Preview3D` and `BodyModel`, so there is no leftover wiring pretending the feature still exists.
+- **Deleted** `src/components/BoneScalingDebug.tsx` and `src/utils/boneScaling.ts`. Nothing imported
+  them after the change above, and they existed only to service the cancelled feature.
+
+### Deliberately NOT changed
+
+- **The saved `body_size_slider` number stays exactly where it is** in the user profile, the database
+  and the API. Dropping the field is a schema and data migration that would orphan every existing
+  account, and it buys nothing now that nothing reads it in the 3D view. It is simply ignored by the
+  renderer. `ProfileScreen` and `ShareableCardScreen` still *display* it — that is a separate copy
+  question, flagged rather than decided here.
+
+### Verification
+
+`npx tsc --noEmit` is clean, and a recursive grep of `src/` confirms zero remaining
+`morphFactor` / `bodySizeValue` / `showBoneDebug` / `BoneScalingDebug` / `boneScaling` references.
+
+**Not verified, and we are not claiming otherwise:** the restored proportions have not been
+screenshot-checked on a physical device, and the touch-rotation work in the same request is still
+unconfirmed. See the next entry.
+
+### Not part of this session
+
+- No commits were made
+- No garment layering (Milestone 5)
+- No schema migration; `body_size_slider` is untouched
+- The rotation debug banner is still on screen on purpose
+
+- No schema migration: `base_body_selection` and the .glb filenames are unchanged
+- No new gender field or question anywhere - registration, profile and onboarding are untouched apart from relabelling existing text
+- Nothing in Events / Logistics / Marketplace / Offers / Chat was touched
+- Native/Expo Go was not run; verification was web

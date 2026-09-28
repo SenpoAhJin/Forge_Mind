@@ -1,5 +1,7 @@
 # ForgeMind — Sprint 0 Changelog (Unity WebGL Integration Foundation)
 
+**Scope:** This changelog tracks Sprint 0 (3D rendering foundation), 3D visualization work (React Three Fiber implementation, GLB models, body type selector), and AI service development (attire matching, character datasets). See main CHANGELOG.md for all other feature work.
+
 **Purpose:** This changelog tracks ONLY Sprint 0 work — the critical foundation phase where we verify the Unity WebGL → react-native-webview → Expo Go pipeline works BEFORE building 3D content.
 
 **Why separate from main CHANGELOG.md:** Sprint 0 is infrastructure/tooling validation, not user-facing features. Keeping it separate makes it easier to reference the technical foundation work without cluttering the main feature changelog.
@@ -1877,7 +1879,7 @@ types only, and `node_modules/maath/three` is a re-export shim (a `package.json`
 pointing at `dist/maath-three.*.js`, no `three` source of its own).
 
 **Correction to the Milestone 2 entry:** its explanation of the "multiple instances of
-Three.js" warning � a wildcard import � is **unverified, and the warning persisted
+Three.js" warning � a wildcard import � is **unverified, and the warning persisted
 after that "fix" was applied**. The real result is that no duplicate install exists to
 fix. The warning is therefore not addressed by this change and no `package.json`
 edit is proposed; if it still appears it is worth capturing verbatim, since a
