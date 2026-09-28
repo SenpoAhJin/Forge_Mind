@@ -5,6 +5,114 @@
 
 ---
 
+## Session — Monday, September 28, 2026, 23:30 (Phase 3 Step 1b: Database Schema v2 Revision)
+
+**Phase:** Phase 3 (Backend & Data Services) — Step 1b: Schema revision fixing 19 defects  
+**Scope:** Design document only — NO databases, tables, or migrations created yet.
+
+### What we created
+
+**Revised PostgreSQL schema v2** with all 19 identified defects from v1 fixed, based on:
+- As-built code analysis (TypeScript types, contexts, enums)
+- Extracted .docx specification documents (python-docx extraction)
+- User decisions on open questions
+
+**Documents created:**
+- `docs/database/SCHEMA_RECONCILIATION.md` v2 (1,460 lines)
+- `docs/database/SCHEMA_V2_REVISION_LOG.md` (detailed fix documentation)
+
+**Key v2 changes:**
+1. ✅ Fixed `users.department` enum: `programs`, `sponsorship`, `technical_production` (not `program`, `finance`, `technical`)
+2. ✅ Fixed `users.theme_preference`: `purple|blue|pink|green|orange` (not `light|dark|auto`)
+3. ✅ Fixed `listings` enums: removed `draft` status, changed `pass` to `passed`, added `condition` column
+4. ✅ Simplified `structured_offers`: all offers target listings (listing-centric model)
+5. ✅ Fixed `chat_threads`: unique per (listing, buyer), added per-party `last_read_at`
+6. ✅ Expanded `events`: added start/end dates, city, description, has_contest, confirmed_at, cancelled_at
+7. ✅ Expanded `guest_logistics`: participant_kind, split arrival date/time, parking_needs enum, status, assignment tracking
+8. ✅ Changed `commitment_change_log`: field-level rows (entity_type, field_name, old/new value)
+9. ✅ Added `invite_meetups.invite_code` (6-char UNIQUE), changed to joined_at/left_at pattern
+10. ✅ Verified `calendar_entries` matches FE-5.5 moderation model
+11. ✅ Split `holder_verification_records`: id_front_image_ref + id_back_image_ref
+12. ✅ Consolidated marketplace registration in `users` table (single source of truth)
+13. ✅ Fixed all FK constraints: snapshot columns now NULL with ON DELETE SET NULL
+14. ✅ Changed `sessions.refresh_token_hash`: SHA-256 (not bcrypt) for lookup performance
+15. ✅ Removed inline pgcrypto: application-level AES-256-GCM for payout_method_number
+16. ✅ Added UNIQUE constraints: contest opt-ins, chat threads, pending offers, invite codes
+17. ✅ Renamed `audit_events.event_id` to `audit_event_id` (avoid collision)
+18. ✅ Documented `default_casual_assets` as deferred (Phase 2)
+19. ✅ Corrected table count: 38 tables (not 40)
+
+**User decisions applied:**
+- Body size slider: DROPPED from schema completely (FULLY DISREGARDED)
+- Marketplace participant types: Junction table `user_marketplace_participant_types`
+- Holder ID verification: Front + back images separate + year on ID
+- Password migration: Force reset (bcrypt/argon2 only, no dual-hash grace period)
+- Live-location: In-memory sessions only (no persisted coordinates)
+- Backend location: `forgemind-backend/` sibling folder at repo root
+
+**Documents extracted via python-docx:**
+- ✅ `ForgeMind.docx` (5,847 words extracted)
+- ✅ `ForgeMind_Overall_Data_Information.docx` (1,428 words extracted)
+
+**Enum cross-check (all 10 validated against code):**
+- ✅ Departments: logistics, programs, sponsorship, secretariat, technical_production, marketing
+- ✅ Theme presets: purple, blue, pink, green, orange
+- ✅ Listing status: active, sold, cancelled, blocked
+- ✅ Screening result: passed, blocked
+- ✅ Marketplace condition: new, like_new, good, fair, well_loved
+- ✅ Offer status: pending, accepted, declined, withdrawn
+- ✅ Event status: draft, confirmed, ongoing, completed, cancelled
+- ✅ Participant kind: guest, sponsor, performer
+- ✅ Parking needs: yes, no, accessible
+- ✅ Chat thread status: open, closed
+
+**Environment status:**
+- PostgreSQL: 18.6 installed ✅
+- Database: forgemind_dev created ✅
+- Role: forgemind_app created ✅
+- Port 5432: OPEN ✅
+
+**Total tables:** 38 (10 domains)
+**Deferred:** 2 tables (default_casual_assets, dispatch_board)
+
+### What changed from v1
+
+**19 defects fixed** (all with code evidence):
+1. Department CHECK values wrong → fixed to match organizer.ts
+2. Theme enum wrong → fixed to match ThemeContext.tsx
+3. Listings enums incorrect → fixed to match marketplace.ts
+4. Offers model overly complex → simplified per OffersContext.tsx
+5. Chat thread structure incomplete → fixed per chat.ts
+6. Events missing key fields → added per events.ts
+7. Logistics fields incomplete → expanded per logistics.ts
+8. Commitment log event-level → changed to field-level per commitmentLog.ts
+9. Invite meetups RSVP pattern → changed to join/leave per inviteMeetups.ts
+10. Calendar moderation model → verified against FE-5.5
+11. Single ID image URL → split to front + back per user decision
+12. Marketplace data duplicated → consolidated in users table
+13. FK NOT NULL with SET NULL → fixed all snapshot FKs
+14. Bcrypt for session tokens → changed to SHA-256 for performance
+15. Inline pgcrypto encryption → moved to application level
+16. Missing UNIQUE constraints → added 5 constraints
+17. audit_events.event_id collision → renamed to audit_event_id
+18. default_casual_assets undefined → documented as deferred
+19. Table count wrong → corrected to 38
+
+### What's next
+
+**Awaiting user approval** of v2 schema before proceeding to Phase 3 Step 2 (implementation).
+
+**Step 2 will include:**
+- Create `forgemind-backend/` folder (sibling to forgemind-mobile)
+- Set up Node.js + TypeScript + Express
+- Install node-pg-migrate
+- Write migrations (one per domain)
+- Run migrations against forgemind_dev
+- Seed from JSON files
+- Verify with psql
+
+---
+
 ## Session — Monday, September 28, 2026, 21:45 (Phase 3 Step 1: Database Schema Design)
 
 **Phase:** Phase 3 (Backend & Data Services) — Step 1 of database work  
