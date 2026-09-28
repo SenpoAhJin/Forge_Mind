@@ -9,6 +9,7 @@ import { Button, ConfirmationModal } from '../../components';
 import { OrganizerService } from '../../services/OrganizerService';
 import { OrganizerAccessRequest, DEPARTMENT_LABELS } from '../../types/organizer';
 import { formatVerificationStatus, formatDepartmentVerificationStatus } from '../../utils/formatStatus';
+import { bodyTypeLabel } from '../../constants/bodyType';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, resetOnboarding, updateVerification } = useUser();
@@ -128,10 +129,10 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Body Representation</Text>
           <View style={styles.detailRow}>
-            <Ionicons name="male-outline" size={18} color={colors.textSecondary} />
+            <Ionicons name="body-outline" size={18} color={colors.textSecondary} />
             <Text style={styles.detailLabel}>Base body</Text>
             <Text style={styles.detailValue}>
-              {user?.base_body_selection === 'male' ? 'Male' : 'Female'}
+              {bodyTypeLabel(user?.base_body_selection)}
             </Text>
           </View>
           <View style={styles.detailRow}>

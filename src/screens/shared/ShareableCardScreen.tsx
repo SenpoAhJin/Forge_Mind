@@ -18,6 +18,7 @@ import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
+import { bodyTypeLabel } from '../../constants/bodyType';
 
 type CardType = 'profile' | 'itinerary';
 
@@ -361,7 +362,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         <View style={styles.bodySection}>
           <Text style={styles.bodySectionLabel}>Body Representation</Text>
           <Text style={styles.bodyInfo}>
-            {user?.base_body_selection === 'male' ? 'Male' : 'Female'} • Size {user?.body_size_slider?.toFixed(2) || '0.50'}
+            {bodyTypeLabel(user?.base_body_selection)} • Size {user?.body_size_slider?.toFixed(2) || '0.50'}
           </Text>
         </View>
       </View>

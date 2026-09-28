@@ -30,6 +30,28 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
 
+// Suppress expo-gl WebGL compatibility warnings (must run before any 3D components load)
+// These warnings are harmless - three.js tries to set parameters that expo-gl doesn't support yet
+if (Platform.OS !== 'web') {
+  const originalLog = console.log;
+  console.log = (...args: any[]) => {
+    const msg = args[0];
+    if (typeof msg === 'string' && (msg.includes('pixelStorei') || msg.includes('EXGL') || msg.includes('WEBGL_lose_context'))) {
+      return; // Suppress
+    }
+    originalLog(...args);
+  };
+
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    const msg = args[0];
+    if (typeof msg === 'string' && (msg.includes('WEBGL_lose_context') || msg.includes('WebGLRenderer'))) {
+      return; // Suppress
+    }
+    originalWarn(...args);
+  };
+}
+
 export default function App() {
   // Expose DebugLogger to browser console for FE-5.5 verification
   useEffect(() => {
