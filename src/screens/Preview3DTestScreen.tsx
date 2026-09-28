@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Preview3D from '../components/Preview3D';
+import BodyTypeSelector from '../components/BodyTypeSelector';
+import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { Button } from '../components/buttons/Button';
 
 /**
  * Preview3DTestScreen
- * 
- * Test screen for Sprint 0 Step 3-4:
+ *
+ * Test screen for the React Three Fiber dress-up preview:
  * - Verify react-three-fiber works on web + device
- * - Test body morphing concept (slider controls body size)
+ * - Load and render the real Blender base bodies (assets/models/*.glb)
  * - Prove 3D rendering works without Unity
- * 
+ *
  * Success criteria:
  * ✅ 3D scene renders without errors
  * ✅ Can orbit/zoom camera with touch/mouse
- * ✅ Body morphs smoothly with slider
+ * ✅ Both base bodies load and render
  * ✅ Runs at 60fps on real device
+ *
+ * There is no body-size slider: runtime bone scaling was cancelled, so the body
+ * always renders at the proportions authored in Blender. See CHANGELOG.md.
  */
 
 export default function Preview3DTestScreen() {
-  const [morphFactor, setMorphFactor] = useState(0.5); // 0 = slim, 1 = plus
+  // FE-3D Milestone 1c: local state, but labelled with the same neutral body-type
+  // copy the production preview uses. The stored values are unchanged; only the
+  // user-facing labels moved off the gendered value names.
+  const [bodyType, setBodyType] = useState<BaseBodySelection>(DEFAULT_BASE_BODY);
   const [showTestCubes, setShowTestCubes] = useState(false);
 
   return (
@@ -30,48 +38,37 @@ export default function Preview3DTestScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>3D Preview Test</Text>
           <Text style={styles.subtitle}>
-            Sprint 0 Alternative — React Three Fiber (No Unity)
+            React Three Fiber — real Blender base bodies (no Unity)
           </Text>
         </View>
 
         {/* 3D Preview */}
         <View style={styles.previewContainer}>
-          <Preview3D 
-            morphFactor={morphFactor}
+          <Preview3D
+            bodyType={bodyType}
             showTestCubes={showTestCubes}
           />
         </View>
 
         {/* Controls */}
         <View style={styles.controls}>
-          <Text style={styles.label}>
-            Body Size: {morphFactor.toFixed(2)}
-          </Text>
-          <Text style={styles.hint}>
-            {morphFactor < 0.33 ? 'Slim' : morphFactor < 0.66 ? 'Average' : 'Plus-size'}
-          </Text>
-          
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={1}
-            value={morphFactor}
-            onValueChange={setMorphFactor}
-            minimumTrackTintColor="#8e44ad"
-            maximumTrackTintColor="#d0d0d0"
-            thumbTintColor="#8e44ad"
+          <BodyTypeSelector
+            value={bodyType}
+            onChange={setBodyType}
+            label="Body type"
           />
 
+          <Text style={[styles.label, styles.labelSpaced]}>
+            {showTestCubes
+              ? 'Showing animated test cubes.'
+              : 'Showing the real base body, unscaled.'}
+          </Text>
+          
           <View style={styles.buttonRow}>
             <Button
               title={showTestCubes ? "Show Body" : "Show Test Cubes"}
               onPress={() => setShowTestCubes(!showTestCubes)}
               variant="secondary"
-            />
-            <Button
-              title="Reset"
-              onPress={() => setMorphFactor(0.5)}
-              variant="tertiary"
             />
           </View>
         </View>
@@ -82,19 +79,22 @@ export default function Preview3DTestScreen() {
           <Text style={styles.instructionsText}>
             • Drag to orbit camera{'\n'}
             • Pinch/scroll to zoom{'\n'}
-            • Move slider to morph body{'\n'}
-            • Toggle "Test Cubes" to see animated primitives{'\n'}
+            • Tap the body type buttons to swap base bodies{'\n'}
+            • Toggle "Test Cubes" to fall back to animated primitives{'\n'}
             • Verify works on web AND real device via Expo Go
           </Text>
         </View>
 
         {/* Status Checklist */}
         <View style={styles.checklist}>
-          <Text style={styles.checklistTitle}>Sprint 0 Step 3-4 Checklist:</Text>
+          <Text style={styles.checklistTitle}>FE-3D Milestone 0-1 Checklist:</Text>
+          <Text style={styles.checklistItem}>☐ node scripts/verify-glb-models.mjs passes</Text>
           <Text style={styles.checklistItem}>☐ Renders on web preview</Text>
           <Text style={styles.checklistItem}>☐ Renders on real device (Expo Go)</Text>
-          <Text style={styles.checklistItem}>☐ Camera controls work (orbit/zoom)</Text>
-          <Text style={styles.checklistItem}>☐ Body morphs with slider</Text>
+          <Text style={styles.checklistItem}>☐ Camera controls work (orbit/zoom/pan)</Text>
+          <Text style={styles.checklistItem}>☐ Male base body loads and renders</Text>
+          <Text style={styles.checklistItem}>☐ Female base body loads and renders</Text>
+          <Text style={styles.checklistItem}>☐ Test-cubes fallback still works</Text>
           <Text style={styles.checklistItem}>☐ Smooth 60fps rendering</Text>
           <Text style={styles.checklistItem}>☐ No console errors</Text>
         </View>
@@ -105,9 +105,10 @@ export default function Preview3DTestScreen() {
           <Text style={styles.techInfoText}>
             <Text style={styles.bold}>Stack:</Text> @react-three/fiber + expo-gl{'\n'}
             <Text style={styles.bold}>Rendering:</Text> Three.js (WebGL){'\n'}
-            <Text style={styles.bold}>Body:</Text> Procedural cylinders + spheres{'\n'}
-            <Text style={styles.bold}>Morphing:</Text> Scale-based (prototype){'\n'}
-            <Text style={styles.bold}>Next:</Text> Replace with Blender GLB models
+            <Text style={styles.bold}>Body:</Text> Blender .glb (assets/models/){'\n'}
+            <Text style={styles.bold}>Rig:</Text> Full Rigify skeleton, rest pose{'\n'}
+            <Text style={styles.bold}>Materials:</Text> None in the export — renders untextured{'\n'}
+            <Text style={styles.bold}>Body size:</Text> Not scaled — Blender-authored proportions
           </Text>
         </View>
       </ScrollView>
@@ -159,6 +160,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7f8c8d',
     marginBottom: 12,
+  },
+  labelSpaced: {
+    marginTop: 20,
   },
   slider: {
     width: '100%',

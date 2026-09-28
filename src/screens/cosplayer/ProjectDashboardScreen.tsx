@@ -8,9 +8,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StandardCard, Button, Tag, TextInputField, StatusBadge, BodySizeSlider, ThreeDPreview } from '../../components';
+import { StandardCard, Button, Tag, TextInputField, StatusBadge, ThreeDPreview, BodyTypeSelector } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { BaseBodySelection, DEFAULT_BASE_BODY } from '../../constants/bodyType';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { useUser } from '../../contexts/UserContext';
@@ -77,7 +78,7 @@ const formatPeso = (value: number) => {
 export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId, onOpenMeetups }) => {
   const { projects, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
   const { events, getEventById } = useEvents();
-  const { user, setUserBody } = useUser();
+  const { user, updateBodyType } = useUser();
 
   const project = projects.find((p) => p.project_id === projectId);
 
@@ -87,8 +88,14 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   const [newActual, setNewActual] = useState('');
   const [newCategory, setNewCategory] = useState<BudgetCategory>('material');
   
-  // 3D Preview body size state (synced with user profile)
-  const [localBodySize, setLocalBodySize] = useState(user?.body_size_slider ?? 0.5);
+  // FE-3D Milestone 1c: 3D preview body type. Seeded from the persisted profile
+  // value so the choice follows the user across every project they open, and falls
+  // back to a technical default (not a silent hardcoded assumption in the JSX) so a
+  // brand-new user still sees a body immediately. The selector next to the preview
+  // is always visible, so an unset preference is a one-tap fix.
+  const [bodyType, setBodyType] = useState<BaseBodySelection>(
+    user?.base_body_selection ?? DEFAULT_BASE_BODY
+  );
   
   // Event linking state
   const [showEventPicker, setShowEventPicker] = useState(false);
@@ -359,34 +366,30 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>3D Preview</Text>
         <Text style={styles.sectionDescription}>
-          Procedural placeholder showing selected variant with your body representation. 
+          Your saved base body, rendered from the real Blender rig. Variant garments are not shown here yet. 
           Drag to rotate, pinch to zoom.
         </Text>
         
         <View style={styles.previewContainer}>
           <ThreeDPreview 
-            bodySizeValue={localBodySize} 
+            bodyType={bodyType}
             width={300} 
             height={400} 
           />
         </View>
 
-        <View style={styles.sliderSection}>
-          <BodySizeSlider
-            value={localBodySize}
-            onValueChange={(newValue) => {
-              setLocalBodySize(newValue);
-              // Sync to user profile in real-time
-              if (user) {
-                setUserBody(user.base_body_selection, newValue);
-              }
-            }}
-            label="Adjust Body Size"
+        {/* FE-3D Milestone 1c: the only place the body type is chosen. Deliberately
+            inside the 3D Preview and not in onboarding/profile, and deliberately not
+            framed as a gender or identity question. Selecting here persists and
+            becomes the default for every later character/variant preview. */}
+        <View style={styles.bodyTypeSection}>
+          <BodyTypeSelector
+            value={bodyType}
+            onChange={setBodyType}
+            onCommit={(next) => { void updateBodyType(next); }}
           />
-          <Text style={styles.previewNote}>
-            Slider controls body deformation · Garment placeholder attached to procedural body
-          </Text>
         </View>
+
       </View>
 
       <View style={styles.section}>
@@ -623,15 +626,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  sliderSection: {
-    paddingHorizontal: spacing.md,
-  },
-  previewNote: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    fontStyle: 'italic',
+  bodyTypeSection: {
+    marginBottom: spacing.lg,
   },
   sectionDescription: {
     ...typography.body,
