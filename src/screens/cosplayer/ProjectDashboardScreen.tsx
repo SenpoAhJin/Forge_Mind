@@ -195,8 +195,10 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
     }
   };
 
+  const scrollViewRef = React.useRef<ScrollView>(null);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView ref={scrollViewRef} style={styles.container} contentContainerStyle={styles.content}>
       <StandardCard style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerMeta}>
@@ -370,7 +372,15 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
           Drag to rotate, pinch to zoom.
         </Text>
         
-        <View style={styles.previewContainer}>
+        <View 
+          style={styles.previewContainer}
+          onTouchStart={() => {
+            scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
+          }}
+          onTouchEnd={() => {
+            scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
+          }}
+        >
           <ThreeDPreview 
             bodyType={bodyType}
             width={300} 

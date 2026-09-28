@@ -30,10 +30,11 @@ export default function Preview3DTestScreen() {
   // user-facing labels moved off the gendered value names.
   const [bodyType, setBodyType] = useState<BaseBodySelection>(DEFAULT_BASE_BODY);
   const [showTestCubes, setShowTestCubes] = useState(false);
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>3D Preview Test</Text>
@@ -42,8 +43,18 @@ export default function Preview3DTestScreen() {
           </Text>
         </View>
 
-        {/* 3D Preview */}
-        <View style={styles.previewContainer}>
+        {/* 3D Preview - Touch handling to prevent ScrollView interference
+            Problem: parent ScrollView steals drag touches, preventing OrbitControls rotation
+            Solution: Disable scroll while user touches the canvas, re-enable on release */}
+        <View 
+          style={styles.previewContainer}
+          onTouchStart={() => {
+            scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
+          }}
+          onTouchEnd={() => {
+            scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
+          }}
+        >
           <Preview3D
             bodyType={bodyType}
             showTestCubes={showTestCubes}
