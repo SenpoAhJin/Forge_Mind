@@ -1,6 +1,6 @@
 /**
  * ForgeMind Onboarding - Body Slider Onboarding Screen
- * Base body toggle (male/female) → User.base_body_selection
+ * Base body toggle (neutral body-type labels) → User.base_body_selection
  * Continuous slider (0.0–1.0) → User.body_size_slider
  * Uses BodySizeSlider component from FE-1 (first real usage)
  * Explicit copy: "This is for 3D preview only — not a scan, not a measurement."
@@ -10,7 +10,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Button, BodySizeSlider } from '../../components';
+import { Button, BodySizeSlider, BodyTypeSelector } from '../../components';
+import { bodyTypeLabel } from '../../constants/bodyType';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 
 interface BodySliderOnboardingScreenProps {
@@ -47,33 +48,23 @@ export const BodySliderOnboardingScreen: React.FC<BodySliderOnboardingScreenProp
             This is for 3D preview only — not a scan, not a measurement.
           </Text>
           <Text style={styles.noticeSubtext}>
-            You can change this anytime in your profile settings.
+            You can change this at any time from the Body type selector in any 3D preview.
           </Text>
         </View>
       </View>
 
       <View style={styles.form}>
-        {/* Base Body Selection Toggle */}
+        {/* Base Body Selection Toggle
+            FE-3D Milestone 1c: uses the shared, identity-neutral selector. This
+            screen is currently unreachable (RootNavigator completes onboarding at
+            AccountCreation), which is why the production 3D Preview hosts the
+            selector instead - see src/constants/bodyType.ts. */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Select a Base Body</Text>
-          <Text style={styles.sectionDescription}>
-            Choose the base body shape that best approximates your build
-          </Text>
-          
-          <View style={styles.toggleContainer}>
-            <Button
-              title="Male"
-              onPress={() => setBaseBodySelection('male')}
-              variant={baseBodySelection === 'male' ? 'primary' : 'secondary'}
-              style={styles.toggleButton}
-            />
-            <Button
-              title="Female"
-              onPress={() => setBaseBodySelection('female')}
-              variant={baseBodySelection === 'female' ? 'primary' : 'secondary'}
-              style={styles.toggleButton}
-            />
-          </View>
+          <BodyTypeSelector
+            value={baseBodySelection}
+            onChange={setBaseBodySelection}
+            label="Body type"
+          />
         </View>
 
         {/* Body Size Slider - using FE-1 component */}
@@ -107,7 +98,7 @@ export const BodySliderOnboardingScreen: React.FC<BodySliderOnboardingScreenProp
               👤
             </Text>
             <Text style={styles.previewSubtext}>
-              {baseBodySelection === 'male' ? 'Male' : 'Female'} body
+              {bodyTypeLabel(baseBodySelection)} body
             </Text>
             <Text style={styles.previewSubtext}>
               Size: {bodySizeSlider.toFixed(2)}

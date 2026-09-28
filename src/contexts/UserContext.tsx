@@ -9,6 +9,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthService, StoredAccount } from '../services/AuthService';
 import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
+import { BaseBodySelection } from '../constants/bodyType';
 
 const NOTIFICATION_SEEN_KEY = '@forgemind:notification_seen';
 
@@ -81,6 +82,10 @@ interface UserContextType {
   setUserRoles: (isCosplayer: boolean, isOrganizer: boolean) => void;
   setUserAccount: (email: string, password: string, displayName: string) => void;
   setUserBody: (baseBody: 'male' | 'female', bodySize: number) => void;
+
+  // FE-3D Milestone 1c: persist the 3D preview body type (persists across
+  // logout/login and applies to every character/variant preview thereafter).
+  updateBodyType: (baseBody: BaseBodySelection) => Promise<void>;
   
   // Holder verification (FE-4.5 - persists across logout/login)
   updateVerification: (isVerified: boolean, status: User['verification_status']) => Promise<void>;
@@ -315,6 +320,28 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
+  /**
+   * FE-3D Milestone 1c — persist the 3D preview body type.
+   *
+   * `setUserBody` above only mutates in-memory state, so before this existed there
+   * was NO way to persist `base_body_selection` at all: the onboarding screen that
+   * was supposed to set it is unreachable (see RootNavigator), and nothing else
+   * called AuthService. This follows the same persist-then-set shape as
+   * `updateVerification`, so the choice survives reload/logout and becomes the
+   * standing default for every later character/variant preview.
+   */
+  const updateBodyType = async (baseBody: BaseBodySelection): Promise<void> => {
+    if (!user) return;
+
+    const updated = {
+      ...user,
+      base_body_selection: baseBody,
+    } as StoredAccount;
+
+    await AuthService.updateUser(updated);
+    setUser(updated);
+  };
+
   const isOnboardingComplete = user !== null &&
     user.email !== '' &&
     (user.is_cosplayer || user.is_organizer);
@@ -361,7 +388,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateVerification,
         setUserRoles,
         setUserAccount,
-        setUserBody,
+         setUserBody,
+         updateBodyType,
         isOnboardingComplete,
         resetOnboarding,
         pendingNotification,
