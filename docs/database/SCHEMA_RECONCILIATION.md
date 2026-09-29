@@ -1,11 +1,11 @@
-# ForgeMind — Database Schema Reconciliation & Design (v2)
+# ForgeMind — Database Schema Reconciliation & Design (v2.2)
 
 **Phase:** Phase 3, Step 1b (Design Doc Only)  
 **Date:** Monday, September 28, 2026  
-**Version:** 2.0  
+**Version:** 2.2  
 **Purpose:** Comprehensive PostgreSQL schema design covering all domains, with provenance tracking, drift analysis, and migration recommendations.
 
-**STATUS:** ⚠️ DESIGN PHASE ONLY — No databases, tables, or migrations created yet. Awaiting user approval.
+**STATUS:** ⚠️ DESIGN PHASE ONLY — No databases, tables, or migrations created yet. Awaiting user approval of v2.
 
 ---
 
@@ -54,7 +54,24 @@ This revision addresses all identified defects from v1 based on:
     - `guest_logistics.participant_kind`: `'guest'` → **`'confirmed_guest'`** (`src/types/logistics.ts:6`)
     - `guest_logistics.parking_needs`: `('yes','no','accessible')` → **`('none','standard','accessible')`** (`src/types/logistics.ts:8`)
     - `events.status`: removed **`'ongoing'` and `'completed'`** → `('draft','confirmed','cancelled')` (`src/types/events.ts:7`; `grep -rn "'ongoing'" src/` → 0 matches, so v2's values had no source)
-    - `commitment_change_log.entity_type`: `('event','logistics','contest','calendar','other')` → **`('event','logistics_entry')`** (`src/types/commitmentLog.ts:8`)
+     - `commitment_change_log.entity_type`: `('event','logistics','contest','calendar','other')` → **`('event','logistics_entry')`** (`src/types/commitmentLog.ts:8`)
+
+### v2.2 (September 28, 2026) — Open Defects A / B / C Ruled and Corrected
+
+The user ruled on all three defects the v2.1 audit had left open. In every case the ruling was to
+**delete the invented construct, not to invent a replacement value set.** All three are backed by
+raw `git grep` output quoted in the "OPEN DEFECTS A/B/C" section above.
+
+| Ruling | Action taken |
+|--------|--------------|
+| **A** — `event_participant_applications.applicant_type` | **Column deleted.** Zero matches in `src/`; `'vendor'` also has zero matches |
+| **B** — `group_meetups.status` | **Column, its CHECK constraint, and its index deleted.** Whole table rebuilt against `Meetup` (`src/types/meetups.ts:29-42`): `meetup_name`→`title`, `confirmed_time`/`confirmed_location` removed, `event_id` NULL→NOT NULL, plus `proposed_by_email`, `proposed_by_name`, `purpose`, `proposed_date`, `proposed_time` |
+| **C** — `meetup_members.rsvp_status` | **CHECK corrected** to `('going','maybe','declined')`, DEFAULT dropped. `priority_level` deleted (zero matches). `user_id` → `cosplayer_email` (RSVP identity in the app is email). **Citation fixed from the non-existent `src/types/inviteMeetup.ts` to `src/types/meetups.ts:12,14,16-27,39`** |
+
+**Table count is unchanged at 38.** Ruling A removed a *column*, not a table. Two follow-ups are
+flagged as still-unverified and are NOT resolved by this revision:
+- `event_participant_applications` as a table (Ruling A named one column only)
+- `invite_meetups.status` — same four-value pattern as B, on a different table, not yet swept
 
 **User Decisions Applied:**
 - Body size slider: DROPPED from schema completely
@@ -66,24 +83,75 @@ This revision addresses all identified defects from v1 based on:
 
 ---
 
-## ⚠️ OPEN DEFECTS — v2.1 AUDIT FOUND MORE UNFIXED DIVERGENCE (NOT YET RESOLVED)
+## ✅ OPEN DEFECTS A/B/C — RULED AND CORRECTED (v2.2)
 
 The v2 "A4 cross-check" claimed *"all 10 enums validated against code."* **That claim was false.**
 The four enums in item 20 above were wrong, and a follow-up sweep of **every** `CHECK (x IN (...))`
-domain in this document against `src/` found **three further tables that are still wrong.** They are
-recorded here rather than silently rewritten, because each is a *design* decision, not a typo:
+domain in this document against `src/` found **three further tables that were still wrong.**
 
-| # | Table / field | What this doc says | What as-built code says | Evidence |
-|---|---------------|--------------------|--------------------------|----------|
-| A | `event_participant_applications.applicant_type` | `('vendor','guest','sponsor','performer')` | **No `applicant_type` field exists.** Nor does any event-application concept. | `grep -rn "applicant\|applications" src/` → only `RejectionReasonModal` / `VerifyCosplayersScreen` / `VerifyStaffScreen`, all about cosplayer+staff verification, unrelated to events |
-| B | `group_meetups` (whole shape) | `meetup_name`, `proposed_time`, `confirmed_time`, `proposed_location`, `confirmed_location`, `status IN ('proposed','confirmed','completed','cancelled')` | `Meetup` (src/types/meetups.ts:29) has **no `status` field at all**: `meetup_id, event_id, proposed_by_email, proposed_by_name, title, purpose?, proposed_date, proposed_time, proposed_location, rsvps[], created_at, updated_at` | src/types/meetups.ts:29-42; `MeetupsContext.tsx` never reads/writes a status |
-| C | `meetup_members` (whole shape) | `priority_level IN ('must-attend','prefer-attend','flexible')`, `rsvp_status IN ('pending','attending','declined')` | `RsvpStatus = 'going' \| 'maybe' \| 'declined'` (+ `RSVP_STATUSES` const). RSVPs are **embedded in the `Meetup` object**, not a separate `meetup_members` row. `priority_level` has no counterpart. | src/types/meetups.ts:12,14,39; MeetupsContext.tsx:58,184,200 |
+The user has now ruled on all three. Each was **removed or corrected against the as-built code —
+no value set was invented to fill a gap.**
 
-**Consequence:** the v2 table inventory and the A4 cross-check should be treated as **unvalidated**
-until A/B/C are ruled on. Do **not** hand these tables to a migration generator as-is.
-Same question applies to `invite_meetups.status IN ('proposed','confirmed','completed','cancelled')`
-— same four-value pattern as B, and the doc cites a source file that does not exist
-(`src/types/inviteMeetup.ts`); it needs the same scrutiny.
+| # | Table / field | v2 said | Ruling | Now |
+|---|---------------|---------|--------|-----|
+| A | `event_participant_applications.applicant_type` | `('vendor','guest','sponsor','performer')` | Field does not exist anywhere in the app | **Column deleted.** Not replaced |
+| B | `group_meetups.status` | `('proposed','confirmed','completed','cancelled')` | `Meetup` has no `status` field at all | **Column + CHECK + index deleted.** Table rebuilt against `src/types/meetups.ts:29-42` |
+| C | `meetup_members.rsvp_status` | `('pending','attending','declined')` | Real values are `going / maybe / declined` | **CHECK corrected** to `('going','maybe','declined')`, no DEFAULT. Citation corrected to `src/types/meetups.ts` |
+
+**Ruling evidence (raw `git grep` output, reproducible):**
+
+```
+$ git grep -n -E "applicant_type|applicantType|ParticipantApplication|participantApplication" -- src/
+=== git grep exit code: 1 (1 = zero matches) ===
+
+$ git grep -n "'vendor'" -- src/
+=== exit: 1 ===
+
+$ git grep -n "status" -- src/types/meetups.ts
+src/types/meetups.ts:25:  status: RsvpStatus;
+src/types/meetups.ts:52: * Headcount per status for a meetup. Recomputed on every render from the RSVP
+src/types/meetups.ts:59:    headcount[rsvp.status] += 1;
+
+$ git grep -n "attending" -- src/
+=== exit: 1 (1 = zero matches) ===
+
+$ git grep -n -E "RsvpStatus|RSVP_STATUSES" -- src/
+src/contexts/MeetupsContext.tsx:25:import { Meetup, MeetupRsvp, RsvpStatus } from '../types/meetups';
+src/contexts/MeetupsContext.tsx:58:  setRsvp: (meetupId: string, email: string, name: string, status: RsvpStatus) => Promise<MeetupResult>;
+src/contexts/MeetupsContext.tsx:200:    status: RsvpStatus
+src/screens/cosplayer/EventMeetupsScreen.tsx:41:  RsvpStatus,
+src/screens/cosplayer/EventMeetupsScreen.tsx:48:type StatusFilter = 'all' | RsvpStatus;
+src/screens/cosplayer/EventMeetupsScreen.tsx:333:              {statusFilter === 'all' ? 'No meetups yet' : `Nothing ${RSVP_LABELS[statusFilter as RsvpStatus].toLowerCase()}`}
+src/screens/cosplayer/EventMeetupsScreen.tsx:407:                    {(['going', 'maybe', 'declined'] as RsvpStatus[]).map((status) => (
+src/types/meetups.ts:12:export type RsvpStatus = 'going' | 'maybe' | 'declined';
+src/types/meetups.ts:14:export const RSVP_STATUSES: RsvpStatus[] = ['going', 'maybe', 'declined'];
+src/types/meetups.ts:16:export const RSVP_LABELS: Record<RsvpStatus, string> = {
+src/types/meetups.ts:25:  status: RsvpStatus;
+
+$ git grep -n -E "priority_level|priorityLevel|must-attend|prefer-attend" -- src/
+=== exit: 1 ===
+```
+
+**Citation correction.** The audit text cited `src/types/inviteMeetup.ts` as the RSVP source. **That
+file does not exist.** The correct file is `src/types/meetups.ts` (`RsvpStatus` at line 12,
+`RSVP_STATUSES` at 14, `MeetupRsvp` at 22-27, `Meetup` at 29-42). `src/types/inviteMeetups.ts`
+(plural) is a different feature — join-by-code meetups — and holds no RSVP type.
+
+**Consequence:** `event_participant_applications`, `group_meetups` and `meetup_members` are now
+corrected against as-built code. The v2 A4 cross-check claim remains false as history; treat any
+"validated against code" assertion in this document as unverified unless a `git grep` is quoted
+beside it.
+
+**Still unverified — not covered by these three rulings:**
+
+1. ⚠️ `event_participant_applications` as a **table** is unverified. Ruling A deleted the one column
+   the user named; the rest of the table (`applicant_name`, `application_status`,
+   `application_details`, …) has never been grepped, and no `src/types/*applic*` file exists.
+   `guest_logistics.source_application_id` has an FK into it. **Do not migrate this table.**
+2. ⚠️ `invite_meetups.status IN ('proposed','confirmed','completed','cancelled')` — same four-value
+   pattern as B, on a different table. Not yet swept. Cite-checked only so far: the doc's
+   `src/types/inviteMeetups.ts` **does** exist (plural), so the B/C citation error does not recur
+   here. Domain itself unverified.
 
 ---
 
@@ -1140,13 +1208,26 @@ CREATE INDEX idx_events_city ON events(city);
 
 **Provenance:** [v0.2.1 Correction #6]
 
-**Purpose:** Pre-confirmation intake for vendor/guest/sponsor/performer.
+**Purpose:** Pre-confirmation intake for event participants.
+
+**v2.1 RULING — DEFECT A (column removed):**
+- ✅ `applicant_type` **REMOVED.** It was invented: no `applicant_type` / `applicantType` field and no
+  event-application concept exists anywhere in `src/`. Evidence: `git grep -n -E
+  "applicant_type|applicantType|ParticipantApplication|participantApplication" -- src/` → **zero
+  matches** (exit 1). `git grep -n "'vendor'" -- src/` → **zero matches**, so the value set
+  `('vendor','guest','sponsor','performer')` had no source at all. Per ruling, the field is deleted
+  rather than given a substitute value set.
+- ⚠️ **STILL OPEN — this whole table is now unverified.** The ruling covered the one named column,
+  not the table. `applicant_name`, `applicant_contact_email`, `application_status`,
+  `application_details` have equally never been grepped, and no `src/types/*applic*` file exists.
+  `guest_logistics.source_application_id` has an FK into this table. **Do not migrate this table
+  until the user rules on whether `event_participant_applications` exists at all.** The nearest real
+  concept is `guest_logistics` (participant intake), which already exists as a table.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | application_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | |
 | event_id | UUID | NOT NULL REFERENCES events(event_id) ON DELETE CASCADE | |
-| applicant_type | VARCHAR(20) | NOT NULL CHECK (applicant_type IN ('vendor', 'guest', 'sponsor', 'performer')) | |
 | applicant_name | VARCHAR(200) | NOT NULL | |
 | applicant_contact_email | VARCHAR(255) | NOT NULL | |
 | applicant_contact_phone | VARCHAR(50) | NULL | |
@@ -1184,7 +1265,7 @@ CREATE INDEX idx_event_participant_applications_status ON event_participant_appl
 |--------|------|-------------|-------|
 | logistics_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | |
 | event_id | UUID | NOT NULL REFERENCES events(event_id) ON DELETE CASCADE | |
-| source_application_id | UUID | NULL REFERENCES event_participant_applications(application_id) ON DELETE SET NULL | Audit trail [Correction #6] |
+| source_application_id | UUID | NULL REFERENCES event_participant_applications(application_id) ON DELETE SET NULL | Audit trail [Correction #6] ⚠️ **v2.2: target table is unverified — ruling A deleted `applicant_type` from it and the rest of the table was never grepped. Do not migrate either table until ruled on** |
 | participant_kind | VARCHAR(20) | NOT NULL CHECK (participant_kind IN ('confirmed_guest', 'sponsor', 'performer')) | [v2 DEFECT #7 FIX] [v2.1 CORRECTED] Source: `src/types/logistics.ts:6` |
 | participant_name | VARCHAR(200) | NOT NULL | |
 | participant_contact_email | VARCHAR(255) | NULL | [v2 DEFECT #7 FIX] Optional |
@@ -1219,54 +1300,116 @@ CREATE UNIQUE INDEX idx_unique_staff_assignment ON guest_logistics(assigned_to_s
 
 ### Table: `group_meetups` (Event-based)
 
-**Provenance:** [v0.2.1]
+**Provenance:** [v0.2.1] + **[v2.1 CORRECTED — rebuilt to match `src/types/meetups.ts`]**
 
-**Purpose:** AI-suggested group meetup coordination for events.
+**Purpose:** Cosplayer-proposed group meetup coordination points for a confirmed event.
+
+**v2.1 RULING — DEFECT B (status column and its CHECK constraint REMOVED):**
+- ✅ `status` **REMOVED**, together with `CHECK (status IN ('proposed','confirmed','completed','cancelled'))`
+  and the `idx_group_meetups_status` index built on it. The `Meetup` interface has **no `status`
+  field**: `git grep -n "status" -- src/types/meetups.ts` returns only 3 hits — `MeetupRsvp.status`
+  (line 25, an RSVP value, not a meetup lifecycle) and two comment/counter lines (52, 59). There is
+  no meetup lifecycle state in the app, so none is invented here.
+- ✅ **Column set rebuilt** against `Meetup` (`src/types/meetups.ts:29-42`): the v2 columns
+  `meetup_name`, `confirmed_time`, `confirmed_location` and the proposed/confirmed pairs do not
+  exist. Real fields are `title`, `purpose`, `proposed_date`, `proposed_time`, `proposed_location`,
+  `proposed_by_email`, `proposed_by_name`, `rsvps` (→ `meetup_members`), `created_at`, `updated_at`.
+- ⚠️ `event_id` is **NOT NULL** in the app (`Meetup.event_id: string`, set from the required
+  `input.event_id` in `MeetupsContext.tsx:171`), not the NULL the v2 table declared. Corrected below.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
-| meetup_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | |
-| event_id | UUID | NULL REFERENCES events(event_id) ON DELETE CASCADE | Optional event association |
-| meetup_name | VARCHAR(200) | NOT NULL | |
-| proposed_time | TIMESTAMPTZ | NULL | AI-suggested |
-| confirmed_time | TIMESTAMPTZ | NULL | User-confirmed |
-| proposed_location | VARCHAR(200) | NULL | AI-suggested |
-| confirmed_location | VARCHAR(200) | NULL | User-confirmed |
-| status | VARCHAR(20) | NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'confirmed', 'completed', 'cancelled')) | |
-| created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | |
-| updated_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | |
+| meetup_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | [v2.1] Source: `src/types/meetups.ts:30` |
+| event_id | UUID | NOT NULL REFERENCES events(event_id) ON DELETE CASCADE | [v2.1 CORRECTED] Was NULL; app requires an event. Source: `src/types/meetups.ts:31` |
+| proposed_by_email | VARCHAR(255) | NOT NULL | [v2.1] Source: `src/types/meetups.ts:32` |
+| proposed_by_name | VARCHAR(200) | NOT NULL | [v2.1] Source: `src/types/meetups.ts:33` |
+| title | VARCHAR(200) | NOT NULL | [v2.1] Replaces invented `meetup_name`. Source: `src/types/meetups.ts:34` |
+| purpose | TEXT | NULL | [v2.1] Source: `src/types/meetups.ts:35` (optional, nullable) |
+| proposed_date | DATE | NOT NULL | [v2.1] Source: `src/types/meetups.ts:36` (YYYY-MM-DD) |
+| proposed_time | TIME | NOT NULL | [v2.1] Source: `src/types/meetups.ts:37` (HH:MM 24-hour) |
+| proposed_location | VARCHAR(200) | NOT NULL | [v2.1] Source: `src/types/meetups.ts:38` |
+| created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | [v2.1] Source: `src/types/meetups.ts:40` |
+| updated_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | [v2.1] Source: `src/types/meetups.ts:41` |
+
+**Removed columns and why:**
+
+| Removed | Reason |
+|---------|--------|
+| `meetup_name` | Renamed to `title` (`src/types/meetups.ts:34`) |
+| `confirmed_time` | No such field. There is no "confirmed" concept for a meetup — the proposer creates it, RSVPs attach |
+| `confirmed_location` | No such field, same reason |
+| `status` + CHECK + index | **Ruling B.** `Meetup` has no status field. Per ruling, deleted rather than given an invented value set |
 
 **Indexes:**
 ```sql
 CREATE INDEX idx_group_meetups_event_id ON group_meetups(event_id);
-CREATE INDEX idx_group_meetups_status ON group_meetups(status);
+CREATE INDEX idx_group_meetups_proposed_by ON group_meetups(proposed_by_email);
+-- v2.1: idx_group_meetups_status REMOVED — the status column it indexed no longer exists
 ```
 
-**Source File:** `src/types/meetups.ts`, `src/contexts/MeetupsContext.tsx`
+**Source File:** `src/types/meetups.ts:29-42`, `src/contexts/MeetupsContext.tsx:169-190`
 
 ---
 
-### Table: `meetup_members`
+### Table: `meetup_members` (RSVPs on a group meetup)
 
-**Provenance:** [v0.2.1]
+**Provenance:** [v0.2.1] + **[v2.1 CORRECTED — rebuilt to match `src/types/meetups.ts`]**
 
-**Purpose:** Members of event-based group meetups with individual schedules.
+**Purpose:** One row per cosplayer RSVP against a `group_meetups` row.
+
+**v2.1 RULING — DEFECT C (RSVP domain corrected; citation corrected):**
+- ✅ `rsvp_status` CHECK domain **corrected** from `('pending','attending','declined')` to
+  **`('going','maybe','declined')`**, the values actually in the app.
+  Source of truth: **`src/types/meetups.ts:12`** —
+  `export type RsvpStatus = 'going' | 'maybe' | 'declined';` — corroborated by
+  `RSVP_STATUSES` (`src/types/meetups.ts:14`), `RSVP_LABELS` (`:16-20`) and the RSVP filter chips
+  in `src/screens/cosplayer/EventMeetupsScreen.tsx:407`
+  (`(['going', 'maybe', 'declined'] as RsvpStatus[])`).
+  The old domain was invented: `git grep -n "attending" -- src/` → **zero matches** (exit 1), and
+  `'pending'` was never an RSVP value in this domain. **There is no DEFAULT** — the app never stores
+  an unanswered RSVP as a row; the proposer is written as `'going'` at creation
+  (`MeetupsContext.tsx:184`) and a re-RSVP replaces the prior answer rather than stacking
+  (`MeetupsContext.tsx:218`).
+- ✅ **Citation fixed.** The v2.1 audit text cited `src/types/inviteMeetup.ts`, which **does not
+  exist**. The correct file is **`src/types/meetups.ts`**. `git ls-files src/types/` contains
+  `inviteMeetups.ts` (a different, join-by-code feature) and `meetups.ts`; there is no
+  `inviteMeetup.ts`. All RSVP and `Meetup` types live in `src/types/meetups.ts`.
+- ✅ `priority_level` **REMOVED.** `git grep -n -E "priority_level|priorityLevel|must-attend|prefer-attend" -- src/`
+  → **zero matches** (exit 1). No scheduling-priority concept exists in the app.
+- ✅ RSVP is **keyed by email, not user_id**, and carries `responded_at`. The app stores RSVPs
+  embedded in the `Meetup` object (`rsvps: MeetupRsvp[]`, `src/types/meetups.ts:39,22-27`); this
+  table is the relational flattening of that array. One email may hold several meetup accounts, so
+  `cosplayer_email` is the identity — there is no `users.user_id` on the RSVP to reference.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
-| member_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | |
-| meetup_id | UUID | NOT NULL REFERENCES group_meetups(meetup_id) ON DELETE CASCADE | |
-| user_id | UUID | NOT NULL REFERENCES users(user_id) ON DELETE CASCADE | |
-| individual_schedule_notes | TEXT | NULL | |
-| priority_level | VARCHAR(20) | NOT NULL DEFAULT 'flexible' CHECK (priority_level IN ('must-attend', 'prefer-attend', 'flexible')) | |
-| rsvp_status | VARCHAR(20) | NOT NULL DEFAULT 'pending' CHECK (rsvp_status IN ('pending', 'attending', 'declined')) | |
+| rsvp_id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | [v2.1] Surrogate; the app uses the array position |
+| meetup_id | UUID | NOT NULL REFERENCES group_meetups(meetup_id) ON DELETE CASCADE | [v2.1] |
+| cosplayer_email | VARCHAR(255) | NOT NULL | [v2.1 CORRECTED] Replaces `user_id`. Source: `src/types/meetups.ts:23` |
+| cosplayer_name | VARCHAR(200) | NOT NULL | [v2.1] Source: `src/types/meetups.ts:24` |
+| rsvp_status | VARCHAR(20) | NOT NULL CHECK (rsvp_status IN ('going', 'maybe', 'declined')) | **[v2.1 CORRECTED]** Source: `src/types/meetups.ts:12`. No DEFAULT — an unanswered RSVP is not a row |
+| responded_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | [v2.1] Source: `src/types/meetups.ts:26` |
+
+**Removed columns and why:**
+
+| Removed | Reason |
+|---------|--------|
+| `priority_level` + CHECK | **Ruling C.** Zero matches in `src/`. Nothing to reconcile it against |
+| `individual_schedule_notes` | Not on `MeetupRsvp` (`src/types/meetups.ts:22-27`) |
+| `user_id` | RSVPs are identified by `cosplayer_email` in the app, not by user id |
 
 **Indexes:**
 ```sql
 CREATE INDEX idx_meetup_members_meetup_id ON meetup_members(meetup_id);
-CREATE INDEX idx_meetup_members_user_id ON meetup_members(user_id);
-CREATE UNIQUE INDEX idx_unique_meetup_member ON meetup_members(meetup_id, user_id);
+CREATE UNIQUE INDEX idx_unique_meetup_member ON meetup_members(meetup_id, cosplayer_email);
+-- v2.1: idx_meetup_members_user_id REMOVED — no user_id column
 ```
+
+**Business Rule:** Re-RSVP replaces the prior answer for that email; it never creates a duplicate
+row (`src/contexts/MeetupsContext.tsx:218`). The proposer is auto-inserted as `'going'` at meetup
+creation (`src/contexts/MeetupsContext.tsx:180-187`).
+
+**Source File:** `src/types/meetups.ts:12,14,16-27,39`, `src/contexts/MeetupsContext.tsx:58,169-190,196-224`, `src/screens/cosplayer/EventMeetupsScreen.tsx:48,407`
 
 ---
 
@@ -1826,6 +1969,22 @@ erDiagram
    - **Proposal:** Add `contest_results` table if needed for tier suggestions
    - **Action:** Implement when contest AI suggestion feature is built
 
+7. ⏳ **`event_participant_applications` — does this table exist at all?**
+   - Ruling A deleted the invented `applicant_type` column, but the remaining columns
+     (`applicant_name`, `applicant_contact_email`, `application_status`, `application_details`)
+     have never been verified. `guest_logistics.source_application_id` FKs into it.
+   - **Proposal:** Either (a) drop the table and its FK, keeping `guest_logistics` as the single
+     participant-intake surface; or (b) keep it as a forward-looking design and mark every column
+     `[proposed]` with no as-built provenance.
+   - **Action:** **User decision required before Phase 3 Step 2.** Do not migrate this table.
+
+8. ⏳ **`invite_meetups.status` domain unverified**
+   - Declared `('proposed','confirmed','completed','cancelled')` — the same four-value pattern that
+     was wrong for `group_meetups` (ruling B). Its cited source `src/types/inviteMeetups.ts`
+     *does* exist, so the citation is sound, but the domain itself has not been swept.
+   - **Action:** Sweep against `src/types/inviteMeetups.ts` + `InviteMeetupsContext.tsx` before
+     migration.
+
 ---
 
 ## MIGRATION STRATEGY
@@ -1896,14 +2055,20 @@ erDiagram
 Before proceeding to Step 2 (implementation):
 
 - [x] All 19 v1 defects addressed with code evidence
-- [x] All 10 enum values cross-checked against TypeScript code
+- [x] All 10 enum values cross-checked against TypeScript code — ⚠️ **this line records the v2
+      claim, which was FALSE.** Four were wrong (fixed in v2.1) and three more tables were found
+      wrong by the follow-up sweep (fixed in v2.2). Treat "validated against code" as unproven
+      unless a `git grep` is quoted alongside it
+- [x] Open defects **A / B / C ruled by the user and corrected** against as-built code (v2.2)
+- [ ] `event_participant_applications` table existence confirmed — **open, see STILL OPEN below**
+- [ ] `invite_meetups.status` domain swept against code — **open, see STILL OPEN below**
 - [x] All user decisions applied (body slider removed, marketplace junction table, ID images split, etc.)
 - [x] All .docx files extracted and key excerpts documented
 - [x] All 18 AsyncStorage keys mapped to database tables/columns
 - [x] All 38 tables documented with provenance, indexes, constraints
 - [x] ERD diagram includes all domains and relationships
 - [x] Drift report documents v0.2.1 → as-built → v2 evolution
-- [x] Open decisions section updated (11 resolved, 6 deferred)
+- [x] Open decisions section updated
 - [x] Migration strategy documented
 - [x] Security notes for sensitive fields (passwords, payout, ID images, chat)
 - [ ] User approval received for v2 schema (WAITING)
@@ -1914,15 +2079,16 @@ Before proceeding to Step 2 (implementation):
 
 ## DOCUMENT METADATA
 
-- **Version:** 2.0
+- **Version:** 2.2
 - **Date:** Monday, September 28, 2026
 - **Author:** Kiro Agent
 - **Files Read:** 45+ TypeScript files, 2 .docx files, 15+ JSON data files
-- **Total Tables:** 38 (excluding 2 deferred)
+- **Total Tables:** 38 (excluding 2 deferred) — unchanged by rulings A/B/C, which removed *columns* only
 - **Total Domains:** 10
-- **Lines of Code Evidence:** 50+ grep outputs, 10 enum cross-checks
-- **Defects Fixed:** 19 (all with code evidence)
+- **Lines of Code Evidence:** 50+ grep outputs, 10 enum cross-checks, plus 6 raw `git grep` transcripts for rulings A/B/C
+- **Defects Fixed:** 19 (v2) + 4 enums (v2.1) + 3 open defects ruled and corrected (v2.2)
+- **Known-unverified:** `event_participant_applications` (table), `invite_meetups.status` (domain) — see STILL OPEN
 
 ---
 
-**END OF SCHEMA RECONCILIATION v2**
+**END OF SCHEMA RECONCILIATION v2.2**

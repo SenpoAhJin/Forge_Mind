@@ -1,7 +1,53 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Monday, September 28, 2026, 19:13 (v2.1 correction pass)  
+**Last updated:** Tuesday, September 29, 2026, 08:33 (v2.2: open defects A/B/C ruled and corrected)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Tuesday, September 29, 2026, 08:33 (Phase 3 Step 1b: v2.2 — Open Defects A/B/C Ruled and Corrected)
+
+**Phase:** Phase 3 (Backend & Data Services) — Step 1b  
+**Scope:** Design document only — still NO databases, tables, or migrations created.
+
+### What the user decided
+
+The three tables the previous pass had flagged as "wrong, but a design decision, not a typo" have now
+been ruled on. The ruling in every case was the same: **delete the invented thing — do not invent a
+replacement value set to fill the hole.**
+
+| | What we had documented | What the app actually has | What we did |
+|---|---|---|---|
+| **A** | An `applicant_type` field on event applications, with four possible values | **No such field anywhere.** No event-application feature exists in the app at all | **Deleted the column.** Did not invent new values for it |
+| **B** | A `status` field on group meetups, with four possible values | The meetup type has **no status field**. There is no "proposed / confirmed / done" state for a meetup | **Deleted the column, its rule, and its index.** Rebuilt the table to match the real code |
+| **C** | Meetup RSVPs could be "pending / attending / declined" | The real values are **"going / maybe / declined"** | **Corrected the rule** to the real values. Also removed a scheduling-priority field that doesn't exist, and fixed a citation to a file that was never real |
+
+### Why this matters
+
+The v2 report had claimed all ten enum lists were checked against the code. That claim turned out to
+be false, which is why the schema doc now says: **treat any "validated against code" statement as
+unproven unless a `grep` result is printed next to it.** The corrections above all have that proof
+attached, and the raw `git grep` transcripts are pasted into the schema doc so anyone can re-run them.
+
+### Also corrected
+
+- **Wrong line count in the changelog.** An earlier entry said the schema doc was "1,460 lines".
+  That was the count of lines *with text in them*; the real total was **1,888**. Both numbers were
+  about the same file at the same commit — the label was simply wrong. The file is **2,094 lines**
+  now, and the growth is entirely the correction notes above. Nothing was duplicated.
+- **A timestamp that had not happened yet.** An earlier entry was stamped "23:30" when the actual
+  time was **19:01** (taken from that work's own commit timestamp). Corrected.
+- Two other overstated line counts in older entries ("10,000+ lines" for v1, which was really 1,567)
+  were also corrected, along with the three enum lists in the v2 entry that were later found to be
+  invented. Those are marked in place rather than deleted, so the record stays honest about what was
+  claimed at the time.
+
+### Still open — we did not quietly resolve these
+
+- **Does the "event applications" table exist at all?** Ruling A removed one column, but the rest of
+  that table was never checked against the app. It is marked *do not migrate* until decided.
+- **The "status" values on join-by-code meetups** have the same four-value pattern that was wrong for
+  group meetups. Not yet checked.
 
 ---
 
@@ -164,7 +210,24 @@ Schema v2.1 is **not** yet approved for migration generation.
 
 ---
 
-## Session — Monday, September 28, 2026, 23:30 (Phase 3 Step 1b: Database Schema v2 Revision)
+## Session — Monday, September 28, 2026, 19:01 (Phase 3 Step 1b: Database Schema v2 Revision)
+
+> **⏱️ Timestamp corrected (was "23:30").** 23:30 had not yet happened when this entry was
+> written. The real time is **19:01**, taken from this work's own git commit:
+> `ac63adf` — `2026-09-28 19:01:52 +0800`. (For clarity: **19:13** is the *v2.1 correction pass*
+> in the entry above, commit `366bd66` at `19:13:54` — a separate, later session. The two are not
+> the same entry.)
+>
+> **📏 Line count corrected.** This entry previously said the schema doc was "1,460 lines". That
+> was a **non-blank-line count, not a line count**. The v2 file was **1,888 lines total**
+> (1,460 non-blank). Both figures were true of commit `ac63adf`; the label was wrong. After the
+> v2.1 and v2.2 correction passes the file is now **2,094 lines**. No content was duplicated or
+> bloated — see the breakdown under the 19:13 entry.
+>
+> **⚠️ Two claims in this entry are known to be FALSE and were corrected in later passes:**
+> the "all 10 enums validated against code" line below, and the enum values it lists for
+> `events.status`, `participant_kind` and `parking_needs`. See the 19:13 and 19:13-following
+> entries. This entry is left as-written as a record of what was claimed at the time.
 
 **Phase:** Phase 3 (Backend & Data Services) — Step 1b: Schema revision fixing 19 defects  
 **Scope:** Design document only — NO databases, tables, or migrations created yet.
@@ -177,7 +240,8 @@ Schema v2.1 is **not** yet approved for migration generation.
 - User decisions on open questions
 
 **Documents created:**
-- `docs/database/SCHEMA_RECONCILIATION.md` v2 (1,460 lines)
+- `docs/database/SCHEMA_RECONCILIATION.md` v2 (1,888 lines — **previously mislabelled "1,460 lines",
+  which was the non-blank-line count**)
 - `docs/database/SCHEMA_V2_REVISION_LOG.md` (detailed fix documentation)
 
 **Key v2 changes:**
@@ -214,15 +278,21 @@ Schema v2.1 is **not** yet approved for migration generation.
 - ✅ `ForgeMind_Overall_Data_Information.docx` (1,428 words extracted)
 
 **Enum cross-check (all 10 validated against code):**
+
+> ⛔ **This claim was FALSE.** Four of these ten were wrong. The values listed for
+> `Event status`, `Participant kind` and `Parking needs` below were invented and have no source
+> in the app. Corrected in the v2.1 pass (see the 19:13 entry). Kept verbatim as a record of what
+> was claimed at the time.
+
 - ✅ Departments: logistics, programs, sponsorship, secretariat, technical_production, marketing
 - ✅ Theme presets: purple, blue, pink, green, orange
 - ✅ Listing status: active, sold, cancelled, blocked
 - ✅ Screening result: passed, blocked
 - ✅ Marketplace condition: new, like_new, good, fair, well_loved
 - ✅ Offer status: pending, accepted, declined, withdrawn
-- ✅ Event status: draft, confirmed, ongoing, completed, cancelled
-- ✅ Participant kind: guest, sponsor, performer
-- ✅ Parking needs: yes, no, accessible
+- ❌ **WRONG → corrected to `draft, confirmed, cancelled`** — `ongoing` and `completed` have zero matches in `src/`
+- ❌ **WRONG → corrected to `confirmed_guest, sponsor, performer`** — `guest` was not the value
+- ❌ **WRONG → corrected to `none, standard, accessible`** — `yes/no/accessible` was not the value
 - ✅ Chat thread status: open, closed
 
 **Environment status:**
@@ -281,7 +351,8 @@ Schema v2.1 is **not** yet approved for migration generation.
 
 **Comprehensive PostgreSQL schema design document** covering all 10 domains, with full provenance tracking, drift analysis, and migration recommendations.
 
-**Document created:** `docs/database/SCHEMA_RECONCILIATION.md` (10,000+ lines)
+**Document created:** `docs/database/SCHEMA_RECONCILIATION.md` (1,567 lines — **this entry previously
+claimed "10,000+ lines", which was false**; 1,191 non-blank)
 
 **Domains designed:**
 1. Identity/Authentication (users, sessions, email OTP, holder verification)
