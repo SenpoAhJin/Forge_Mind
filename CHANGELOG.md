@@ -1,7 +1,142 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Tuesday, September 29, 2026, 09:59 (Phase 3: database actually built, filled, and checked)  
+**Last updated:** Tuesday, September 29, 2026, 12:53 (Phase 3 Step 3: real sign-up, sign-in, and sign-out)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Tuesday, September 29, 2026, 12:53 (Phase 3 Step 3: Real Sign-Up, Sign-In, and Sign-Out)
+
+**Phase:** Phase 3 (Backend & Data Services)
+**Scope:** The three account actions — create account, log in, log out — now use the real database instead of pretending. Passwords are scrambled before being saved, and a real sign-in ticket is issued and then withdrawn.
+
+### The short version
+
+Last session built the database and pointed out that the app's sign-up and sign-in screens were still
+fake: they saved your details on your own phone and called it a login, including writing your actual
+password in plain readable text. This session replaced that with the real thing.
+
+The app now sends your details to the server, the server checks them against the real database, and
+only then lets you in. Your password is scrambled with a one-way method before it is saved, so even
+someone who gained direct access to the database could not read it. Logging in gives you a long
+random ticket; the app keeps it, and logging out tells the server to throw it away so it stops
+working.
+
+This was checked in a real browser, against the real server and the real database — not by reading the
+code and hoping.
+
+### What was built
+
+**Three new server endpoints** in the backend project (`forgemind-backend/`), each in its own file
+under `src/auth/`:
+
+| What you do | What the server does | What comes back |
+|---|---|---|
+| Create an account | Checks the details, scrambles the password, saves the account | The account, with no password attached |
+| Log in | Compares your password against the scrambled copy, issues a ticket | The account plus a sign-in ticket |
+| Log out | Throws the ticket away | Confirmation that it is done |
+
+**Passwords are genuinely scrambled now.** A method called *bcrypt* is used, which is deliberately
+slow and one-way: it cannot be reversed to reveal the original password. The cost setting is 12, so
+each password takes real effort to scramble and an attacker cannot test millions of guesses quickly.
+
+**Sign-in tickets are scrambled too.** Logging in gives you a long random code (64 characters). The
+server never keeps that code. It keeps only its SHA-256 fingerprint — like a fingerprint of a hand
+rather than the hand itself. Logging out deletes the fingerprint, which instantly makes the ticket
+useless. We confirmed this by hand: the fingerprint in the database matched the ticket the app held,
+and after logging out the row was gone.
+
+**Nothing about you leaks by accident.** The server returns a fixed, deliberate list of fields. The
+password column is not on that list, so it cannot come back even by mistake. We checked the server's
+own source to confirm the password column name is never selected.
+
+**Failed logins tell you nothing useful.** An email that does not exist and a wrong password both give
+the same "email or password is incorrect" message, so the form cannot be used to discover which emails
+have accounts. We also added a decoy scramble for unknown emails, so a wrong email does not answer
+noticeably faster than a wrong password and give the trick away.
+
+**Clean errors instead of crash pages.** Malformed data now returns a plain "invalid JSON" message
+rather than dumping an internal error page.
+
+**The app can find the server.** A new config file reads the server address from an environment
+setting, so the address is not buried in the code. Example files were added in both projects showing
+what to fill in. The real files holding your local addresses are ignored by Git, so they cannot be
+committed or shared by accident.
+
+### What was verified, and how
+
+Checked two ways: by calling the server directly, and by genuinely using the app in a real browser.
+
+| Check | Result |
+|---|---|
+| Server only: create a new account | Works — the account appears in the database |
+| Server only: email already in use | Correctly refused, with a clear message |
+| Server only: required details left out | Correctly refused, saying what is missing |
+| Server only: log in with the right password | Works — a ticket is issued |
+| Server only: log in with the wrong password | Refused, without revealing which part was wrong |
+| Server only: log in with an email that does not exist | Refused, with the identical message |
+| Server only: log out | Works — the ticket is destroyed |
+| Server only: reuse a ticket after logging out | Refused — the ticket no longer works |
+| Server only: submit broken data | Refused cleanly, no internal details leaked |
+| Database: look at the saved password | Scrambled, 60 characters, begins `$2b$12$` |
+| Browser: create an account | Real request to the server, success message shown |
+| Browser: log in starting from a completely empty app | Real request, ticket issued, app opens |
+| Browser: log out | Real request, ticket destroyed, back at the sign-in screen |
+| Database: count the tickets left after logging out | Zero — confirmed directly in the database |
+
+Both projects were also checked for type errors and pass cleanly.
+
+### The one thing that needed a decision
+
+The body-size slider has no column in the approved database design, and we did not invent one. So the
+slider still saves on your own phone exactly as before, and the server does not know it exists. Every
+other part of your profile now comes from the server. This is a real gap and is listed below.
+
+Organizer roles, staff departments, marketplace details, and portfolio photos were also left on the
+phone, because this session was scoped to sign-up, sign-in, and sign-out. Those still work and are
+still saved — but they do not yet follow you to a new device either.
+
+### Honest notes about what is still imperfect
+
+- **The body-size slider is not on the server.** It saves on your phone only, so if you sign in on a
+  different device your body size will not follow you. Everything else does. This needs a design
+  decision before it can be fixed.
+- **The old fake sign-in file has been deleted.** There used to be two files with the same name, one
+  ending `.ts` and one ending `.js`. The app loads the `.ts` one — we checked the app's own
+  file-loading order to be certain — so the old one was doing nothing, but it still contained the
+  old pretend sign-in with a password stored in readable text. It has now been removed so it can
+  never be loaded by mistake.
+- **A leftover path can still write a password in plain text.** During the very first onboarding, the
+  app still puts your password into the field meant to hold a scrambled password, and a later save
+  could write that to your phone. This path predates this session and is only reached in an unusual
+  case (an account where neither role was chosen). It is **not** part of the real sign-up and sign-in
+  we built. We left it alone rather than change screens outside this task, but it should be cleaned up.
+- **Seeded sample accounts still cannot log in.** Unchanged from last session: their password field
+  holds a deliberately unusable marker so they can own the sample data.
+- **The listing-screener AI was not touched.** Still planning-only, exactly as before.
+
+### Files changed
+
+Backend project (`forgemind-backend/`):
+
+- `src/auth/router.ts` — the three account endpoints, issuing and cancelling tickets
+- `src/auth/crypto.ts` — password and ticket scrambling
+- `src/auth/validation.ts` — checking that submitted details are sensible
+- `src/auth/publicUser.ts` — the exact list of fields allowed to be sent back
+- `src/config.ts` — how long a ticket lasts, and which websites may connect
+- `src/index.ts` — attaching the account endpoints to the server, and clean error handling
+- `.env.example` — example settings
+- `package.json` / `package-lock.json` — the two new tools this needed
+
+Mobile project (`forgemind-mobile/`):
+
+- `src/services/AuthService.ts` — the app now uses the real server for create account, log in, log out
+- `src/services/AuthService.js` — **deleted**; the old pretend sign-in, superseded by the `.ts` file
+- `src/config/api.ts` — new; reads the server address from the environment setting
+- `.env.example` — example settings
+
+No screens, buttons, or wording were changed. The sign-up and sign-in forms you already approved look
+and behave exactly as before — only where the data goes changed.
 
 ---
 
