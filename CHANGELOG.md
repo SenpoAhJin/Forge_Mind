@@ -1,7 +1,90 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Tuesday, September 29, 2026, 08:33 (v2.2: open defects A/B/C ruled and corrected)  
+**Last updated:** Tuesday, September 29, 2026, 09:59 (Phase 3: database actually built, filled, and checked)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Tuesday, September 29, 2026, 09:59 (Phase 3: The Database Now Actually Exists)
+
+**Phase:** Phase 3 (Backend & Data Services)
+**Scope:** A real database was created, filled with data, and independently checked. Until now, the schema existed only as a design document.
+
+### The short version
+
+Last time we settled what the tables should look like. This time we **built them**. All 38 tables now
+exist for real in a live PostgreSQL database, and 58 rows of the app's existing sample data have been
+loaded into them and read back to confirm it worked.
+
+The database lives in its own project folder, `forgemind-backend/`, with its own GitHub repository at
+<https://github.com/SenpoAhJin/forgemind-backend>. It is **separate** from the mobile app's repository.
+Neither one was merged into the other, and the mobile app's history was not rewritten.
+
+### What was built
+
+- **Ten build scripts, one per subject area.** Each subject area (sign-in, catalogue, events,
+  marketplace, and so on) is its own file, so you can see exactly which change belongs where.
+- **All 38 tables**, matching the approved design. Verified count from the live database: 38.
+- **58 sample rows** loaded and confirmed present in the live database:
+
+  | What | Rows | | What | Rows |
+  |---|---|---|---|---|
+  | Users | 8 | | Events | 3 |
+  | Characters | 4 | | Marketplace listings | 6 |
+  | Character versions | 12 | | Owned clothing & items | 3 |
+  | Allowed listing categories | 5 | | Projects | 2 |
+  | Project tasks | 8 | | Project budget lines | 7 |
+
+### Three more corrections we found while building
+
+Building the tables forced us to compare every single column against the real app code. That surfaced
+**three more places where the design document did not match the app.** We stopped and asked, and the
+corrections were approved:
+
+| | What the design document said | What the app actually has | What we did |
+|---|---|---|---|
+| **1** | An event's end date and city were **required** | Both are **optional** — the app lets you leave them blank, and one existing sample event already has no end date | **Made them optional.** The required version would have rejected events the app itself creates |
+| **2** | Every event must record a full street address | **No such field exists anywhere in the app.** A full-text search found the word only inside the design documents themselves, never in the app | **Removed the field.** Keeping it would have forced every event to invent an address that no screen collects or shows |
+| **3** | Listings had no field for "is this a sale, a trade, or either" | The app has this field, saves it, and **uses it to block invalid offers** — e.g. you cannot offer to buy something that is trade-only | **Added the field**, plus a rule enforcing the app's own rule: sale and either-type listings must have a price above zero; trade-only listings may be zero |
+
+Correction 3 adds **one column to an existing table**. It does not add a table, so the total stays
+at 38.
+
+### Two things we deliberately did **not** fix
+
+You asked us to leave these for the next design pass rather than invent a solution, so we did. They are
+recorded here so they are not forgotten:
+
+1. **`match_components.json` has nowhere to live.** The app has a small file listing "which parts of a
+   costume match this character version," but the approved database has no table for it. The data was
+   **not loaded and nothing was invented** to hold it.
+2. **Two event fields have nowhere to live.** The app records *who* confirmed or cancelled an event by
+   email address. The database stores only *when* it happened, not *who*. That information was **not
+   loaded and nothing was invented** to hold it.
+
+### Two things that had to be set up before the database could be built
+
+Both were fixed during this session, and both are recorded because they are easy to hit again:
+
+1. **The app's login account was not allowed to build tables.** PostgreSQL 15 and later removed a
+   default permission that had quietly let any account create tables. The app account has database
+   access but was refused permission to create anything. One permission was granted by the database
+   administrator. **The app account was never given administrator rights**, and the app's own account
+   password was never printed, logged, or sent into a file that gets saved.
+2. **A duplicated password setting.** The settings file held the password twice — once as a plain
+   setting, once embedded inside a longer connection line. When the password was changed, the longer
+   line kept the old value and silently caused a "wrong password" error. The duplicated line was
+   **removed entirely**, and the connection is now assembled from the individual settings every time,
+   so the two can never disagree again.
+
+### Honest notes about what is still imperfect
+
+- **Seeded sample accounts cannot log in.** Their password field holds a deliberately unusable marker
+  rather than a real password. They exist only to give the sample data a valid owner.
+- **Five indexes are duplicated.** Four columns are protected both by an inline "must be unique" rule
+  and by a separately created index doing the same job. This is harmless — it only costs a tiny amount
+  of extra disk and write time — but it is untidy and should be cleaned up in a future pass.
+- **The listing-screener AI was not touched.** It remains planning-only, exactly as before.
 
 ---
 
