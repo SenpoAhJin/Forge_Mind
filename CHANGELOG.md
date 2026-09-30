@@ -84,7 +84,7 @@ is how history gets lost.
 
 ### Commits
 
-- `PENDING` - filled in immediately after the commit, in a small follow-up commit.
+- `33edab7` - filled in immediately after the commit, in a small follow-up commit.
 
 ### Files changed
 
