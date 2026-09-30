@@ -45,7 +45,7 @@ shipped two broken call sites.
   Nothing here was re-tested on a device, because nothing here is device-observable; the
   counts are static properties of the source.
 
-**Commits** — `PENDING`
+**Commits** — `4ccc089`
 
 **Note on how these got wrong**
 
