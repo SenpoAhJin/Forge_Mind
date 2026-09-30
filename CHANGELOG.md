@@ -5,6 +5,109 @@
 
 ---
 
+## Session — Wednesday, September 30, 2026, 17:55 (Phase 1: Target SQLite Schema, AsyncStorage Inventory, and Migration Plan)
+
+**Date:** Wednesday, September 30, 2026, 17:55
+**Phase:** Phase 1 (Scope & Database) - design only, nothing migrated
+**File created:** `docs/DATABASE.md`
+
+**What we did:** Wrote down what the app stores today, key by key, and designed the normalised
+SQLite schema it should store it in instead - with a migration order, a risk rating and a rollback
+for each step. **No database was created, no dependency was added, and no stored data was read,
+written, moved, or deleted.**
+
+### The inventory, and two corrections to it
+
+Every AsyncStorage key the app uses is listed with its shape, its owner, and who can read and write
+it - quoted from the code, not inferred. That audit turned up more than the count suggested:
+
+- **`owned_attire` leaks across accounts.** The key has no user suffix, and the context hands the
+  raw array to every consumer, so account A can see and delete account B's inventory on the same
+  phone. This is the strongest argument in the document for partitioning by owner.
+- **Identity is the email address, not an id.** `StoredAccount` has no `user_id`, and the address is
+  compared case-insensitively in one place and case-sensitively in another. Two keys are built from
+  the raw, un-normalised address, so a casing change silently resets notification state. One service
+  even synthesises an id by taking the part of the email before the `@`. **The migration must
+  normalise every address to lowercase and resolve those fake ids before any table is created**, or
+  every foreign key will point at nothing.
+- **`clearAllData()` has never worked.** It filters on `@ForgeMind:` and `FM_`, but every real key
+  is lowercase `@forgemind:`. That is why stale test data could never be cleared.
+- **Two renamed keys are still on people's phones.** `@forgemind:logistics` and
+  `@forgemind:current_user` were replaced without a migration, so upgraded devices are carrying
+  orphaned rows nobody reads, including an old copy of an account object. Both are now on the
+  deletion list, with a backup first.
+
+Two counting errors in the first draft were corrected against the source: the number of broken keys
+(three, not five - and two *other* underscore keys are live and must not be "tidied"), and the
+on-disk key count, which is 20 fixed keys plus two per-email keys, so 22 plus twice the number of
+accounts.
+
+### The schema
+
+46 tables, each tagged with how it behaves when there is no network. The split matters: accepting an
+offer is an online-only action, because first-accepted-wins has to be decided in one place, while a
+logistics field filled in on a bus has to save offline. Getting that wrong in either direction is a
+defect - one direction produces a purchase nobody can complete, the other loses a plate number.
+
+**Every syncable table carries the same six columns** - client id, created, updated, version, deleted,
+sync state. The first draft broke this on the append-only tables, which was wrong: the rule was
+stated as universal, so the columns are there and documented as structurally fixed instead. A new
+**§3.11** now checks all 36 syncable tables against the six columns one row at a time, so the
+compliance can be audited rather than taken on trust. The ten class-A tables that are exempt are
+listed with a reason each, so the exemption is visible too.
+
+Also caught while writing it: a foreign key in the category-mapping table pointed at a column that
+was never unique, which SQLite would have rejected outright. The index it needed is now in the DDL.
+
+### The migration plan
+
+Fifteen steps, each with a risk rating and a rollback, and one safety property that makes the whole
+thing survivable: **AsyncStorage is never deleted during the migration.** Every step reads,
+transforms, writes, and verifies. Only one late step removes anything, and only after every table's
+row count matches what was imported.
+
+The most important step is not a data import at all. **Projects are never persisted anywhere** - no
+key, no table, just `useState` - so there is nothing to migrate. That single gap orphans the diary's
+project link, the owned-attire commitment, and the meetup grouping, and the plan therefore writes
+the flush *before* the cutover or live project data is lost in the upgrade.
+
+### Verification
+
+- `npx tsc --noEmit` - **clean, exit 0**.
+- Every key in the inventory was confirmed by searching the source, not by reading the older
+  documents. Two keys listed as dead in the earlier reconciliation document turned out to be live.
+- The five seed-data rows with dangling event references and the six demo listings owned by
+  non-existent accounts are catalogued as data bugs that exist today, independent of the migration.
+
+### Not tested, and not claimed
+
+- **The schema has never been executed.** Not one `CREATE TABLE` statement has been run. It is a
+  proposal.
+- **iOS: NOT TESTED. Android: NOT TESTED. Web: NOT TESTED.** No device, no simulator, no emulator,
+  no browser. The claim that `expo-sqlite` works in Expo Go is taken from the versioned Expo
+  documentation, and is scheduled as the very first thing to confirm before anything else in the
+  plan is attempted.
+
+### Not part of this session
+
+- `expo-sqlite` was **not** added to `package.json`. It needs your approval.
+- No migration was run. No AsyncStorage key was read, written, or deleted.
+- No decision was made on the ten items marked as needing one. The defaults are stated so you can
+  simply say "use the defaults", but the choice stays yours.
+- No backend change. The nine gaps the server has to close before any of this can sync - no auth
+  middleware, no sync endpoint, no screener, no transaction helper - are listed, not fixed.
+
+### Commits
+
+- `PENDING` - filled in immediately after the commit, in a small follow-up commit.
+
+### Files changed
+
+- `docs/DATABASE.md` - new
+- `CHANGELOG.md` - this entry
+
+---
+
 ## Session — Wednesday, September 30, 2026, 17:55 (Phase 1: Scope, Discrepancy Audit, and Body-Size Cleanup Proposal)
 
 **Date:** Wednesday, September 30, 2026, 17:55
