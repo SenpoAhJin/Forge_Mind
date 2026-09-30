@@ -87,7 +87,7 @@ discards the WebGL errors that would explain a device-specific 3D crash.
 
 ### Commits
 
-- `PENDING` - filled in immediately after the commit, in a small follow-up commit.
+- `a32dfa0` - filled in immediately after the commit, in a small follow-up commit.
 
 ### Files changed
 
