@@ -109,7 +109,7 @@ buttons on `LoginScreen` and `RegisterScreen` are the retry.
 - **Windows Firewall behaviour** — not touched, not tested. A denied inbound prompt still
   presents as "Can't reach the server".
 
-**Commits** — `PENDING` (mobile; backend is `64c042d`)
+**Commits** — `8f06c61` (mobile; backend is `64c042d`)
 
 **Not changed, deliberately**
 
