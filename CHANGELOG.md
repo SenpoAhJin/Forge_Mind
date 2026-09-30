@@ -1,7 +1,122 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, September 30, 2026, 19:40 (Step A: system report — real architecture, network, backend, and the Postgres/SQLite split)  
+**Last updated:** Wednesday, September 30, 2026, 22:10 (Fix: physical phones could not reach the backend)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, September 30, 2026, 22:10 (Fix: physical phones could not reach the backend — "Failed to connect to localhost/127.0.0.1:3000")
+
+**Symptom**
+
+Registering from a physical Android phone in Expo Go failed with:
+
+```
+[AuthService] Login failed: fetch failed: java.net.ConnectException:
+Failed to connect to localhost/127.0.0.1:3000
+```
+
+The same build worked in a PC browser.
+
+**Cause**
+
+`localhost` means "the machine running this code". That is correct on the web and on the
+iOS simulator, which share the host's loopback, and wrong everywhere else: on a phone it is
+the phone. `src/config/api.ts` read `EXPO_PUBLIC_API_URL` and trusted it verbatim, and
+`.env.local` is set to `http://localhost:3000` — correct for the two environments that
+already worked, guaranteed to fail on the device the demo actually runs on.
+
+**Files changed**
+
+- `src/config/api.ts` — rewritten as the single place a backend URL is built
+- `src/services/AuthService.ts` — timeout 15s → 10s; transport failures now report a
+  network message instead of a generic one
+- `package.json`, `package-lock.json` — `expo-constants` promoted from a transitive
+  dependency to a direct one
+- `.env.example`, `README.md` — how the address is resolved, and when to override it
+
+**How the base URL is now resolved**
+
+`src/config/api.ts` is the only file that builds a backend URL. Resolution order:
+
+1. `EXPO_PUBLIC_API_URL`, **if set and not a loopback address on native**
+2. native: `http://<Metro host>:3000`, read from `expo-constants`
+3. web: `http://localhost:3000`
+4. Android emulator: `http://10.0.2.2:3000`
+
+Rule 2 is the fix. On a physical device we ask Metro which host it is serving. That host
+is by definition the PC that just delivered the JS bundle, so it is reachable without any
+manual configuration, and it follows the network when the PC's address changes. The IP no
+longer has to be edited by hand.
+
+A **loopback `EXPO_PUBLIC_API_URL` is deliberately ignored on native**, because it is the
+exact value that cannot work there. Leaving `.env.local` at `http://localhost:3000` is
+therefore safe: web and the iOS simulator use it, the phone ignores it in favour of rule 2.
+Anyone who has already set a LAN IP keeps it — rule 1 still wins.
+
+The resolved URL and the rule that produced it are logged once in dev only:
+`[api] backend base URL: http://192.168.254.168:3000 (source: Metro hostUri; platform: android)`.
+
+**The generic error is fixed too**
+
+`errorMessage()` already relayed the server's own message correctly, and the server already
+distinguishes 401 from 409. Both were being thrown away, because a transport failure never
+produces a `Response` to pass in — it throws. So "wrong password", "email already taken"
+and "the phone cannot see the PC" all rendered as the same sentence.
+
+A new `transportErrorMessage()` handles the thrown path, and a thrown fetch or an
+`AbortError` no longer masquerades as a credential problem. The
+`!IS_API_URL_CONFIGURED` condition that overrode a genuine 401 with a connection message has
+been removed — with `.env.local` present it was dead code, and without it it would have
+mislabelled a real auth error. The `{ success, error }` return shape is unchanged; the
+buttons on `LoginScreen` and `RegisterScreen` are the retry.
+
+**Backend** (committed separately as `64c042d` in `forgemind-backend`)
+
+- `app.listen` now binds `0.0.0.0` explicitly via `config.host` (`HOST` env, default
+  `0.0.0.0`) instead of relying on Node's unspecified-address default.
+- CORS accepts private-LAN origins on Expo dev ports (8081/19006/8082) alongside the
+  explicit `CORS_ORIGINS` list, because a browser opened on the LAN IP has an origin that
+  cannot be written down ahead of time. It remains an allowlist: a public origin, or a LAN
+  host on a non-Expo port, is still refused.
+- The startup banner prints every reachable URL, including the LAN one the phone will use.
+- **`GET /health` already existed** (`src/index.ts`) and already returned `status: "ok"`. It
+  was not duplicated. It additionally reports the database and role, which is more useful
+  than a bare `ok`.
+
+**Verification — what actually ran**
+
+- `npx tsc --noEmit` (mobile) — exit 0. `npm run typecheck` (backend) — exit 0.
+- Backend started and bound `0.0.0.0:3000`; banner printed
+  `phone / LAN: http://192.168.254.168:3000`.
+- `GET /health` over **loopback and over the LAN address** — both
+  `{"status":"ok","database":"forgemind_dev","role":"forgemind_app"}`.
+- CORS: LAN origin on 8081 → allowed, echoed back. Public origin `evil.example.com:8081` →
+  refused. LAN origin on port 9999 → refused. An origin-less request (what native `fetch`
+  sends) → allowed.
+- Auth over the LAN address: register 201, duplicate register 409 `email_taken`, wrong
+  password 401 `invalid_credentials`, correct password 200 with a `session_token`.
+- The smoke-test user created by that check was deleted; the 8 seeded rows and your 4 real
+  accounts are untouched. The backend process was stopped afterwards.
+
+**NOT TESTED (2026-09-30)**
+
+- **iOS device / simulator** — the resolution logic was not exercised on either.
+- **Android device / emulator** — the phone path that motivated this fix was not run by me.
+  Evidence is the LAN requests above plus the Metro-host derivation, not an observed login.
+- **Expo web preview** — not run; CORS was verified with direct `Invoke-WebRequest` calls,
+  not from a browser.
+- **Windows Firewall behaviour** — not touched, not tested. A denied inbound prompt still
+  presents as "Can't reach the server".
+
+**Commits** — `PENDING` (mobile; backend is `64c042d`)
+
+**Not changed, deliberately**
+
+No auth logic, no business rules, no schema, no stored data, no firewall or network
+settings. The offline/demo-mode work in Step B of the system report — seeded offline
+accounts, an offline banner, a forced-offline switch — is **not** part of this entry and
+has not been started.
 
 ---
 

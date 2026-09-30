@@ -16,7 +16,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { authUrl, IS_API_URL_CONFIGURED } from '../config/api';
+import { authUrl, API_BASE_URL } from '../config/api';
 import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
 
 // Storage keys
@@ -27,7 +27,7 @@ const STORAGE_KEYS = {
 } as const;
 
 /** Request timeout for auth calls, in ms. */
-const AUTH_TIMEOUT_MS = 15000;
+const AUTH_TIMEOUT_MS = 10000;
 
 /** Shape of `user` as returned by GET-style auth responses. */
 interface ApiUser {
@@ -148,8 +148,11 @@ export class AuthService {
   }
 
   /**
-   * Turns an error response into the single human-readable string the existing
+   * Turns an error RESPONSE into the single human-readable string the existing
    * screens already render via `result.error`.
+   *
+   * Only reached when the server answered. A transport failure never produces a
+   * Response — it throws — and is handled by `transportErrorMessage` instead.
    */
   private static async errorMessage(response: Response): Promise<string> {
     let message = 'Something went wrong. Please try again.';
@@ -161,10 +164,30 @@ export class AuthService {
     } catch {
       // Non-JSON error body: keep the generic message.
     }
-    if (response.status === 0 || !IS_API_URL_CONFIGURED) {
-      message = 'Cannot reach the server. Check your connection and try again.';
+    if (__DEV__) {
+      console.warn(
+        `[AuthService] server replied ${response.status} for ${API_BASE_URL}: ${message}`,
+      );
     }
     return message;
+  }
+
+  /**
+   * Turns a THROWN fetch into a message that says the network is the problem,
+   * not the user's password.
+   *
+   * This is the distinction that was missing. `fetch` rejects for a refused
+   * connection, an unreachable host, or our own AbortController timeout, and in
+   * every one of those cases the server said nothing at all — so there is no
+   * 401 to report and no server message to relay. Reporting "login failed" here
+   * is what made a Wi-Fi problem look like a typing mistake.
+   */
+  private static transportErrorMessage(error: unknown): string {
+    const name = (error as { name?: string } | null)?.name;
+    if (name === 'AbortError') {
+      return 'The server took too long to answer. Check that your phone and PC are on the same Wi-Fi, then try again.';
+    }
+    return "Can't reach the server. Check that your phone and PC are on the same Wi-Fi.";
   }
 
   /** Best-effort device description stored in sessions.device_info. */
@@ -297,7 +320,7 @@ export class AuthService {
       return { success: true, account };
     } catch (error) {
       console.error('[AuthService] Registration failed:', (error as Error).message);
-      return { success: false, error: 'Failed to create account. Please try again.' };
+      return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
 
@@ -340,7 +363,7 @@ export class AuthService {
       return { success: true, account };
     } catch (error) {
       console.error('[AuthService] Login failed:', (error as Error).message);
-      return { success: false, error: 'Login failed. Please try again.' };
+      return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
 

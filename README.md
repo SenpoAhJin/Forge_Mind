@@ -37,6 +37,41 @@ npm run android  # Android emulator
 npm run web      # Web browser (fastest for testing — recommended)
 ```
 
+### Connecting to the backend from a physical phone
+
+Auth (sign-up / sign-in) is the only feature that talks to a server. On a physical
+phone the app derives the backend address from Metro automatically, so **no manual IP
+editing is required**. Do not set the URL to `localhost` for a device — `localhost`
+means the phone itself.
+
+To make the backend reachable:
+
+1. Start the backend on the same machine as Metro. It binds `0.0.0.0` and prints
+   every URL it is reachable at, including the LAN one the phone will use:
+   ```bash
+   cd ../forgemind-backend
+   npm run dev
+   # forgemind-backend listening on 0.0.0.0:3000 (development)
+   #   phone / LAN:  http://192.168.1.5:3000
+   ```
+2. Phone and PC must be on the **same** Wi-Fi or hotspot. Windows Firewall must allow
+   inbound Node.js traffic on a private network.
+3. Start Metro and open the project in Expo Go:
+   ```bash
+   npx expo start
+   ```
+
+The resolved address is printed once in the terminal and in the device log as
+`[api] backend base URL: ... (source: ...)`. If sign-in reports "Can't reach the
+server", read that line first — the `source` tells you which rule was used.
+
+To pin an address manually, set `EXPO_PUBLIC_API_URL` in `.env.local` and restart
+with the cache cleared, because the value is inlined into the bundle at build time:
+
+```bash
+npx expo start -c
+```
+
 ---
 
 ## Project Structure
