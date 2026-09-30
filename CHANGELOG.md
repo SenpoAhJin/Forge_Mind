@@ -5,6 +5,111 @@
 
 ---
 
+## Session — Wednesday, September 30, 2026, 19:40 (Step A: System Report — real architecture, network, backend, and the Postgres/SQLite split)
+
+**Files changed**
+
+- `docs/SYSTEM_REPORT.md` (new, 580 lines)
+
+**What this is**
+
+The first report that describes what the system actually is, as opposed to what any single
+document claims it should be. Everything in it was read out of the code, the live database, or
+the two source-of-truth `.docx` files. Nothing was inferred from a previous report of mine.
+
+**The eight things it establishes**
+
+1. **One network call exists in the entire app.** A single `fetch()` at
+   `src/services/AuthService.ts:140`, wrapped once, used by exactly three endpoints:
+   `POST /auth/register`, `/auth/login`, `/auth/logout`. No `axios`, no `WebSocket`, no
+   `XMLHttpRequest`, no realtime library anywhere in `src/`.
+
+2. **Flask is completely disconnected.** No screen, service, or util references port 5000,
+   `/api/match`, or `forgemind-ai`. Zero of the 65 screens need it. I searched for three
+   plausible strings and every hit was a false positive: the `15000` timeout constant, the
+   word "matcher" inside a prose field in `variants.json`, and a comment in
+   `listingScreener.ts` saying real classification is Phase 4 work.
+
+3. **`EXPO_PUBLIC_API_URL=http://localhost:3000` cannot work on a phone.** It works on the
+   iOS simulator and on web, which share the host's loopback. It fails on an Android emulator
+   (`localhost` is the emulator) and on any physical device (the phone's own loopback). The
+   demo target is a physical phone, so the current value guarantees the reported
+   "Failed to fetch" on the device the demo actually runs on.
+
+4. **The backend already binds all interfaces.** `src/index.ts:66` passes no host argument, so
+   Node binds the unspecified address. The real obstacles to reaching it from a phone are the
+   Windows Firewall prompt and LAN/hotspot membership, not the code.
+
+5. **The migrations have been run, and the seed has been run.** I queried `pgmigrations`
+   live: all 10 migrations recorded at `2026-09-29 09:57:01.413269`. 38 tables exist; 10 hold
+   data, 28 are empty. The seeded data is the app's own mock dataset, loaded with deterministic
+   UUIDv5 ids so re-running is idempotent.
+
+6. **No seeded account can log in — by design.** `seed.ts:256` writes the literal
+   `!SEED_ACCOUNT_CANNOT_AUTHENTICATE` into `password_hash`. So even with the backend up and
+   reachable, there is no seeded Cosplayer, Head Organizer, or Staff persona that can sign in.
+   This is correct security behaviour and it constrains the offline demo mode, which cannot
+   lean on the existing seed.
+
+7. **Postgres and the Phase 1 SQLite document are two different systems that were never
+   reconciled.** `docs/DATABASE.md` proposes 47 `CREATE TABLE` statements; Postgres has 38
+   tables; 21 proposed tables do not exist and 12 real ones are missing from the document.
+   Seven name pairs are the same concept under two names, and the document double-counts
+   offers. Full list in §4.1 of the report. Recorded as a disagreement, not corrected.
+
+8. **Your two source-of-truth documents contradict each other on live location.**
+   `ForgeMind.docx` §Scope says the system does *not* track live location;
+   `ForgeMind_Overall_Data_Information.docx` builds a live-location relay in Phase 1 and 3 and
+   puts a two-device live-location demo in the Phase 6 defense script. Postgres already has a
+   `live_location_sessions` table. I did not resolve this — it is D-9 for you.
+
+**Two findings that change earlier conclusions**
+
+- **`TEST_MATRIX.md` R-1 (missing `expo-camera` / `expo-image-picker` config plugins) is not a
+  P0 under the Expo Go constraint.** Expo Go's host app already declares the usage
+  descriptions, so the app runs. The finding is real for any future standalone build and
+  inert for the demo. Logged as a disagreement rather than edited, and scheduled as P2.
+- **`AuthService.register` failing with "Failed to fetch" is not a missing-feature problem.**
+  `errorMessage()` at `AuthService.ts:154-168` already renders the server's own message
+  correctly, and the server already distinguishes 401 from 409. The information is discarded
+  only in the `catch` at `:298`, because a transport failure never produces a `Response` to
+  pass in. The fix is small; the 15-second `AbortController` timeout at `:30` already prevents
+  a stuck spinner.
+
+**One probable crash found**
+
+`src/screens/organizer/ContestManageScreen.tsx:85` calls a bare global `confirm()`. There is
+no `confirm` global in React Native, so this is a `ReferenceError` on both iOS and Android
+when an organizer confirms or declines a contest entry — one of the exact flows in the Phase 6
+defense script. The same file already imports `ConfirmationModal` and uses it at `:217`, and
+nine other screens use it correctly. Ranked P0. Evidence is static only; I did not run it on a
+device, so it stays NOT TESTED.
+
+**Verification**
+
+- `npx tsc --noEmit` — exit 0.
+- Live read-only queries against `forgemind_dev` as `forgemind_app`: `pgmigrations` contents,
+  `information_schema` table list, and a `count(*)` for all 38 tables. No write, no DDL, no
+  stored data touched.
+- 65 screen files enumerated by import analysis.
+- iOS: NOT TESTED (2026-09-30). Android: NOT TESTED (2026-09-30). Web: NOT TESTED (2026-09-30).
+  Flask: NOT TESTED (2026-09-30), not started.
+- No automated test suite exists in any of the three projects.
+
+**Commits** — `PENDING`
+
+**Follow-ups for you**
+
+Twelve decisions are listed in §8 of the report, of which **D-1** is the one that gates the
+others: Postgres is the system of record and AsyncStorage is a read cache plus offline write
+queue, never a second authority. The build plan mandates Node/PostgreSQL, the backend exists,
+38 tables are migrated and seeded, and only 3 of 65 screens work without it.
+
+**Deliberately not started:** Step B. No app code, schema, dependency, or stored data was
+changed. AI Phase 2 remains not started per the standing rule.
+
+---
+
 ## Session — Wednesday, September 30, 2026, 19:35 (Correction: three wrong counts in TEST_MATRIX.md, found while writing SYSTEM_REPORT.md)
 
 **Files changed**
