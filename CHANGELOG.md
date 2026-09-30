@@ -1,7 +1,58 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, September 30, 2026, 18:00 (Phase 1: scope, target database, and test matrix — planning only, no feature code)  
+**Last updated:** Wednesday, September 30, 2026, 19:40 (Step A: system report — real architecture, network, backend, and the Postgres/SQLite split)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, September 30, 2026, 19:35 (Correction: three wrong counts in TEST_MATRIX.md, found while writing SYSTEM_REPORT.md)
+
+**Files changed**
+
+- `docs/TEST_MATRIX.md` (§2 line 62, R-5, and test row 7)
+
+**What changed and why**
+
+I wrote `SYSTEM_REPORT.md` on top of the Phase 1 platform inventory, and in the course of
+re-deriving those numbers from source I found three claims in the committed
+`docs/TEST_MATRIX.md` were wrong. Corrections are a new dated entry rather than an edit to the
+original, per the append-only rule. The corrected text is in the file; this entry records what
+was wrong and what it is now.
+
+| Claim | Was | Is | How it was checked |
+|---|---|---|---|
+| `Platform.*` references | "There are **13** and no more" | **30 lines across 18 files** (the table groups adjacent lines, so it has 22 rows for 30 lines) | enumerated every `file:line` containing `Platform.OS`, `Platform.Version`, `Platform.constants`, or `Platform.select` across `src/**` and `App.tsx` |
+| R-5 `DateInput` blast radius | "12 call sites" | **14 call sites in 10 files** | matched `<DateInput` per file, then opened each of the 14 cited lines and confirmed the element is actually there — all 14 confirmed |
+| test row 7 reference | "R-5, R-6, 12 call sites" | "R-5, R-6, 14 call sites in 10 files" | same |
+
+The `Platform` count was the worst of the three: the original sentence claimed the inventory
+was exhaustive at 13 when the real figure is 30, so more than half the platform-divergent
+code was missing from a section whose entire purpose is to be complete. Two of the omitted
+files are `App.tsx` and `components/testing/PhoneFrame.tsx`, which do appear in the table, so
+the table itself was closer to right than its own preamble claimed.
+
+**Why this matters for the platform audit**
+
+These counts feed two P0 test rows. Row 7 (`DateInput` open/pick/confirm) is scoped by the
+call-site count, so a fix verified against 12 of 14 sites would have looked complete and
+shipped two broken call sites.
+
+**Verification**
+
+- `npx tsc --noEmit` — exit 0.
+- No app code was touched. This is a documentation correction only.
+- iOS: NOT TESTED (2026-09-30). Android: NOT TESTED (2026-09-30). Web: NOT TESTED (2026-09-30).
+  Nothing here was re-tested on a device, because nothing here is device-observable; the
+  counts are static properties of the source.
+
+**Commits** — `PENDING`
+
+**Note on how these got wrong**
+
+The Phase 1 numbers were produced by a search that matched a narrow pattern and I then wrote
+"and no more" against its output without counting the matches. The corrected figures come from
+enumerating the matches and listing them. I am flagging this because the same phrasing appears
+in other Phase 1 claims; I have not audited the rest of them yet.
 
 ---
 
