@@ -5,6 +5,94 @@
 
 ---
 
+## Session — Wednesday, September 30, 2026, 17:55 (Phase 1: Scope, Discrepancy Audit, and Body-Size Cleanup Proposal)
+
+**Date:** Wednesday, September 30, 2026, 17:55
+**Phase:** Phase 1 (Scope & Database) - planning only
+**File created:** `docs/SCOPE.md`
+
+**What we did:** Read both source documents end to end, checked every claim in them against the
+actual code, and wrote down three lists: what must be built, what must not, and what can wait. Where
+the document and the code disagree, both are recorded and neither was changed.
+
+### The headline finding
+
+**The single most valuable thing in the app is the thing that is not saved.** Projects, tasks,
+budget items, and project milestones live in `useState` and nowhere else. There is no storage key
+and no table. So closing the app loses the project list, and with it the diary entry's project
+link, the owned-attire commitment, and the meetup grouping that depends on it. Everything the
+document says about schedules, readiness, buy-or-make suggestions, and material budgets is built on
+top of a list that evaporates on reload.
+
+### 76 items marked in-scope, each with an honest status
+
+Not a wish list. Each row says whether it is built, partly built, a stub, or missing, with the file
+and line that proves it. The uncomfortable ones are recorded as plainly as the rest: the variant
+library has no screen for submitting a user-original variant, the listing screener is a local
+function with no server endpoint behind it, the value reference table is empty with no job to fill
+it, and the contest history has nowhere to store years, placements, or awards.
+
+### 24 places the document and the code disagree
+
+Listed, not silently resolved. The most serious: the document specifies a three-tier
+exact/close/loose match rating while the Python service returns five different labels; the match
+service reads field names that do not exist in its own data files, so it cannot currently score
+anything at all; the build plan requires a live-location relay that the scope section of the same
+document forbids; and the backend has no authentication middleware, so a bearer token identifies
+nobody and none of the sync design can be trusted until that is fixed.
+
+### The body-size slider: three separate decisions, none taken
+
+The document asks for a continuous body-size slider in six places. A previous decision dropped it.
+**Nothing was deleted and no field was removed.** Instead, all 16 remaining traces are listed -
+still-shown UI, types, a privacy-policy sentence, a dead request parameter, a 1.8 KB lookup table,
+and about 25 MB of Blender source files - and split into three decisions you can take
+independently: the UI, then the field and its types, then the data files. The document also states
+plainly that the slider's value is written into the scannable QR code on the shareable card, which
+is a data-minimisation problem worth deciding on its own.
+
+### A proposal for the second changelog
+
+You asked how the two changelogs should become one. **The proposal is written; nothing was merged.**
+The complication is that their date ranges overlap, so simply appending one to the other would put
+September 28 after September 29 and break the order the file is read in. The plan classifies each of
+the second file's 16 entries as verbatim, already-summarised, or superseded, and only the first kind
+gets copied in full - the other two become one-line pointers, so the full history of the 3D work is
+kept without duplicating a story the main file already tells. The second file is kept, frozen, never
+deleted: it is the only place that record exists, and deleting the source of entries you just copied
+is how history gets lost.
+
+### Verification
+
+- `npx tsc --noEmit` - **clean, exit 0**.
+- Every code claim carries a file and line, and the two counting errors the first draft contained
+  were corrected against the source rather than left in.
+
+### Not tested, and not claimed
+
+- **iOS: NOT TESTED. Android: NOT TESTED. Web: NOT TESTED.** This is a document, but it makes
+  claims about code, and none of that code was run.
+- The 15 open questions are questions, not answers. Each states what happens if you say nothing,
+  so you can approve the defaults in one go - but the decision is still yours.
+
+### Not part of this session
+
+- No app code, schema, dependency, or stored data was changed.
+- No body-size trace was deleted. No document was edited to match the code.
+- No changelog was merged, and the second one was not modified in any way.
+- No Phase 2 work was started, in line with stopping at the end of Phase 1.
+
+### Commits
+
+- `PENDING` - filled in immediately after the commit, in a small follow-up commit.
+
+### Files changed
+
+- `docs/SCOPE.md` - new
+- `CHANGELOG.md` - this entry
+
+---
+
 ## Session — Tuesday, September 29, 2026, 12:53 (Phase 3 Step 3: Real Sign-Up, Sign-In, and Sign-Out)
 
 **Phase:** Phase 3 (Backend & Data Services)
