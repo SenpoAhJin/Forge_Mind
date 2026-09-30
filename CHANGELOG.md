@@ -1,7 +1,98 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Tuesday, September 29, 2026, 12:53 (Phase 3 Step 3: real sign-up, sign-in, and sign-out)  
+**Last updated:** Wednesday, September 30, 2026, 18:00 (Phase 1: scope, target database, and test matrix — planning only, no feature code)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, September 30, 2026, 18:00 (Phase 1: Test Matrix and iOS/Android Platform Risk Audit)
+
+**Date:** Wednesday, September 30, 2026, 18:00
+**Phase:** Phase 1 (Scope & Database) - planning only
+**File created:** `docs/TEST_MATRIX.md`
+
+**What we did:** Wrote the missing third Phase 1 document: a test matrix and a full platform risk
+audit. Nothing in the app was changed. The point of the document is that it is honest about what
+has and has not been run, because every row in it is currently untested.
+
+### The honest status, stated up front
+
+| Thing | Status |
+|---|---|
+| `npx tsc --noEmit` | **PASS**, exit 0 |
+| iOS on a device or simulator | **NOT TESTED** |
+| Android on a device or emulator | **NOT TESTED** |
+| Web in a browser | **NOT TESTED** |
+| Automated tests | **none exist** - no `test` script, no runner, no test files |
+
+A green type check is a compiler result, not a test run. It says nothing about layout, the keyboard,
+the camera, or WebGL, so it is recorded separately and never counted as a platform pass.
+
+### What the audit found
+
+**The two worst problems are invisible while the app runs in Expo Go.**
+
+1. **`expo-camera` and `expo-image-picker` both ship a config plugin, and neither is registered**
+   (`app.json:28-40` lists only the datetime picker, sharing, and asset plugins). In Expo Go these
+   modules work, because the Expo Go binary already carries the permissions. In any prebuilt or
+   store build there is no `Info.plist` usage string, so **iOS terminates the app** the moment the QR
+   scanner or any of the three image pickers asks for a permission, and **Android has no `CAMERA`
+   permission declared at all**. This cannot be found by testing in Expo Go.
+2. **`.env.local` points the app at `http://localhost:3000`.** The iOS simulator shares the host
+   loopback, so this works. An Android emulator resolves `localhost` to *itself*, so every auth call
+   fails there. The most misleading possible failure: green on iOS, broken on Android.
+
+Then 14 more, all with file and line evidence, including 17 of the 26 screens that contain a text
+input having no keyboard avoidance at all; the iOS date picker having no way to dismiss its inline
+wheel, which displaces the rest of the form at 12 call sites; `ChatThreadScreen` applying a 90pt
+keyboard offset on Android *on top of* the shrink the offset is meant to compensate for; the
+"Save to Gallery" button writing nothing at all; and the app-wide `console` patch that silently
+discards the WebGL errors that would explain a device-specific 3D crash.
+
+### What is now recorded rather than guessed
+
+- **The complete platform inventory: 13 `Platform.*` references, no more.** There is not one
+  `.ios.tsx`, `.android.tsx`, `.native.tsx`, or `.web.tsx` file in the project, so every platform
+  difference is a runtime check and the list had to be exhaustive to be worth anything.
+- **26 screens have a text input. 9 handle the keyboard. 17 do not.** Enumerated one by one.
+- **The per-screen matrix** says which of the 17 are which, so the Phase 5 device pass has a list
+  to work from instead of a vague instruction to "test the app".
+
+### Verification
+
+- `npx tsc --noEmit` - **clean, exit 0**, run after every document edit in this phase.
+- Every platform claim in the document was re-checked directly against the source before being
+  written down, and four claims from the first draft were corrected as a result: the count of
+  `fontFamily` uses, the claim that the type checker ignores the stale `.js` files (`expo/tsconfig.base.json`
+  sets `allowJs: true`, so it does not), the keyboard offsets, and the camera plugin's real effect.
+- The 26/9/17 keyboard split was derived by searching for `TextInput` and `KeyboardAvoidingView`
+  and subtracting, not estimated.
+
+### Not tested, and not claimed
+
+- **iOS: NOT TESTED.** No simulator, no device, no Expo Go session.
+- **Android: NOT TESTED.** No emulator, no device.
+- **Web: NOT TESTED.** The dev server was never started.
+- Nothing was marked `PASS` on the strength of an earlier session's claim, and no historical or
+  web-only result was carried forward as a current pass.
+
+### Not part of this session
+
+- No app code, no schema, no stored data, and no dependency was changed.
+- No test was run, because running one requires a device this environment does not have.
+- The two P0 findings are **not** fixed here. Fixing them means registering two config plugins
+  (native configuration) and changing an environment file, and both need your approval.
+- No automated test was added, because the project has no test runner and adding one is a decision,
+  not a default. Logged as an open item in `docs/DATABASE.md` §8, B-9.
+
+### Commits
+
+- `PENDING` - filled in immediately after the commit, in a small follow-up commit.
+
+### Files changed
+
+- `docs/TEST_MATRIX.md` - new
+- `CHANGELOG.md` - this entry
 
 ---
 
