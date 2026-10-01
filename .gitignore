@@ -40,6 +40,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Compiled JavaScript output from TypeScript (should not be committed)
+# TypeScript sources in src/ are the source of truth
+src/types/*.js
+src/utils/*.js
+
 # generated native folders
 /ios
 /android
