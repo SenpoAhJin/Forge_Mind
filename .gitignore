@@ -45,6 +45,9 @@ yarn-error.*
 src/types/*.js
 src/utils/*.js
 
+# Compiled output of the pure-logic test build (npm run test:pure)
+.purity-build/
+
 # generated native folders
 /ios
 /android

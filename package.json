@@ -45,7 +45,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "postinstall": "patch-package",
-    "verify:orbitcontrols": "node scripts/verify-orbitcontrols-patch.js"
+    "verify:orbitcontrols": "node scripts/verify-orbitcontrols-patch.js",
+    "test:pure": "tsc -p src/utils/__tests__/tsconfig.pure.json && node src/utils/__tests__/run-pure-logic-tests.mjs",
+    "check:wiring": "node scripts/generate-wiring-matrix.mjs"
   },
   "private": true
 }

@@ -1,0 +1,25 @@
+{
+  "_comment": "Compiles only the pure-logic rule modules so run-pure-logic-tests.mjs can execute them under plain node. No JSX, no react-native, no expo — if a module cannot compile here it is not pure logic.",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "outDir": "../../../.purity-build",
+    "rootDir": "../..",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "../logisticsRules.ts",
+    "../offerRules.ts",
+    "../listingScreener.ts",
+    "../formatCurrency.ts",
+    "../dateHelpers.ts",
+    "../../constants/marketplaceCategories.ts",
+    "../../types/logistics.ts",
+    "../../types/offers.ts",
+    "../../types/marketplace.ts"
+  ]
+}
