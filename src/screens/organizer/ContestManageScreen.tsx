@@ -34,6 +34,15 @@ export const ContestManageScreen: React.FC = () => {
 
   // Selected opt-in for tier assignment
   const [selectedOptInId, setSelectedOptInId] = useState<string | null>(null);
+  
+  // Confirmation modal for confirm/decline decisions
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<{
+    optInId: string;
+    decision: 'confirmed' | 'declined';
+    cosplayerName: string;
+    tierLabel?: string;
+  } | null>(null);
 
   if (!event) {
     return (
@@ -77,16 +86,26 @@ export const ContestManageScreen: React.FC = () => {
     }
   };
 
-  const handleConfirmDecision = async (optInId: string, decision: 'confirmed' | 'declined', cosplayerName: string, tierLabel?: string) => {
-    const confirmMsg = decision === 'confirmed'
-      ? `Confirm ${cosplayerName} in tier ${tierLabel}? This cannot be undone.`
-      : `Decline ${cosplayerName}'s entry? This cannot be undone.`;
+  const handleConfirmDecision = (optInId: string, decision: 'confirmed' | 'declined', cosplayerName: string, tierLabel?: string) => {
+    setPendingDecision({ optInId, decision, cosplayerName, tierLabel });
+    setShowConfirmModal(true);
+  };
 
-    if (!confirm(confirmMsg)) return; // Simple browser confirm for demo
+  const handleConfirmModalConfirm = async () => {
+    if (!pendingDecision) return;
+
+    const { optInId, decision } = pendingDecision;
+    setShowConfirmModal(false);
 
     const result = await confirmDecision(optInId, decision);
     setModalMessage(result.success ? `Entry ${decision}` : result.error || 'Failed');
     setShowModal(true);
+    setPendingDecision(null);
+  };
+
+  const handleConfirmModalCancel = () => {
+    setShowConfirmModal(false);
+    setPendingDecision(null);
   };
 
   return (
@@ -214,6 +233,7 @@ export const ContestManageScreen: React.FC = () => {
         </StandardCard>
       </ScrollView>
 
+      {/* Success/Error notification modal */}
       <ConfirmationModal
         visible={showModal}
         title="Notice"
@@ -221,6 +241,23 @@ export const ContestManageScreen: React.FC = () => {
         onConfirm={() => setShowModal(false)}
         onCancel={() => setShowModal(false)}
       />
+
+      {/* Confirm/Decline decision confirmation modal */}
+      {pendingDecision && (
+        <ConfirmationModal
+          visible={showConfirmModal}
+          title={pendingDecision.decision === 'confirmed' ? 'Confirm Entry' : 'Decline Entry'}
+          message={
+            pendingDecision.decision === 'confirmed'
+              ? `Confirm ${pendingDecision.cosplayerName} in tier ${pendingDecision.tierLabel}? This cannot be undone.`
+              : `Decline ${pendingDecision.cosplayerName}'s entry? This cannot be undone.`
+          }
+          confirmText={pendingDecision.decision === 'confirmed' ? 'Confirm' : 'Decline'}
+          cancelText="Cancel"
+          onConfirm={handleConfirmModalConfirm}
+          onCancel={handleConfirmModalCancel}
+        />
+      )}
     </View>
   );
 };
