@@ -1,7 +1,128 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, September 30, 2026, 22:10 (Fix: physical phones could not reach the backend)  
+**Last updated:** Thursday, October 1, 2026, 11:51 (Fix: Head Organizers were blocked by the organizer gate)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 1, 2026, 11:51 (Fix: Head Organizers were blocked by the organizer gate)
+
+**Symptom**
+
+An account registered as the top organizer (in this app that is the **Head Organizer** — there is no separate Holder role) signed in and saw the ORGANIZER tabs (Events, Logistics, Meetups, Profile). Events and Logistics both showed:
+
+> "... access requires Head Organizer or (approved) Staff status. Please request organizer access from your profile."
+
+Head Organizers used to open those screens directly.
+
+**Cause**
+
+The Head's role was never written to the database. It was saved only into the phone's local storage, and then thrown away:
+
+1. `HeadOrganizerRegistrationScreen` called `AuthService.register(...)`, which POSTed to `/auth/register`. That endpoint's `INSERT` listed only `email, password_hash, display_name, is_cosplayer, is_organizer, base_body_selection` — no `organizer_role` column. The new row therefore had `organizer_role = NULL` in PostgreSQL.
+2. The screen then called `AuthService.updateOrganizerRole(email, 'head')` and `setHeadOrganizerDepartment(...)`. Both wrote to AsyncStorage **only**.
+3. The screen then called `AuthService.login(...)`. Login re-read the user from the server, where the role was `NULL`, and `toStoredAccount` copied that `null` straight over the `'head'` that step 2 had just saved.
+4. The guard on Events and Logistics reads `organizer_role`, sees `null`, and shows the gate.
+
+So the role was destroyed by the login that immediately created it. Any Head or Staff account was affected, and so was every staff approval, for the same reason: `updateDepartmentVerificationStatus` and `updateOrganizerRole` were local-only, so an approval did not survive the next login.
+
+Confirmed against the live database before the fix — the accounts registered through the dev Head screen were present in PostgreSQL with the organizer flag set but the role column empty:
+
+```
+              email               | organizer_role | head_organizer_department | is_cosplayer | is_organizer
+----------------------------------+----------------+---------------------------+--------------+--------------
+ sett@gmail.com                   |                |                           | f            | t
+ asta@gmail.com                   |                |                           | f            | t
+```
+
+This is the change that caused it: `5018aba feat(auth): use the real backend for register, login, and logout` (Wed Sep 29 2026). Before it, `login` compared against the local account and returned it untouched, so the locally-saved role survived. That commit's own message records the gap: "organizer roles, staff departments ... stay in AsyncStorage and are merged back over the server response". They were merged back, but the server response said `null`, and a null overwrote the local value.
+
+**A second, separate disagreement**
+
+The tab navigator and the screens inside it read different fields. `RootNavigator` decided tabs from `is_organizer`; the Events and Logistics guards decided access from `organizer_role`. An account with `is_organizer = true` and `organizer_role = null` was therefore given the organizer tabs and then shown a gate inside them. Both sides now read one shared helper.
+
+**Files changed**
+
+Mobile:
+
+- `src/utils/organizerAccess.ts` — new. The single place that answers "does this account get the organizer screens": `isHeadOrganizer`, `isApprovedStaff`, `hasOrganizerScreenAccess`, `shouldShowOrganizerTabs`.
+- `src/navigation/RootNavigator.tsx` — tab choice reads `shouldShowOrganizerTabs` instead of `is_organizer` alone.
+- `src/screens/organizer/EventsScreen.tsx`, `src/screens/organizer/LogisticsHomeScreen.tsx` — the guards call the same helper.
+- `src/services/AuthService.ts` — `register()` takes an optional `organizer` argument and sends the role with the request. `updateOrganizerRole`, `setHeadOrganizerDepartment` and `updateDepartmentVerificationStatus` now write to the server first and report a rejection as a failure instead of saving it locally regardless.
+- `src/screens/dev/HeadOrganizerRegistrationScreen.tsx` — registers with `organizer_role: 'head'` and `head_organizer_department` in one request.
+- `src/screens/dev/StaffRegistrationScreen.tsx` — registers with `organizer_role: 'staff'`, the department, and `department_verification_status: 'pending'` in one request.
+
+Backend:
+
+- `src/auth/validation.ts` — register accepts the organizer columns; the domains mirror the `CHECK` constraints on `users`, and the two cross-column constraints (`chk_head_has_department`, `chk_staff_has_department`) are checked before the statement runs, so a bad combination is a 400 with a readable message instead of a 500.
+- `src/auth/router.ts` — the register `INSERT` writes the organizer columns; new `PATCH /auth/organizer-fields` records role and department changes.
+
+**Authorization on the new endpoint**
+
+`PATCH /auth/organizer-fields` reads the caller's role from their own database row, not from anything they sent, so a caller cannot grant themselves a role. Only an account that is already a Head Organizer may change organizer fields. `password_hash` remains excluded from the response projection.
+
+**NOT TESTED — must be run on a physical Android phone in Expo Go**
+
+None of the following were run; they need the phone and a running Metro bundler:
+
+1. Register a new Head via the dev Head registration screen, log out, log back in, and confirm the organizer tabs open with no gate message and that every Head item is reachable (Events create/confirm/cancel/Manage Contest, Logistics add/edit/withdraw/assign/Needs attention/Unassigned chip, Profile department + Team Management + Marketplace Management + Logistics Overview).
+2. Register a Staff account, confirm the gate before approval, approve it as Head, and confirm read-only access afterwards.
+3. Confirm a plain cosplayer still sees cosplayer tabs only.
+4. Confirm the gate is still shown to pending and rejected staff.
+5. Confirm two Heads can share one department, and that departments with no Head stay visible to all Heads.
+
+**Verified without a phone**
+
+- `npx tsc --noEmit` — mobile: exit 0. Backend: exit 0.
+- Live HTTP against the running backend and PostgreSQL:
+  - Head registers with role + department → `organizer_role=head`, `head_organizer_department=secretariat` on **both** the register response and a fresh login response.
+  - Staff registers with role + department + pending → all three survive login.
+  - Head approves that staff member via `PATCH /auth/organizer-fields` → the staff account re-logs in and reads back `status=approved`.
+  - A Head rejecting with a reason stores the reason; re-approving restores the status.
+  - Head registered without a department → **400**, matching `chk_head_has_department`.
+  - Staff session trying to promote itself to head → **403**.
+  - No bearer token → **401**.
+  - Attempting to clear a Staff account's department while it is still `staff` → **400**, matching `chk_staff_has_department`.
+  - A cosplayer registering with no organizer fields gets `organizer_role` empty and `is_organizer=false`.
+
+**Section D answer — Staff logistics rights (reported, not changed)**
+
+The specification says Staff may view **and edit** logistics within their department. The changelog builds Staff as **read-only**, and the code follows the changelog. Every logistics mutation is `organizer_role === 'head'` only:
+
+- `src/contexts/LogisticsContext.tsx` — `requireHeadOrganizer()` gates `createEntry`, `updateLogisticsFields`, `assignEntry` and `withdrawEntry`; any other role gets `{ success: false, error: 'Head Organizer access required' }`.
+- `src/screens/organizer/LogisticsEntryDetailScreen.tsx` — `isReadOnly` hides Edit for Staff, and Assign Staff / Withdraw are `isHeadOrganizer`-only.
+- Events and contests behave the same way (`EventsContext`, `ContestContext`: `actorRole !== 'head'`).
+
+So an approved Staff member can read the list, the detail, the "Assigned to Me" chip and the "Assigned to you" panel, and can open an entry assigned to them — but has no way to fill that entry in, even though the Profile copy at `ProfileScreen.tsx:494` tells Staff to "manage department-specific logistics". This is the gap between the spec and the build. Not changed.
+
+**Who can review organizer access requests today**
+
+Nobody, in practice. `HolderReviewQueueScreen` is the only review UI, its guard is `user?.is_holder_verified` (not `organizer_role === 'head'`), and no screen navigates to it — `ProfileScreen` has no Review Queue entry, so the route registered at `ProfileStackNavigator.tsx:62` is unreachable. Requests accumulate in AsyncStorage with no in-app path to approve them, and its approve branch sets `organizer_role='head'` without a `head_organizer_department`, which the database constraint rejects. Not changed, per instruction.
+
+**Section B answer — the account you used**
+
+Present in the **backend database** as `sett@gmail.com` / `asta@gmail.com` (organizer flag set, role column empty), and in the phone's AsyncStorage with a locally-saved role that login then overwrote. Phone and web keep separate storage, so the web session and the phone session were never the same record.
+
+**Duplicate registration files**
+
+Audited. There are two dev registration screens plus the two public ones, and no duplicate copies of any of them:
+
+| File | Saves |
+| --- | --- |
+| `src/screens/auth/RegisterScreen.tsx` | cosplayer only: `is_cosplayer=true`, `is_organizer=false`, no role |
+| `src/screens/onboarding/RoleSelectionScreen.tsx` | nothing — forwards `onContinue(true, false)` |
+| `src/screens/dev/HeadOrganizerRegistrationScreen.tsx` | `head` + department (now in the register request) |
+| `src/screens/dev/StaffRegistrationScreen.tsx` | `staff` + department + `pending` (now in the register request) |
+
+`src/screens/onboarding/AccountCreationScreen.tsx` only collects fields; it does not persist a role. Five compiled `.js` shadows of `.ts` modules exist under `src/types` and `src/utils` (`organizer.js`, `events.js`, `logistics.js`, `dateHelpers.js`, `logisticsRules.js`); Metro resolves `.ts` first, so the `.ts` sources are the ones loaded — the same situation as the `AuthService.js` mock deleted in `5018aba`.
+
+**Commits**
+
+| Commit | What |
+| --- | --- |
+| `5018aba` | the change that caused this (backend-backed auth; roles left local) |
+| `340ad5b` | mobile: `fix(auth): keep organizer roles on the server and out of the gate` |
+| `dbdc411` | backend: `fix(auth): persist organizer roles and department access in PostgreSQL` |
 
 ---
 
