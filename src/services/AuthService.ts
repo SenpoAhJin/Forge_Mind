@@ -26,8 +26,17 @@ const STORAGE_KEYS = {
   SESSION_TOKEN: '@forgemind:session_token',
 } as const;
 
-/** Request timeout for auth calls, in ms. */
-const AUTH_TIMEOUT_MS = 10000;
+/**
+ * Request timeout for auth calls, in ms.
+ *
+ * 15 s rather than 10 s: a cold server has to hash the password with bcrypt on
+ * the first login after a restart, and on a phone the same request also crosses
+ * Wi-Fi. 10 s aborted those requests and the abort surfaced to the user as
+ * "Fetch request has been canceled", which reads like a bug rather than a slow
+ * server. An abort is still reported as a network error - never as bad
+ * credentials.
+ */
+const AUTH_TIMEOUT_MS = 15000;
 
 /**
  * Organizer columns sent with a registration so the Head/Staff role is created
@@ -234,10 +243,10 @@ export class AuthService {
    * is what made a Wi-Fi problem look like a typing mistake.
    */
   private static transportErrorMessage(error: unknown): string {
-    const name = (error as { name?: string } | null)?.name;
-    if (name === 'AbortError') {
-      return 'The server took too long to answer. Check that your phone and PC are on the same Wi-Fi, then try again.';
-    }
+    // An abort and a refused connection are the same class of problem from the
+    // user's point of view: no response arrived. React Native reports both as
+    // "fetch failed: Fetch request has been canceled", so both get the one
+    // message that tells them what to actually check.
     return "Can't reach the server. Check that your phone and PC are on the same Wi-Fi.";
   }
 
@@ -376,7 +385,7 @@ export class AuthService {
 
       return { success: true, account };
     } catch (error) {
-      console.error('[AuthService] Registration failed:', (error as Error).message);
+      console.warn('[AuthService] Registration failed (network):', (error as Error).message);
       return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
@@ -419,7 +428,7 @@ export class AuthService {
 
       return { success: true, account };
     } catch (error) {
-      console.error('[AuthService] Login failed:', (error as Error).message);
+      console.warn('[AuthService] Login failed (network):', (error as Error).message);
       return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
@@ -466,7 +475,7 @@ export class AuthService {
         } catch (error) {
           // A failed revoke must never strand the user in a logged-in state, so
           // local state is cleared regardless of what the server said.
-          console.error('[AuthService] Server logout failed:', (error as Error).message);
+          console.warn('[AuthService] Server logout failed (network):', (error as Error).message);
         }
       }
       await AsyncStorage.multiRemove([STORAGE_KEYS.ACTIVE_SESSION, STORAGE_KEYS.SESSION_TOKEN]);

@@ -150,6 +150,36 @@ if (__DEV__) {
     `[api] backend base URL: ${API_BASE_URL} (source: ${API_BASE_URL_SOURCE}; ` +
       `platform: ${Platform.OS})`,
   );
+
+  /**
+   * Dev-only reachability probe.
+   *
+   * Resolving the URL correctly is not the same as reaching it: a wrong port, a
+   * firewall block or a server that is not running all produce the same
+   * "Fetch request has been canceled" on the device. One line at startup says
+   * which of those it is, before the user types a password.
+   *
+   * Fire-and-forget: it never rejects, never throws and never blocks the bundle.
+   * A 500 still proves the phone reached the server, so the status is reported
+   * alongside a readable result rather than treated as a failure.
+   */
+  void (async () => {
+    const url = `${API_BASE_URL}/health`;
+    const startedAt = Date.now();
+    try {
+      const response = await fetch(url);
+      const ms = Date.now() - startedAt;
+      const reachable = response.ok ? 'reachable' : `reachable (HTTP ${response.status})`;
+      console.log(`[api] health ping ${url} -> ${reachable} in ${ms} ms`);
+    } catch (error) {
+      const ms = Date.now() - startedAt;
+      const name = (error as { name?: string } | null)?.name ?? 'Error';
+      console.warn(
+        `[api] health ping ${url} -> unreachable after ${ms} ms (${name}). ` +
+          'Check the server is running, the port is right, and Windows Firewall allows it.',
+      );
+    }
+  })();
 }
 
 /** Joins a path onto the base URL, e.g. authUrl('/login') -> 'http://.../auth/login'. */
