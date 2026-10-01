@@ -29,6 +29,17 @@ const STORAGE_KEYS = {
 /** Request timeout for auth calls, in ms. */
 const AUTH_TIMEOUT_MS = 10000;
 
+/**
+ * Organizer columns sent with a registration so the Head/Staff role is created
+ * server-side rather than patched into local storage afterwards.
+ */
+export interface OrganizerRegistration {
+  organizer_role: 'head' | 'staff';
+  head_organizer_department?: StaffDepartment | null;
+  department?: StaffDepartment | null;
+  department_verification_status?: DepartmentVerificationStatus | null;
+}
+
 /** Shape of `user` as returned by GET-style auth responses. */
 interface ApiUser {
   user_id: string;
@@ -129,6 +140,46 @@ export class AuthService {
     } catch (error) {
       console.error('[AuthService] Failed to save accounts:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Persists organizer columns to the server via PATCH /auth/organizer-fields.
+   *
+   * Returns `{ success: false, skipped: true }` when there is no session token,
+   * which is the window between register() and the login that follows it: the
+   * role was already written by the register request itself, so there is nothing
+   * to patch and nothing to confirm.
+   *
+   * When a token IS present the server is authoritative. A rejection is
+   * reported as a failure rather than swallowed, so a role the server did not
+   * grant is never presented as granted.
+   */
+  private static async patchOrganizerFieldsOnServer(
+    email: string,
+    fields: Record<string, unknown>
+  ): Promise<{ success: boolean; skipped?: boolean; error?: string; user?: ApiUser }> {
+    let token: string | null = null;
+    try {
+      token = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
+    } catch {
+      token = null;
+    }
+    if (!token) return { success: false, skipped: true };
+
+    try {
+      const response = await AuthService.authFetch('/organizer-fields', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), ...fields }),
+      });
+      if (!response.ok) {
+        return { success: false, error: await AuthService.errorMessage(response) };
+      }
+      const data = (await response.json()) as { user: ApiUser };
+      return { success: true, user: data.user };
+    } catch (error) {
+      return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
 
@@ -289,7 +340,8 @@ export class AuthService {
     isCosplayer: boolean,
     isOrganizer: boolean,
     baseBody: 'male' | 'female',
-    bodySize: number
+    bodySize: number,
+    organizer?: OrganizerRegistration
   ): Promise<{ success: boolean; error?: string; account?: StoredAccount }> {
     try {
       const response = await AuthService.authFetch('/register', {
@@ -301,6 +353,11 @@ export class AuthService {
           is_cosplayer: isCosplayer,
           is_organizer: isOrganizer,
           base_body_selection: baseBody,
+          // The role is written server-side on the INSERT. It used to be set
+          // only in local storage right after this call returned, and the login
+          // that immediately followed read the role back from the server — as
+          // null — so a Head Organizer lost its access every time it logged in.
+          ...(organizer ? { ...organizer } : {}),
           device_info: AuthService.deviceInfo(),
         }),
       });
@@ -462,6 +519,16 @@ export class AuthService {
     email: string,
     role: 'head' | 'staff' | null
   ): Promise<{ success: boolean; error?: string }> {
+    // The server is asked first so the role survives the next login. Before
+    // this, the role was only ever written here, to local storage, and the login
+    // response then replaced it with the server's null.
+    const remote = await AuthService.patchOrganizerFieldsOnServer(email, {
+      organizer_role: role,
+    });
+    if (!remote.success && !remote.skipped) {
+      return { success: false, error: remote.error ?? 'Failed to update role' };
+    }
+
     try {
       const accounts = await this.getAccounts();
       const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
@@ -494,6 +561,13 @@ export class AuthService {
     email: string,
     department: StaffDepartment | null
   ): Promise<{ success: boolean; error?: string }> {
+    const remote = await AuthService.patchOrganizerFieldsOnServer(email, {
+      head_organizer_department: department,
+    });
+    if (!remote.success && !remote.skipped) {
+      return { success: false, error: remote.error ?? 'Failed to set department' };
+    }
+
     try {
       const accounts = await this.getAccounts();
       const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
@@ -628,6 +702,18 @@ export class AuthService {
       // Approving a department-less account would grant nothing meaningful.
       if (!accounts[index].department) {
         return { success: false, error: 'This staff account has no department selected' };
+      }
+
+      // Persisted before the local write, so an approval made by a Head survives
+      // the staff member's next login instead of reverting to 'pending'.
+      const remote = await AuthService.patchOrganizerFieldsOnServer(email, {
+        department_verification_status: status,
+        ...(status === 'rejected' && rejectionReason
+          ? { department_rejection_reason: rejectionReason }
+          : {}),
+      });
+      if (!remote.success && !remote.skipped) {
+        return { success: false, error: remote.error ?? 'Failed to update department verification status' };
       }
 
       accounts[index].department_verification_status = status;

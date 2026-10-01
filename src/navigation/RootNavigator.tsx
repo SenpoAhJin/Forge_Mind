@@ -7,6 +7,7 @@ import { OrganizerTabNavigator } from './OrganizerTabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { useUser } from '../contexts/UserContext';
+import { shouldShowOrganizerTabs } from '../utils/organizerAccess';
 import { GlobalNotificationHandler } from '../components';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
@@ -43,9 +44,13 @@ export const RootNavigator: React.FC = () => {
     );
   }
 
-  // Logged in and onboarding complete - show main app
+  // Logged in and onboarding complete - show main app.
+  // These three come from utils/organizerAccess so the tab bar and the Events /
+  // Logistics guards read the same fields. They used to diverge: the navigator
+  // read is_organizer and the guards read organizer_role, so an account could
+  // be given the organizer tabs and then hit the access gate inside them.
   const isCosplayer = user!.is_cosplayer;
-  const isOrganizer = user!.is_organizer;
+  const isOrganizer = shouldShowOrganizerTabs(user);
   const showRoleSwitcher = isCosplayer && isOrganizer;
 
   return (

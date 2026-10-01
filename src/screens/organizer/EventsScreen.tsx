@@ -11,6 +11,11 @@ import { Button, StandardCard, Tag } from '../../components';
 import { formatEventStatus } from '../../utils/formatStatus';
 import { Event, EventStatus } from '../../types/events';
 import { isDateInPast } from '../../utils/dateHelpers';
+import {
+  hasOrganizerScreenAccess,
+  isApprovedStaff as isApprovedStaffUser,
+  isHeadOrganizer as isHeadOrganizerUser,
+} from '../../utils/organizerAccess';
 
 type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList, 'EventsHome'>;
 
@@ -21,10 +26,10 @@ export const EventsScreen: React.FC = () => {
   
   const [selectedStatus, setSelectedStatus] = useState<'all' | EventStatus>('all');
 
-  // Role checks
-  const isHeadOrganizer = user?.organizer_role === 'head';
-  const isVerifiedStaff = user?.organizer_role === 'staff' && user?.department_verification_status === 'approved';
-  const hasAccess = isHeadOrganizer || isVerifiedStaff;
+  // Role checks — shared with the tab navigator so the two cannot disagree.
+  const isHeadOrganizer = isHeadOrganizerUser(user);
+  const isVerifiedStaff = isApprovedStaffUser(user);
+  const hasAccess = hasOrganizerScreenAccess(user);
 
   // Filter logic
   const getFilteredEvents = (): Event[] => {

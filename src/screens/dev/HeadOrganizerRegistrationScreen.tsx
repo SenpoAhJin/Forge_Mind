@@ -124,7 +124,11 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
     setLoading(true);
 
     try {
-      // Register with organizer_role='head' directly (dev shortcut)
+      // Register with organizer_role='head' directly (dev shortcut).
+      // The role AND the department go out with the registration itself so
+      // PostgreSQL holds them. They used to be written only to local storage
+      // after this returned, and the login below then read the role back from
+      // the server as null — which is what put a Head behind the organizer gate.
       const result = await AuthService.register(
         email.trim().toLowerCase(),
         password,
@@ -132,16 +136,14 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)
-        0.5     // bodySize (placeholder - not used for organizers)
+        0.5,    // bodySize (placeholder - not used for organizers)
+        {
+          organizer_role: 'head',
+          head_organizer_department: department,
+        }
       );
 
       if (result.success) {
-        // Set organizer_role to 'head' directly (bypassing OrganizerAccessRequest)
-        await AuthService.updateOrganizerRole(email.trim().toLowerCase(), 'head');
-
-        // NEW: Set Head Organizer department
-        await AuthService.setHeadOrganizerDepartment(email.trim().toLowerCase(), department);
-
         // Log in immediately
         const loginResult = await AuthService.login(email.trim().toLowerCase(), password);
 

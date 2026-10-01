@@ -17,6 +17,11 @@ import { useLogistics } from '../../contexts/LogisticsContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { sortByCriticality, checkCompletion, getUrgency, formatParticipantKind, formatEventDateRange } from '../../utils/logisticsRules';
 import { getTodayLocal } from '../../utils/dateHelpers';
+import {
+  hasOrganizerScreenAccess,
+  isApprovedStaff as isApprovedStaffUser,
+  isHeadOrganizer as isHeadOrganizerUser,
+} from '../../utils/organizerAccess';
 
 type LogisticsStackParamList = {
   LogisticsHome: undefined;
@@ -33,9 +38,9 @@ export const LogisticsHomeScreen: React.FC = () => {
   const { entries, loading } = useLogistics();
   const { events } = useEvents();
 
-  const isHeadOrganizer = user?.organizer_role === 'head';
-  const isVerifiedStaff = user?.organizer_role === 'staff' && user?.department_verification_status === 'approved';
-  const hasAccess = isHeadOrganizer || isVerifiedStaff;
+  const isHeadOrganizer = isHeadOrganizerUser(user);
+  const isVerifiedStaff = isApprovedStaffUser(user);
+  const hasAccess = hasOrganizerScreenAccess(user);
   const today = getTodayLocal();
   const myEmail = user?.email;
 

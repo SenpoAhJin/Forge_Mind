@@ -112,7 +112,10 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
     setLoading(true);
 
     try {
-      // Register with organizer_role='staff' directly (dev shortcut)
+      // Register with organizer_role='staff' directly (dev shortcut).
+      // Role + department + 'pending' verification go out with the registration
+      // itself so PostgreSQL holds them, rather than being patched into local
+      // storage afterwards and then read back as null on the next login.
       const result = await AuthService.register(
         email.trim().toLowerCase(),
         password,
@@ -120,17 +123,19 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)
-        0.5     // bodySize (placeholder - not used for organizers)
+        0.5,    // bodySize (placeholder - not used for organizers)
+        department
+          ? {
+              organizer_role: 'staff',
+              department,
+              // Event-trigger: a department selected at registration creates a
+              // pending verification. Blank/skipped department creates none.
+              department_verification_status: 'pending',
+            }
+          : undefined
       );
 
       if (result.success) {
-        // Set organizer_role to 'staff' directly (bypassing EventStaffMember invite)
-        await AuthService.updateOrganizerRole(email.trim().toLowerCase(), 'staff');
-
-        // Event-trigger: department selected at registration → create a pending
-        // department verification. If department is blank/skipped, no entry is made.
-        await AuthService.setStaffDepartment(email.trim().toLowerCase(), department);
-
         // Create dev-only EventStaffMember record
         await OrganizerService.createDevStaffMember(
           email.trim().toLowerCase(),
