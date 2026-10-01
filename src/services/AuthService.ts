@@ -208,22 +208,39 @@ export class AuthService {
   }
 
   /**
-   * Turns an error RESPONSE into the single human-readable string the existing
-   * screens already render via `result.error`.
-   *
-   * Only reached when the server answered. A transport failure never produces a
-   * Response — it throws — and is handled by `transportErrorMessage` instead.
+   * Maps HTTP status + error body to a user-facing message.
+   * Each failure mode is distinguishable and actionable.
    */
   private static async errorMessage(response: Response): Promise<string> {
-    let message = 'Something went wrong. Please try again.';
+    // Default messages by status code
+    const statusDefaults: Record<number, string> = {
+      503: 'The server is running but its database is not available. Tell the person running the server.',
+      500: 'The server hit an error. Please try again.',
+      401: 'Incorrect email or password.',
+      409: 'An account with this email already exists.',
+    };
+
+    let message = statusDefaults[response.status] ?? 'Something went wrong. Please try again.';
+
     try {
       const data = await response.json();
-      if (data && typeof data.message === 'string' && data.message.trim() !== '') {
+      
+      // 503 db_unavailable: use default message (don't leak db details)
+      if (response.status === 503 && data.error === 'db_unavailable') {
+        message = statusDefaults[503];
+      }
+      // 400 validation errors: show field-specific message
+      else if (response.status === 400 && data.message) {
+        message = data.message;
+      }
+      // Other errors: use server message if provided, otherwise default
+      else if (data && typeof data.message === 'string' && data.message.trim() !== '') {
         message = data.message;
       }
     } catch {
-      // Non-JSON error body: keep the generic message.
+      // Non-JSON error body: keep the status-based default message.
     }
+
     if (__DEV__) {
       console.warn(
         `[AuthService] server replied ${response.status} for ${API_BASE_URL}: ${message}`,
