@@ -1,6 +1,6 @@
 # Progress: Marketplace Listings On The Backend (Part 1)
 
-Status: STEP 0 COMPLETE (inspect, read only). Next: STEP 1 migration.
+Status: STEP 1 COMPLETE (migration 014 applied, down/up verified). Next: STEP 2 auth + role helpers.
 
 Goal: move marketplace LISTINGS from per-device AsyncStorage onto the backend so a
 listing created by one user is visible to every other user on any device, with the
@@ -9,13 +9,55 @@ server-side screener as the authority. Offers and chat stay local in this task.
 ## Step Status
 
 - [x] STEP 0: Inspect (DONE)
-- [ ] STEP 1: Migration (NOT STARTED)
+- [x] STEP 1: Migration (DONE - committed)
 - [ ] STEP 2: Auth + role helpers (NOT STARTED)
 - [ ] STEP 3: Endpoints (NOT STARTED)
 - [ ] STEP 4: Seed check (NOT STARTED)
 - [ ] STEP 5: Mobile wiring (NOT STARTED)
 - [ ] STEP 6: Verify with two real accounts (NOT STARTED)
 - [ ] STEP 7: Docs (NOT STARTED)
+
+## STEP 1 Complete - Migration 014
+
+File: forgemind-backend/migrations/014_listing_post_types.js
+
+16 columns added to `listings`: post_type (NOT NULL DEFAULT 'sell'), budget, rate,
+rental_fee, rental_period_days, deposit_note, trade_offered_item,
+trade_wanted_item, trade_estimated_value, request_deadline, handoff_method
+(CHECK meetup|courier|either), open_to_trade (NOT NULL DEFAULT false), removed_at,
+removed_reason (CHECK sold_elsewhere|no_longer_available|posted_by_mistake|other),
+screener_version (NOT NULL DEFAULT 1), blocked_by_rescreen (NOT NULL DEFAULT false).
+
+The four moderation/appeal columns named in the task
+(screening_result, screening_reason, appeal_status, appeal_message) already
+existed from migration 007, so nothing had to be added for them.
+
+Constraints added:
+| Constraint | Purpose | Validated |
+|------------|---------|-----------|
+| listings_post_type_values | post_type is one of the six values | yes |
+| listings_post_type_money | sell price > 0; buy/service_request budget > 0; service_offer rate > 0; rent rental_fee > 0 and rental_period_days >= 1; trade both item fields non-empty | NOT VALID |
+| listings_post_type_field_limits | non-negative money, period >= 1, free-text length caps | NOT VALID |
+| chk_listing_price_required | DROPPED (old model forced price > 0 for legacy buy/both) and restored by `down` | n/a |
+
+Index added: idx_listings_status_post_type_created on
+(listing_status, post_type, created_at DESC).
+
+Backfill from the legacy transaction_type values (buy=3, trade=1, both=2):
+buy -> buy, trade -> trade, both -> sell with open_to_trade = true.
+Result counts: buy=3, sell(open_to_trade)=2, trade=1. transaction_type kept.
+
+Verification (psql counts only):
+- up: 34 columns total, 16 new, 3 new CHECK constraints, 1 new index,
+  6 rows backfilled, 14 migrations applied.
+- down: 18 columns, 0 new columns, 0 new constraints, 0 new index, 6 rows intact.
+- up again: identical to the first up, so the down is reversible.
+- Constraint probe: 9 invalid rows rejected (sell price 0, buy budget 0,
+  service rate 0, rent period 0, rent fee 0, blank trade item, unknown post_type,
+  unknown removed_reason, negative budget), 2 valid control rows accepted,
+  row count unchanged at 6.
+- `npm run typecheck` exit 0.
+- Commit: a168dd2 feat(db): add marketplace listing post types and type-specific fields
 
 ## STEP 0 Findings
 
