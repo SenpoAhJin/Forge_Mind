@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthService, StoredAccount } from '../services/AuthService';
+import { refreshCurrentUser } from '../services/UserService';
 import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
 import { BaseBodySelection } from '../constants/bodyType';
 
@@ -78,6 +79,9 @@ interface UserContextType {
     bodySize: number
   ) => Promise<{ success: boolean; error?: string }>;
   
+  // Refresh user data from backend
+  refreshUser: () => Promise<void>;
+  
   // Onboarding helpers (for existing flow - kept for backward compat)
   setUserRoles: (isCosplayer: boolean, isOrganizer: boolean) => void;
   setUserAccount: (email: string, password: string, displayName: string) => void;
@@ -125,7 +129,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     staff?: string;
   }>({});
 
-  // Load active session on mount
+  // Load active session on mount and refresh from backend
   useEffect(() => {
     const loadSession = async () => {
       try {
@@ -133,6 +137,15 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (session) {
           setUser(session);
           await checkForNotifications(session);
+          // Refresh from backend to get latest verification status
+          try {
+const updatedUser = await refreshCurrentUser();
+             const merged = AuthService.accountFromServerUser(updatedUser, session);
+             setUser(merged);
+             await AuthService.setActiveSession(merged);
+          } catch (error) {
+            console.log('[UserContext] Backend refresh failed on mount, using cached session');
+          }
         }
       } catch (error) {
         console.error('[UserContext] Failed to load session:', error);
@@ -149,6 +162,23 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       checkForNotifications(user);
     }
   }, [user?.verification_status, user?.department_verification_status]);
+
+  // Refresh user on app foreground (AppState change to active)
+  useEffect(() => {
+    const { AppState } = require('react-native');
+    
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active' && user) {
+        refreshUser().catch(err => console.log('[UserContext] AppState refresh failed:', err));
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [user]);
 
   // Check if there's a pending notification to show
   const checkForNotifications = async (currentUser: User) => {
@@ -222,6 +252,29 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setPendingNotification(null);
     } catch (error) {
       console.error('[UserContext] Failed to clear notification:', error);
+    }
+  };
+
+  // Refresh user data from backend (GET /auth/me)
+  const refreshUser = async (): Promise<void> => {
+    if (!user) return; // No active session to refresh
+    
+    try {
+      const updatedUser = await refreshCurrentUser();
+      // Merge with existing local-only data (body slider, portfolio photos).
+      // The server status and registration always win.
+      const merged = AuthService.accountFromServerUser(updatedUser, user);
+      setUser(merged);
+      await AuthService.setActiveSession(merged);
+    } catch (error: unknown) {
+      console.error('[UserContext] refreshUser failed:', error);
+      // If 401, session expired - logout
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
+        console.log('[UserContext] Session expired, logging out');
+        await logout();
+      }
+      // Network errors: keep current user, don't crash
     }
   };
 
@@ -385,6 +438,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         logout,
         register,
+        refreshUser,
         updateVerification,
         setUserRoles,
         setUserAccount,

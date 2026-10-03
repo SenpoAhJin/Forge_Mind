@@ -6,6 +6,8 @@
 
 **Why separate from main CHANGELOG.md:** Sprint 0 is infrastructure/tooling validation, not user-facing features. Keeping it separate makes it easier to reference the technical foundation work without cluttering the main feature changelog.
 
+> **Archived. Superseded by `CHANGELOG.md`; folded in on October 1, 2026.** Kept verbatim as the source of the folded entries. Do not append here — one changelog going forward. Map: `docs/CHANGELOG_FOLD_MAP.md`.
+
 ---
 
 ## Session — Monday, September 28, 2026, 21:30 (3D touch rotation fix + doc corrections)

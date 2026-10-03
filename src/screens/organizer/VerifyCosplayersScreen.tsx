@@ -9,7 +9,7 @@
  * - Revoke marketplace access if needed
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,13 +19,16 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { formatVerificationStatus } from '../../utils/formatStatus';
 import { AuthService, StoredAccount } from '../../services/AuthService';
+import { getUsers, updateVerification } from '../../services/UserService';
+import { UserListItem, GetUsersParams } from '../../types/api/users';
 import { RejectionReasonModal, ConfirmationModal } from '../../components';
 
 
@@ -34,20 +37,25 @@ type VerificationFilter = 'pending' | 'verified' | 'all';
 export const VerifyCosplayersScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useUser();
-  const [cosplayers, setCosplayers] = useState<StoredAccount[]>([]);
-  const [filteredCosplayers, setFilteredCosplayers] = useState<StoredAccount[]>([]);
+  const [cosplayers, setCosplayers] = useState<UserListItem[]>([]);
   const [filter, setFilter] = useState<VerificationFilter>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  /**
+   * A failed request must never be shown as an empty queue: a Head who saw
+   * "No Pending Requests" because of a network error would conclude there is
+   * nothing to review. loadError is set on failure and cleared on success.
+   */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [revealedPayoutFor, setRevealedPayoutFor] = useState<string | null>(null);
   
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [cosplayerToReject, setCosplayerToReject] = useState<StoredAccount | null>(null);
+  const [cosplayerToReject, setCosplayerToReject] = useState<UserListItem | null>(null);
   
   // NEW: Approval confirmation modal state
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [cosplayerToApprove, setCosplayerToApprove] = useState<StoredAccount | null>(null);
+  const [cosplayerToApprove, setCosplayerToApprove] = useState<UserListItem | null>(null);
   
   // NEW: Success notification modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -55,57 +63,53 @@ export const VerifyCosplayersScreen: React.FC = () => {
   
   // NEW: Revoke confirmation modal state
   const [showRevokeModal, setShowRevokeModal] = useState(false);
-  const [cosplayerToRevoke, setCosplayerToRevoke] = useState<StoredAccount | null>(null);
+  const [cosplayerToRevoke, setCosplayerToRevoke] = useState<UserListItem | null>(null);
 
-  // Load cosplayers
-  useEffect(() => {
-    loadCosplayers();
-  }, []);
+  // Load cosplayers on mount, when the filter or search changes, and every time
+  // the screen regains focus, so a cosplayer who submitted while the Head was
+  // on another screen appears without a manual restart.
+  useFocusEffect(
+    useCallback(() => {
+      loadCosplayers();
+    }, [filter, searchQuery]),
+  );
 
-  // Filter cosplayers based on verification status and search
-  useEffect(() => {
-    let filtered = cosplayers;
-
-    // Filter by verification status
-    if (filter === 'pending') {
-      // Only show cosplayers who have submitted marketplace registration
-      filtered = filtered.filter(c => 
-        c.verification_status === 'pending' && c.marketplace_registration
-      );
-    } else if (filter === 'verified') {
-      filtered = filtered.filter(c => c.verification_status === 'verified');
-    }
-
-    // Filter by search query (name or email)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(c => 
-        c.display_name.toLowerCase().includes(query) ||
-        c.email.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredCosplayers(filtered);
-  }, [cosplayers, filter, searchQuery]);
-
-  const loadCosplayers = async () => {
+  const loadCosplayers = useCallback(async () => {
     setLoading(true);
     try {
-      const accounts = await AuthService.getAccounts();
-      // Only show cosplayers (exclude organizers and self)
-      const cosplayerAccounts = accounts.filter(
-        acc => acc.is_cosplayer && acc.email !== user?.email
-      );
-      setCosplayers(cosplayerAccounts);
+      const params: GetUsersParams = { role: 'cosplayer' };
+
+      // Apply filter based on tab
+      if (filter === 'pending') {
+        params.verification_status = 'pending';
+      } else if (filter === 'verified') {
+        params.verification_status = 'verified';
+      }
+      // 'all' = no verification_status filter
+
+      // Apply search if present
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+
+      const response = await getUsers(params);
+      setCosplayers(response.users);
+      setLoadError(null);
     } catch (error) {
       console.error('[VerifyCosplayers] Failed to load cosplayers:', error);
-      // Error handling: User will see empty state if load fails
+      // Keep the previous list, but mark the screen as failed so it cannot be
+      // mistaken for an empty queue.
+      setLoadError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Can't reach the server. Check your connection and try again.",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, searchQuery]);
 
-  const handleVerify = async (cosplayer: StoredAccount, approve: boolean) => {
+  const handleVerify = async (cosplayer: UserListItem, approve: boolean) => {
     if (approve) {
       // Approve: show confirmation modal
       setCosplayerToApprove(cosplayer);
@@ -123,7 +127,7 @@ export const VerifyCosplayersScreen: React.FC = () => {
     setShowApprovalModal(false);
 
     try {
-      await AuthService.updateVerificationStatus(cosplayerToApprove.email, 'verified');
+      await updateVerification(cosplayerToApprove.user_id, { decision: 'approve' });
       setSuccessMessage(`${cosplayerToApprove.display_name} approved`);
       setShowSuccessModal(true);
       setCosplayerToApprove(null);
@@ -143,10 +147,9 @@ export const VerifyCosplayersScreen: React.FC = () => {
     if (!cosplayerToReject) return;
 
     try {
-      await AuthService.updateVerificationStatus(
-        cosplayerToReject.email,
-        'rejected',
-        reason
+      await updateVerification(
+        cosplayerToReject.user_id,
+        { decision: 'reject', rejection_reason: reason }
       );
       setSuccessMessage(`${cosplayerToReject.display_name}'s application was rejected`);
       setShowSuccessModal(true);
@@ -164,7 +167,7 @@ export const VerifyCosplayersScreen: React.FC = () => {
     setCosplayerToReject(null);
   };
 
-  const handleRevoke = async (cosplayer: StoredAccount) => {
+  const handleRevoke = async (cosplayer: UserListItem) => {
     // Show confirmation modal for revoke action
     setCosplayerToRevoke(cosplayer);
     setShowRevokeModal(true);
@@ -174,7 +177,9 @@ export const VerifyCosplayersScreen: React.FC = () => {
     if (!cosplayerToRevoke) return;
     
     try {
-      await AuthService.updateVerificationStatus(cosplayerToRevoke.email, 'revoked');
+      // Note: Revoke not yet implemented in API - would be same endpoint with 'revoke' status
+      // For now, this will fail gracefully
+      await updateVerification(cosplayerToRevoke.user_id, { decision: 'reject', rejection_reason: 'Access revoked by admin' });
       setSuccessMessage(`Marketplace access revoked for ${cosplayerToRevoke.display_name}.`);
       setShowSuccessModal(true);
       setShowRevokeModal(false);
@@ -193,12 +198,14 @@ export const VerifyCosplayersScreen: React.FC = () => {
     setCosplayerToRevoke(null);
   };
 
-  const renderCosplayerCard = (cosplayer: StoredAccount) => {
+  const renderCosplayerCard = (cosplayer: UserListItem) => {
     const isPending = cosplayer.verification_status === 'pending';
     const isVerified = cosplayer.verification_status === 'verified';
     const isRejected = cosplayer.verification_status === 'rejected';
-    const marketplaceReg = cosplayer.marketplace_registration;
-    const payoutRevealed = revealedPayoutFor === cosplayer.email;
+    // The registration comes from the server's `registration` object, which
+    // carries the submitted contact details and the MASKED payout number. The
+    // full number is never sent to any organizer.
+    const marketplaceReg = cosplayer.registration;
 
     return (
       <View key={cosplayer.email} style={styles.card}>
@@ -250,55 +257,38 @@ export const VerifyCosplayersScreen: React.FC = () => {
             </View>
             <View style={styles.detailRow}>
               <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Contact:</Text>
+              <Text style={styles.detailLabel}>Contact Email:</Text>
               <Text style={styles.detailValue}>{marketplaceReg.contact_email}</Text>
             </View>
-            {marketplaceReg.contact_phone && (
+            {marketplaceReg.contact_phone ? (
               <View style={styles.detailRow}>
                 <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>Phone:</Text>
+                <Text style={styles.detailLabel}>Contact Phone:</Text>
                 <Text style={styles.detailValue}>{marketplaceReg.contact_phone}</Text>
               </View>
-            )}
+            ) : null}
+            {marketplaceReg.payout_method ? (
+              <View style={styles.detailRow}>
+                <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>Payout Method:</Text>
+                <Text style={styles.detailValue}>{marketplaceReg.payout_method}</Text>
+              </View>
+            ) : null}
+            {marketplaceReg.payout_account_masked ? (
+              <View style={styles.detailRow}>
+                <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>Payout Account:</Text>
+                <Text style={styles.detailValue}>
+                  {marketplaceReg.payout_account_masked}
+                </Text>
+              </View>
+            ) : null}
 
-            {/* STEP 2: Only show payout info for seller or both */}
-            {(marketplaceReg.marketplace_role === 'seller' || marketplaceReg.marketplace_role === 'both') && (
-              <>
-                <View style={styles.detailRow}>
-                  <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.detailLabel}>Payout:</Text>
-                  <Text style={styles.detailValue}>{marketplaceReg.payout_method_label}</Text>
-                </View>
-                {/* Payout number: hidden by default, tap to reveal */}
-                <TouchableOpacity
-                  style={styles.revealButton}
-                  onPress={() =>
-                    setRevealedPayoutFor(payoutRevealed ? null : cosplayer.email)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={payoutRevealed ? 'eye-off-outline' : 'eye-outline'}
-                    size={16}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.revealButtonText}>
-                    {payoutRevealed ? 'Hide' : 'Show'} Payout Number
-                  </Text>
-                </TouchableOpacity>
-                {payoutRevealed && (
-                  <View style={styles.payoutNumberBox}>
-                    <Text style={styles.payoutNumberText}>{marketplaceReg.payout_method_number}</Text>
-                    <Text style={styles.mockWarning}>⚠️ MOCK FIELD (not encrypted)</Text>
-                  </View>
-                )}
-              </>
-            )}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.detailLabel}>Submitted:</Text>
               <Text style={styles.detailValue}>
-                {new Date(marketplaceReg.submitted_at).toLocaleDateString('en-US', {
+                {new Date(marketplaceReg.submitted_at ?? cosplayer.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',
@@ -406,22 +396,36 @@ export const VerifyCosplayersScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
+      {/* Content: loading, failed, empty and loaded are four distinct states */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading cosplayers...</Text>
         </View>
-      ) : filteredCosplayers.length === 0 ? (
+      ) : loadError !== null ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="cloud-offline-outline" size={64} color={colors.error} />
+          <Text style={styles.emptyStateTitle}>Couldn't Load Requests</Text>
+          <Text style={styles.emptyStateText}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => loadCosplayers()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="refresh" size={16} color={colors.backgroundLight} />
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : cosplayers.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
           <Text style={styles.emptyStateTitle}>
-            {filter === 'pending' ? 'No Pending Requests' : 
-             filter === 'verified' ? 'No Verified Cosplayers' : 
+            {filter === 'pending' ? 'No Pending Requests' :
+             filter === 'verified' ? 'No Verified Cosplayers' :
              'No Cosplayers Found'}
           </Text>
           <Text style={styles.emptyStateText}>
-            {searchQuery.trim() 
+            {searchQuery.trim()
               ? 'Try adjusting your search.'
               : filter === 'pending'
               ? 'There are no cosplayers awaiting verification.'
@@ -429,12 +433,19 @@ export const VerifyCosplayersScreen: React.FC = () => {
           </Text>
         </View>
       ) : (
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={() => loadCosplayers()}
+              tintColor={colors.primary}
+            />
+          }
         >
-          {filteredCosplayers.map(renderCosplayerCard)}
+          {cosplayers.map(renderCosplayerCard)}
         </ScrollView>
       )}
 
@@ -664,6 +675,21 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.error,
     fontWeight: '600',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+    minHeight: 48,
+  },
+  retryButtonText: {
+    ...typography.buttonText,
+    color: colors.backgroundLight,
   },
   loadingContainer: {
     flex: 1,

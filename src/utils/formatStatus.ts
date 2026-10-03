@@ -72,6 +72,9 @@ const OFFER_TYPE_LABELS: Record<string, string> = {
   purchase: 'Purchase Offer',
   trade: 'Trade Offer',
   commission: 'Commission',
+  rental: 'Rental Request',
+  sell_to_poster: 'Sell Offer',
+  service_bid: 'Service Bid',
 };
 
 /**

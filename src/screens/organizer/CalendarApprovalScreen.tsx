@@ -3,23 +3,43 @@
  * Review pending calendar submissions from own department
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Modal, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Modal, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { StandardCard, Button, TextInputField, ConfirmationModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useCalendar } from '../../contexts/CalendarContext';
-import { CalendarEntry } from '../../types/calendarEntries';
+import { CalendarListing } from '../../types/api/calendar';
 
 export const CalendarApprovalScreen: React.FC = () => {
   const { user } = useUser();
-  const { entries, approveEntry, rejectEntry } = useCalendar();
+  const { entries, isLoading, error, loadEntries, approveEntry, rejectEntry } = useCalendar();
 
-  const [selectedEntry, setSelectedEntry] = useState<CalendarEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<CalendarListing | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionError, setActionError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Load entries on mount and focus
+  useEffect(() => {
+    loadEntries('pending'); // Only load pending for approval screen
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadEntries('pending');
+    }, [])
+  );
+
+  // Pull to refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadEntries('pending');
+    setRefreshing(false);
+  };
 
   // Filter pending entries from own department
   const pendingEntries = useMemo(() => {
@@ -28,23 +48,22 @@ export const CalendarApprovalScreen: React.FC = () => {
     );
   }, [entries, user?.head_organizer_department]);
 
-  const handleApprove = async (entry: CalendarEntry) => {
-    if (!user) return;
-    const result = await approveEntry(entry.id, user.email, user.organizer_role, user.head_organizer_department || null);
+  const handleApprove = async (entry: CalendarListing) => {
+    const result = await approveEntry(entry.id);
     if (!result.success) {
       setActionError(result.error || 'Failed to approve');
     }
   };
 
   const handleReject = async () => {
-    if (!user || !selectedEntry) return;
+    if (!selectedEntry) return;
     const reason = rejectionReason.trim();
     if (!reason) {
       setActionError('Rejection reason is required');
       return;
     }
     
-    const result = await rejectEntry(selectedEntry.id, reason, user.email, user.organizer_role, user.head_organizer_department || null);
+    const result = await rejectEntry(selectedEntry.id, reason);
     if (!result.success) {
       setActionError(result.error || 'Failed to reject');
     } else {
@@ -63,7 +82,17 @@ export const CalendarApprovalScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={colors.primary}
+        />
+      }
+    >
       <Text style={styles.header}>Pending Submissions ({pendingEntries.length})</Text>
 
       {pendingEntries.length === 0 ? (

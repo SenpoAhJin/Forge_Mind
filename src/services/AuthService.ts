@@ -50,7 +50,7 @@ export interface OrganizerRegistration {
 }
 
 /** Shape of `user` as returned by GET-style auth responses. */
-interface ApiUser {
+export interface ApiUser {
   user_id: string;
   email: string;
   display_name: string;
@@ -61,19 +61,35 @@ interface ApiUser {
   is_holder_verified: boolean;
   verification_status: StoredAccount['verification_status'];
   organizer_role: 'head' | 'staff' | null;
-  head_organizer_department: string | null;
-  department: string | null;
-  department_verification_status: string | null;
+  head_organizer_department: StaffDepartment | null;
+  department: StaffDepartment | null;
+  department_verification_status: DepartmentVerificationStatus | null;
   department_rejection_reason: string | null;
   marketplace_role: 'buyer' | 'seller' | 'both' | null;
   seller_display_name: string | null;
   marketplace_contact_email: string | null;
   marketplace_contact_phone: string | null;
   payout_method_label: string | null;
-  payout_method_number: string | null;
   agreed_to_marketplace_terms: boolean | null;
   marketplace_submitted_at: string | null;
   marketplace_rejection_reason: string | null;
+  /**
+   * The server's own masked registration summary. There is no full payout
+   * number here: the backend removed payout_method_number from its public
+   * columns, so `payout_account_masked` is the only payout form available.
+   */
+  marketplace_registration?: {
+    marketplace_role: 'buyer' | 'seller' | 'both' | null;
+    seller_display_name: string;
+    contact_email: string;
+    contact_phone: string | null;
+    payout_method: string | null;
+    payout_account_masked: string | null;
+    agreed_to_marketplace_terms: boolean;
+    terms_accepted_at: string | null;
+    submitted_at: string | null;
+    rejection_reason: string | null;
+  } | null;
   data_consent_given: boolean;
   theme_preference: string;
   created_at: string;
@@ -311,7 +327,10 @@ export class AuthService {
       account.department_rejection_reason = user.department_rejection_reason;
     }
 
-    // The server stores these flat; the app nests them.
+    // The server stores these flat; the app nests them. The server is the only
+    // source: a local-only registration from before the endpoint existed is
+    // deliberately NOT preserved here, because keeping it would leave the app
+    // showing "pending" for a submission the database has never seen.
     if (user.marketplace_role) {
       account.marketplace_registration = {
         marketplace_role: user.marketplace_role,
@@ -319,14 +338,13 @@ export class AuthService {
         contact_email: user.marketplace_contact_email ?? user.email,
         contact_phone: user.marketplace_contact_phone ?? undefined,
         payout_method_label: user.payout_method_label ?? '',
-        payout_method_number: user.payout_method_number ?? '',
+        payout_method_number: user.marketplace_registration?.payout_account_masked ?? '',
         agreed_to_marketplace_terms: user.agreed_to_marketplace_terms ?? false,
         submitted_at: user.marketplace_submitted_at ?? user.created_at,
         rejection_reason: user.marketplace_rejection_reason ?? undefined,
       };
-    } else if (existing?.marketplace_registration) {
-      // Local-only submission that the server has no record of yet.
-      account.marketplace_registration = existing.marketplace_registration;
+    } else {
+      delete account.marketplace_registration;
     }
 
     if (existing?.portfolio_photos) {
@@ -334,6 +352,26 @@ export class AuthService {
     }
 
     return account;
+  }
+
+  /**
+   * Folds a server user (GET /auth/me) into the local account shape.
+   *
+   * `refreshUser()` needs this because the server sends the MARKETPLACE MASKED
+   * registration (payout_method, payout_account_masked, nullable fields) while
+   * the app's local `marketplace_registration` is the nested editable form
+   * shape. Spreading the server response over the local record, as this used to
+   * do, produced an object matching neither type and, worse, left the whole
+   * server registration unmapped. `toStoredAccount` is the single place that
+   * already knows how to do the conversion correctly, so it is reused here
+   * rather than duplicating the field mapping.
+   *
+   * The server is the source of truth: `verification_status` and the
+   * registration both come from `user`, and a local-only registration is not
+   * preserved.
+   */
+  static accountFromServerUser(user: ApiUser, existing: StoredAccount | null): StoredAccount {
+    return AuthService.toStoredAccount(user, existing, existing?.body_size_slider);
   }
 
   /** Inserts or updates the account in the local cache array. */
@@ -665,10 +703,9 @@ export class AuthService {
 
   /**
    * Record a staff member's department and start it as "pending".
-   * Same event-trigger pattern as Marketplace (submitMarketplaceRegistration):
-   * it only becomes 'pending' because the staff registered with a department
-   * selected. If the department is somehow blank/skipped, NO pending entry
-   * is created at all.
+   * Same event-trigger pattern as the marketplace registration: it only becomes
+   * 'pending' because the staff registered with a department selected. If the
+   * department is somehow blank/skipped, NO pending entry is created at all.
    */
   static async setStaffDepartment(
     email: string,
@@ -768,53 +805,4 @@ export class AuthService {
     }
   }
 
-  /**
-   * Submit marketplace registration (NEW)
-   * Sets marketplace_registration data and changes verification_status from 'not_submitted' to 'pending'
-   */
-  static async submitMarketplaceRegistration(
-    email: string,
-    registrationData: {
-      marketplace_role: 'buyer' | 'seller' | 'both';  // STEP 2: required role selection
-      seller_display_name: string;
-      contact_email: string;
-      contact_phone?: string;
-      payout_method_label: string;
-      payout_method_number: string;
-      agreed_to_marketplace_terms: boolean;
-    }
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const accounts = await this.getAccounts();
-      const index = accounts.findIndex(acc => acc.email.toLowerCase() === email.toLowerCase());
-
-      if (index === -1) {
-        return { success: false, error: 'Account not found' };
-      }
-
-      // Set marketplace registration data
-      accounts[index].marketplace_registration = {
-        ...registrationData,
-        submitted_at: new Date().toISOString(),
-      };
-
-      // Change status from 'not_submitted' to 'pending'
-      accounts[index].verification_status = 'pending';
-
-      await this.saveAccounts(accounts);
-
-      // Update active session if this is the current user
-      const activeSession = await this.getActiveSession();
-      if (activeSession && activeSession.email.toLowerCase() === email.toLowerCase()) {
-        activeSession.marketplace_registration = accounts[index].marketplace_registration;
-        activeSession.verification_status = 'pending';
-        await this.setActiveSession(activeSession);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('[AuthService] Submit marketplace registration failed:', error);
-      return { success: false, error: 'Failed to submit marketplace registration' };
-    }
-  }
 }

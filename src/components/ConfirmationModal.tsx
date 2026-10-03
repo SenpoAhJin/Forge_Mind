@@ -104,9 +104,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <TouchableOpacity
                   style={[styles.button, styles.cancelButton, dynamicStyles.cancelButton]}
                   onPress={onCancel}
-                  activeOpacity={0.7}
+                  activeOpacity={0.85}
                 >
-                  <Text style={[styles.cancelButtonText, dynamicStyles.cancelButtonText]}>{cancelText}</Text>
+                  <Text
+                    style={[styles.buttonText, dynamicStyles.cancelButtonText]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                  >
+                    {cancelText}
+                  </Text>
                 </TouchableOpacity>
               ) : null}
 
@@ -118,14 +125,18 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     : [styles.confirmButton, dynamicStyles.confirmButton],
                 ]}
                 onPress={onConfirm}
-                activeOpacity={0.7}
+                activeOpacity={0.85}
               >
                 <Text
-                  style={
+                  style={[
+                    styles.buttonText,
                     confirmStyle === 'destructive'
-                      ? [styles.destructiveButtonText, dynamicStyles.destructiveButtonText]
-                      : [styles.confirmButtonText, dynamicStyles.confirmButtonText]
-                  }
+                      ? dynamicStyles.destructiveButtonText
+                      : dynamicStyles.confirmButtonText,
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
                 >
                   {confirmText}
                 </Text>
@@ -174,30 +185,26 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: 12,
+    alignItems: 'stretch',
   },
   button: {
     flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
     borderWidth: 1,
   },
-  cancelButtonText: {
-    ...typography.body,
+  buttonText: {
+    fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
   confirmButton: {},
-  confirmButtonText: {
-    ...typography.body,
-    fontWeight: '700',
-  },
   destructiveButton: {},
-  destructiveButtonText: {
-    ...typography.body,
-    fontWeight: '700',
-  },
 });

@@ -19,10 +19,10 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
-import { TextInputField, TextAreaField, Button, AppealModal, ListingBlockedModal, ConfirmationModal } from '../../components';
+import { TextInputField, TextAreaField, Button } from '../../components';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
-import { MarketplaceCondition, Listing, TransactionType } from '../../types/marketplace';
-import { screenListing } from '../../utils/listingScreener';
+import { MarketplaceCondition, TransactionType } from '../../types/marketplace';
+import { checkListing } from '../../services/MarketplaceService';
 
 interface CreateListingScreenProps {
   onSuccess: () => void;
@@ -31,7 +31,7 @@ interface CreateListingScreenProps {
 export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSuccess }) => {
   const navigation = useNavigation();
   const { user } = useUser();
-  const { createListing, submitAppeal } = useMarketplace();
+  const { createListing } = useMarketplace();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -48,12 +48,6 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
   const [conditionError, setConditionError] = useState('');
   const [globalError, setGlobalError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // FE-6 Step 2: blocked-listing + appeal flow state
-  const [blockedListing, setBlockedListing] = useState<Listing | null>(null);
-  const [blockedModalVisible, setBlockedModalVisible] = useState(false);
-  const [appealVisible, setAppealVisible] = useState(false);
-  const [appealSubmitted, setAppealSubmitted] = useState(false);
 
   const validateFields = (): boolean => {
     let isValid = true;
@@ -129,6 +123,54 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
       return;
     }
 
+    // Pre-submit moderation check
+    setIsLoading(true);
+    setGlobalError('');
+    setTitleError('');
+    setDescriptionError('');
+
+    const checkResult = await checkListing({
+      title: title.trim(),
+      description: description.trim(),
+      category,
+    });
+
+    if (!checkResult.ok) {
+      setIsLoading(false);
+      // Fail closed: network, auth, rate limit, or server error blocks the save
+      if (checkResult.error.kind === 'rate_limit') {
+        setGlobalError(checkResult.error.message);
+      } else if (checkResult.error.kind === 'network' || checkResult.error.kind === 'server') {
+        setGlobalError("Can't check your listing right now. Try again.");
+      } else if (checkResult.error.kind === 'auth') {
+        setGlobalError(checkResult.error.message);
+      } else {
+        setGlobalError('Unable to verify listing content. Please try again.');
+      }
+      return;
+    }
+
+    if (!checkResult.data.allowed) {
+      // Moderation blocked the listing: show per-field violations
+      setIsLoading(false);
+      const violations = checkResult.data.violations;
+      let scrolled = false;
+      for (const violation of violations) {
+        if (violation.field === 'title') {
+          setTitleError(violation.message);
+          if (!scrolled) scrolled = true;
+        } else if (violation.field === 'description') {
+          setDescriptionError(violation.message);
+          if (!scrolled) scrolled = true;
+        }
+      }
+      if (violations.length > 0 && !violations.some((v) => v.field === 'title' || v.field === 'description')) {
+        setGlobalError('This listing cannot be published. Please review the guidelines.');
+      }
+      return;
+    }
+
+    // Moderation passed: save the listing
     const input = {
       title: title.trim(),
       description: description.trim(),
@@ -136,30 +178,12 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
       transaction_type: transactionType as TransactionType,
       price: transactionType === 'trade' ? 0 : parseFloat(price),
       condition: condition as MarketplaceCondition,
-      photos: [], // No photo upload in Step 1
+      photos: [],
     };
 
-    // FE-6 Step 2: every submitted listing is screened at the point of posting
-    // (mock rule-based screener; real classification is Phase 4).
-    const screening = screenListing(input);
-
-    setIsLoading(true);
     try {
-      if (screening.passed) {
-        await createListing(user.email, input);
-        // Success - navigate back (listing published normally)
-        onSuccess();
-      } else {
-        // Failed the screen: persist as 'blocked' so it is never public, and
-        // show the seller a distinct block experience instead of a success flow.
-        const blocked = await createListing(user.email, input, {
-          status: 'blocked',
-          screening_result: 'blocked',
-          screening_reason: screening.reason,
-        });
-        setBlockedListing(blocked);
-        setBlockedModalVisible(true);
-      }
+      await createListing(user.email, input);
+      onSuccess();
     } catch (error) {
       setGlobalError('Failed to create listing. Please try again.');
     } finally {
@@ -167,38 +191,15 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
     }
   };
 
-  // Blocked-listing flow (FE-6 Step 2)
-  const handleEditAndResubmit = () => {
-    setBlockedModalVisible(false);
-    setBlockedListing(null);
+  // Field errors clear when the user edits
+  const handleTitleChange = (text: string) => {
+    setTitle(text);
+    if (titleError) setTitleError('');
   };
 
-  const handleOpenAppeal = () => {
-    setBlockedModalVisible(false);
-    setAppealVisible(true);
-  };
-
-  const handleCancelAppeal = () => {
-    setAppealVisible(false);
-    setBlockedListing(null);
-  };
-
-  const handleAppealSubmit = async (message: string) => {
-    if (!blockedListing) return;
-    try {
-      await submitAppeal(blockedListing.id, message);
-      setAppealVisible(false);
-      setAppealSubmitted(true);
-    } catch (error) {
-      setGlobalError('Failed to submit appeal. Please try again.');
-    }
-  };
-
-  const handleAppealDone = () => {
-    setAppealSubmitted(false);
-    setBlockedListing(null);
-    // Blocked listing stays hidden from the public feed; return to browse.
-    onSuccess();
+  const handleDescriptionChange = (text: string) => {
+    setDescription(text);
+    if (descriptionError) setDescriptionError('');
   };
 
   return (
@@ -227,7 +228,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           <TextInputField
             label="Title *"
             value={title}
-            onChangeText={setTitle}
+            onChangeText={handleTitleChange}
             placeholder="e.g., Gojo Satoru White Wig - Heat Resistant"
             error={titleError}
           />
@@ -236,7 +237,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           <TextAreaField
             label="Description *"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={handleDescriptionChange}
             placeholder="Describe your item in detail: condition, size, materials, etc."
             error={descriptionError}
             minRows={6}
@@ -450,33 +451,6 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           />
         )}
       </View>
-
-      {/* FE-6 Step 2: block notice shown when the listing fails the category screen */}
-      <ListingBlockedModal
-        visible={blockedModalVisible}
-        reason={blockedListing?.screening_reason ?? ''}
-        onEdit={handleEditAndResubmit}
-        onAppeal={handleOpenAppeal}
-      />
-
-      {/* FE-6 Step 2: seller appeal text input */}
-      <AppealModal
-        visible={appealVisible}
-        listingTitle={blockedListing?.title ?? ''}
-        onCancel={handleCancelAppeal}
-        onSubmit={handleAppealSubmit}
-      />
-
-      {/* FE-6 Step 2: appeal submitted confirmation */}
-      <ConfirmationModal
-        visible={appealSubmitted}
-        title="Appeal Submitted"
-        message="Your appeal has been submitted for review by a Holder. You'll be notified once a decision is made."
-        confirmText="Got it"
-        cancelText=""
-        onConfirm={handleAppealDone}
-        onCancel={handleAppealDone}
-      />
     </KeyboardAvoidingView>
   );
 };

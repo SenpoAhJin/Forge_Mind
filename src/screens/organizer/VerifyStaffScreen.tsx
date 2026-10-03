@@ -23,6 +23,8 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { AuthService, StoredAccount } from '../../services/AuthService';
+import { getUsers, updateDepartmentVerification } from '../../services/UserService';
+import { UserListItem } from '../../types/api/users';
 import { Button, RejectionReasonModal, ConfirmationModal } from '../../components';
 import {
   STAFF_DEPARTMENTS,
@@ -38,19 +40,19 @@ type DepartmentFilter = 'all' | StaffDepartment;
 export const VerifyStaffScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useUser();
-  const [staff, setStaff] = useState<StoredAccount[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<StoredAccount[]>([]);
+  const [staff, setStaff] = useState<UserListItem[]>([]);
+  const [filteredStaff, setFilteredStaff] = useState<UserListItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>('all');
   const [loading, setLoading] = useState(true);
   
   // Rejection modal state
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [staffToReject, setStaffToReject] = useState<StoredAccount | null>(null);
+  const [staffToReject, setStaffToReject] = useState<UserListItem | null>(null);
   
   // Approval confirmation modal state
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [staffToApprove, setStaffToApprove] = useState<StoredAccount | null>(null);
+  const [staffToApprove, setStaffToApprove] = useState<UserListItem | null>(null);
   
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -59,20 +61,20 @@ export const VerifyStaffScreen: React.FC = () => {
   // NEW: Track which departments have at least one Head Organizer assigned
   const [claimedDepartments, setClaimedDepartments] = useState<Set<StaffDepartment>>(new Set());
 
-  // Load staff accounts (organizer_role === 'staff' with a department on record)
+  // Load staff accounts and reload on filter changes
   useEffect(() => {
     loadStaff();
     loadClaimedDepartments();
-  }, []);
+  }, [statusFilter, departmentFilter]);
 
   // Load which departments have Head Organizers assigned
   const loadClaimedDepartments = async () => {
     try {
-      const accounts = await AuthService.getAccounts();
-      const headOrganizers = accounts.filter(
-        acc => acc.organizer_role === 'head' && acc.head_organizer_department
+      const response = await getUsers({ role: 'head' });
+      const headOrganizers = response.users.filter(
+        u => u.organizer_role === 'head' && u.head_organizer_department
       );
-      const claimed = new Set(headOrganizers.map(acc => acc.head_organizer_department!));
+      const claimed = new Set(headOrganizers.map(u => u.head_organizer_department!)) as Set<StaffDepartment>;
       setClaimedDepartments(claimed);
     } catch (error) {
       console.error('[VerifyStaffScreen] Failed to load claimed departments:', error);
@@ -92,7 +94,7 @@ export const VerifyStaffScreen: React.FC = () => {
       // we need fallback logic: show staff from departments with NO Head Organizers assigned
       filtered = filtered.filter(acc => {
         // Show staff if their department has NO Head Organizers claimed
-        return !claimedDepartments.has(acc.department!);
+        return !claimedDepartments.has(acc.department! as StaffDepartment);
       });
     }
 
@@ -121,16 +123,22 @@ export const VerifyStaffScreen: React.FC = () => {
   const loadStaff = async () => {
     setLoading(true);
     try {
-      const accounts = await AuthService.getAccounts();
-      // Only organizer_role='staff' accounts that registered with a department
-      const staffAccounts = accounts.filter(
-        acc =>
-          acc.organizer_role === 'staff' &&
-          acc.is_organizer &&
-          acc.department &&
-          acc.email !== user?.email
-      );
-      setStaff(staffAccounts);
+      const params: any = { role: 'staff' };
+      
+      // Apply department filter if not 'all'
+      if (departmentFilter !== 'all') {
+        params.department = departmentFilter;
+      }
+      
+      // Apply status filter if not 'all'
+      if (statusFilter === 'pending') {
+        params.department_verification_status = 'pending';
+      } else if (statusFilter === 'approved') {
+        params.department_verification_status = 'approved';
+      }
+      
+      const response = await getUsers(params);
+      setStaff(response.users as any[]);
     } catch (error) {
       console.error('[VerifyStaff] Failed to load staff:', error);
       Alert.alert('Error', 'Failed to load staff accounts. Please try again.');
@@ -139,7 +147,7 @@ export const VerifyStaffScreen: React.FC = () => {
     }
   };
 
-  const handleVerify = async (member: StoredAccount, approve: boolean) => {
+  const handleVerify = async (member: UserListItem, approve: boolean) => {
     const deptLabel = member.department ? DEPARTMENT_LABELS[member.department] : 'unknown department';
 
     if (approve) {
@@ -156,23 +164,20 @@ export const VerifyStaffScreen: React.FC = () => {
   const handleApprovalConfirm = async () => {
     if (!staffToApprove) return;
     
-    const deptLabel = staffToApprove.department ? DEPARTMENT_LABELS[staffToApprove.department] : 'unknown department';
+    const deptLabel = staffToApprove.department ? DEPARTMENT_LABELS[staffToApprove.department as StaffDepartment] : 'unknown department';
     
     try {
-      const result = await AuthService.updateDepartmentVerificationStatus(
-        staffToApprove.email,
-        'approved'
+      await updateDepartmentVerification(
+        staffToApprove.user_id,
+        { decision: 'approve' }
       );
-      if (result.success) {
-        setShowApprovalModal(false);
-        setSuccessMessage(`${staffToApprove.display_name} approved for ${deptLabel}`);
-        setShowSuccessModal(true);
-        setStaffToApprove(null);
-        loadStaff();
-      } else {
-        Alert.alert('Error', result.error || 'Failed to approve application.');
-      }
+      setShowApprovalModal(false);
+      setSuccessMessage(`${staffToApprove.display_name} approved for ${deptLabel}`);
+      setShowSuccessModal(true);
+      setStaffToApprove(null);
+      loadStaff();
     } catch (error) {
+      console.error('[VerifyStaff] Approve failed:', error);
       Alert.alert('Error', 'Failed to approve application.');
     }
   };
@@ -186,21 +191,17 @@ export const VerifyStaffScreen: React.FC = () => {
     if (!staffToReject) return;
 
     try {
-      const result = await AuthService.updateDepartmentVerificationStatus(
-        staffToReject.email,
-        'rejected',
-        reason
+      await updateDepartmentVerification(
+        staffToReject.user_id,
+        { decision: 'reject', rejection_reason: reason }
       );
-      if (result.success) {
-        setShowRejectionModal(false);
-        setSuccessMessage(`${staffToReject.display_name}'s application was rejected`);
-        setShowSuccessModal(true);
-        setStaffToReject(null);
-        loadStaff();
-      } else {
-        Alert.alert('Error', result.error || 'Failed to reject application.');
-      }
+      setShowRejectionModal(false);
+      setSuccessMessage(`${staffToReject.display_name}'s application was rejected`);
+      setShowSuccessModal(true);
+      setStaffToReject(null);
+      loadStaff();
     } catch (error) {
+      console.error('[VerifyStaff] Reject failed:', error);
       Alert.alert('Error', 'Failed to reject application.');
     }
   };
@@ -239,9 +240,9 @@ export const VerifyStaffScreen: React.FC = () => {
     }))
     .filter(group => group.members.length > 0);
 
-  const renderStaffCard = (member: StoredAccount) => {
+  const renderStaffCard = (member: UserListItem) => {
     const isPending = member.department_verification_status === 'pending';
-    const deptLabel = member.department ? DEPARTMENT_LABELS[member.department] : 'No department';
+    const deptLabel = member.department ? DEPARTMENT_LABELS[member.department as StaffDepartment] : 'No department';
 
     return (
       <View key={member.email} style={styles.card}>

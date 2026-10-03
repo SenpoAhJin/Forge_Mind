@@ -24,7 +24,9 @@ interface TextInputFieldProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad';
+  inputMode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+  maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
 }
@@ -36,6 +38,8 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
   placeholder,
   secureTextEntry,
   keyboardType = 'default',
+  inputMode,
+  maxLength,
   autoCapitalize,
   error,
 }) => {
@@ -45,7 +49,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
 
   const handleTextChange = (text: string) => {
     // Auto-apply proper case unless it's a password, email field, or numeric field
-    if (secureTextEntry || keyboardType === 'email-address' || keyboardType === 'numeric' || keyboardType === 'phone-pad') {
+    if (secureTextEntry || keyboardType === 'email-address' || keyboardType === 'numeric' || keyboardType === 'phone-pad' || keyboardType === 'number-pad') {
       onChangeText(text);
     } else {
       const formatted = isAllLowercase(text) ? toProperCase(text) : text;
@@ -69,6 +73,8 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
         placeholderTextColor={themeColors.textDisabled}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
+        inputMode={inputMode}
+        maxLength={maxLength}
         autoCapitalize={autoCapitalize}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

@@ -24,11 +24,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { TextInputField, MarketplaceRegistrationSuccessModal, TermsModal } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
-import { AuthService } from '../../services/AuthService';
 import {
   validateEmail,
   validateRequired,
 } from '../../utils/validation';
+import { digitsOnly } from '../../utils/inputFilters';
+import { submitRegistration } from '../../services/MarketplaceService';
+import {
+  PAYOUT_NUMBER_MIN_LENGTH,
+  PAYOUT_NUMBER_MAX_LENGTH,
+  CONTACT_PHONE_MIN_LENGTH,
+  CONTACT_PHONE_MAX_LENGTH,
+} from '../../types/api/marketplace';
+
+const TERMS_ERROR = 'You must agree to the Marketplace Terms & Conditions to register.';
 
 interface MarketplaceRegistrationScreenProps {
   onSuccess: () => void;
@@ -37,7 +46,7 @@ interface MarketplaceRegistrationScreenProps {
 export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScreenProps> = ({
   onSuccess,
 }) => {
-  const { user } = useUser();
+  const { user, refreshUser } = useUser();
 
   // STEP 2: Marketplace role selection
   const [marketplaceRole, setMarketplaceRole] = useState<'buyer' | 'seller' | 'both' | null>(null);
@@ -56,6 +65,8 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
   const [contactEmailError, setContactEmailError] = useState('');
   const [payoutMethodLabelError, setPayoutMethodLabelError] = useState('');
   const [payoutMethodNumberError, setPayoutMethodNumberError] = useState('');
+  const [contactPhoneError, setContactPhoneError] = useState('');
+  const [termsError, setTermsError] = useState('');
   const [globalError, setGlobalError] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -88,15 +99,47 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
     return result.valid;
   };
 
+  const validateContactPhone = (value: string): boolean => {
+    // Optional field: an empty value is valid, but a present one must be digits
+    // within the server's range, otherwise the submission is rejected with 400.
+    if (!value) {
+      setContactPhoneError('');
+      return true;
+    }
+    if (
+      value.length < CONTACT_PHONE_MIN_LENGTH ||
+      value.length > CONTACT_PHONE_MAX_LENGTH ||
+      digitsOnly(value) !== value
+    ) {
+      setContactPhoneError(`Numbers only, ${CONTACT_PHONE_MIN_LENGTH} to ${CONTACT_PHONE_MAX_LENGTH} digits`);
+      return false;
+    }
+    setContactPhoneError('');
+    return true;
+  };
+
   const validatePayoutMethodNumber = (value: string): boolean => {
     // STEP 2: Only validate if payout info is required
     if (!requiresPayoutInfo) {
       setPayoutMethodNumberError('');
       return true;
     }
-    const result = validateRequired(value, 'Account/phone number');
-    setPayoutMethodNumberError(result.error);
-    return result.valid;
+    const required = validateRequired(value, 'Account/phone number');
+    if (!required.valid) {
+      setPayoutMethodNumberError(required.error);
+      return false;
+    }
+    const digits = digitsOnly(value);
+    if (digits !== value.trim()) {
+      setPayoutMethodNumberError('Numbers only, 7 to 20 digits');
+      return false;
+    }
+    if (digits.length < PAYOUT_NUMBER_MIN_LENGTH || digits.length > PAYOUT_NUMBER_MAX_LENGTH) {
+      setPayoutMethodNumberError('Numbers only, 7 to 20 digits');
+      return false;
+    }
+    setPayoutMethodNumberError('');
+    return true;
   };
 
   const handleSubmit = async () => {
@@ -116,39 +159,73 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
     // Validate all fields
     const isSellerNameValid = validateSellerDisplayName(sellerDisplayName);
     const isEmailValid = validateContactEmail(contactEmail);
+    const isPhoneValid = validateContactPhone(contactPhone);
     const isPayoutLabelValid = validatePayoutMethodLabel(payoutMethodLabel);
     const isPayoutNumberValid = validatePayoutMethodNumber(payoutMethodNumber);
 
-    if (!isSellerNameValid || !isEmailValid || !isPayoutLabelValid || !isPayoutNumberValid) {
-      return;
+    // Terms is required and its error sits under the checkbox, not in the
+    // banner, so the reason the submit was refused is visible where the fix is.
+    if (!agreedToMarketplaceTerms) {
+      setTermsError(TERMS_ERROR);
+    } else {
+      setTermsError('');
     }
 
-    // Check marketplace T&C agreement
-    if (!agreedToMarketplaceTerms) {
-      setGlobalError('You must agree to the Marketplace Terms to submit');
+    if (
+      !isSellerNameValid ||
+      !isEmailValid ||
+      !isPhoneValid ||
+      !isPayoutLabelValid ||
+      !isPayoutNumberValid ||
+      !agreedToMarketplaceTerms
+    ) {
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const result = await AuthService.submitMarketplaceRegistration(user.email, {
-        marketplace_role: marketplaceRole,  // STEP 2: include role in submission
+      const result = await submitRegistration({
+        marketplace_role: marketplaceRole,
         seller_display_name: sellerDisplayName.trim(),
-        contact_email: contactEmail.trim().toLowerCase(),
-        contact_phone: contactPhone.trim() || undefined,
-        payout_method_label: payoutMethodLabel.trim(),
-        payout_method_number: payoutMethodNumber.trim(),
-        agreed_to_marketplace_terms: agreedToMarketplaceTerms,
+        marketplace_contact_email: contactEmail.trim().toLowerCase(),
+        marketplace_contact_phone: contactPhone || undefined,
+        payout_method_label: payoutMethodLabel.trim() || undefined,
+        payout_method_number: digitsOnly(payoutMethodNumber) || undefined,
+        agreed_to_marketplace_terms: true,
       });
 
-      if (result.success) {
-        setShowSuccessModal(true);
-      } else {
-        setGlobalError(result.error || 'Registration failed. Please try again.');
+      if (!result.ok) {
+        const error = result.error;
+        if (error.kind === 'validation') {
+          setGlobalError(error.message);
+          // Each message is attached to the input that caused it. The server
+          // keys match the request body, so nothing has to be translated.
+          if (error.fields.seller_display_name) setSellerDisplayNameError(error.fields.seller_display_name);
+          if (error.fields.marketplace_contact_email) setContactEmailError(error.fields.marketplace_contact_email);
+          if (error.fields.marketplace_contact_phone) setContactPhoneError(error.fields.marketplace_contact_phone);
+          if (error.fields.payout_method_label) setPayoutMethodLabelError(error.fields.payout_method_label);
+          if (error.fields.payout_method_number) setPayoutMethodNumberError(error.fields.payout_method_number);
+          if (error.fields.marketplace_role) setGlobalError(error.fields.marketplace_role);
+          if (error.fields.agreed_to_marketplace_terms) setTermsError(TERMS_ERROR);
+        } else {
+          // network / auth / conflict / server: one message, form data kept so
+          // the user does not have to retype anything.
+          setGlobalError(error.message);
+        }
+        return;
       }
-    } catch (error) {
-      setGlobalError('An unexpected error occurred. Please try again.');
+
+      // Server accepted it. Refresh the session so verification_status and the
+      // masked registration come from the database, not from local state.
+      try {
+        await refreshUser();
+      } catch {
+        // The submission is already stored. A failed refresh only means the
+        // header can be stale until the next refresh, so it must not fail the
+        // submission the user just completed.
+      }
+      setShowSuccessModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +237,11 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
   };
 
   const handleEditSubmission = () => {
-    // Just close modal - form is already pre-filled with current values
+    // Re-apply the filter and re-check the payout number before returning to the form
+    setPayoutMethodNumber(digitsOnly(payoutMethodNumber));
+    if (payoutMethodNumber) {
+      validatePayoutMethodNumber(payoutMethodNumber);
+    }
     setShowSuccessModal(false);
   };
 
@@ -301,9 +382,16 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
           <TextInputField
             label="Contact Phone (Optional)"
             value={contactPhone}
-            onChangeText={setContactPhone}
-            placeholder="+63 912 345 6789"
+            onChangeText={(text) => {
+              const digits = digitsOnly(text);
+              setContactPhone(digits);
+              if (contactPhoneError) validateContactPhone(digits);
+            }}
+            placeholder="912 345 6789"
             keyboardType="phone-pad"
+            inputMode="tel"
+            maxLength={CONTACT_PHONE_MAX_LENGTH}
+            error={contactPhoneError}
           />
         </View>
 
@@ -337,10 +425,14 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
               label="Account/Phone Number"
               value={payoutMethodNumber}
               onChangeText={(text) => {
-                setPayoutMethodNumber(text);
-                if (payoutMethodNumberError) validatePayoutMethodNumber(text);
+                const digits = digitsOnly(text);
+                setPayoutMethodNumber(digits);
+                if (payoutMethodNumberError) validatePayoutMethodNumber(digits);
               }}
               placeholder="Account number or mobile number"
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={PAYOUT_NUMBER_MAX_LENGTH}
               error={payoutMethodNumberError}
             />
 
@@ -354,7 +446,12 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
         <View style={styles.termsRow}>
           <TouchableOpacity
             style={styles.termsCheckboxContainer}
-            onPress={() => setAgreedToMarketplaceTerms(!agreedToMarketplaceTerms)}
+            onPress={() => {
+              const next = !agreedToMarketplaceTerms;
+              setAgreedToMarketplaceTerms(next);
+              // Checking the box clears the inline error immediately.
+              if (next && termsError) setTermsError('');
+            }}
             activeOpacity={0.7}
             disabled={isLoading}
           >
@@ -362,16 +459,19 @@ export const MarketplaceRegistrationScreen: React.FC<MarketplaceRegistrationScre
               {agreedToMarketplaceTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
             </View>
           </TouchableOpacity>
-          <Text style={styles.termsText}>
-            I agree to the{' '}
-            <Text
-              style={styles.termsLink}
-              onPress={() => setShowMarketplaceTermsModal(true)}
-            >
-              Marketplace Terms & Conditions
+          <View style={styles.termsTextContainer}>
+            <Text style={styles.termsText}>
+              I agree to the{' '}
+              <Text
+                style={styles.termsLink}
+                onPress={() => setShowMarketplaceTermsModal(true)}
+              >
+                Marketplace Terms & Conditions
+              </Text>
+              {' '}(seller rules, fees, dispute resolution)
             </Text>
-            {' '}(seller rules, fees, dispute resolution)
-          </Text>
+            {termsError ? <Text style={styles.termsError}>{termsError}</Text> : null}
+          </View>
         </View>
 
         <Text style={styles.termsNote}>
@@ -550,6 +650,14 @@ const styles = StyleSheet.create({
   termsCheckboxChecked: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  termsTextContainer: {
+    flex: 1,
+  },
+  termsError: {
+    ...typography.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
   termsText: {
     ...typography.body,

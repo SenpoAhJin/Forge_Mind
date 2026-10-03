@@ -5,16 +5,17 @@
  * Edit/delete: original submitter OR any Head Organizer
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { StandardCard, Button, TextInputField, ConfirmationModal } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { getTodayLocal } from '../../utils/dateHelpers';
-import { CalendarEntry } from '../../types/calendarEntries';
+import { CalendarListing } from '../../types/api/calendar';
 import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
@@ -36,10 +37,11 @@ export const CalendarManageScreen: React.FC = () => {
   const { themeColors } = useTheme();
   const dynamicStyles = getDynamicStyles(themeColors);
   const { user } = useUser();
-  const { entries, isLoading, createEntry, updateEntry, deleteEntry } = useCalendar();
+  const { entries, isLoading, error, loadEntries, createEntry, updateEntry, deleteEntry } = useCalendar();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -53,7 +55,25 @@ export const CalendarManageScreen: React.FC = () => {
   const [formError, setFormError] = useState('');
 
   // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<CalendarEntry | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<CalendarListing | null>(null);
+
+  // Load entries on mount and focus
+  useEffect(() => {
+    loadEntries();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadEntries();
+    }, [])
+  );
+
+  // Pull to refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadEntries();
+    setRefreshing(false);
+  };
 
   // Check permissions
   const canSubmit = user?.is_organizer && (
@@ -61,10 +81,10 @@ export const CalendarManageScreen: React.FC = () => {
     (user.organizer_role === 'staff' && user.department_verification_status === 'approved')
   );
 
-  const canEdit = (entry: CalendarEntry) => {
+  const canEdit = (entry: CalendarListing) => {
     if (!user?.is_organizer) return false;
     if (user.organizer_role === 'head') return true; // Head can edit any
-    return entry.submitted_by_email === user.email; // Staff can edit own only
+    return entry.submitted_by_user_id === user.email; // Check by email since we don't have user_id in User type
   };
 
   const canDelete = canEdit; // Same rules
@@ -88,7 +108,7 @@ export const CalendarManageScreen: React.FC = () => {
     setShowForm(false);
   };
 
-  const loadEntryForEdit = (entry: CalendarEntry) => {
+  const loadEntryForEdit = (entry: CalendarListing) => {
     setEditingId(entry.id);
     setTitle(entry.title);
     setOrganizerName(entry.organizer_name);
@@ -103,27 +123,22 @@ export const CalendarManageScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
-
     setFormError('');
+
+    const input = {
+      title,
+      organizer_name: organizerName,
+      venue_name: venueName,
+      city,
+      start_date: startDate,
+      end_date: endDate || null,
+      description: description || null,
+      external_link: externalLink || null,
+    };
 
     if (editingId) {
       // Update existing
-      const result = await updateEntry(
-        editingId,
-        {
-          title,
-          organizer_name: organizerName,
-          venue_name: venueName,
-          city,
-          start_date: startDate,
-          end_date: endDate || null,
-          description: description || null,
-          external_link: externalLink || null,
-        },
-        user.email,
-        user.organizer_role
-      );
+      const result = await updateEntry(editingId, input);
       if (!result.success) {
         setFormError(result.error || 'Failed to update listing');
       } else {
@@ -131,38 +146,17 @@ export const CalendarManageScreen: React.FC = () => {
       }
     } else {
       // Create new
-      const result = await createEntry(
-        {
-          title,
-          organizer_name: organizerName,
-          venue_name: venueName,
-          city,
-          start_date: startDate,
-          end_date: endDate || null,
-          description: description || null,
-          external_link: externalLink || null,
-        },
-        user.email,
-        user.display_name,
-        user.organizer_role,
-        user.department_verification_status || null,
-        user.department || null  // Pass department for routing approval
-      );
+      const result = await createEntry(input);
       if (!result.success) {
         setFormError(result.error || 'Failed to create listing');
       } else {
         resetForm();
-        // Show success message based on role
-        if (user.organizer_role === 'staff') {
-          setFormError('✓ Submission sent to your Head Organizer for approval');
-        }
       }
     }
   };
 
-  const handleDelete = async (entry: CalendarEntry) => {
-    if (!user) return;
-    const result = await deleteEntry(entry.id, user.email, user.organizer_role);
+  const handleDelete = async (entry: CalendarListing) => {
+    const result = await deleteEntry(entry.id);
     if (result.success) {
       setDeleteConfirm(null);
     } else {
@@ -170,10 +164,23 @@ export const CalendarManageScreen: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && entries.length === 0) {
     return (
       <View style={[styles.container, dynamicStyles.container]}>
         <Text style={[styles.loadingText, dynamicStyles.loadingText]}>Loading calendar...</Text>
+      </View>
+    );
+  }
+
+  if (error && entries.length === 0) {
+    return (
+      <View style={[styles.container, dynamicStyles.container]}>
+        <StandardCard style={styles.noAccessCard}>
+          <Ionicons name="alert-circle-outline" size={40} color={themeColors.error} />
+          <Text style={[styles.noAccessTitle, dynamicStyles.noAccessTitle]}>Connection Error</Text>
+          <Text style={[styles.noAccessBody, dynamicStyles.noAccessBody]}>{error}</Text>
+          <Button title="Retry" variant="primary" onPress={() => loadEntries()} />
+        </StandardCard>
       </View>
     );
   }
@@ -193,7 +200,17 @@ export const CalendarManageScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={[styles.container, dynamicStyles.container]} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, dynamicStyles.container]}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={themeColors.primary}
+        />
+      }
+    >
       {showForm ? (
         <StandardCard style={styles.formCard}>
           <View style={styles.formHeader}>

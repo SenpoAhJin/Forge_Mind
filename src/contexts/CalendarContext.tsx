@@ -1,346 +1,153 @@
 /**
- * Public Event Calendar Context
+ * Public Event Calendar Context - API-Backed Version
  * Community-submitted event listings (cosplay.ph-style directory)
- * Staff-submitted (any approved staff OR Head Organizer), visible to all cosplayers
  * 
- * Guards:
+ * DATA SOURCE: Backend API (/calendar endpoints)
+ * No local storage - all operations go to server
+ * 
+ * Guards (server-enforced):
  * - Create: approved staff (any department) OR Head Organizer
  * - Edit/Delete: original submitter OR any Head Organizer
- * 
- * No seed data (starts empty, staff-generated content)
+ * - Review: Head Organizer (department-scoped)
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CalendarEntry, CalendarEntryStatus } from '../types/calendarEntries';
-
-const STORAGE_KEY = '@forgemind:calendar_entries';
-
-interface CreateEntryInput {
-  title: string;
-  organizer_name: string;
-  venue_name: string;
-  city: string;
-  start_date: string;
-  end_date?: string | null;
-  description?: string | null;
-  external_link?: string | null;
-}
-
-interface UpdateEntryInput {
-  title?: string;
-  organizer_name?: string;
-  venue_name?: string;
-  city?: string;
-  start_date?: string;
-  end_date?: string | null;
-  description?: string | null;
-  external_link?: string | null;
-}
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { CalendarService } from '../services/CalendarService';
+import { CalendarListing, CalendarListingStatus, CreateCalendarListingInput, UpdateCalendarListingInput } from '../types/api/calendar';
 
 interface CalendarContextType {
-  entries: CalendarEntry[];
+  entries: CalendarListing[];
   isLoading: boolean;
-  createEntry: (
-    input: CreateEntryInput,
-    actorEmail: string,
-    actorName: string,
-    actorRole: 'head' | 'staff' | null,
-    actorStatus: string | null,
-    actorDepartment?: string | null
-  ) => Promise<{ success: boolean; entryId?: string; error?: string }>;
-  updateEntry: (
-    entryId: string,
-    input: UpdateEntryInput,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null
-  ) => Promise<{ success: boolean; error?: string }>;
-  deleteEntry: (
-    entryId: string,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null
-  ) => Promise<{ success: boolean; error?: string }>;
-  approveEntry: (
-    entryId: string,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null,
-    actorDepartment?: string | null
-  ) => Promise<{ success: boolean; error?: string }>;
-  rejectEntry: (
-    entryId: string,
-    reason: string,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null,
-    actorDepartment?: string | null
-  ) => Promise<{ success: boolean; error?: string }>;
-  getEntryById: (id: string) => CalendarEntry | null;
+  error: string | null;
+  loadEntries: (status?: CalendarListingStatus) => Promise<void>;
+  createEntry: (input: CreateCalendarListingInput) => Promise<{ success: boolean; entryId?: string; error?: string }>;
+  updateEntry: (entryId: string, input: UpdateCalendarListingInput) => Promise<{ success: boolean; error?: string }>;
+  deleteEntry: (entryId: string) => Promise<{ success: boolean; error?: string }>;
+  approveEntry: (entryId: string) => Promise<{ success: boolean; error?: string }>;
+  rejectEntry: (entryId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
+  getEntryById: (id: string) => CalendarListing | null;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
-const nowIso = () => new Date().toISOString();
-
-// Simple URL pattern check (not exhaustive, just plausibility)
-const isPlausibleUrl = (str: string): boolean => {
-  return /^https?:\/\/.+\..+/.test(str) || /^www\..+\..+/.test(str);
-};
-
 export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [entries, setEntries] = useState<CalendarEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [entries, setEntries] = useState<CalendarListing[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load from storage on mount
-  useEffect(() => {
-    const loadEntries = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setEntries(JSON.parse(stored));
-        }
-        // No seed data - starts empty
-      } catch (error) {
-        console.error('[CalendarContext] Failed to load entries:', error);
-      } finally {
-        setIsLoading(false);
+  const loadEntries = async (status?: CalendarListingStatus): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await CalendarService.listListings(status);
+      if (result.success && result.data) {
+        setEntries(result.data);
+      } else {
+        setError(result.error || 'Failed to load calendar listings');
       }
-    };
-    loadEntries();
-  }, []);
-
-  // Persist to storage whenever entries change
-  useEffect(() => {
-    if (!isLoading) {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries)).catch((error) =>
-        console.error('[CalendarContext] Failed to persist entries:', error)
-      );
+    } catch (err) {
+      setError('Failed to load calendar listings');
+      console.error('[CalendarContext] Load error:', err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [entries, isLoading]);
+  };
 
   const createEntry = async (
-    input: CreateEntryInput,
-    actorEmail: string,
-    actorName: string,
-    actorRole: 'head' | 'staff' | null,
-    actorStatus: string | null,
-    actorDepartment?: string | null
+    input: CreateCalendarListingInput
   ): Promise<{ success: boolean; entryId?: string; error?: string }> => {
-    // Guard: must be approved staff OR Head Organizer
-    if (actorRole === 'staff' && actorStatus !== 'approved') {
-      return { success: false, error: 'Only approved staff can submit listings' };
+    try {
+      const result = await CalendarService.createListing(input);
+      if (result.success && result.data) {
+        // Optimistic update
+        setEntries((prev) => [result.data!, ...prev]);
+        return { success: true, entryId: result.data.id };
+      }
+      return { success: false, error: result.error };
+    } catch (err) {
+      return { success: false, error: 'Failed to create listing' };
     }
-    if (actorRole !== 'staff' && actorRole !== 'head') {
-      return { success: false, error: 'Only staff or Head Organizers can submit listings' };
-    }
-
-    // Validate title length
-    if (input.title.trim().length < 3 || input.title.trim().length > 100) {
-      return { success: false, error: 'Title must be 3-100 characters' };
-    }
-
-    // Validate dates
-    if (input.end_date && input.end_date < input.start_date) {
-      return { success: false, error: 'End date must be on or after start date' };
-    }
-
-    // Validate description length
-    if (input.description && input.description.length > 500) {
-      return { success: false, error: 'Description must be 500 characters or less' };
-    }
-
-    // Validate external_link if provided
-    if (input.external_link && !isPlausibleUrl(input.external_link)) {
-      return { success: false, error: 'External link must be a valid URL' };
-    }
-
-    const entry: CalendarEntry = {
-      id: `calendar-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: input.title.trim(),
-      organizer_name: input.organizer_name.trim(),
-      venue_name: input.venue_name.trim(),
-      city: input.city.trim(),
-      start_date: input.start_date,
-      end_date: input.end_date || null,
-      description: input.description?.trim() || null,
-      external_link: input.external_link?.trim() || null,
-      submitted_by_email: actorEmail,
-      submitted_by_name: actorName,
-      submitted_by_department: actorRole === 'staff' ? actorDepartment || null : null,
-      status: actorRole === 'head' ? 'approved' : 'pending',  // Head submissions auto-approved, Staff go to pending
-      created_at: nowIso(),
-      updated_at: nowIso(),
-    };
-
-    setEntries((prev) => [entry, ...prev]);
-    return { success: true, entryId: entry.id };
   };
 
   const updateEntry = async (
     entryId: string,
-    input: UpdateEntryInput,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null
+    input: UpdateCalendarListingInput
   ): Promise<{ success: boolean; error?: string }> => {
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry) {
-      return { success: false, error: 'Entry not found' };
-    }
-
-    // Guard: only original submitter OR Head Organizer
-    if (actorRole !== 'head' && entry.submitted_by_email !== actorEmail) {
-      return { success: false, error: 'You can only edit your own listings' };
-    }
-
-    // Validate title if provided
-    if (input.title !== undefined) {
-      if (input.title.trim().length < 3 || input.title.trim().length > 100) {
-        return { success: false, error: 'Title must be 3-100 characters' };
+    try {
+      const result = await CalendarService.updateListing(entryId, input);
+      if (result.success && result.data) {
+        // Optimistic update
+        setEntries((prev) =>
+          prev.map((e) => (e.id === entryId ? result.data! : e))
+        );
+        return { success: true };
       }
+      return { success: false, error: result.error };
+    } catch (err) {
+      return { success: false, error: 'Failed to update listing' };
     }
-
-    // Validate dates if provided
-    const newStartDate = input.start_date || entry.start_date;
-    const newEndDate = input.end_date !== undefined ? input.end_date : entry.end_date;
-    if (newEndDate && newEndDate < newStartDate) {
-      return { success: false, error: 'End date must be on or after start date' };
-    }
-
-    // Validate description if provided
-    if (input.description !== undefined && input.description && input.description.length > 500) {
-      return { success: false, error: 'Description must be 500 characters or less' };
-    }
-
-    // Validate external_link if provided
-    if (input.external_link !== undefined && input.external_link && !isPlausibleUrl(input.external_link)) {
-      return { success: false, error: 'External link must be a valid URL' };
-    }
-
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? {
-              ...e,
-              title: input.title !== undefined ? input.title.trim() : e.title,
-              organizer_name: input.organizer_name !== undefined ? input.organizer_name.trim() : e.organizer_name,
-              venue_name: input.venue_name !== undefined ? input.venue_name.trim() : e.venue_name,
-              city: input.city !== undefined ? input.city.trim() : e.city,
-              start_date: input.start_date || e.start_date,
-              end_date: input.end_date !== undefined ? input.end_date : e.end_date,
-              description: input.description !== undefined ? (input.description?.trim() || null) : e.description,
-              external_link: input.external_link !== undefined ? (input.external_link?.trim() || null) : e.external_link,
-              updated_at: nowIso(),
-            }
-          : e
-      )
-    );
-
-    return { success: true };
   };
 
   const deleteEntry = async (
-    entryId: string,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null
+    entryId: string
   ): Promise<{ success: boolean; error?: string }> => {
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry) {
-      return { success: false, error: 'Entry not found' };
+    try {
+      const result = await CalendarService.deleteListing(entryId);
+      if (result.success) {
+        // Optimistic update
+        setEntries((prev) => prev.filter((e) => e.id !== entryId));
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (err) {
+      return { success: false, error: 'Failed to delete listing' };
     }
-
-    // Guard: only original submitter OR Head Organizer
-    if (actorRole !== 'head' && entry.submitted_by_email !== actorEmail) {
-      return { success: false, error: 'You can only delete your own listings' };
-    }
-
-    setEntries((prev) => prev.filter((e) => e.id !== entryId));
-    return { success: true };
   };
 
-  const getEntryById = (id: string) => entries.find((e) => e.id === id) || null;
-
   const approveEntry = async (
-    entryId: string,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null,
-    actorDepartment?: string | null
+    entryId: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // Guard: Head Organizer only
-    if (actorRole !== 'head') {
-      return { success: false, error: 'Only Head Organizers can approve listings' };
+    try {
+      const result = await CalendarService.reviewListing(entryId, {
+        decision: 'approve',
+      });
+      if (result.success && result.data) {
+        // Optimistic update
+        setEntries((prev) =>
+          prev.map((e) => (e.id === entryId ? result.data! : e))
+        );
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (err) {
+      return { success: false, error: 'Failed to approve listing' };
     }
-
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry) {
-      return { success: false, error: 'Entry not found' };
-    }
-
-    // Department scope: Head can only approve submissions from their own department
-    if (entry.submitted_by_department && entry.submitted_by_department !== actorDepartment) {
-      return { success: false, error: 'You can only approve listings from your own department' };
-    }
-
-    if (entry.status !== 'pending') {
-      return { success: false, error: 'Entry is not pending approval' };
-    }
-
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? {
-              ...e,
-              status: 'approved' as CalendarEntryStatus,
-              reviewed_by_email: actorEmail,
-              reviewed_at: nowIso(),
-              updated_at: nowIso(),
-            }
-          : e
-      )
-    );
-
-    return { success: true };
   };
 
   const rejectEntry = async (
     entryId: string,
-    reason: string,
-    actorEmail: string,
-    actorRole: 'head' | 'staff' | null,
-    actorDepartment?: string | null
+    reason: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // Guard: Head Organizer only
-    if (actorRole !== 'head') {
-      return { success: false, error: 'Only Head Organizers can reject listings' };
+    try {
+      const result = await CalendarService.reviewListing(entryId, {
+        decision: 'reject',
+        rejection_reason: reason,
+      });
+      if (result.success && result.data) {
+        // Optimistic update
+        setEntries((prev) =>
+          prev.map((e) => (e.id === entryId ? result.data! : e))
+        );
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (err) {
+      return { success: false, error: 'Failed to reject listing' };
     }
+  };
 
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry) {
-      return { success: false, error: 'Entry not found' };
-    }
-
-    // Department scope: Head can only reject submissions from their own department
-    if (entry.submitted_by_department && entry.submitted_by_department !== actorDepartment) {
-      return { success: false, error: 'You can only reject listings from your own department' };
-    }
-
-    if (entry.status !== 'pending') {
-      return { success: false, error: 'Entry is not pending approval' };
-    }
-
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? {
-              ...e,
-              status: 'rejected' as CalendarEntryStatus,
-              reviewed_by_email: actorEmail,
-              reviewed_at: nowIso(),
-              rejection_reason: reason.trim() || null,
-              updated_at: nowIso(),
-            }
-          : e
-      )
-    );
-
-    return { success: true };
+  const getEntryById = (id: string): CalendarListing | null => {
+    return entries.find((e) => e.id === id) || null;
   };
 
   return (
@@ -348,6 +155,8 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
       value={{
         entries,
         isLoading,
+        error,
+        loadEntries,
         createEntry,
         updateEntry,
         deleteEntry,

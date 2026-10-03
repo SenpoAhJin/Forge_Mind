@@ -13,6 +13,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, borderRadius } from '../theme';
@@ -79,16 +80,22 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
   
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
       setError('Please provide a reason for rejection');
       return;
     }
-    onSubmit(trimmedReason);
-    setReason('');
-    setError('');
+    setIsSubmitting(true);
+    try {
+      await onSubmit(trimmedReason);
+      setReason('');
+      setError('');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -96,6 +103,8 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
     setError('');
     onCancel();
   };
+
+  const isReasonEmpty = !reason.trim();
 
   return (
     <Modal
@@ -114,16 +123,22 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
             <View style={styles.header}>
               <Ionicons name="close-circle-outline" size={32} color={themeColors.error} />
               <Text style={[styles.title, dynamicStyles.title]}>Reject Application</Text>
-              <Text style={[styles.subtitle, dynamicStyles.subtitle]}>
-                Provide a reason for rejecting {applicantName}'s application
-              </Text>
             </View>
+
+            <Text style={[styles.subtitle, dynamicStyles.subtitle]}>
+              Provide a reason for rejecting {applicantName}'s application
+            </Text>
 
             {/* Reason input */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, dynamicStyles.label]}>Rejection Reason *</Text>
               <TextInput
-                style={[styles.input, dynamicStyles.input, error ? dynamicStyles.inputError : null]}
+                style={[
+                  styles.input,
+                  dynamicStyles.input,
+                  error ? dynamicStyles.inputError : null,
+                  reason.trim() ? styles.inputFocused : null,
+                ]}
                 value={reason}
                 onChangeText={(text) => {
                   const formatted = isAllLowercase(text) ? toProperCase(text) : text;
@@ -131,10 +146,12 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
                   if (error) setError('');
                 }}
                 placeholder="e.g., Incomplete information, policy violation, etc."
+                placeholderTextColor={themeColors.textSecondary}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
                 maxLength={500}
+                editable={!isSubmitting}
               />
               {error ? <Text style={[styles.errorText, dynamicStyles.errorText]}>{error}</Text> : null}
               <Text style={[styles.hint, dynamicStyles.hint]}>
@@ -147,17 +164,42 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton, dynamicStyles.cancelButton]}
                 onPress={handleCancel}
-                activeOpacity={0.7}
+                activeOpacity={0.85}
+                disabled={isSubmitting}
               >
-                <Text style={[styles.cancelButtonText, dynamicStyles.cancelButtonText]}>Cancel</Text>
+                <Text
+                  style={[styles.buttonText, dynamicStyles.cancelButtonText]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.submitButton, dynamicStyles.submitButton]}
+                style={[
+                  styles.button,
+                  styles.submitButton,
+                  dynamicStyles.submitButton,
+                  (isReasonEmpty || isSubmitting) && styles.buttonDisabled,
+                ]}
                 onPress={handleSubmit}
-                activeOpacity={0.7}
+                activeOpacity={0.85}
+                disabled={isReasonEmpty || isSubmitting}
               >
-                <Text style={[styles.submitButtonText, dynamicStyles.submitButtonText]}>Reject Application</Text>
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={themeColors.backgroundLight} />
+                ) : (
+                  <Text
+                    style={[styles.buttonText, dynamicStyles.submitButtonText]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                  >
+                    Reject
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -180,7 +222,7 @@ const styles = StyleSheet.create({
   },
   modal: {
     borderRadius: borderRadius.lg,
-    padding: spacing.xl,
+    padding: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -189,63 +231,71 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: 8,
   },
   title: {
     ...typography.h2,
     marginTop: spacing.sm,
-    marginBottom: spacing.xs,
   },
   subtitle: {
     ...typography.body,
     textAlign: 'center',
+    marginBottom: 20,
   },
   inputContainer: {
-    marginBottom: spacing.lg,
+    marginBottom: 24,
   },
   label: {
     ...typography.body,
     fontWeight: '600',
-    marginBottom: spacing.xs,
+    marginBottom: 8,
   },
   input: {
     ...typography.body,
     borderWidth: 1,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: 12,
     minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  inputFocused: {
+    borderWidth: 1,
   },
   inputError: {},
   errorText: {
     ...typography.caption,
-    marginTop: spacing.xs,
+    marginTop: 8,
   },
   hint: {
     ...typography.caption,
+    fontSize: 13,
     fontStyle: 'italic',
-    marginTop: spacing.xs,
+    marginTop: 8,
   },
   actions: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: 12,
+    alignItems: 'stretch',
   },
   button: {
     flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
     borderWidth: 1,
   },
-  cancelButtonText: {
-    ...typography.body,
-    fontWeight: '600',
-  },
   submitButton: {},
-  submitButtonText: {
-    ...typography.body,
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });

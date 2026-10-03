@@ -9,9 +9,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
@@ -176,6 +177,7 @@ const MarketplaceBrowse: React.FC = () => {
   const { user } = useUser();
   const { getActiveListings, isLoading } = useMarketplace();
   const { getUnreadCount } = useChat();
+  const insets = useSafeAreaInsets();
   
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   
@@ -194,16 +196,9 @@ const MarketplaceBrowse: React.FC = () => {
   }, [selectedCategory, getActiveListings]);
 
   const renderListingCard = ({ item }: { item: Listing }) => {
-    const hasPhoto = item.photos && item.photos.length > 0;
-    
-    // Generate initials from title for placeholder
-    const initials = item.title
-      .split(' ')
-      .slice(0, 2)
-      .map(word => word[0])
-      .join('')
-      .toUpperCase();
-    
+    const photoUri = item.photos && item.photos.length > 0 ? item.photos[0] : null;
+    const categoryIcon = CATEGORY_ICONS[item.category] ?? DEFAULT_CATEGORY_ICON;
+
     return (
       <TouchableOpacity
         style={styles.listingCard}
@@ -211,35 +206,50 @@ const MarketplaceBrowse: React.FC = () => {
         activeOpacity={0.7}
       >
         <View style={styles.cardContent}>
-          {/* Image/Thumbnail Area */}
+          {/* Thumbnail: photo when present, category icon otherwise */}
           <View style={styles.listingThumbnail}>
-            {hasPhoto ? (
-              <Text style={styles.thumbnailPlaceholder}>📷</Text>
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.listingPhoto}
+                resizeMode="cover"
+              />
             ) : (
-              <View style={styles.thumbnailInitials}>
-                <Text style={styles.initialsText}>{initials}</Text>
-              </View>
+              <Ionicons name={categoryIcon} size={32} color={colors.tertiary} />
             )}
           </View>
 
           {/* Card Details */}
           <View style={styles.listingDetails}>
-            <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+            <Text style={styles.listingTitle} numberOfLines={3}>{item.title}</Text>
 
             <View style={styles.listingMeta}>
               <View style={styles.categoryTag}>
-                <Text style={styles.categoryTagText}>{item.category}</Text>
+                <Text style={styles.categoryTagText} numberOfLines={1} ellipsizeMode="tail">
+                  {item.category}
+                </Text>
               </View>
               <View style={styles.conditionTag}>
-                <Text style={styles.conditionTagText}>{CONDITION_LABELS[item.condition]}</Text>
+                <Text style={styles.conditionTagText} numberOfLines={1}>
+                  {CONDITION_LABELS[item.condition]}
+                </Text>
               </View>
             </View>
 
-            <Text style={styles.listingPrice}>{formatPHP(item.price)}</Text>
-
-            <Text style={styles.listingDescription} numberOfLines={2}>
-              {item.description}
+            <Text
+              style={styles.listingPrice}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {formatPHP(item.price)}
             </Text>
+
+            {item.description ? (
+              <Text style={styles.listingDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+            ) : null}
           </View>
         </View>
       </TouchableOpacity>
@@ -373,13 +383,34 @@ const MarketplaceBrowse: React.FC = () => {
           data={filteredListings}
           renderItem={renderListingCard}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listingsList}
+          contentContainerStyle={[
+            styles.listingsList,
+            // Keeps the last card clear of the bottom tab bar.
+            { paddingBottom: spacing.xl + insets.bottom },
+          ]}
           showsVerticalScrollIndicator={false}
         />
       )}
     </View>
   );
 };
+
+/**
+ * Icon for the no-photo placeholder. Icons come from the Ionicons set already in
+ * use, so nothing new is added to the project. Any category not listed falls
+ * back to the generic tag.
+ */
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'Wigs': 'cut-outline',
+  'Costumes & Cosplay': 'shirt-outline',
+  'Props & Accessories': 'color-palette-outline',
+  'Materials & Fabric': 'layers-outline',
+  'Makeup & Contacts': 'sparkles-outline',
+  'Photography Services': 'camera-outline',
+  'Commissions & Crafting Services': 'hammer-outline',
+};
+
+const DEFAULT_CATEGORY_ICON: keyof typeof Ionicons.glyphMap = 'pricetag-outline';
 
 const styles = StyleSheet.create({
   container: {
@@ -602,28 +633,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   filterScroll: {
-    height: 56, // Fixed height container
     backgroundColor: colors.backgroundLight,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    overflow: 'hidden', // Prevent content from expanding beyond this height
   },
   filterContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, // Back to sm for better spacing
+    paddingHorizontal: spacing.lg,
+    // Extra right padding so the last chip can scroll fully clear of the edge
+    // instead of being cut off.
+    paddingRight: spacing.xl,
+    paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, // Back to sm for better button feel
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   filterChipActive: {
     backgroundColor: colors.tertiary,
@@ -639,8 +672,9 @@ const styles = StyleSheet.create({
     color: colors.backgroundLight,
   },
   listingsList: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl, // Extra padding at bottom for comfortable scrolling
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   listingCard: {
     backgroundColor: colors.backgroundLight,
@@ -653,83 +687,79 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
-    overflow: 'hidden',
-    height: 140, // Fixed height instead of minHeight - all cards same size
+    // No fixed height and no overflow: 'hidden'. A fixed 140 clipped the price
+    // and cut the description in half when chips wrapped to a second line.
+    minHeight: 88,
   },
   cardContent: {
     flexDirection: 'row',
-    height: '100%', // Fill parent height exactly
+    alignItems: 'flex-start',
+    padding: spacing.md,
+    gap: 12,
   },
   listingThumbnail: {
-    width: 100,
-    height: '100%', // Fixed to fill card height exactly
-    backgroundColor: colors.surface,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
+    width: 88,
+    height: 88,
+    borderRadius: 10,
+    backgroundColor: colors.tertiary + '18',
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  thumbnailPlaceholder: {
-    fontSize: 40,
-  },
-  thumbnailInitials: {
+  listingPhoto: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.tertiary + '18',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  initialsText: {
-    fontSize: 28,
-    color: colors.tertiary,
-    fontWeight: '700',
   },
   listingDetails: {
     flex: 1,
-    padding: spacing.md,
-    justifyContent: 'space-between', // Distribute content evenly
+    // Without minWidth: 0 a long unbroken title widens the column past the card
+    // and squeezes the price out of view.
+    minWidth: 0,
+    gap: 6,
   },
   listingTitle: {
-    ...typography.h3,
     color: colors.textPrimary,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: spacing.xs,
+    lineHeight: 22,
   },
   listingMeta: {
     flexDirection: 'row',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
     flexWrap: 'wrap',
+    columnGap: 6,
+    rowGap: 6,
   },
   categoryTag: {
     backgroundColor: colors.tertiary + '15',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: 3,
     borderRadius: borderRadius.sm,
+    maxWidth: '100%',
   },
   categoryTagText: {
     ...typography.caption,
     color: colors.tertiary,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: 12,
   },
   conditionTag: {
     backgroundColor: colors.secondary + '15',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: 3,
     borderRadius: borderRadius.sm,
+    maxWidth: '100%',
   },
   conditionTagText: {
     ...typography.caption,
     color: colors.secondary,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: 12,
   },
   listingPrice: {
-    ...typography.h3,
     color: colors.tertiary,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: spacing.xs,
   },
   listingDescription: {
     ...typography.body,
