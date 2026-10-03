@@ -1,7 +1,126 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 1, 2026, 19:46 (Database connection verified)  
+**Last updated:** Saturday, October 3, 2026, 19:09 (Screener now uses the datasets)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 3, 2026, 19:09 (Screener now uses the datasets)
+
+**Summary**
+
+The marketplace filter that decides whether a listing is allowed through used a
+hand-written list of words, and nobody had ever measured how well it worked. We
+built a tool that reads the datasets, works out which words genuinely help, and
+measures the before-and-after. The filter is now on version 2. It is better, but
+only slightly, and we can finally prove why it cannot be much better without
+ruining the marketplace for honest sellers. We also trained a second, automatic
+filter to see if a smarter approach is worth the cost. It is much better at
+catching bad listings, but we did not switch it on, because that is a decision for
+the project owner.
+
+**Why the filter was missing things**
+
+The old filter had no connection to the datasets, so there was no way to check
+whether it was any good. Two numbers matter: how many bad listings get through,
+and how many good listings get wrongly blocked. Both were guesses.
+
+**What we measured**
+
+Counting only, no listing text was printed or stored anywhere:
+
+| | Before | After |
+|---|---|---|
+| Good listings correctly allowed (held-out sample) | 73.28% | 73.30% |
+| Bad listings correctly caught (held-out sample) | 48.19% | 48.25% |
+| Bad listings that got through | 1,716 | 1,714 |
+| Good listings wrongly blocked | 582 | 582 |
+| Good listings newly wrongly blocked | - | **0** |
+
+The main finding is not the small improvement, it is the trade-off we measured.
+Trying all 6,308 candidate words catches about 1,000 more bad listings but wrongly
+blocks about 16,000 good ones. There is no setting that gives a big win without
+wrecking the marketplace, so we chose the safe end: 3 words, zero new wrongly
+blocked listings. Catching roughly half of bad listings is the honest number, and
+it was already close to that before this work.
+
+**The automatic filter we did not switch on**
+
+We trained a standard text classifier on the same data: 159,716 labelled listings
+(16,585 bad, 143,131 good), tested on 20% it had never seen.
+
+| | Value |
+|---|---|
+| Bad listings caught | 2,687 |
+| Bad listings that got through | 630 |
+| Good listings wrongly blocked | 987 |
+| Precision | 73.14% |
+| Recall | 81.01% |
+
+It catches far more than the word list (81% against 48%), at a similar rate of
+mistakes overall, but it wrongly blocks more innocent listings (987 against 582).
+Since wrongly blocking a good listing hurts a real seller, we left it off. The
+backend has a placeholder where it would plug in, and nothing loads it yet.
+
+**Files changed**
+
+forgemind-backend (the server):
+- New: `scripts/build-moderation-data.ts`, `scripts/measure-screener.ts`,
+  `scripts/analyze-term-selection.ts`, `src/moderation/rules/blockedTerms.ts`,
+  `tests/moderation-data.test.ts`
+- Changed: `src/moderation/normalize.ts`, `src/moderation/rules/index.ts`,
+  `src/moderation/index.ts`, `src/marketplace/screener.ts` (version 2),
+  `src/marketplace/listingsRouter.ts`, `package.json`, `.gitignore`
+- Generated but not committed (rebuildable, tens of megabytes):
+  `data/labeled_listings.jsonl`, `data/blocked_terms_candidates.json`
+- Generated and committed: `src/moderation/data/blocked_terms.json` (3 terms)
+
+forgemind-ai (new files only, nothing existing was touched):
+- New: `scripts/train_screener_classifier.py`,
+  `models/marketplace_screener_lr.joblib`
+
+forgemind-mobile (this app): this entry and the server-listings progress file.
+No app screen, screen flow or user-facing text changed in this session.
+
+**Also fixed**
+
+Removing a listing now works with or without giving a reason, and both the
+documented field name and the database column name are accepted. Verified against
+a real server run.
+
+A real bug in the server's own test script was fixed: listing IDs were put into
+database queries without quotes, so two checks could never pass.
+
+**Status**
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| TypeScript | DONE | Backend `tsc --noEmit` exit 0 |
+| Unit tests | DONE | 7/7 moderation, 8/8 new data tests, 10/10 rules |
+| Generated data | DONE | 6,308 candidates, 3 terms kept, 159,716 labelled rows |
+| Server restarted | DONE | Port 3000, `database: OK` |
+| End-to-end test | DONE with 9 known failures | 52 pass, 9 fail (was 1 pass, 2 fail) |
+| Automatic filter on the server | NOT DONE | Deliberate. Needs an owner decision |
+| Automatic filter tested live on the server | NOT TESTED | No request path uses it |
+| Pushed | NOT DONE | Three local commits only, as instructed |
+
+**Known failures, on purpose**
+
+Nine end-to-end checks still fail, all from one cause: the test script expects
+three perfectly ordinary cosplay listings (a costume lab coat, a costume vest, a
+foam stage prop) to be blocked. The filter correctly allows all three, because
+costume and foam props are legitimate. The other six failures are knock-on effects
+of that. We did not change the test's expectations, because rewriting a test until
+it passes hides the answer instead of reporting it. Someone should decide whether
+those fixtures should be replaced with listings that genuinely deserve blocking.
+
+**Skipped**
+
+- The three large `processed/` dataset files were counted but not used.
+- No live test of the automatic filter.
+- Nothing was uploaded to any remote.
+- `docs/changes/progress-marketplace-post-types.md` was already modified before
+  this session and was left as it was.
 
 ---
 
