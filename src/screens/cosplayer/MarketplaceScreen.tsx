@@ -8,10 +8,10 @@
  * 4. Status='rejected' or 'revoked' → Allow resubmission with pre-filled data
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
@@ -175,11 +175,18 @@ export const MarketplaceScreen: React.FC = () => {
 const MarketplaceBrowse: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useUser();
-  const { getActiveListings, isLoading } = useMarketplace();
+  const { getActiveListings, isLoading, refreshListings } = useMarketplace();
   const { getUnreadCount } = useChat();
   const insets = useSafeAreaInsets();
   
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  
+  // Refresh listings when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshListings();
+    }, [refreshListings])
+  );
   
   // Check if user can create listings (seller or both role)
   const canCreateListing = user?.marketplace_registration?.marketplace_role === 'seller' ||

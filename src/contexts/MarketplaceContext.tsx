@@ -1,39 +1,57 @@
 /**
- * ForgeMind - Marketplace Context (FE-6 Step 1)
+ * ForgeMind - Marketplace Context
  *
- * Manages marketplace listings (mock data, in-memory for Phase 1).
- * Uses same persistence pattern as OwnedAttireContext (AsyncStorage).
+ * Manages marketplace listings from the server API.
+ * AsyncStorage is used only as an offline cache with a "showing saved copy" note.
+ * Three transaction types: sell, trade, commission.
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Listing, CreateListingInput, ListingStatus, ScreeningResult } from '../types/marketplace';
-import seedListings from '../data/marketplace_listings.json';
+import MarketplaceApi, { Listing as ApiListing, CreateListingRequest } from '../services/MarketplaceApi';
 
-const STORAGE_KEY = '@forgemind:marketplace_listings';
+const STORAGE_KEY = '@forgemind:marketplace_listings_cache';
+const STORAGE_KEY_OLD = '@forgemind:marketplace_listings'; // For clearing old local listings
+const STORAGE_KEY_MIGRATED = '@forgemind:marketplace_migrated';
 
-// Optional screening outcome passed in by the caller (the screener runs at
-// the point of posting, before the listing is persisted). When omitted the
-// listing defaults to a fully-passed screen ('active', 'passed').
-export interface ScreeningOverride {
-  status: ListingStatus;
-  screening_result: ScreeningResult;
-  screening_reason?: string;
+export interface Listing {
+  id: string;
+  post_type: 'sell' | 'trade' | 'commission';
+  transaction_type?: 'sell' | 'trade' | 'commission'; // Deprecated alias for post_type
+  title: string;
+  description: string;
+  category: string;
+  condition: string;
+  price?: number;
+  rate?: number;
+  trade_offered_item?: string;
+  trade_wanted_item?: string;
+  status: 'active' | 'blocked' | 'cancelled' | 'sold';
+  screening_result?: 'passed' | 'blocked';
+  screening_reason?: string | null;
+  appeal_status?: 'none' | 'pending' | 'approved' | 'rejected';
+  seller_user_id?: string;
+  seller_name?: string;
+  seller_email?: string; // Deprecated, use seller_user_id
+  photos?: string[]; // Optional array of photo URLs
+  created_at: string;
 }
 
 interface MarketplaceContextType {
   listings: Listing[];
+  myListings: Listing[];
   isLoading: boolean;
-  createListing: (
-    sellerEmail: string,
-    input: CreateListingInput,
-    screening?: ScreeningOverride
-  ) => Promise<Listing>;
+  isOffline: boolean;
+  createListing: (emailOrInput: string | CreateListingRequest, maybeInput?: CreateListingRequest) => Promise<{ success: boolean; listing?: Listing; error?: string }>;
   getListingById: (id: string) => Listing | undefined;
   getActiveListings: () => Listing[];
-  getListingsBySeller: (sellerEmail: string) => Listing[];
-  cancelListing: (id: string) => Promise<void>;
-  submitAppeal: (listingId: string, message: string) => Promise<void>;
+  getListingsBySeller: (sellerUserId: string) => Listing[];
+  cancelListing: (listingId: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
+  removeListing: (listingId: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
+  deleteListingPermanently: (listingId: string) => Promise<{ success: boolean; error?: string }>;
+  submitAppeal: (listingId: string, message: string) => Promise<{ success: boolean; error?: string }>;
+  refreshListings: () => Promise<void>;
+  refreshMyListings: () => Promise<void>;
 }
 
 const MarketplaceContext = createContext<MarketplaceContextType | undefined>(undefined);
@@ -48,113 +66,222 @@ export const useMarketplace = (): MarketplaceContextType => {
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [listings, setListings] = useState<Listing[]>([]);
+  const [myListings, setMyListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
-  // Load listings from AsyncStorage on mount
+  // Load listings from server on mount
   useEffect(() => {
     loadListings();
+    loadMyListings();
+    clearOldLocalListingsOnce();
   }, []);
+
+  /** Clear old AsyncStorage listings once after first successful server fetch */
+  const clearOldLocalListingsOnce = async () => {
+    try {
+      const migrated = await AsyncStorage.getItem(STORAGE_KEY_MIGRATED);
+      if (!migrated) {
+        await AsyncStorage.removeItem(STORAGE_KEY_OLD);
+        await AsyncStorage.setItem(STORAGE_KEY_MIGRATED, 'true');
+        if (__DEV__) {
+          console.log('[MarketplaceContext] Cleared old local listings');
+        }
+      }
+    } catch (error) {
+      console.error('[MarketplaceContext] Failed to clear old listings:', error);
+    }
+  };
 
   const loadListings = async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setListings(JSON.parse(stored));
+      const response = await MarketplaceApi.getListings();
+      
+      if (response.success && response.data) {
+        // Map post_type to transaction_type for backward compatibility
+        const mappedListings = response.data.map(listing => ({
+          ...listing,
+          transaction_type: listing.post_type,
+        }));
+        setListings(mappedListings);
+        setIsOffline(false);
+        // Cache for offline use
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mappedListings));
       } else {
-        // First load: seed with mock data
-        setListings(seedListings as Listing[]);
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(seedListings));
+        // Failed to fetch: try cache
+        const cached = await AsyncStorage.getItem(STORAGE_KEY);
+        if (cached) {
+          setListings(JSON.parse(cached));
+          setIsOffline(true);
+        } else {
+          setListings([]);
+        }
       }
     } catch (error) {
       console.error('[MarketplaceContext] Failed to load listings:', error);
-      setListings(seedListings as Listing[]);
+      // Try cache on error
+      try {
+        const cached = await AsyncStorage.getItem(STORAGE_KEY);
+        if (cached) {
+          setListings(JSON.parse(cached));
+          setIsOffline(true);
+        }
+      } catch {}
     } finally {
       setIsLoading(false);
     }
   };
 
-  const saveListings = async (updatedListings: Listing[]) => {
+  const loadMyListings = async () => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedListings));
-      setListings(updatedListings);
+      const response = await MarketplaceApi.getMyListings();
+      if (response.success && response.data) {
+        // Map post_type to transaction_type for backward compatibility
+        const mappedListings = response.data.map(listing => ({
+          ...listing,
+          transaction_type: listing.post_type,
+        }));
+        setMyListings(mappedListings);
+      }
     } catch (error) {
-      console.error('[MarketplaceContext] Failed to save listings:', error);
+      console.error('[MarketplaceContext] Failed to load my listings:', error);
     }
   };
 
-  const createListing = async (
-    sellerEmail: string,
-    input: CreateListingInput,
-    screening?: ScreeningOverride
-  ): Promise<Listing> => {
-    const newListing: Listing = {
-      id: `listing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      seller_email: sellerEmail,
-      title: input.title,
-      description: input.description,
-      category: input.category,
-      transaction_type: input.transaction_type,
-      price: input.price,
-      condition: input.condition,
-      photos: input.photos,
-      status: screening?.status ?? 'active',
-      screening_result: screening?.screening_result ?? 'passed',
-      screening_reason: screening?.screening_reason,
-      appeal_status: 'none',
-      created_at: new Date().toISOString(),
-    };
-
-    const updatedListings = [newListing, ...listings];
-    await saveListings(updatedListings);
-    return newListing;
+  const refreshListings = async () => {
+    try {
+      const response = await MarketplaceApi.getListings();
+      if (response.success && response.data) {
+        // Map post_type to transaction_type for backward compatibility
+        const mappedListings = response.data.map(listing => ({
+          ...listing,
+          transaction_type: listing.post_type,
+        }));
+        setListings(mappedListings);
+        setIsOffline(false);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mappedListings));
+      }
+    } catch (error) {
+      console.error('[MarketplaceContext] Failed to refresh listings:', error);
+    }
   };
 
-  // Seller appeal path (FE-6 Step 2, simplified mock): records the seller's
-  // appeal text and marks the listing pending Holder review. Approving or
-  // overturning an appeal is a Holder action and is explicitly out of scope
-  // until FE-8 (Holder verification / review surface) exists.
-  const submitAppeal = async (listingId: string, message: string): Promise<void> => {
-    const updatedListings = listings.map(listing =>
-      listing.id === listingId
-        ? { ...listing, appeal_status: 'pending' as const, appeal_message: message }
-        : listing
-    );
-    await saveListings(updatedListings);
+  const refreshMyListings = async () => {
+    try {
+      const response = await MarketplaceApi.getMyListings();
+      if (response.success && response.data) {
+        // Map post_type to transaction_type for backward compatibility
+        const mappedListings = response.data.map(listing => ({
+          ...listing,
+          transaction_type: listing.post_type,
+        }));
+        setMyListings(mappedListings);
+      }
+    } catch (error) {
+      console.error('[MarketplaceContext] Failed to refresh my listings:', error);
+    }
+  };
+
+  const createListing = async (emailOrInput: string | CreateListingRequest, maybeInput?: CreateListingRequest): Promise<{ success: boolean; listing?: Listing; error?: string }> => {
+    // Support both old signature createListing(email, input) and new createListing(input)
+    let input: CreateListingRequest = typeof emailOrInput === 'string' ? maybeInput! : emailOrInput;
+    
+    // Map transaction_type to post_type if needed (backward compatibility)
+    if ('transaction_type' in input && !('post_type' in input)) {
+      const txType = (input as any).transaction_type;
+      input = {
+        ...input,
+        post_type: txType === 'sell' ? 'sell' : txType === 'trade' ? 'trade' : txType === 'commission' ? 'commission' : 'sell',
+      };
+    }
+    
+    const response = await MarketplaceApi.createListing(input);
+    
+    if (response.success && response.data) {
+      // Refresh both lists
+      await refreshListings();
+      await refreshMyListings();
+      return { 
+        success: true, 
+        listing: { ...response.data, transaction_type: response.data.post_type } 
+      };
+    }
+    
+    return { success: false, error: response.error };
+  };
+
+  const cancelListing = async (listingId: string, reason?: string): Promise<{ success: boolean; error?: string }> => {
+    // cancelListing is an alias for removeListing (old signature)
+    return removeListing(listingId, reason);
+  };
+
+  const getListingsBySeller = (sellerUserId: string): Listing[] => {
+    return listings.filter(listing => listing.seller_user_id === sellerUserId);
+  };
+
+  const removeListing = async (listingId: string, reason?: string): Promise<{ success: boolean; error?: string }> => {
+    const response = await MarketplaceApi.removeListing(listingId, reason);
+    
+    if (response.success) {
+      // Refresh both lists
+      await refreshListings();
+      await refreshMyListings();
+      return { success: true };
+    }
+    
+    return { success: false, error: response.error };
+  };
+
+  const deleteListingPermanently = async (listingId: string): Promise<{ success: boolean; error?: string }> => {
+    const response = await MarketplaceApi.deleteListingPermanently(listingId);
+    
+    if (response.success) {
+      // Refresh both lists
+      await refreshListings();
+      await refreshMyListings();
+      return { success: true };
+    }
+    
+    return { success: false, error: response.error };
+  };
+
+  const submitAppeal = async (listingId: string, message: string): Promise<{ success: boolean; error?: string }> => {
+    const response = await MarketplaceApi.appealListing(listingId, message);
+    
+    if (response.success) {
+      // Refresh my listings to see updated appeal status
+      await refreshMyListings();
+      return { success: true };
+    }
+    
+    return { success: false, error: response.error };
   };
 
   const getListingById = (id: string): Listing | undefined => {
-    return listings.find(listing => listing.id === id);
+    return listings.find(listing => listing.id === id) || myListings.find(listing => listing.id === id);
   };
 
-  // Public browse feed: ONLY 'active' listings are ever visible to buyers.
-  // Strictly excluded: 'blocked' (failed the category screen, never went
-  // public), 'sold', and 'cancelled'.
   const getActiveListings = (): Listing[] => {
     return listings.filter(listing => listing.status === 'active');
-  };
-
-  const getListingsBySeller = (sellerEmail: string): Listing[] => {
-    return listings.filter(listing => listing.seller_email === sellerEmail);
-  };
-
-  const cancelListing = async (id: string): Promise<void> => {
-    const updatedListings = listings.map(listing =>
-      listing.id === id ? { ...listing, status: 'cancelled' as const } : listing
-    );
-    await saveListings(updatedListings);
   };
 
   return (
     <MarketplaceContext.Provider
       value={{
         listings,
+        myListings,
         isLoading,
+        isOffline,
         createListing,
         getListingById,
         getActiveListings,
         getListingsBySeller,
         cancelListing,
+        removeListing,
+        deleteListingPermanently,
         submitAppeal,
+        refreshListings,
+        refreshMyListings,
       }}
     >
       {children}
