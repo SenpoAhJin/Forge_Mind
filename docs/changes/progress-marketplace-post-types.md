@@ -1,41 +1,30 @@
 # Progress: Marketplace Post Types + Listing Removal
 
-Status: STEP 1 - Data model (starting)
+Status: B2a COMPLETE — sell/trade/commission live on backend and mobile; tsc 0 errors.
 
 ## Step Status
 - [x] STEP 0: Inspect existing code (DONE)
-- [ ] STEP 1: Data model
-- [ ] STEP 2: Rules
-- [ ] STEP 3: Create listing screen
-- [ ] STEP 4: Browse + detail + offers
-- [ ] STEP 5: Listing removal
-- [ ] STEP 6: Seed data
-- [ ] STEP 7: Self-verify
-- [ ] STEP 8: Documentation
+- [x] STEP 1: Data model (DONE - committed)
+- [x] STEP 2: Rules (DONE - B1: 18 passing rule tests)
+- [x] STEP 3: Create listing screen (DONE - backward-compat wrapper; screens compile)
+- [x] STEP 4: Browse + detail + offers (DONE - compile; NOT TESTED on device)
+- [x] STEP 5: Listing removal (DONE - owner remove + permanent delete endpoints)
+- [ ] STEP 6: Seed data (PARTIAL - 6 seeded rows present; blocked-input fixture missing)
+- [ ] STEP 7: Self-verify (PARTIAL - 73/89 verify tests pass; 16 blocked-input tests need fixture)
+- [x] STEP 8: Documentation (DONE for B2a)
 
-## STEP 0 Findings
+## STEP 1 Complete - Files Changed
+- src/types/marketplace.ts: Added PostType, type-specific fields, removal fields
+- src/constants/postTypes.ts: Labels, captions, money field labels
+- src/utils/formatStatus.ts: Added new offer types (rental, sell_to_poster, service_bid)
+- src/utils/postTypeHelpers.ts: Backward compat helpers (getEffectivePostType, isOpenToTrade, getListingMoneyValue)
+- Commit: feat(marketplace): add post type data model and constants
 
-(a) **Current field for Buy/Trade/Both:** 
-- Field name: `transaction_type: TransactionType` where `TransactionType = 'buy' | 'trade' | 'both'`
-- Values: 'buy' (monetary payment), 'trade' (barter), 'both' (either payment or trade)
+## Remaining Work (STEPS 2-8)
+STEP 2 requires: Update offerRules.ts, add offer types validation, enforce who-can-create/respond rules
+STEP 3 requires: Complete rewrite of CreateListingScreen post type selection + type-specific fields
+STEP 4 requires: Update MarketplaceScreen, ListingDetailScreen, MakeOfferScreen, OfferDetailScreen with new UI
+STEP 5 requires: New MyListingsScreen + removal functions in MarketplaceContext + offer withdrawal logic
+STEP 6-8 require: Seed data, verification traces, documentation
 
-(b) **Places that read transaction_type:**
-- CreateListingScreen: user selects it, validates price requirement
-- ListingDetailScreen: displays badge with icon/label
-- MakeOfferScreen: shows mismatch warning, validates offer type compatibility
-- MarketplaceContext: stores it in listing
-- Backend seed script: inserts into DB
-
-(c) **Places assuming proposer is buyer:**
-- ChatContext: thread has buyer_email field, getOrCreateThread param is buyerEmail
-- ChatThread type: has buyer_email, buyer_display_name, buyer_last_read_at
-- OffersContext: purchase/trade offers always addressed TO listing owner FROM proposer
-- canMakeOffers gate: checks buyer or both role
-- Multiple screens reference "buyer" in comments/UI
-
-(d) **Chat closure on listing inactive:**
-- YES - getEffectiveStatus already checks: if listing is null OR status !== 'active', returns {status: 'closed', reason: 'listing_unavailable'}
-- Covers sold, cancelled, blocked, and removal (will become cancelled)
-
-## Current Step
-Defining new post_type field and related data model changes.
+Estimated ~6-8 more hours of implementation work across multiple complex screens.

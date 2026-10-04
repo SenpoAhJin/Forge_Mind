@@ -1,7 +1,59 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Sunday, October 4, 2026, 11:10 (AI setup made reproducible)  
+**Last updated:** Saturday, October 3, 2026 (B2a: marketplace server + compile fix)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 3, 2026 (B2a: marketplace server + compile fix)
+
+**Summary**
+
+Brought backend marketplace work under control: committed three listing types (sell/trade/commission), owner remove, and permanent delete. Fixed a crash that happened when the app started — the MarketplaceContext was importing a navigation hook (@react-navigation/native) that can't be used outside a navigator, causing a blank screen. Wired the mobile app to the real backend instead of local device storage. Phone now compiles with zero TypeScript errors and the web export succeeds.
+
+**What was fixed**
+
+- Navigation crash fix: removed `useFocusEffect` import from MarketplaceContext (contexts can't touch navigation). Moved it to MarketplaceScreen where it belongs — screen now refreshes listings from the server every time you navigate back to it.
+- TypeScript: 34 compile errors → 0 errors. Root cause: Listing interface was missing `photos`, `transaction_type` and `seller_email` fields after the server migration renamed them. Added backward-compat fields to the context Listing type.
+- DELETE endpoint: removed photo cleanup code (listing_photos table does not exist yet). DELETE now cleanly removes the row with correct HTTP codes (403/404/409/200).
+
+**What was added / changed (backend)**
+
+- migrations/015: category table with 29 cosplay categories (wigs, armour, props…)
+- migrations/016: extended listings table with post_type, condition, rate, trade_offered_item, trade_wanted_item columns
+- POST /marketplace/listings: enforces sell/trade/commission rules, category validity, price/rate required per type
+- PATCH /marketplace/listings/:id/remove: owner-only soft cancel with an optional reason
+- DELETE /marketplace/listings/:id: owner-only permanent delete (only cancelled/blocked listings)
+- 18 rule tests all pass; verify_marketplace.ps1 73 pass / 16 fail (blocked-input fixture tests require a separate fixture file not yet in the repo — NOT TESTED)
+
+**What was added / changed (mobile)**
+
+- src/services/MarketplaceApi.ts: all server calls (getListings, getMyListings, createListing, removeListing, deleteListingPermanently, appealListing)
+- src/contexts/MarketplaceContext.tsx: rewritten to use server API with AsyncStorage offline cache; backward-compat wrappers for old function signatures (createListing with email arg, cancelListing, getListingsBySeller)
+- src/screens/cosplayer/MarketplaceScreen.tsx: added useFocusEffect to refresh the feed when the screen comes back into focus
+
+**NOT TESTED (on device)**
+
+- Listing create/browse/remove flows with a real logged-in user
+- Offline cache fallback (server unreachable)
+- Appeal flow end-to-end
+- Blocked listing visibility in /mine
+
+**Files changed (backend)**
+
+- forgemind-backend/migrations/015_marketplace_categories.js (created)
+- forgemind-backend/migrations/016_three_listing_types.js (created)
+- forgemind-backend/src/marketplace/rules.ts (rewritten)
+- forgemind-backend/src/marketplace/listings.ts (updated)
+- forgemind-backend/src/marketplace/listingsRouter.ts (remove + delete endpoints added)
+- forgemind-backend/tests/marketplace-rules.test.ts (18 tests)
+- forgemind-backend/scripts/verify_marketplace.ps1 (DELETE section added)
+
+**Files changed (mobile)**
+
+- forgemind-mobile/src/services/MarketplaceApi.ts (created)
+- forgemind-mobile/src/contexts/MarketplaceContext.tsx (rewritten)
+- forgemind-mobile/src/screens/cosplayer/MarketplaceScreen.tsx (useFocusEffect added)
 
 ---
 
