@@ -8040,3 +8040,33 @@ Changelog claims match current code state.
 
 ---
 
+
+
+---
+
+## Session — Saturday, October 3, 2026 (Marketplace API Updates)
+
+**Summary**
+
+The marketplace backend now supports only three transaction types: selling items, trading items, and offering commission services. Four older types (buy requests, rentals, service requests, and service offers) were removed to simplify the marketplace. Categories were expanded to include "Costumes & Cosplay" and "Props & Accessories", and the catch-all "Other" category is no longer available for new listings. Listing owners can now remove blocked listings, not just active ones.
+
+**What changed**
+
+- **Three transaction types only:** You can now only post listings to sell an item, trade an item, or offer a commission service. The buy, rent, service_offer, and service_request types no longer exist.
+- **New categories:** Two new categories were added specifically for cosplay items: "Costumes & Cosplay" and "Props & Accessories".
+- **"Other" category retired:** New listings cannot use the "Other" category anymore. Existing listings with "Other" remain visible but new posts must use a specific category.
+- **Remove blocked listings:** If your listing was held for review and you want to remove it, you can now do that. Previously only active listings could be removed.
+
+**What this means for users**
+
+- Sellers can list items for sale, offer commission services, or post trade requests
+- Buyers can post trade requests (trading something they own for something else)
+- More specific categories help buyers find what they need
+- Listing owners have more control over their blocked listings
+
+**Technical details**
+
+- Backend migrations 015 (categories) and 016 (three types) implemented
+- Remove endpoint now handles `listing_status IN ('active', 'blocked')`
+- Removing a blocked listing clears any pending appeals automatically
+- All moderation rules tests passing (18/18)
