@@ -1,7 +1,47 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 3, 2026, 19:09 (Screener now uses the datasets)  
+**Last updated:** Sunday, October 4, 2026, 11:10 (AI setup made reproducible)  
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Sunday, October 4, 2026, 11:10 (AI setup made reproducible)
+
+**Summary**
+
+The AI folder (forgemind-ai) had Python code and a model file, but no way to install it from scratch. If the venv got deleted or someone cloned the repo fresh, there was no automated setup. We added a setup script that installs everything, pins every library version, and tests that it works. The AI server now starts reliably.
+
+**What was added**
+
+- setup.ps1: automated install script (checks Python 3.10+, creates venv, installs dependencies, verifies imports)
+- requirements.txt: pinned versions (Flask 3.1.3, scikit-learn 1.9.1, numpy 2.5.3, pandas 3.0.6, joblib 1.6.0, flask-cors 6.0.5, openpyxl 3.1.5)
+- requirements-dev.txt: testing tools (pytest 9.1.1)
+- README.md Setup section: how to install and run (13 lines)
+- .gitignore updates: added .venv, __pycache__, *.pyc
+
+**Files changed**
+
+- forgemind-ai/setup.ps1 (created)
+- forgemind-ai/requirements.txt (rewritten with 7 pinned packages)
+- forgemind-ai/requirements-dev.txt (created)
+- forgemind-ai/README.md (added Setup section at top)
+- forgemind-ai/.gitignore (added .venv, **/__pycache__, *.pyc)
+
+**Model check**
+
+The marketplace_screener_lr.joblib model (6.18 MB) loads successfully with the new scikit-learn version. No retraining needed. Precision 73.14%, recall 81.01%.
+
+**NOT TESTED**
+
+- Existing code logic (attire_matcher.py, color_matcher.py, api.py endpoints) was not modified
+- Model training scripts not run (model already compatible)
+- No test suite exists (tests/.gitkeep only)
+
+**Service check**
+
+The AI server starts on port 5000 and responds:
+- GET /health: 200 OK
+- POST /api/match: 400/404 (validated request handling)
 
 ---
 

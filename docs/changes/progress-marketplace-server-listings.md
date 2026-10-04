@@ -1,9 +1,8 @@
 # Progress: Marketplace Listings On The Backend (Part 1)
 
-Status: STEP 1 COMPLETE (migration 014 applied, down/up verified). Next: STEP 2 auth + role helpers.
+Status: STEP 1 COMPLETE (migration 014 applied, down/up verified). AI setup automated. Next: STEP 2 auth + role helpers.
 
-Latest: 2026-10-03 screener data alignment (see the top entry under Step Status
-below). Newest work is always the first dated section after the checklist.
+Latest: 2026-10-04 AI setup automation (see entry below). Newest work is always the first dated section after the checklist.
 
 Goal: move marketplace LISTINGS from per-device AsyncStorage onto the backend so a
 listing created by one user is visible to every other user on any device, with the
@@ -19,6 +18,34 @@ server-side screener as the authority. Offers and chat stay local in this task.
 - [ ] STEP 5: Mobile wiring (NOT STARTED)
 - [ ] STEP 6: Verify with two real accounts (NOT STARTED)
 - [ ] STEP 7: Docs (NOT STARTED)
+
+## 2026-10-04 - AI Setup Automation
+
+### Why this was needed
+
+forgemind-ai had Python code, a trained model, and requirements files, but no automated setup. If someone cloned the repo or deleted the venv, there was no one-command way to get it working. Library versions were not pinned, so a fresh install could break the model.
+
+### What was done
+
+- Created setup.ps1: checks Python 3.10+, creates .venv, installs pinned dependencies, runs import checks
+- Rewrote requirements.txt with 7 pinned versions (Flask 3.1.3, scikit-learn 1.9.1, numpy 2.5.3, pandas 3.0.6, joblib 1.6.0, flask-cors 6.0.5, openpyxl 3.1.5)
+- Created requirements-dev.txt (pytest 9.1.1)
+- Added Setup section to README.md (Python version, how to run setup.ps1, how to start server, port 5000)
+- Updated .gitignore (.venv, **/__pycache__, *.pyc)
+
+### Verification
+
+- All 8 packages import successfully
+- Model (marketplace_screener_lr.joblib, 6.18 MB) loads with scikit-learn 1.9.1, no version warnings
+- Precision 73.14%, recall 81.01% (from training)
+- AI server starts on port 5000, /health returns 200, /api/match validates requests (400/404)
+- Venv size: 325.82 MB
+
+### NOT CHANGED
+
+- No code logic modified (attire_matcher.py, color_matcher.py, api.py)
+- No model retraining (already compatible)
+- No tests added (tests/.gitkeep only)
 
 ## 2026-10-03 - Screener Data Alignment (screener_version 2)
 
