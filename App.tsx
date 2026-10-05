@@ -26,6 +26,7 @@ import { CalendarProvider } from './src/contexts/CalendarContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { DiaryProvider } from './src/contexts/DiaryContext';
 import { ConsentBanner } from './src/components';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
 import { DebugLogger } from './src/utils/debugLogger';
@@ -114,8 +115,15 @@ export default function App() {
 
   // Wrap in phone frame on web for testing
   if (Platform.OS === 'web') {
-    return <PhoneFrame>{appContent}</PhoneFrame>;
+    // Inside the frame so the fallback screen looks like the app, not like a
+    // bare page. A render error anywhere below shows the friendly screen
+    // instead of a white page.
+    return (
+      <ErrorBoundary label="The app">
+        <PhoneFrame>{appContent}</PhoneFrame>
+      </ErrorBoundary>
+    );
   }
 
-  return appContent;
+  return <ErrorBoundary label="The app">{appContent}</ErrorBoundary>;
 }

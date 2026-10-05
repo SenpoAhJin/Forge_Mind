@@ -20,6 +20,7 @@ import {
 import { typography } from '../theme';
 import { OfferType } from '../types/offers';
 import { useTheme } from '../contexts/ThemeContext';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export type MarketplaceStackParamList = {
   MarketplaceHome: undefined;
@@ -36,6 +37,30 @@ export type MarketplaceStackParamList = {
 
 const Stack = createNativeStackNavigator<MarketplaceStackParamList>();
 
+/**
+ * Wrap a screen in the error boundary. Built once per screen at module scope:
+ * a wrapper created during render would be a new component type every render
+ * and the screen would remount (and lose its state) each time.
+ */
+function withBoundary(Screen: React.ComponentType<any>, label: string): React.ComponentType<any> {
+  const Guarded: React.FC<any> = props => (
+    <ErrorBoundary label={label}>
+      <Screen {...props} />
+    </ErrorBoundary>
+  );
+  Guarded.displayName = `Guarded(${Screen.displayName ?? Screen.name ?? 'Screen'})`;
+  return Guarded;
+}
+
+const GuardedMarketplaceHome = withBoundary(MarketplaceScreen, 'The Marketplace');
+const GuardedListingDetail = withBoundary(ListingDetailScreen, 'This listing');
+const GuardedMakeOffer = withBoundary(MakeOfferScreen, 'The offer form');
+const GuardedOfferLog = withBoundary(OfferLogScreen, 'Your offers');
+const GuardedOfferDetail = withBoundary(OfferDetailScreen, 'This offer');
+const GuardedCommissionProgress = withBoundary(CommissionProgressScreen, 'The commission progress');
+const GuardedChatList = withBoundary(ChatListScreen, 'Your messages');
+const GuardedChatThread = withBoundary(ChatThreadScreen, 'This conversation');
+
 export const MarketplaceStackNavigator: React.FC = () => {
   const { themeColors } = useTheme();
 
@@ -51,7 +76,7 @@ export const MarketplaceStackNavigator: React.FC = () => {
     >
     <Stack.Screen
       name="MarketplaceHome"
-      component={MarketplaceScreen}
+      component={GuardedMarketplaceHome}
       options={{ title: 'Marketplace' }}
     />
     <Stack.Screen
@@ -59,9 +84,11 @@ export const MarketplaceStackNavigator: React.FC = () => {
       options={{ title: 'Register for Marketplace' }}
     >
       {({ navigation }) => (
-        <MarketplaceRegistrationScreen
-          onSuccess={() => navigation.navigate('MarketplaceHome')}
-        />
+        <ErrorBoundary label="The marketplace registration form">
+          <MarketplaceRegistrationScreen
+            onSuccess={() => navigation.navigate('MarketplaceHome')}
+          />
+        </ErrorBoundary>
       )}
     </Stack.Screen>
     <Stack.Screen
@@ -69,44 +96,46 @@ export const MarketplaceStackNavigator: React.FC = () => {
       options={{ title: 'Create Listing' }}
     >
       {({ navigation }) => (
-        <CreateListingScreen
-          onSuccess={() => navigation.navigate('MarketplaceHome')}
-        />
+        <ErrorBoundary label="The create listing form">
+          <CreateListingScreen
+            onSuccess={() => navigation.navigate('MarketplaceHome')}
+          />
+        </ErrorBoundary>
       )}
     </Stack.Screen>
     <Stack.Screen
       name="ListingDetail"
-      component={ListingDetailScreen}
+      component={GuardedListingDetail}
       options={{ title: 'Listing Details' }}
     />
     <Stack.Screen
       name="MakeOffer"
-      component={MakeOfferScreen}
+      component={GuardedMakeOffer}
       options={{ title: 'Make Offer' }}
     />
     <Stack.Screen
       name="OfferLog"
-      component={OfferLogScreen}
+      component={GuardedOfferLog}
       options={{ title: 'Offers' }}
     />
     <Stack.Screen
       name="OfferDetail"
-      component={OfferDetailScreen}
+      component={GuardedOfferDetail}
       options={{ title: 'Offer Details' }}
     />
     <Stack.Screen
       name="CommissionProgress"
-      component={CommissionProgressScreen}
+      component={GuardedCommissionProgress}
       options={{ title: 'Commission Progress' }}
     />
     <Stack.Screen
       name="ChatList"
-      component={ChatListScreen}
+      component={GuardedChatList}
       options={{ title: 'Messages' }}
     />
     <Stack.Screen
       name="ChatThread"
-      component={ChatThreadScreen}
+      component={GuardedChatThread}
       options={{ title: 'Chat' }}
     />
   </Stack.Navigator>
