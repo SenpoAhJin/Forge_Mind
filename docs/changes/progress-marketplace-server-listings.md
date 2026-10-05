@@ -1,8 +1,11 @@
 # Progress: Marketplace Listings On The Backend (Part 1)
 
-Status: B2a COMPLETE (server wired to mobile, tsc 0 errors, expo export 0). Next: B2b blocked-inputs fixture.
+Status: B2a COMPLETE (server wired to mobile, tsc 0 errors, expo export 0). White
+page fix merged 2026-10-05. Next: B2b blocked-inputs fixture, then the B2 UI
+steps (create form, My Listings).
 
-Latest: 2026-10-03 B2a completed. Newest work is always the first dated section after the checklist.
+Latest: 2026-10-05 marketplace white page fixed and hardened. Newest work is always
+the first dated section after the checklist.
 
 Goal: move marketplace LISTINGS from per-device AsyncStorage onto the backend so a
 listing created by one user is visible to every other user on any device, with the
@@ -17,7 +20,158 @@ server-side screener as the authority. Offers and chat stay local in this task.
 - [x] STEP 4: Seed check (DONE - 6 seeded rows verified)
 - [x] STEP 5: Mobile wiring (DONE - B2a: MarketplaceApi.ts + Context rewrite)
 - [ ] STEP 6: Verify with two real accounts (NOT TESTED on device)
-- [ ] STEP 7: Docs (DONE for B2a; B2b docs pending)
+- [x] STEP 7: Docs (DONE for B2a and for the 2026-10-05 white page fix)
+- [x] EXTRA: White page fix, seller identity, offline cache validation, error boundary (DONE 2026-10-05)
+- [ ] EXTRA: B2 UI steps still missing (create form by post type, Browse / My Listings toggle, Remove listing, Delete permanently). Audited only, not built.
+
+## 2026-10-05 Monday 16:25 - Marketplace White Page Fixed And Hardened
+
+### The symptom
+
+The Marketplace feed rendered, but opening a listing produced a white page on the
+phone and on the web build at `localhost:8081`. The feed itself was fine, which is
+why it looked like a navigation problem.
+
+### Why it happened, with evidence
+
+| Cause | Evidence | Fixed |
+|-------|----------|-------|
+| The listing screen read a field the server never sends | `ListingDetailScreen.tsx:198` did `listing.seller_email.split('@')[0]`. The public listing shape has never carried an email, and must not. The throw happened during render, with no boundary around it, so React unmounted the whole screen and the page went white. | yes |
+| Cached listings were parsed without being checked | The context ran `JSON.parse` on the cache on every launch and pushed the result straight into state. The old per-device cache stored an object, not an array, so a device with old data threw `SyntaxError` or `TypeError` before anything could render. | yes |
+| Money was formatted as if it always existed | `formatPHP` took a `number` and called `.toFixed(2)`, while a commission listing stores its money in `rate` and leaves `price` empty. Live rows happened to be safe, so this was latent, but tsc proved it. | yes |
+| Two different listing shapes were in play | The context had its own `Listing` type and the screens had another one in `src/types/marketplace.ts`, plus a `FlatList` overload that did not exist. 21 tsc errors in total. | yes |
+| The create screen called an old function signature | `createListing(sellerEmail, input)` spread `undefined` when the screen passed no input, and the old signature asked the client for an address. | yes |
+| Bundle or import failure | `expo export --platform web` exited 0 before any change, and there is no `components/marketplace` folder. Not a cause. | n/a |
+| A navigation hook inside a provider | 0 matches for `@react-navigation` under `src/contexts` and `src/services`. Not a cause. | n/a |
+
+A headless script ran the real screen expressions over the live server response
+for 12 listings and 6 cache shapes before the fix: 15 throws, all from the three
+causes marked yes above.
+
+### What changed in the mobile app
+
+- `src/utils/marketplaceMapping.ts` (new): one function turns any server row into
+  the shape a phone screen expects, with a safe value for every field. It is a
+  plain module so a script can exercise it without rendering React.
+  `MarketplaceContext` re-exports it, so there is still exactly one mapping.
+  `seller_name` falls back to "Cosplayer" when the server has no name,
+  `photos` falls back to an empty list, and dates fall back to an epoch date
+  rather than an invalid one.
+- The cache is only used when it parses into an array of listing-shaped rows.
+  Anything else is treated as no cache, and `listings` and `myListings` are
+  always arrays.
+- Old cached listings are cleared only after a fetch that actually succeeded, so
+  a failed launch no longer destroys the offline copy.
+- `ListingDetailScreen` names the seller from `seller_name` and asks
+  `is_owner` whether it is your own listing. No address is ever read or shown.
+- Offers and chat no longer read an address either. Both take the listing's
+  public fields and, if the shape is wrong, store a minimal placeholder instead
+  of throwing.
+- `formatPHP` accepts an empty value and prints a dash.
+- `getListingPriceLabel` decides what a listing costs: a sell listing shows its
+  price, a commission listing shows its rate, a trade listing shows an estimate
+  when one exists, and anything else shows the dash. It is used on the feed card
+  and on the detail screen.
+- `VerifyStaffScreen.tsx` had 4 type errors unrelated to the marketplace. Fixed
+  so the app compiles cleanly.
+- `src/components/ErrorBoundary.tsx` (new) catches a render failure and shows a
+  readable message with a Try again button instead of a white page. It wraps the
+  app root and every Marketplace screen. Outside development it says only that
+  something went wrong; it never prints listing text.
+
+### Price labels
+
+| Listing | Server fields | Label |
+|---------|---------------|-------|
+| Sell | `price` 1200 | the price |
+| Commission | `price` empty, `rate` 850 | the rate |
+| Trade | `price` empty, no estimate | dash |
+| Trade with an estimate | `trade_estimated_value` set | trade plus the estimate |
+| Anything missing | nothing | dash |
+
+### What changed in the backend
+
+The public listing shape had no way to say who the seller was in a form a client
+can use, and no way to tell a client which listings are the caller's own.
+
+- `toPublicListing` now takes the caller's id and adds `seller_user_id` and
+  `is_owner`. The feed passes the signed-in user; the owner endpoint passes the
+  seller, so `/mine` reports `is_owner` true on its own rows.
+- `seller_email` is still never sent to anyone.
+- `scripts/verify_marketplace.ps1` gained 10 checks: the feed carries
+  `seller_user_id`, `seller_name` and `is_owner`, still carries no
+  `seller_email`, the seller id is a non-empty string, `is_owner` is a boolean,
+  another account's listing is never owned by the reader, and the same listing
+  disagrees about ownership between its owner and another account.
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| `npx tsc --noEmit` (mobile) | exit 0, from 21 errors |
+| `npx expo export --platform web` | exit 0, output folder deleted |
+| Headless screen run, before | 15 throws over 12 listings and 6 cache shapes |
+| Headless screen run, after | 0 throws over 21 listings (9 feed, 3 mine, 9 edge cases) and 8 cache shapes |
+| `npm run typecheck` (backend) | exit 0 |
+| `scripts/verify_marketplace.ps1` | 83 pass / 16 fail, the same 16 blocked-fixture failures as before this change (73 pass / 16 fail) |
+| `/health` after restart | 200, backend pid 25768 |
+| Test rows left in the database | 0 accounts, 0 listings |
+
+### NOT TESTED
+
+- No manual testing on a real phone. The app was never opened on a device or in
+  a browser by a person during this work.
+- The white page itself was not reproduced by hand. The cause was found by
+  reading the code and by running the screen expressions outside React.
+- No two-account manual walkthrough of opening a listing.
+- No manual check of the offline note, the dash for a missing price, the
+  commission rate label, the trade estimate label, the ErrorBoundary message, or
+  Try again.
+- No manual check of the offers and chat messages that now replace the address.
+- No manual check that a listing photo shows, or of image loading itself.
+- The 16 verify failures were not investigated; they need the blocked-inputs
+  fixture file, which is still not in the repo.
+
+### COULD NOT DO
+
+- Offers and chat still identify the buyer and seller from a local address,
+  because the signed-in user record carries no server id. Both entry points now
+  say `Offers and chat will use the server in an upcoming update.` and store a
+  placeholder name instead of crashing.
+- The seller portfolio cannot look up a server id either, for the same reason.
+
+### Commits
+
+- `fix(marketplace): map every server listing through one safe mapping`
+- `feat(safety): add an error boundary so a render error stops being a white page`
+- `feat(marketplace): public listing shape carries seller_user_id and is_owner`
+  (forgemind-backend)
+
+### Delete listings audit, no changes made
+
+Checked and left exactly as found, as asked.
+
+| Piece | Where | State |
+|-------|-------|-------|
+| Owner takes a listing down | `forgemind-backend/src/marketplace/listingsRouter.ts:704` | present |
+| Permanent delete | `forgemind-backend/src/marketplace/listingsRouter.ts:853` | present, refuses an active listing |
+| Appeal | `forgemind-backend/src/marketplace/listingsRouter.ts:779` | present |
+| Mark as sold | `forgemind-backend/src/marketplace/listingsRouter.ts:618` | present |
+| Photo cleanup on delete | anywhere in `src`, `migrations`, `tests` | 0 matches for a photo table or column |
+| `removeListing` in the app | `src/contexts/MarketplaceContext.tsx:237` | present, unused |
+| `deleteListingPermanently` in the app | `src/contexts/MarketplaceContext.tsx:250` | present, unused |
+| Same two calls in the API layer | `src/services/marketplaceApi.ts:110` and `:130` | present |
+| Browse / My Listings toggle | `src/screens/cosplayer/MarketplaceScreen.tsx` | missing |
+| My Listings screen | any file matching `MyListing` | 0 files |
+| Remove listing button | any screen | missing |
+| Delete permanently button | any screen | missing |
+
+The backend and the client functions exist but nothing in the app can reach
+them. The missing Browse / My Listings toggle, the missing status tags, the
+missing Remove listing button with its reason picker, and the missing Delete
+permanently button are the B2 "Step 2" and "Step 3" items in the B2-RESUME plan
+above. They are the same items listed under "Files To Modify" 2, 3 and 4 there.
+They are deliberately not built yet.
 
 ## 2026-10-04 - AI Setup Automation
 

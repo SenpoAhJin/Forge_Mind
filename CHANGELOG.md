@@ -1,7 +1,45 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 3, 2026 (B2a: marketplace server + compile fix)  
+**Last updated:** Monday, October 5, 2026 (marketplace white page fix + seller identity)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Monday, October 5, 2026 (marketplace white page fix + seller identity)
+
+**Summary**
+
+Opening a marketplace listing showed a blank white page. The listing screen was trying to read the seller's email address to work out their name, but the server has never sent an email to the app (and should not, since other people can see listings). That missing field was read during drawing, so the screen threw, and with nothing to catch it the whole page went white. Two other things could do the same thing on a phone that had older data: cached listings were read without checking them, and money was formatted as if it were always filled in. All three are fixed, plus a safety net so a drawing failure can never be a blank page again.
+
+**What was fixed**
+
+- White page: the listing screen now shows the seller's display name from the server, and asks the server whether the listing is yours. No address is read or shown anywhere.
+- Cached listings: the app now only uses cached listings when they really are a list of listings. Old or damaged cache is ignored instead of crashing, and listings stay available offline.
+- Missing prices: a commission listing keeps its amount in the rate box, not the price box. The app shows the right box for each listing type, and shows a dash when there is genuinely nothing to show, instead of breaking.
+- Types: the phone app had two different copies of the listing shape and 21 compile errors. One shape now, zero errors.
+- Create listing: the old function needed an email address and broke when nothing was passed. It is now optional and the app works without an address.
+- Safety net: a new error screen catches any drawing failure, explains that something went wrong, and offers a Try again button. It wraps the whole app and every marketplace screen.
+- Unrelated: four compile errors in the staff verification screen, fixed so the whole app compiles.
+
+**What was added / changed (backend)**
+
+- Listings now carry `seller_user_id` and `is_owner`, so the app can say who the seller is and tell your own listings apart from other people's, without ever sending an address.
+- Owner's own listing list reports `is_owner` as true.
+- Ten new automatic checks, including one that proves the same listing is marked yours by you and not yours by somebody else. Checks now pass 83 / fail 16, and those 16 failures are the same ones that failed before this change (they need a blocked-listing example file that is not in the repo yet).
+
+**What is still missing**
+
+- The "My Listings" part of the marketplace: the toggle to switch between browsing and your own listings, the Remove listing button with its reason picker, and the Delete permanently button. The server already supports both actions and the app already has the functions, but no button uses them yet. This was checked and deliberately left alone.
+- Offers and chat still use a local address to tell buyer from seller, because the signed-in account has no server id yet. Those entry points now say `Offers and chat will use the server in an upcoming update.` instead of failing.
+
+**How it was checked**
+
+- Phone app compile: 0 errors, down from 21.
+- Web build: finished successfully, temporary files deleted.
+- Script that runs the real screen code over saved server responses and saved cache: 0 failures, down from 15, across 21 listings and 8 cache shapes.
+- Server compile: 0 errors. Server restarted, health check passed.
+- Nothing was tested by hand on a real phone or in a browser. The full list of untested items is in `docs/changes/progress-marketplace-server-listings.md`.
+- Nothing was sent anywhere; all work is saved locally only.
 
 ---
 
