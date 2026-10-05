@@ -18,7 +18,14 @@ export interface ChatThread {
   id: string; // thread-<timestamp>-<rand>
   listing_id: string;
   listing_title: string; // Snapshot at creation
+  /**
+   * The seller's email. The server does not hand out another user's email
+   * (privacy rule B1), so this is '' for every listing created from server data
+   * and is NOT used for matching. `seller_user_id` is the identity.
+   */
   seller_email: string;
+  /** The seller's server id. Null until the listing carries one. */
+  seller_user_id?: string | null;
   seller_display_name: string; // Snapshot at creation
   buyer_email: string;
   buyer_display_name: string; // Snapshot at creation

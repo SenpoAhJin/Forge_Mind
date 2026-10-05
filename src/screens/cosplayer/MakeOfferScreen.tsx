@@ -23,14 +23,13 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { useOffers } from '../../contexts/OffersContext';
-import { AuthService } from '../../services/AuthService';
 import { TextInputField, TextAreaField, Button, ConfirmationModal } from '../../components';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { OfferType } from '../../types/offers';
 import { MarketplaceCondition } from '../../types/marketplace';
 import { isOfferTypeAllowed } from '../../utils/offerRules';
 import { formatOfferType } from '../../utils/formatStatus';
-import { formatPHP } from '../../utils/formatCurrency';
+import { getListingPriceLabel } from '../../utils/marketplaceMapping';
 import { MarketplaceStackParamList } from '../../navigation/MarketplaceStackNavigator';
 
 type MakeOfferRouteProp = RouteProp<
@@ -72,25 +71,14 @@ export const MakeOfferScreen: React.FC = () => {
   const listing = getListingById(listingId);
 
   // Load seller's portfolio for commission offers
+  // Seller portfolio (commission offers only). A locally stored account has no
+  // server id to match the listing's seller_user_id against, so the portfolio is
+  // not shown rather than looked up by an email the server does not return.
   useEffect(() => {
-    const loadSellerPortfolio = async () => {
-      if (!listing || offerType !== 'commission') return;
-
-      try {
-        const accounts = await AuthService.getAccounts();
-        const sellerAccount = accounts.find(acc => acc.email === listing.seller_email);
-        if (sellerAccount?.portfolio_photos) {
-          setSellerPortfolio(sellerAccount.portfolio_photos);
-        }
-      } catch (error) {
-        console.error('Failed to load seller portfolio:', error);
-      }
-    };
-
-    loadSellerPortfolio();
+    setSellerPortfolio([]);
   }, [listing, offerType]);
 
-  const isSeller = user ? listing?.seller_email === user.email : false;
+  const isSeller = listing?.is_owner === true;
   const roleIsSellerOnly = user?.marketplace_registration?.marketplace_role === 'seller';
   const isVerified = user?.verification_status === 'verified';
   const listingIsActive = listing?.status === 'active';
@@ -259,22 +247,22 @@ export const MakeOfferScreen: React.FC = () => {
           <Text style={styles.listingTitle}>{listing.title}</Text>
           <View style={styles.listingRow}>
             <Text style={styles.listingPrice}>
-              {listing.transaction_type === 'trade' ? 'Trade Only' : formatPHP(listing.price)}
+              {getListingPriceLabel(listing)}
             </Text>
             <View style={styles.transactionTypeBadge}>
               <Ionicons 
                 name={
-                  listing.transaction_type === 'buy' ? 'cash-outline' :
-                  listing.transaction_type === 'trade' ? 'swap-horizontal-outline' :
-                  'options-outline'
+                  listing.post_type === 'sell' ? 'cash-outline' :
+                  listing.post_type === 'trade' ? 'swap-horizontal-outline' :
+                  'hammer-outline'
                 } 
                 size={14} 
                 color={colors.primary} 
               />
               <Text style={styles.transactionTypeText}>
-                {listing.transaction_type === 'buy' ? 'Buy Only' :
-                 listing.transaction_type === 'trade' ? 'Trade Only' :
-                 'Buy or Trade'}
+                {listing.post_type === 'sell' ? 'Selling' :
+                 listing.post_type === 'trade' ? 'Trading' :
+                 'Commission'}
               </Text>
             </View>
           </View>
@@ -305,8 +293,8 @@ export const MakeOfferScreen: React.FC = () => {
         {/* Form */}
         <View style={styles.form}>
           {/* Transaction type mismatch warning */}
-          {((offerType === 'purchase' && listing.transaction_type === 'trade') ||
-            (offerType === 'trade' && listing.transaction_type === 'buy')) && (
+          {((offerType === 'purchase' && listing.post_type === 'trade') ||
+            (offerType === 'trade' && listing.post_type === 'sell')) && (
             <View style={styles.warningBox}>
               <Ionicons name="alert-circle" size={18} color={colors.warning} />
               <Text style={styles.warningText}>

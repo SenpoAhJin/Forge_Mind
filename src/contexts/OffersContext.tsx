@@ -25,6 +25,7 @@ import {
 } from '../types/offers';
 import { isOfferTypeAllowed } from '../utils/offerRules';
 import { useMarketplace } from './MarketplaceContext';
+import { getListingSellerName } from '../utils/marketplaceMapping';
 
 const STORAGE_KEY = '@forgemind:marketplace_offers';
 
@@ -53,9 +54,14 @@ export const useOffers = (): OffersContextType => {
   return context;
 };
 
-// Display names are snapshotted as the email handle, matching the seller name
-// derivation used across the marketplace surface.
-const displayNameFromEmail = (email: string): string => email.split('@')[0];
+// A proposer's own display name is the handle in their email, because the
+// signed-in user record has no server id to read a display name from. Safe on a
+// missing email: it returns an empty handle instead of throwing.
+const displayNameFromEmail = (email: string | null | undefined): string => {
+  if (typeof email !== 'string') return '';
+  const handle = email.split('@')[0];
+  return handle || 'Member';
+};
 
 export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { getListingById } = useMarketplace();
@@ -99,7 +105,9 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (listing.status !== 'active') {
       return { success: false, error: 'That listing is no longer accepting offers.' };
     }
-    if (listing.seller_email === proposerEmail) {
+    // Ownership comes from the server's is_owner flag. The seller email is
+    // gone for good (the server never returns it), so it is not matched on.
+    if (listing.is_owner) {
       return { success: false, error: 'You cannot make an offer on your own listing.' };
     }
     if (!isOfferTypeAllowed(listing.category, input.offer_type)) {
@@ -120,9 +128,10 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `offer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       listing_id: listing.id,
       listing_title: listing.title,
-      listing_price: listing.price,
-      listing_seller_email: listing.seller_email,
-      seller_display_name: displayNameFromEmail(listing.seller_email),
+      listing_price: listing.price ?? 0,
+      listing_seller_email: '',
+      listing_seller_user_id: listing.seller_user_id,
+      seller_display_name: getListingSellerName(listing),
       proposer_email: proposerEmail,
       proposer_display_name: displayNameFromEmail(proposerEmail),
       offer_type: input.offer_type,

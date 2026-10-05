@@ -19,7 +19,7 @@ import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { useChat } from '../../contexts/ChatContext';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Listing } from '../../types/marketplace';
-import { formatPHP } from '../../utils/formatCurrency';
+import { getListingPriceLabel } from '../../utils/marketplaceMapping';
 
 export const MarketplaceScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -175,7 +175,7 @@ export const MarketplaceScreen: React.FC = () => {
 const MarketplaceBrowse: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useUser();
-  const { getActiveListings, isLoading, refreshListings } = useMarketplace();
+  const { getActiveListings, isLoading, isOffline, refreshListings } = useMarketplace();
   const { getUnreadCount } = useChat();
   const insets = useSafeAreaInsets();
   
@@ -249,7 +249,7 @@ const MarketplaceBrowse: React.FC = () => {
               adjustsFontSizeToFit
               minimumFontScale={0.8}
             >
-              {formatPHP(item.price)}
+              {getListingPriceLabel(item)}
             </Text>
 
             {item.description ? (
@@ -359,6 +359,17 @@ const MarketplaceBrowse: React.FC = () => {
           ))}
         </ScrollView>
       </View>
+
+      {/* Offline note: shown instead of the feed only when the saved copy is
+          what is on screen. The feed itself stays usable either way. */}
+      {isOffline ? (
+        <View style={styles.offlineNote}>
+          <Ionicons name="cloud-offline-outline" size={16} color={colors.textSecondary} />
+          <Text style={styles.offlineNoteText}>
+            You are offline. Showing the saved copy of the listings.
+          </Text>
+        </View>
+      ) : null}
 
       {/* Listings feed */}
       {filteredListings.length === 0 ? (
@@ -812,6 +823,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
+  },
+  offlineNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  offlineNoteText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginLeft: spacing.sm,
+    flex: 1,
   },
   emptyStateTitle: {
     ...typography.h2,

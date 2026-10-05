@@ -148,7 +148,7 @@ export const VerifyStaffScreen: React.FC = () => {
   };
 
   const handleVerify = async (member: UserListItem, approve: boolean) => {
-    const deptLabel = member.department ? DEPARTMENT_LABELS[member.department] : 'unknown department';
+    const deptLabel = member.department ? DEPARTMENT_LABELS[member.department as StaffDepartment] : 'unknown department';
 
     if (approve) {
       // Approve: show confirmation modal
@@ -211,7 +211,7 @@ export const VerifyStaffScreen: React.FC = () => {
     setStaffToReject(null);
   };
 
-  const renderStatusBadge = (status: DepartmentVerificationStatus | undefined) => {
+  const renderStatusBadge = (status: DepartmentVerificationStatus | null | undefined) => {
     const s = status ?? 'pending';
     return (
       <View style={[
@@ -416,8 +416,8 @@ export const VerifyStaffScreen: React.FC = () => {
       {/* Approval Confirmation Modal */}
       <ConfirmationModal
         visible={showApprovalModal}
-        title={`Approve ${staffToApprove?.department ? DEPARTMENT_LABELS[staffToApprove.department] : ''} Staff`}
-        message={`Approve this application? ${staffToApprove?.display_name || ''} will gain membership in the ${staffToApprove?.department ? DEPARTMENT_LABELS[staffToApprove.department] : 'unknown'} department only.`}
+        title={`Approve ${staffToApprove?.department ? DEPARTMENT_LABELS[staffToApprove.department as StaffDepartment] : ''} Staff`}
+        message={`Approve this application? ${staffToApprove?.display_name || ''} will gain membership in the ${staffToApprove?.department ? DEPARTMENT_LABELS[staffToApprove.department as StaffDepartment] : 'unknown'} department only.`}
         confirmText="Approve"
         onConfirm={handleApprovalConfirm}
         onCancel={handleApprovalCancel}

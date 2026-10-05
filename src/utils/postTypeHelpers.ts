@@ -7,34 +7,31 @@ import type { Listing, PostType } from '../types/marketplace';
 
 /**
  * Get effective post type for a listing, handling legacy transaction_type.
- * Mapping: buy -> sell, trade -> trade, both -> sell (with open_to_trade flag)
+ * The server stores sell, trade and commission. 'commission' predates the
+ * six-value PostType union as a service_offer, so it maps to that here.
  */
 export function getEffectivePostType(listing: Listing): PostType {
   // New listings have post_type
   if (listing.post_type) {
-    return listing.post_type;
+    return listing.post_type === 'commission' ? 'service_offer' : listing.post_type;
   }
-  
+
   // Legacy listings: map transaction_type
   if (listing.transaction_type === 'trade') {
     return 'trade';
   }
-  
+
   // 'buy' and 'both' both map to 'sell'
   // ('both' sets open_to_trade flag separately)
   return 'sell';
 }
 
 /**
- * Check if listing is open to trade offers (handles legacy 'both' type)
+ * Check if listing is open to trade offers. The server sends the flag itself,
+ * so there is no legacy 'both' transaction type left to fall back to.
  */
 export function isOpenToTrade(listing: Listing): boolean {
-  if (listing.open_to_trade !== undefined) {
-    return listing.open_to_trade;
-  }
-  
-  // Legacy: 'both' means open to trade
-  return listing.transaction_type === 'both';
+  return listing.open_to_trade === true;
 }
 
 /**

@@ -8,33 +8,65 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MarketplaceApi, { Listing as ApiListing, CreateListingRequest } from '../services/MarketplaceApi';
+import MarketplaceApi, { CreateListingRequest } from '../services/MarketplaceApi';
+import { mapServerListing, mapServerListings, parseCachedListings } from '../utils/marketplaceMapping';
+import type { Listing, ServerPostType } from '../types/marketplace';
+
+// The one server -> phone mapping, re-exported so a screen or a test can reach
+// it without this file's React and storage dependencies.
+export { mapServerListing, mapServerListings, parseCachedListings };
 
 const STORAGE_KEY = '@forgemind:marketplace_listings_cache';
 const STORAGE_KEY_OLD = '@forgemind:marketplace_listings'; // For clearing old local listings
 const STORAGE_KEY_MIGRATED = '@forgemind:marketplace_migrated';
 
-export interface Listing {
-  id: string;
-  post_type: 'sell' | 'trade' | 'commission';
-  transaction_type?: 'sell' | 'trade' | 'commission'; // Deprecated alias for post_type
+export type { Listing };
+
+/**
+ * What the older screens still pass: a transaction_type from before the server
+ * migration and a photos array the server does not accept. Accepted and
+ * translated, never sent as it is.
+ */
+export interface LegacyCreateListingInput {
   title: string;
   description: string;
   category: string;
-  condition: string;
+  transaction_type?: string;
+  post_type?: string;
   price?: number;
   rate?: number;
+  condition?: string;
   trade_offered_item?: string;
   trade_wanted_item?: string;
-  status: 'active' | 'blocked' | 'cancelled' | 'sold';
-  screening_result?: 'passed' | 'blocked';
-  screening_reason?: string | null;
-  appeal_status?: 'none' | 'pending' | 'approved' | 'rejected';
-  seller_user_id?: string;
-  seller_name?: string;
-  seller_email?: string; // Deprecated, use seller_user_id
-  photos?: string[]; // Optional array of photo URLs
-  created_at: string;
+  [key: string]: unknown;
+}
+
+/** The legacy transaction types, mapped onto the three the server stores. */
+function toServerPostType(value: unknown): ServerPostType {
+  if (value === 'sell' || value === 'trade' || value === 'commission') return value;
+  // 'buy' and 'both' both meant "the seller is selling this".
+  if (value === 'trade') return 'trade';
+  return 'sell';
+}
+
+function toCreateListingRequest(input: LegacyCreateListingInput): CreateListingRequest {
+  const postType = toServerPostType(input.post_type ?? input.transaction_type);
+  const request: CreateListingRequest = {
+    post_type: postType,
+    title: typeof input.title === 'string' ? input.title : '',
+    description: typeof input.description === 'string' ? input.description : '',
+    category: typeof input.category === 'string' ? input.category : '',
+  };
+  if (typeof input.condition === 'string' && input.condition !== '') request.condition = input.condition;
+  if (typeof input.price === 'number' && Number.isFinite(input.price)) request.price = input.price;
+  if (typeof input.rate === 'number' && Number.isFinite(input.rate)) request.rate = input.rate;
+  if (typeof input.trade_offered_item === 'string' && input.trade_offered_item !== '') {
+    request.trade_offered_item = input.trade_offered_item;
+  }
+  if (typeof input.trade_wanted_item === 'string' && input.trade_wanted_item !== '') {
+    request.trade_wanted_item = input.trade_wanted_item;
+  }
+  return request;
 }
 
 interface MarketplaceContextType {
@@ -42,7 +74,7 @@ interface MarketplaceContextType {
   myListings: Listing[];
   isLoading: boolean;
   isOffline: boolean;
-  createListing: (emailOrInput: string | CreateListingRequest, maybeInput?: CreateListingRequest) => Promise<{ success: boolean; listing?: Listing; error?: string }>;
+  createListing: (emailOrInput: string | LegacyCreateListingInput, maybeInput?: LegacyCreateListingInput) => Promise<{ success: boolean; listing?: Listing; error?: string }>;
   getListingById: (id: string) => Listing | undefined;
   getActiveListings: () => Listing[];
   getListingsBySeller: (sellerUserId: string) => Listing[];
@@ -74,10 +106,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     loadListings();
     loadMyListings();
-    clearOldLocalListingsOnce();
   }, []);
 
-  /** Clear old AsyncStorage listings once after first successful server fetch */
+  /** Clear old AsyncStorage listings once, and only after a successful fetch. */
   const clearOldLocalListingsOnce = async () => {
     try {
       const migrated = await AsyncStorage.getItem(STORAGE_KEY_MIGRATED);
@@ -93,39 +124,36 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  /**
+   * The offline fallback. A cache that is missing, unparsable or in the old
+   * local shape is ignored: the answer is always a valid array, so the screen
+   * shows its empty state and never a blank page.
+   */
+  const applyCachedListings = async (): Promise<void> => {
+    const cached = parseCachedListings(await AsyncStorage.getItem(STORAGE_KEY));
+    setListings(cached);
+    setIsOffline(true);
+  };
+
   const loadListings = async () => {
     try {
       const response = await MarketplaceApi.getListings();
-      
-      if (response.success && response.data) {
-        // Map post_type to transaction_type for backward compatibility
-        const mappedListings = response.data.map(listing => ({
-          ...listing,
-          transaction_type: listing.post_type,
-        }));
+
+      if (response.success && Array.isArray(response.data)) {
+        const mappedListings = mapServerListings(response.data);
         setListings(mappedListings);
         setIsOffline(false);
         // Cache for offline use
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mappedListings));
+        await clearOldLocalListingsOnce();
       } else {
-        // Failed to fetch: try cache
-        const cached = await AsyncStorage.getItem(STORAGE_KEY);
-        if (cached) {
-          setListings(JSON.parse(cached));
-          setIsOffline(true);
-        } else {
-          setListings([]);
-        }
+        // Failed to fetch: try the cache, then the empty state
+        await applyCachedListings();
       }
     } catch (error) {
       console.error('[MarketplaceContext] Failed to load listings:', error);
-      // Try cache on error
       try {
-        const cached = await AsyncStorage.getItem(STORAGE_KEY);
-        if (cached) {
-          setListings(JSON.parse(cached));
-          setIsOffline(true);
-        }
+        await applyCachedListings();
       } catch {}
     } finally {
       setIsLoading(false);
@@ -135,13 +163,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loadMyListings = async () => {
     try {
       const response = await MarketplaceApi.getMyListings();
-      if (response.success && response.data) {
-        // Map post_type to transaction_type for backward compatibility
-        const mappedListings = response.data.map(listing => ({
-          ...listing,
-          transaction_type: listing.post_type,
-        }));
-        setMyListings(mappedListings);
+      if (response.success && Array.isArray(response.data)) {
+        setMyListings(mapServerListings(response.data));
       }
     } catch (error) {
       console.error('[MarketplaceContext] Failed to load my listings:', error);
@@ -151,62 +174,54 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const refreshListings = async () => {
     try {
       const response = await MarketplaceApi.getListings();
-      if (response.success && response.data) {
-        // Map post_type to transaction_type for backward compatibility
-        const mappedListings = response.data.map(listing => ({
-          ...listing,
-          transaction_type: listing.post_type,
-        }));
+      if (response.success && Array.isArray(response.data)) {
+        const mappedListings = mapServerListings(response.data);
         setListings(mappedListings);
         setIsOffline(false);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mappedListings));
+        await clearOldLocalListingsOnce();
+      } else {
+        await applyCachedListings();
       }
     } catch (error) {
       console.error('[MarketplaceContext] Failed to refresh listings:', error);
+      try {
+        await applyCachedListings();
+      } catch {}
     }
   };
 
   const refreshMyListings = async () => {
     try {
       const response = await MarketplaceApi.getMyListings();
-      if (response.success && response.data) {
-        // Map post_type to transaction_type for backward compatibility
-        const mappedListings = response.data.map(listing => ({
-          ...listing,
-          transaction_type: listing.post_type,
-        }));
-        setMyListings(mappedListings);
+      if (response.success && Array.isArray(response.data)) {
+        setMyListings(mapServerListings(response.data));
       }
     } catch (error) {
       console.error('[MarketplaceContext] Failed to refresh my listings:', error);
     }
   };
 
-  const createListing = async (emailOrInput: string | CreateListingRequest, maybeInput?: CreateListingRequest): Promise<{ success: boolean; listing?: Listing; error?: string }> => {
+  const createListing = async (
+    emailOrInput: string | LegacyCreateListingInput,
+    maybeInput?: LegacyCreateListingInput,
+  ): Promise<{ success: boolean; listing?: Listing; error?: string }> => {
     // Support both old signature createListing(email, input) and new createListing(input)
-    let input: CreateListingRequest = typeof emailOrInput === 'string' ? maybeInput! : emailOrInput;
-    
-    // Map transaction_type to post_type if needed (backward compatibility)
-    if ('transaction_type' in input && !('post_type' in input)) {
-      const txType = (input as any).transaction_type;
-      input = {
-        ...input,
-        post_type: txType === 'sell' ? 'sell' : txType === 'trade' ? 'trade' : txType === 'commission' ? 'commission' : 'sell',
-      };
+    const input = typeof emailOrInput === 'string' ? maybeInput : emailOrInput;
+
+    if (!input) {
+      return { success: false, error: 'Please check the listing details and try again.' };
     }
-    
-    const response = await MarketplaceApi.createListing(input);
-    
+
+    const response = await MarketplaceApi.createListing(toCreateListingRequest(input));
+
     if (response.success && response.data) {
       // Refresh both lists
       await refreshListings();
       await refreshMyListings();
-      return { 
-        success: true, 
-        listing: { ...response.data, transaction_type: response.data.post_type } 
-      };
+      return { success: true, listing: mapServerListing(response.data) };
     }
-    
+
     return { success: false, error: response.error };
   };
 

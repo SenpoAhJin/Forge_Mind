@@ -18,12 +18,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
-import { useChat } from '../../contexts/ChatContext';
-import { AuthService } from '../../services/AuthService';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Button } from '../../components';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
-import { formatPHP } from '../../utils/formatCurrency';
+import { getListingPriceLabel, getListingSellerName } from '../../utils/marketplaceMapping';
 import { getAllowedOfferTypes } from '../../utils/offerRules';
 import { OfferType } from '../../types/offers';
 import { MarketplaceStackParamList } from '../../navigation/MarketplaceStackNavigator';
@@ -35,7 +33,6 @@ export const ListingDetailScreen: React.FC = () => {
   const route = useRoute<ListingDetailRouteProp>();
   const { user } = useUser();
   const { getListingById } = useMarketplace();
-  const { getOrCreateThread } = useChat();
 
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -43,30 +40,13 @@ export const ListingDetailScreen: React.FC = () => {
 
   const listing = getListingById(route.params.listingId);
 
-  // Load seller's portfolio for commission/service listings
+  // Seller portfolio (commission/service categories only).
+  // The listing carries the seller's user id, but a locally stored account has
+  // no user id (AuthService.StoredAccount is keyed by email), so there is
+  // nothing to match on here and nothing to crash on: the portfolio section is
+  // simply absent until the account record carries a server id.
   useEffect(() => {
-    const loadSellerPortfolio = async () => {
-      if (!listing) return;
-      
-      // Only load portfolio for commission/service categories
-      const isCommissionCategory = 
-        listing.category === 'Commissions & Crafting Services' ||
-        listing.category === 'Photography Services';
-      
-      if (!isCommissionCategory) return;
-
-      try {
-        const accounts = await AuthService.getAccounts();
-        const sellerAccount = accounts.find(acc => acc.email === listing.seller_email);
-        if (sellerAccount?.portfolio_photos) {
-          setSellerPortfolio(sellerAccount.portfolio_photos);
-        }
-      } catch (error) {
-        console.error('Failed to load seller portfolio:', error);
-      }
-    };
-
-    loadSellerPortfolio();
+    setSellerPortfolio([]);
   }, [listing]);
 
   if (!listing) {
@@ -89,31 +69,32 @@ export const ListingDetailScreen: React.FC = () => {
   // FE-6 Step 3: a verified, non-seller participant on their own feed can open
   // a structured offer flow against an active listing. Seller-only accounts
   // cannot make offers (they can only receive them).
+  //
+  // Ownership is answered by the server's is_owner flag, never by comparing
+  // the signed-in user's email with a seller email.
   const isEligibleToOffer =
     user?.verification_status === 'verified' &&
     user?.marketplace_registration?.marketplace_role !== 'seller' &&
-    listing.seller_email !== user?.email &&
+    !listing.is_owner &&
     listing.status === 'active';
   const allowedOfferTypes = getAllowedOfferTypes(listing.category);
 
   // FE-6 Step 4: messaging eligibility
   const isVerified = user?.verification_status === 'verified';
-  const isSeller = user?.email === listing.seller_email;
+  const isSeller = listing.is_owner === true;
   const canMessageSeller =
     isVerified &&
     !isSeller &&
     listing.status === 'active' &&
     user?.marketplace_registration?.marketplace_role !== 'seller';
 
-  const handleMessageSeller = async () => {
-    if (!user?.email) return;
-    const result = await getOrCreateThread(listing.id, user.email);
-    if (result.success && result.thread) {
-      navigation.navigate('ChatThread', { threadId: result.thread.id });
-    } else {
-      setErrorMessage(result.error || 'Failed to start conversation.');
-      setErrorVisible(true);
-    }
+  // The signed-in user record has no server id, so an offer or a chat thread
+  // cannot yet be tied to a seller without an email, which the server does not
+  // hand out. Both entry points say so instead of starting a broken flow.
+  const [serverSoonNote, setServerSoonNote] = useState<string | null>(null);
+
+  const handleOfferUnavailable = () => {
+    setServerSoonNote('Offers and chat will use the server in an upcoming update.');
   };
 
   const handleViewMessages = () => {
@@ -126,21 +107,21 @@ export const ListingDetailScreen: React.FC = () => {
     commission: 'Request Commission',
   };
 
-  const formattedPrice = listing.transaction_type === 'trade' 
-    ? 'Trade Only' 
-    : formatPHP(listing.price);
-  
-  const transactionTypeLabels = {
-    buy: 'Buy Only',
-    trade: 'Trade Only',
-    both: 'Buy or Trade'
+  const formattedPrice = getListingPriceLabel(listing);
+
+  const postTypeLabels = {
+    sell: 'Selling',
+    trade: 'Trading',
+    commission: 'Commission',
   };
 
-  const transactionTypeIcons = {
-    buy: 'cash-outline',
+  const postTypeIcons = {
+    sell: 'cash-outline',
     trade: 'swap-horizontal-outline',
-    both: 'options-outline'
+    commission: 'hammer-outline',
   };
+
+  const postType = listing.post_type;
 
   const formattedDate = new Date(listing.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -162,15 +143,15 @@ export const ListingDetailScreen: React.FC = () => {
           </View>
         </View>
         
-        {/* Transaction Type Badge */}
+        {/* Post Type Badge */}
         <View style={styles.transactionTypeBadge}>
           <Ionicons 
-            name={transactionTypeIcons[listing.transaction_type] as any} 
+            name={postTypeIcons[postType] as any} 
             size={16} 
             color={colors.primary} 
           />
           <Text style={styles.transactionTypeText}>
-            {transactionTypeLabels[listing.transaction_type]}
+            {postTypeLabels[postType]}
           </Text>
         </View>
       </View>
@@ -195,7 +176,7 @@ export const ListingDetailScreen: React.FC = () => {
           <View style={styles.sellerAvatar}>
             <Ionicons name="person" size={20} color={colors.backgroundLight} />
           </View>
-          <Text style={styles.sellerName}>{listing.seller_email.split('@')[0]}</Text>
+          <Text style={styles.sellerName}>{getListingSellerName(listing)}</Text>
         </View>
       </View>
 
@@ -227,30 +208,25 @@ export const ListingDetailScreen: React.FC = () => {
       </View>
 
       {/* Offer entry point (FE-6 Step 3) */}
-      {isEligibleToOffer && (
+      {isEligibleToOffer ? (
         <View style={styles.offerSection}>
           {allowedOfferTypes.map((offerType) => (
             <Button
               key={offerType}
               title={offerButtonLabels[offerType]}
-              onPress={() =>
-                navigation.navigate('MakeOffer', {
-                  listingId: listing.id,
-                  offerType,
-                })
-              }
+              onPress={handleOfferUnavailable}
               variant="primary"
               fullWidth
             />
           ))}
         </View>
-      )}
+      ) : null}
 
       {/* Messaging (FE-6 Step 4) */}
       {canMessageSeller ? (
         <Button
           title="Message Seller"
-          onPress={handleMessageSeller}
+          onPress={handleOfferUnavailable}
           variant="secondary"
           fullWidth
         />
@@ -274,10 +250,18 @@ export const ListingDetailScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Server-bound note: set by either entry point above. */}
+      {serverSoonNote ? (
+        <View style={styles.ineligibleBanner}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+          <Text style={styles.ineligibleText}>{serverSoonNote}</Text>
+        </View>
+      ) : null}
+
       {/* Error Modal */}
       <ConfirmationModal
         visible={errorVisible}
-        title="Error"
+        title="Something went wrong"
         message={errorMessage}
         confirmText="OK"
         onConfirm={() => setErrorVisible(false)}

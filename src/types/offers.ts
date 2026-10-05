@@ -19,8 +19,15 @@ export interface Offer {
   id: string;                          // Mock UUID-style (e.g. "offer-2m9df8k4")
   listing_id: string;                  // The listing this offer is against
   listing_title: string;               // Snapshot of the listing title at offer time
-  listing_price: number;               // Snapshot of the listing's asking price
+  listing_price: number;               // Snapshot of the listing's asking price (0 when it has none)
+  /**
+   * The seller's email. The server does not hand out another user's email
+   * (privacy rule B1), so this is '' for every listing created from server data
+   * and is NOT used for matching. `listing_seller_user_id` is the identity.
+   */
   listing_seller_email: string;
+  /** The seller's server id. Null until the listing carries one. */
+  listing_seller_user_id?: string | null;
   seller_display_name: string;         // Snapshot, surface display only
   proposer_email: string;
   proposer_display_name: string;       // Snapshot, surface display only

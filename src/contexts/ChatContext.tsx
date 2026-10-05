@@ -31,6 +31,7 @@ import {
   ThreadClosedReason,
 } from '../types/chat';
 import { useMarketplace } from './MarketplaceContext';
+import { getListingSellerName } from '../utils/marketplaceMapping';
 
 const STORAGE_KEY = '@forgemind:marketplace_chat';
 
@@ -66,8 +67,14 @@ export const useChat = (): ChatContextType => {
   return context;
 };
 
-// Display names are snapshotted as the email handle
-const displayNameFromEmail = (email: string): string => email.split('@')[0];
+// A buyer's own display name is the handle in their email, because the
+// signed-in user record has no server id to read a display name from. Safe on a
+// missing email: it returns an empty handle instead of throwing.
+const displayNameFromEmail = (email: string | null | undefined): string => {
+  if (typeof email !== 'string') return '';
+  const handle = email.split('@')[0];
+  return handle || 'Member';
+};
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { getListingById } = useMarketplace();
@@ -136,7 +143,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (listing.status !== 'active') {
       return { success: false, error: 'That listing is no longer accepting messages.' };
     }
-    if (listing.seller_email === buyerEmail) {
+    if (listing.is_owner) {
       return { success: false, error: 'You cannot start a chat on your own listing.' };
     }
 
@@ -155,8 +162,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: `thread-${timestamp}-${rand}`,
       listing_id: listingId,
       listing_title: listing.title,
-      seller_email: listing.seller_email,
-      seller_display_name: displayNameFromEmail(listing.seller_email),
+      // No seller email: the server never returns one (privacy rule B1). The
+      // identity is seller_user_id and the name is the seller's chosen name.
+      seller_email: '',
+      seller_user_id: listing.seller_user_id,
+      seller_display_name: getListingSellerName(listing),
       buyer_email: buyerEmail,
       buyer_display_name: displayNameFromEmail(buyerEmail),
       status: 'open',
