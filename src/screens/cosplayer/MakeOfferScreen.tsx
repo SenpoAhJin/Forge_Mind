@@ -31,6 +31,8 @@ import { isOfferTypeAllowed } from '../../utils/offerRules';
 import { formatOfferType } from '../../utils/formatStatus';
 import { getListingPriceLabel } from '../../utils/marketplaceMapping';
 import { MarketplaceStackParamList } from '../../navigation/MarketplaceStackNavigator';
+import { sanitizeDecimalInput, sanitizeIntegerInput } from '../../utils/numericInput';
+import { MAX_AMOUNT_PHP } from '../../utils/marketplaceLimits';
 
 type MakeOfferRouteProp = RouteProp<
   { params: { listingId: string; offerType: OfferType } },
@@ -131,7 +133,7 @@ export const MakeOfferScreen: React.FC = () => {
     let isValid = true;
 
     if (offerType === 'purchase') {
-      const priceNum = parseFloat(offeredPrice);
+      const priceNum = offeredPrice ? Number(offeredPrice) : NaN;
       if (!offeredPrice.trim() || isNaN(priceNum) || priceNum <= 0) {
         setPriceError('Enter an offer price greater than 0');
         isValid = false;
@@ -150,7 +152,7 @@ export const MakeOfferScreen: React.FC = () => {
         isValid = false;
       }
       if (tradeEstValue.trim()) {
-        const estNum = parseFloat(tradeEstValue);
+        const estNum = tradeEstValue ? Number(tradeEstValue) : NaN;
         if (isNaN(estNum) || estNum <= 0) {
           setEstValueError('Estimated value must be greater than 0');
           isValid = false;
@@ -163,7 +165,7 @@ export const MakeOfferScreen: React.FC = () => {
         setDescriptionError('Describe what you want made or done (at least 3 characters)');
         isValid = false;
       }
-      const budgetNum = parseFloat(budget);
+      const budgetNum = budget ? Number(budget) : NaN;
       if (!budget.trim() || isNaN(budgetNum) || budgetNum <= 0) {
         setBudgetError('Enter a budget greater than 0');
         isValid = false;
@@ -191,10 +193,10 @@ export const MakeOfferScreen: React.FC = () => {
     const input = {
       listing_id: listing.id,
       offer_type: offerType,
-      offered_price: offerType === 'purchase' ? parseFloat(offeredPrice) : offerType === 'commission' ? parseFloat(budget) : undefined,
+      offered_price: offerType === 'purchase' ? Number(offeredPrice) : offerType === 'commission' ? Number(budget) : undefined,
       trade_offered_item: offerType === 'trade' ? tradeItem.trim() : undefined,
       trade_offered_condition: offerType === 'trade' ? (tradeCondition as MarketplaceCondition) : undefined,
-      trade_offered_est_value: offerType === 'trade' && tradeEstValue.trim() ? parseFloat(tradeEstValue) : undefined,
+      trade_offered_est_value: offerType === 'trade' && tradeEstValue.trim() ? Number(tradeEstValue) : undefined,
       commission_description: offerType === 'commission' ? commissionDescription.trim() : undefined,
       timeline_days: offerType === 'commission' ? Number(timeline) : undefined,
     };
@@ -306,14 +308,20 @@ export const MakeOfferScreen: React.FC = () => {
           )}
 
           {offerType === 'purchase' && (
-            <TextInputField
-              label="Offer price (₱) *"
-              value={offeredPrice}
-              onChangeText={setOfferedPrice}
-              placeholder="0.00"
-              keyboardType="numeric"
-              error={priceError}
-            />
+            <>
+              <TextInputField
+                label="Offer price (₱) *"
+                value={offeredPrice}
+                onChangeText={(text) => setOfferedPrice(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                inputMode="decimal"
+                error={priceError}
+              />
+              {offeredPrice && Number(offeredPrice) > MAX_AMOUNT_PHP && (
+                <Text style={styles.limitMessage}>Maximum is ₱{MAX_AMOUNT_PHP.toLocaleString()}</Text>
+              )}
+            </>
           )}
 
           {offerType === 'trade' && (
@@ -355,9 +363,10 @@ export const MakeOfferScreen: React.FC = () => {
               <TextInputField
                 label="Estimated value (₱)"
                 value={tradeEstValue}
-                onChangeText={setTradeEstValue}
+                onChangeText={(text) => setTradeEstValue(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
                 placeholder="Optional"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
+                inputMode="decimal"
                 error={estValueError}
               />
             </>
@@ -376,17 +385,22 @@ export const MakeOfferScreen: React.FC = () => {
               <TextInputField
                 label="Budget (₱) *"
                 value={budget}
-                onChangeText={setBudget}
+                onChangeText={(text) => setBudget(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
                 placeholder="0.00"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
+                inputMode="decimal"
                 error={budgetError}
               />
+              {budget && Number(budget) > MAX_AMOUNT_PHP && (
+                <Text style={styles.limitMessage}>Maximum is ₱{MAX_AMOUNT_PHP.toLocaleString()}</Text>
+              )}
               <TextInputField
                 label="Timeline (days) *"
                 value={timeline}
-                onChangeText={setTimeline}
+                onChangeText={(text) => setTimeline(sanitizeIntegerInput(text, { maxDigits: 3 }))}
                 placeholder="e.g., 14"
-                keyboardType="numeric"
+                keyboardType="number-pad"
+                inputMode="numeric"
                 error={timelineError}
               />
             </>
@@ -549,6 +563,11 @@ const styles = StyleSheet.create({
     color: colors.warning,
     flex: 1,
     lineHeight: 18,
+  },
+  limitMessage: {
+    ...typography.caption,
+    color: colors.warning,
+    marginTop: spacing.xs,
   },
   portfolioSection: {
     marginBottom: spacing.lg,

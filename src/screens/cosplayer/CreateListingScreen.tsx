@@ -23,6 +23,8 @@ import { TextInputField, TextAreaField, Button } from '../../components';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { MarketplaceCondition, TransactionType } from '../../types/marketplace';
 import { checkListing } from '../../services/MarketplaceService';
+import { sanitizeDecimalInput } from '../../utils/numericInput';
+import { MAX_AMOUNT_PHP } from '../../utils/marketplaceLimits';
 
 interface CreateListingScreenProps {
   onSuccess: () => void;
@@ -92,7 +94,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
     }
 
     // Price (required for 'buy' or 'both', optional for 'trade')
-    const priceNum = parseFloat(price);
+    const priceNum = price ? Number(price) : NaN;
     if (transactionType === 'buy' || transactionType === 'both') {
       if (!price.trim()) {
         setPriceError('Price is required for Buy transactions');
@@ -176,7 +178,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
       description: description.trim(),
       category,
       transaction_type: transactionType as TransactionType,
-      price: transactionType === 'trade' ? 0 : parseFloat(price),
+      price: transactionType === 'trade' ? 0 : Number(price),
       condition: condition as MarketplaceCondition,
       photos: [],
     };
@@ -376,11 +378,15 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           <TextInputField
             label={transactionType === 'trade' ? 'Price (₱) - Optional for Trade' : 'Price (₱) *'}
             value={price}
-            onChangeText={setPrice}
+            onChangeText={(text) => setPrice(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
             placeholder={transactionType === 'trade' ? 'N/A for trade-only' : '0.00'}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
+            inputMode="decimal"
             error={priceError}
           />
+          {price && Number(price) > MAX_AMOUNT_PHP && (
+            <Text style={styles.limitMessage}>Maximum is ₱{MAX_AMOUNT_PHP.toLocaleString()}</Text>
+          )}
 
           {/* Condition */}
           <View style={styles.field}>
@@ -563,6 +569,11 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.caption,
     color: colors.error,
+    marginTop: spacing.xs,
+  },
+  limitMessage: {
+    ...typography.caption,
+    color: colors.warning,
     marginTop: spacing.xs,
   },
   infoBox: {
