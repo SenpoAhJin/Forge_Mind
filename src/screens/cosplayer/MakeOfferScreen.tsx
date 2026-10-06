@@ -314,7 +314,7 @@ export const MakeOfferScreen: React.FC = () => {
                 value={offeredPrice}
                 onChangeText={(text) => setOfferedPrice(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
                 placeholder="0.00"
-                keyboardType="decimal-pad"
+                keyboardType="numeric"
                 inputMode="decimal"
                 error={priceError}
               />
@@ -365,7 +365,7 @@ export const MakeOfferScreen: React.FC = () => {
                 value={tradeEstValue}
                 onChangeText={(text) => setTradeEstValue(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
                 placeholder="Optional"
-                keyboardType="decimal-pad"
+                keyboardType="numeric"
                 inputMode="decimal"
                 error={estValueError}
               />
@@ -387,7 +387,7 @@ export const MakeOfferScreen: React.FC = () => {
                 value={budget}
                 onChangeText={(text) => setBudget(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
                 placeholder="0.00"
-                keyboardType="decimal-pad"
+                keyboardType="numeric"
                 inputMode="decimal"
                 error={budgetError}
               />

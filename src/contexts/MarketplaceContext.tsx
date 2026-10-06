@@ -74,7 +74,7 @@ interface MarketplaceContextType {
   myListings: Listing[];
   isLoading: boolean;
   isOffline: boolean;
-  createListing: (emailOrInput: string | LegacyCreateListingInput, maybeInput?: LegacyCreateListingInput) => Promise<{ success: boolean; listing?: Listing; error?: string }>;
+  createListing: (emailOrInput: string | LegacyCreateListingInput, maybeInput?: LegacyCreateListingInput) => Promise<{ success: boolean; listing?: Listing; error?: string; fieldErrors?: Record<string, string> }>;
   getListingById: (id: string) => Listing | undefined;
   getActiveListings: () => Listing[];
   getListingsBySeller: (sellerUserId: string) => Listing[];
@@ -205,7 +205,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const createListing = async (
     emailOrInput: string | LegacyCreateListingInput,
     maybeInput?: LegacyCreateListingInput,
-  ): Promise<{ success: boolean; listing?: Listing; error?: string }> => {
+  ): Promise<{ success: boolean; listing?: Listing; error?: string; fieldErrors?: Record<string, string> }> => {
     // Support both old signature createListing(email, input) and new createListing(input)
     const input = typeof emailOrInput === 'string' ? maybeInput : emailOrInput;
 
@@ -222,7 +222,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return { success: true, listing: mapServerListing(response.data) };
     }
 
-    return { success: false, error: response.error };
+    return { success: false, error: response.error, fieldErrors: response.fieldErrors };
   };
 
   const cancelListing = async (listingId: string, reason?: string): Promise<{ success: boolean; error?: string }> => {

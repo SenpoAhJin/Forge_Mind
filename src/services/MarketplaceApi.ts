@@ -49,6 +49,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  fieldErrors?: Record<string, string>;
 }
 
 class MarketplaceApi {
@@ -96,6 +97,34 @@ class MarketplaceApi {
       });
 
       if (!response.ok) {
+        // Handle specific error cases
+        const data = await response.json().catch(() => ({}));
+        
+        // 422 listing_quality - return field errors
+        if (response.status === 422 && data.error === 'listing_quality' && data.fields) {
+          return {
+            success: false,
+            error: data.message || 'Please check your input and try again.',
+            fieldErrors: data.fields,
+          };
+        }
+        
+        // 409 duplicate_listing - return plain message
+        if (response.status === 409 && data.error === 'duplicate_listing') {
+          return {
+            success: false,
+            error: data.message || 'You already have this listing on the marketplace.',
+          };
+        }
+        
+        // 422 content_rejected (moderation) - generic message
+        if (response.status === 422 && data.error === 'content_rejected') {
+          return {
+            success: false,
+            error: 'This listing could not be posted. Please review the content and try again.',
+          };
+        }
+        
         return { success: false, error: await this.errorMessage(response) };
       }
 

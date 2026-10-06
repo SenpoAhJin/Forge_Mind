@@ -19,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
-import { TextInputField, TextAreaField, Button } from '../../components';
+import { TextInputField, TextAreaField, Button, ConfirmationModal } from '../../components';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { MarketplaceCondition, TransactionType } from '../../types/marketplace';
 import { checkListing } from '../../services/MarketplaceService';
@@ -50,6 +50,10 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
   const [conditionError, setConditionError] = useState('');
   const [globalError, setGlobalError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Duplicate listing modal
+  const [duplicateModalVisible, setDuplicateModalVisible] = useState(false);
+  const [duplicateMessage, setDuplicateMessage] = useState('');
 
   const validateFields = (): boolean => {
     let isValid = true;
@@ -184,7 +188,35 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
     };
 
     try {
-      await createListing(user.email, input);
+      const result = await createListing(user.email, input);
+      
+      if (!result.success) {
+        // Handle field errors (422 listing_quality)
+        if (result.fieldErrors) {
+          if (result.fieldErrors.title) setTitleError(result.fieldErrors.title);
+          if (result.fieldErrors.description) setDescriptionError(result.fieldErrors.description);
+          if (result.fieldErrors.trade_offered_item) {
+            // For trade item errors, show in global error for now
+            setGlobalError(result.error || 'Please check your input and try again.');
+          }
+          if (result.fieldErrors.trade_wanted_item) {
+            setGlobalError(result.error || 'Please check your input and try again.');
+          }
+        } else {
+          // Plain error message (409 duplicate, 422 moderation, etc.)
+          const errorMsg = result.error || 'Failed to create listing. Please try again.';
+          // If it looks like a duplicate message, show in modal
+          if (errorMsg.toLowerCase().includes('duplicate') || errorMsg.toLowerCase().includes('already exists')) {
+            setDuplicateMessage(errorMsg);
+            setDuplicateModalVisible(true);
+          } else {
+            setGlobalError(errorMsg);
+          }
+        }
+        setIsLoading(false);
+        return;
+      }
+      
       onSuccess();
     } catch (error) {
       setGlobalError('Failed to create listing. Please try again.');
@@ -380,7 +412,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
             value={price}
             onChangeText={(text) => setPrice(sanitizeDecimalInput(text, { maxDecimals: 2, maxDigits: 7 }))}
             placeholder={transactionType === 'trade' ? 'N/A for trade-only' : '0.00'}
-            keyboardType="decimal-pad"
+            keyboardType="numeric"
             inputMode="decimal"
             error={priceError}
           />
@@ -457,6 +489,17 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           />
         )}
       </View>
+
+      {/* Duplicate Listing Modal */}
+      <ConfirmationModal
+        visible={duplicateModalVisible}
+        title="Duplicate Listing"
+        message={duplicateMessage}
+        confirmText="OK"
+        cancelText=""
+        onConfirm={() => setDuplicateModalVisible(false)}
+        onCancel={() => setDuplicateModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };
