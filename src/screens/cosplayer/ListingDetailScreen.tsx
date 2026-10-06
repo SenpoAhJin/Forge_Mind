@@ -40,6 +40,7 @@ export const ListingDetailScreen: React.FC = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
+  const [serverSoonNote, setServerSoonNote] = useState<string | null>(null);
 
   const listing = getListingById(route.params.listingId);
 
@@ -102,7 +103,6 @@ export const ListingDetailScreen: React.FC = () => {
   // The signed-in user record has no server id, so an offer or a chat thread
   // cannot yet be tied to a seller without an email, which the server does not
   // hand out. Both entry points say so instead of starting a broken flow.
-  const [serverSoonNote, setServerSoonNote] = useState<string | null>(null);
 
   const handleOfferUnavailable = () => {
     setServerSoonNote('Offers and chat will use the server in an upcoming update.');
