@@ -1,7 +1,30 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 3, 2026 (marketplace numeric inputs + server error messages)
+**Last updated:** Tuesday, October 6, 2026 (delete listing crash fix)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Tuesday, October 6, 2026, 19:31 (delete listing crash fix)
+
+**Summary**
+Fixed a crash that occurred after deleting your own listing. The app would show a "hooks" error when you deleted a listing from its detail screen. The problem was that the screen tried to refresh the listing data before navigating away, which caused the screen to re-render with missing data. Now the app navigates back immediately and refreshes in the background, so you go straight back to the marketplace without errors.
+
+**What was fixed**
+- Fixed crash after deleting a listing (React hooks error)
+- Delete button now navigates back immediately after successful delete
+- Listing refresh happens in background after leaving the screen
+- Added safety guards to prevent state updates after screen unmounts
+
+**Files changed**
+- src/screens/cosplayer/ListingDetailScreen.tsx (delete flow and hook safety)
+
+**NOT TESTED (needs manual testing)**
+- Delete one of your own listings from its detail screen and confirm you go back to the list without an error screen and the listing is gone
+- Open a listing from a second account and confirm it still opens
+- Open the detail of a listing that was deleted elsewhere and confirm a friendly "not found" state
+- Delete while the backend is off and confirm a message and no crash
+- Confirm Cancel button in delete confirmation does nothing
 
 ---
 

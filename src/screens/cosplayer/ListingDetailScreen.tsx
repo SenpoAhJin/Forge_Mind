@@ -39,8 +39,15 @@ export const ListingDetailScreen: React.FC = () => {
   const [sellerPortfolio, setSellerPortfolio] = useState<string[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMounted, setIsMounted] = useState(true);
 
   const listing = getListingById(route.params.listingId);
+
+  // Track mount status
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // Seller portfolio (commission/service categories only).
   // The listing carries the seller's user id, but a locally stored account has
@@ -48,7 +55,9 @@ export const ListingDetailScreen: React.FC = () => {
   // nothing to match on here and nothing to crash on: the portfolio section is
   // simply absent until the account record carries a server id.
   useEffect(() => {
-    setSellerPortfolio([]);
+    if (listing) {
+      setSellerPortfolio([]);
+    }
   }, [listing]);
 
   if (!listing) {
@@ -104,43 +113,51 @@ export const ListingDetailScreen: React.FC = () => {
   };
 
   const handleDeleteListing = async () => {
+    if (!isMounted) return;
     setIsDeleting(true);
     
     // If active/blocked, remove first
     const removableStatuses = ['active', 'blocked'];
-    if (removableStatuses.includes(listing.status)) {
+    if (listing && removableStatuses.includes(listing.status)) {
       const removeResult = await removeListing(listing.id, 'other');
       if (!removeResult.success) {
-        setIsDeleting(false);
-        setDeleteModalVisible(false);
-        setErrorMessage(removeResult.error || 'Could not remove listing');
-        setErrorVisible(true);
+        if (isMounted) {
+          setIsDeleting(false);
+          setDeleteModalVisible(false);
+          setErrorMessage(removeResult.error || 'Could not remove listing');
+          setErrorVisible(true);
+        }
         return;
       }
     }
 
     // Now delete permanently
-    const deleteResult = await deleteListingPermanently(listing.id);
-    setIsDeleting(false);
-    setDeleteModalVisible(false);
+    const deleteResult = listing ? await deleteListingPermanently(listing.id) : { success: false, error: 'Listing not found' };
+    if (isMounted) {
+      setIsDeleting(false);
+      setDeleteModalVisible(false);
+    }
 
     if (deleteResult.success) {
-      await refreshListings();
       navigation.goBack();
+      refreshListings(); // Don't await, let it happen in background
     } else {
       const error = deleteResult.error || '';
+      if (error.includes('404') || error.toLowerCase().includes('not found') || error.toLowerCase().includes('no longer exists')) {
+        navigation.goBack();
+        refreshListings();
+        return;
+      }
+      
+      if (!isMounted) return;
+      
       if (error.includes('403') || error.toLowerCase().includes('own')) {
         setErrorMessage('You can only delete your own listings');
-      } else if (error.includes('404') || error.toLowerCase().includes('not found') || error.toLowerCase().includes('no longer exists')) {
-        setErrorMessage('This listing no longer exists');
-        await refreshListings();
-        navigation.goBack();
-        return;
       } else if (error.includes('409') || error.toLowerCase().includes('cannot be deleted')) {
         setErrorMessage('This listing cannot be deleted right now');
       } else if (error.toLowerCase().includes('hidden but was not fully deleted')) {
         setErrorMessage('The listing is hidden but was not fully deleted. Try again.');
-        await refreshListings();
+        refreshListings();
       } else {
         setErrorMessage('Could not delete. Check your connection and try again.');
       }
