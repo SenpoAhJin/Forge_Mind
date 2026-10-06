@@ -43,9 +43,10 @@ export interface LegacyCreateListingInput {
 
 /** The legacy transaction types, mapped onto the three the server stores. */
 function toServerPostType(value: unknown): ServerPostType {
-  if (value === 'sell' || value === 'trade' || value === 'commission') return value;
-  // 'buy' and 'both' both meant "the seller is selling this".
+  if (value === 'sell' || value === 'commission') return value;
   if (value === 'trade') return 'trade';
+  // 'buy' and 'both' both meant "the seller is selling this".
+  if (value === 'buy' || value === 'both') return 'sell';
   return 'sell';
 }
 
