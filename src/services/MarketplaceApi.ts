@@ -50,6 +50,9 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   fieldErrors?: Record<string, string>;
+  locked_until?: string;
+  next_penalty?: 'lock_10m' | 'lock_7d' | 'ban';
+  action?: 'none' | 'lock' | 'ban';
 }
 
 class MarketplaceApi {
@@ -100,6 +103,23 @@ class MarketplaceApi {
         // Handle specific error cases
         const data = await response.json().catch(() => ({}));
         
+        // 423 posting_locked
+        if (response.status === 423 && data.error === 'posting_locked') {
+          return {
+            success: false,
+            error: data.message || 'Posting is paused for now',
+            locked_until: typeof data.locked_until === 'string' ? data.locked_until : undefined,
+          };
+        }
+        
+        // 403 account_banned
+        if (response.status === 403 && data.error === 'account_banned') {
+          return {
+            success: false,
+            error: 'account_banned',
+          };
+        }
+        
         // 422 listing_quality - return field errors
         if (response.status === 422 && data.error === 'listing_quality' && data.fields) {
           return {
@@ -117,11 +137,14 @@ class MarketplaceApi {
           };
         }
         
-        // 422 content_rejected (moderation) - generic message
+        // 422 content_rejected (moderation) - include strike info
         if (response.status === 422 && data.error === 'content_rejected') {
           return {
             success: false,
             error: 'This listing could not be posted. Please review the content and try again.',
+            next_penalty: data.next_penalty,
+            action: data.action,
+            locked_until: typeof data.locked_until === 'string' ? data.locked_until : undefined,
           };
         }
         
@@ -272,6 +295,25 @@ class MarketplaceApi {
       }
     }
     return 'Network error. Please check your connection and try again.';
+  }
+
+  /** GET /marketplace/me/status - Get current user's posting status */
+  static async getMyStatus(): Promise<ApiResponse<{ posting_locked_until: string | null; banned: boolean; next_penalty: 'lock_10m' | 'lock_7d' | 'ban' }>> {
+    try {
+      const url = `${API_BASE_URL}/marketplace/me/status`;
+      const response = await this.apiFetch(url, { method: 'GET' });
+
+      if (!response.ok) {
+        // Failure is ignored per requirements - never blank the screen
+        return { success: false, error: await this.errorMessage(response) };
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      // Failure is ignored per requirements
+      return { success: false, error: this.transportErrorMessage(error) };
+    }
   }
 }
 
