@@ -1,11 +1,22 @@
 # Progress: Marketplace Listings On The Backend (Part 1)
 
-Status: B2a COMPLETE (server wired to mobile, tsc 0 errors, expo export 0). White
-page fix merged 2026-10-05. Next: B2b blocked-inputs fixture, then the B2 UI
-steps (create form, My Listings).
+Status: TASK Q IN PROGRESS - Step 3 backend numeric rules partially complete. Resume at Step 2 quality gate.
 
-Latest: 2026-10-05 marketplace white page fixed and hardened. Newest work is always
-the first dated section after the checklist.
+Latest: 2026-10-05 Task Q started (stop junk/unsafe/Tagalog, fix number inputs). Newest work below.
+
+## Task Q: Stop Junk, Block Unsafe Content (English + Tagalog), Fix Number Fields
+
+### Progress So Far
+- Step 0 state: mobile 60b4f26, backend b67748b, both tsc=0, backend running
+- Step 0b fixtures: English blocked_inputs.json exists, live Tagalog case id=56e6f1a7-91c5-4976-9a02-cfc054aa872c (active+passed)
+- Step 1: Number field inspection complete (see table in session)
+- Step 3 partial: limits.ts created, optionalMoney now rejects typeof string, enforces MAX_AMOUNT_PHP=200000/MAX_DECIMALS=2, price_outlier logic added to INSERT
+
+### Next: Resume at Step 2a (quality.ts module creation)
+
+Files changed: limits.ts (new), listings.ts, listingsRouter.ts
+
+---
 
 Goal: move marketplace LISTINGS from per-device AsyncStorage onto the backend so a
 listing created by one user is visible to every other user on any device, with the
