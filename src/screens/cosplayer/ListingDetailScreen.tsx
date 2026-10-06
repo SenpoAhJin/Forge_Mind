@@ -32,11 +32,13 @@ export const ListingDetailScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<ListingDetailRouteProp>();
   const { user } = useUser();
-  const { getListingById } = useMarketplace();
+  const { getListingById, removeListing, deleteListingPermanently, refreshListings } = useMarketplace();
 
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [sellerPortfolio, setSellerPortfolio] = useState<string[]>([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const listing = getListingById(route.params.listingId);
 
@@ -99,6 +101,51 @@ export const ListingDetailScreen: React.FC = () => {
 
   const handleViewMessages = () => {
     navigation.navigate('ChatList');
+  };
+
+  const handleDeleteListing = async () => {
+    setIsDeleting(true);
+    
+    // If active/blocked, remove first
+    const removableStatuses = ['active', 'blocked'];
+    if (removableStatuses.includes(listing.status)) {
+      const removeResult = await removeListing(listing.id, 'other');
+      if (!removeResult.success) {
+        setIsDeleting(false);
+        setDeleteModalVisible(false);
+        setErrorMessage(removeResult.error || 'Could not remove listing');
+        setErrorVisible(true);
+        return;
+      }
+    }
+
+    // Now delete permanently
+    const deleteResult = await deleteListingPermanently(listing.id);
+    setIsDeleting(false);
+    setDeleteModalVisible(false);
+
+    if (deleteResult.success) {
+      await refreshListings();
+      navigation.goBack();
+    } else {
+      const error = deleteResult.error || '';
+      if (error.includes('403') || error.toLowerCase().includes('own')) {
+        setErrorMessage('You can only delete your own listings');
+      } else if (error.includes('404') || error.toLowerCase().includes('not found') || error.toLowerCase().includes('no longer exists')) {
+        setErrorMessage('This listing no longer exists');
+        await refreshListings();
+        navigation.goBack();
+        return;
+      } else if (error.includes('409') || error.toLowerCase().includes('cannot be deleted')) {
+        setErrorMessage('This listing cannot be deleted right now');
+      } else if (error.toLowerCase().includes('hidden but was not fully deleted')) {
+        setErrorMessage('The listing is hidden but was not fully deleted. Try again.');
+        await refreshListings();
+      } else {
+        setErrorMessage('Could not delete. Check your connection and try again.');
+      }
+      setErrorVisible(true);
+    }
   };
 
   const offerButtonLabels: Record<OfferType, string> = {
@@ -250,6 +297,20 @@ export const ListingDetailScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Delete button for owners */}
+      {listing.is_owner ? (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => setDeleteModalVisible(true)}
+          disabled={isDeleting}
+        >
+          <Ionicons name="trash-outline" size={20} color={colors.surface} />
+          <Text style={styles.deleteButtonText}>
+            {isDeleting ? 'Deleting...' : 'Delete listing'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
       {/* Server-bound note: set by either entry point above. */}
       {serverSoonNote ? (
         <View style={styles.ineligibleBanner}>
@@ -257,6 +318,17 @@ export const ListingDetailScreen: React.FC = () => {
           <Text style={styles.ineligibleText}>{serverSoonNote}</Text>
         </View>
       ) : null}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        visible={deleteModalVisible}
+        title="Delete this listing?"
+        message="This cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteListing}
+        onCancel={() => setDeleteModalVisible(false)}
+      />
 
       {/* Error Modal */}
       <ConfirmationModal
@@ -439,5 +511,22 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.error,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+    height: 48,
+  },
+  deleteButtonText: {
+    ...typography.buttonText,
+    color: colors.surface,
+    fontWeight: '600',
   },
 });
