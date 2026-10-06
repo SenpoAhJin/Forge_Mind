@@ -1,7 +1,71 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Monday, October 5, 2026 (marketplace white page fix + seller identity)
+**Last updated:** Saturday, October 3, 2026 (marketplace numeric inputs + server error messages)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 3, 2026, 15:45 (marketplace numeric inputs + server error messages)
+
+**Summary**
+
+Number fields in the marketplace (price, budget, timeline) were letting users type letters, symbols, and invalid formats. The app only caught the problem when you pressed submit. Now every keystroke is checked: letters disappear immediately, decimals are limited to 2 places for money, and amounts over ₱200,000 show a warning right away. The backend already rejects bad inputs with specific error codes — the app now shows those errors properly: field-by-field messages for quality problems, a modal for duplicate listings, and a clear message when moderation blocks something.
+
+**What was fixed**
+
+- Input filtering: price, budget, estimated value, and timeline fields now only accept digits. Letters, symbols, currency signs (₱), commas, spaces, and Unicode digits are removed as you type.
+- Decimal limits: money fields allow up to 2 decimal places and 7 total digits. Extra decimals are dropped (0.999 becomes 0.99).
+- Leading zeros: stripped automatically (00123 becomes 123), but decimal forms like 0.5 are kept.
+- Inline warnings: when you enter more than ₱200,000, a message appears under the field immediately.
+- Server error mapping: 422 listing_quality responses now show errors under the specific fields (title, description). 409 duplicate_listing shows a modal with the duplicate message. 422 content_rejected shows a generic error.
+- Keyboard types: money fields show numeric keyboard with decimal support (inputMode="decimal" for web). Timeline field (days) shows numeric keyboard without decimal (inputMode="numeric").
+- Conversion: all fields use Number() on sanitized text only. No parseFloat or parseInt on raw user input anywhere in marketplace.
+- Empty fields: treated as missing (validation error), not zero.
+
+**What was added / changed (mobile)**
+
+- src/utils/numericInput.ts (created): sanitizeDecimalInput and sanitizeIntegerInput functions
+- src/utils/marketplaceLimits.ts (created): MAX_AMOUNT_PHP (200000), MAX_DECIMALS (2)
+- src/services/MarketplaceApi.ts: added fieldErrors to ApiResponse interface, updated createListing to map 422 listing_quality (field errors), 409 duplicate_listing (plain message), 422 content_rejected (generic message)
+- src/contexts/MarketplaceContext.tsx: updated createListing return type to include fieldErrors, passes through from API
+- src/screens/cosplayer/CreateListingScreen.tsx: imported ConfirmationModal, added duplicate modal state, applied sanitizeDecimalInput to price field, updated error handling to show field errors and duplicate modal
+- src/screens/cosplayer/MakeOfferScreen.tsx: applied sanitizeDecimalInput to offer price/budget/trade est value (numeric keyboard, inputMode="decimal"), applied sanitizeIntegerInput to timeline (number-pad keyboard, inputMode="numeric")
+
+**How it was checked**
+
+- Phone app compile: 0 TypeScript errors
+- Web build: finished successfully (expo export --platform web)
+- Test script: verified sanitizers on 15 test inputs (12abc→"12", abc→"", 1,234.567→"1234.56", ₱ 99→"99", empty→"", etc.)
+- Alert.alert grep: 0 in marketplace screens (legacy usage in organizer screens not changed)
+- Conditional text grep: 0 instances of && <Text pattern
+- parseFloat/parseInt grep: 0 in marketplace text fields (found only in project budgets, dates, times - different context)
+- Navigation import grep: 0 @react-navigation in src/contexts and src/services
+
+**NOT TESTED (manual testing required)**
+
+- Typing letters in number fields gets filtered immediately
+- Entering "12abc" shows "12" while typing
+- Entering "0.999" becomes "0.99" (2 decimals max)
+- Amount over ₱200,000 shows inline warning
+- Server 422 listing_quality shows per-field errors
+- Server 409 duplicate_listing shows modal
+- Server 422 content_rejected shows generic message
+- Empty price field treated as missing
+- Keyboards show correct type (decimal for money, numeric for days)
+- Web inputMode works correctly
+
+**Files changed**
+
+Created:
+- forgemind-mobile/src/utils/numericInput.ts
+- forgemind-mobile/src/utils/marketplaceLimits.ts
+- forgemind-mobile/docs/Q2_marketplace_numeric_inputs_progress.md
+
+Modified:
+- forgemind-mobile/src/services/MarketplaceApi.ts
+- forgemind-mobile/src/contexts/MarketplaceContext.tsx
+- forgemind-mobile/src/screens/cosplayer/CreateListingScreen.tsx
+- forgemind-mobile/src/screens/cosplayer/MakeOfferScreen.tsx
 
 ---
 
