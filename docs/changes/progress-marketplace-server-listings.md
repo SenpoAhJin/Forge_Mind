@@ -1,20 +1,28 @@
 # Progress: Marketplace Listings On The Backend (Part 1)
 
-Status: TASK Q IN PROGRESS - Step 3 backend numeric rules partially complete. Resume at Step 2 quality gate.
+Status: TASK Q1 IN PROGRESS - Step 2g (language blocking) next. Quality gate complete.
 
-Latest: 2026-10-05 Task Q started (stop junk/unsafe/Tagalog, fix number inputs). Newest work below.
+Latest: 2026-10-05 Task Q1 resumed. Newest work below.
 
-## Task Q: Stop Junk, Block Unsafe Content (English + Tagalog), Fix Number Fields
+## Task Q1: Backend Text Safety (Quality + Language Blocking)
 
-### Progress So Far
-- Step 0 state: mobile 60b4f26, backend b67748b, both tsc=0, backend running
-- Step 0b fixtures: English blocked_inputs.json exists, live Tagalog case id=56e6f1a7-91c5-4976-9a02-cfc054aa872c (active+passed)
-- Step 1: Number field inspection complete (see table in session)
-- Step 3 partial: limits.ts created, optionalMoney now rejects typeof string, enforces MAX_AMOUNT_PHP=200000/MAX_DECIMALS=2, price_outlier logic added to INSERT
+### Completed
+- Step 0: State verified, backend running, earlier work confirmed
+- Step 0b: Dataset inventory (302K clean texts, 11K Tagalog, train/val/Block_Words/processed)
+- Step 0c: Fixtures exist (English, Tagalog, live case id 56e6f1a7-91c5-4976-9a02-cfc054aa872c active+passed)
+- Step 2a: quality.ts created with checkListingQuality
+- Step 2b: char_ngrams.json built (5112 trigrams, 146KB)
+- Step 2c: Rules implemented (vowel check, repeated chars, consonant runs, trigram probability, Tagalog patterns)
+- Step 2d: Tuned (testset: 98% real pass, 70% gibberish reject; val.csv: 0% false reject)
+- Step 2e: Wired quality gate into POST before moderation, 422 listing_quality response, trade item checks
+- Step 2f: Duplicate guard updated to check title AND description
 
-### Next: Resume at Step 2a (quality.ts module creation)
+### Next: Step 2g - English and Tagalog blocking
+Extract blocked terms from datasets (train.csv, Block_Words, Tagalog_Datasets, Explicit_Datasets text),
+save to blocked_terms_en.json and blocked_terms_tl.json, wire into moderation with normalization,
+measure on val.csv, verify live case blocks.
 
-Files changed: limits.ts (new), listings.ts, listingsRouter.ts
+Files changed: quality.ts (new), char_ngrams.json (new), listingsRouter.ts (quality gate moved before moderation, duplicate includes description), build-char-ngrams.ts (new), tune-quality.ts (new), quality_testset.json (new)
 
 ---
 
