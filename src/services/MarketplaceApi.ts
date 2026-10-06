@@ -7,6 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
+import { debugLog } from '../utils/debugLog';
 
 const MARKETPLACE_TIMEOUT_MS = 15000;
 const STORAGE_KEYS = {
@@ -275,7 +276,7 @@ class MarketplaceApi {
     }
 
     if (__DEV__) {
-      console.warn(`[MarketplaceApi] server replied ${response.status}: ${message}`);
+      debugLog('MarketplaceApi', `server replied ${response.status}: ${message}`);
     }
 
     return message;

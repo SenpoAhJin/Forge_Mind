@@ -14,7 +14,6 @@ export const MARKETPLACE_CATEGORIES = [
   'Makeup & Contacts',
   'Photography Services',
   'Commissions & Crafting Services',
-  'Other',
 ] as const;
 
 export type MarketplaceCategory = typeof MARKETPLACE_CATEGORIES[number];

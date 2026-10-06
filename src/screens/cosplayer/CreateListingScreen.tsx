@@ -25,6 +25,7 @@ import { MarketplaceCondition, TransactionType } from '../../types/marketplace';
 import { checkListing } from '../../services/MarketplaceService';
 import { sanitizeDecimalInput } from '../../utils/numericInput';
 import { MAX_AMOUNT_PHP } from '../../utils/marketplaceLimits';
+import { showNotice } from '../../utils/appNotice';
 
 interface CreateListingScreenProps {
   onSuccess: () => void;
@@ -143,15 +144,26 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
 
     if (!checkResult.ok) {
       setIsLoading(false);
-      // Fail closed: network, auth, rate limit, or server error blocks the save
+      // Fail closed: network, auth, rate limit, validation, or server error blocks the save
       if (checkResult.error.kind === 'rate_limit') {
+        showNotice('error', checkResult.error.message);
         setGlobalError(checkResult.error.message);
+      } else if (checkResult.error.kind === 'validation') {
+        // Backend validation error (e.g. invalid category) - show specific message
+        const msg = checkResult.error.message || 'Please check your information and try again.';
+        showNotice('error', msg);
+        setGlobalError(msg);
       } else if (checkResult.error.kind === 'network' || checkResult.error.kind === 'server') {
-        setGlobalError("Can't check your listing right now. Try again.");
+        const msg = "Can't check your listing right now. Try again.";
+        showNotice('error', msg);
+        setGlobalError(msg);
       } else if (checkResult.error.kind === 'auth') {
+        showNotice('error', checkResult.error.message);
         setGlobalError(checkResult.error.message);
       } else {
-        setGlobalError('Unable to verify listing content. Please try again.');
+        const msg = 'Unable to verify listing content. Please try again.';
+        showNotice('error', msg);
+        setGlobalError(msg);
       }
       return;
     }
@@ -171,7 +183,9 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
         }
       }
       if (violations.length > 0 && !violations.some((v) => v.field === 'title' || v.field === 'description')) {
-        setGlobalError('This listing cannot be published. Please review the guidelines.');
+        const msg = 'This listing cannot be published. Please review the guidelines.';
+        showNotice('warning', msg);
+        setGlobalError(msg);
       }
       return;
     }
@@ -197,19 +211,25 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           if (result.fieldErrors.description) setDescriptionError(result.fieldErrors.description);
           if (result.fieldErrors.trade_offered_item) {
             // For trade item errors, show in global error for now
-            setGlobalError(result.error || 'Please check your input and try again.');
+            const msg = result.error || 'Please check your input and try again.';
+            showNotice('error', msg);
+            setGlobalError(msg);
           }
           if (result.fieldErrors.trade_wanted_item) {
-            setGlobalError(result.error || 'Please check your input and try again.');
+            const msg = result.error || 'Please check your input and try again.';
+            showNotice('error', msg);
+            setGlobalError(msg);
           }
         } else {
           // Plain error message (409 duplicate, 422 moderation, etc.)
           const errorMsg = result.error || 'Failed to create listing. Please try again.';
           // If it looks like a duplicate message, show in modal
           if (errorMsg.toLowerCase().includes('duplicate') || errorMsg.toLowerCase().includes('already exists')) {
+            showNotice('warning', errorMsg);
             setDuplicateMessage(errorMsg);
             setDuplicateModalVisible(true);
           } else {
+            showNotice('error', errorMsg);
             setGlobalError(errorMsg);
           }
         }
@@ -217,9 +237,12 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
         return;
       }
       
+      showNotice('success', 'Listing created successfully!');
       onSuccess();
     } catch (error) {
-      setGlobalError('Failed to create listing. Please try again.');
+      const msg = 'Failed to create listing. Please try again.';
+      showNotice('error', msg);
+      setGlobalError(msg);
     } finally {
       setIsLoading(false);
     }

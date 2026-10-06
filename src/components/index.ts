@@ -24,3 +24,4 @@ export * from './StaffPickerModal';
 export * from './ConsentBanner';
 export * from './ThreeDPreview';
 export * from './BodyTypeSelector';
+export * from './AppNoticeHost';

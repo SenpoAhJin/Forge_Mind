@@ -25,7 +25,7 @@ import { CommitmentLogProvider } from './src/contexts/CommitmentLogContext';
 import { CalendarProvider } from './src/contexts/CalendarContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { DiaryProvider } from './src/contexts/DiaryContext';
-import { ConsentBanner } from './src/components';
+import { ConsentBanner, AppNoticeHost } from './src/components';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
@@ -92,6 +92,7 @@ export default function App() {
                                     <CalendarProvider>
                                       <RootNavigator />
                                       <ConsentBanner />
+                                      <AppNoticeHost />
                                       <StatusBar style="auto" />
                                     </CalendarProvider>
                                   </LogisticsProvider>
