@@ -1,7 +1,30 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 3, 2026 (login/register now highlights which fields are wrong)
+**Last updated:** Saturday, October 3, 2026, 14:30 (login and register work again from web and phone)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 3, 2026, 14:30 (fixed login/register body not reaching the server)
+
+**Summary**
+
+Login and register stopped working from both web and phone after the October 7 CONNECT task. Filling in email and password correctly still returned "Please check the highlighted fields and try again" with both fields marked wrong, as if nothing was typed. The cause: a refactor removed the Content-Type header from auth requests, so the server never parsed the request body and thought all fields were missing.
+
+**What changed**
+
+- Restored the Content-Type: application/json header that authFetch used to set before commit 129812d.
+- Without it, the server's body parser didn't run, leaving the email and password fields empty from the server's perspective.
+- This overlaps with the earlier October 3 LOGIN400 fix: that fixed highlighting specific wrong fields when the server sends back a fields object; today's fix ensures the body reaches the server in the first place so validation can run correctly.
+
+**Files changed**
+
+- Mobile: src/services/AuthService.ts (authFetch now adds Content-Type header again).
+
+**NOT TESTED (needs manual testing on both platforms)**
+
+- Web: Register new account, log in with existing account, logout, wrong password shows "Incorrect credentials", empty fields highlighted, eye icon toggles password visibility, "Sign Up" link works.
+- Phone: Same tests.
 
 ---
 
