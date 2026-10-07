@@ -238,9 +238,16 @@ export class AuthService {
     }
 
     if (__DEV__) {
-      console.warn(
-        `[AuthService] server replied ${response.status} for ${API_BASE_URL}: ${message}`,
-      );
+      // Only a 5xx means the backend itself is broken; 4xx are expected,
+      // user-visible outcomes (validation, wrong password, duplicate email) so
+      // they are logged quietly. The full URL is included so any remaining
+      // warning pinpoints the exact endpoint.
+      const target = response.url ? ` ${response.url}` : ` ${API_BASE_URL}`;
+      if (response.status >= 500) {
+        console.warn(`[AuthService] server replied ${response.status} for${target}: ${message}`);
+      } else {
+        console.log(`[AuthService] server replied ${response.status} for${target}: ${message}`);
+      }
     }
     return message;
   }

@@ -290,6 +290,13 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const loadListings = async () => {
+    // No session means every marketplace endpoint would answer 401; show the
+    // last cached copy (if any) and skip the doomed request entirely.
+    if (!(await AuthService.getActiveSession())) {
+      await applyCachedListings();
+      setIsLoading(false);
+      return;
+    }
     try {
       const response = await MarketplaceApi.getListings();
 
@@ -318,6 +325,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loadMyListings = async () => {
     const session = await AuthService.getActiveSession();
     await clearStaleMineCache(session?.email ?? null);
+    if (!session) return; // signed out: nothing of ours to fetch or cache
     try {
       const response = await MarketplaceApi.getMyListings();
       if (response.success && Array.isArray(response.data)) {
@@ -334,6 +342,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const refreshListings = async () => {
+    if (!(await AuthService.getActiveSession())) return; // signed out: nothing to refresh
     try {
       const response = await MarketplaceApi.getListings();
       if (response.success && Array.isArray(response.data)) {
@@ -357,6 +366,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const refreshMyListings = async () => {
     const session = await AuthService.getActiveSession();
     await clearStaleMineCache(session?.email ?? null);
+    if (!session) return; // signed out: nothing of ours to refresh or cache
     try {
       const response = await MarketplaceApi.getMyListings();
       if (response.success && Array.isArray(response.data)) {

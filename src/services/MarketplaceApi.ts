@@ -8,7 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '../config/api';
 import { fetchWithTimeout, isNetworkError } from './http';
-import { debugLog, logApiIssue } from '../utils/debugLog';
+import { logApiIssue } from '../utils/debugLog';
 
 const STORAGE_KEYS = {
   SESSION_TOKEN: '@forgemind:session_token',
@@ -227,6 +227,20 @@ class MarketplaceApi {
 
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`;
+      } else {
+        // Signed out: every marketplace endpoint requires a live session, so
+        // answer 401 locally instead of spending a network round-trip (and
+        // logging a warning) on a request the server is guaranteed to reject.
+        return {
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          url,
+          json: async () => ({
+            error: 'invalid_session',
+            message: 'You must be signed in to access the marketplace.',
+          }),
+        } as unknown as Response;
       }
 
       return await fetchWithTimeout(url, { ...init, headers }, REQUEST_TIMEOUT_MS);
@@ -269,7 +283,17 @@ class MarketplaceApi {
     }
 
     if (__DEV__) {
-      debugLog('MarketplaceApi', `server replied ${response.status}: ${message}`);
+      // Only a 5xx means the server itself is broken; lower statuses are
+      // expected, user-visible outcomes (signed-out, validation, permissions,
+      // conflicts) so they are logged quietly. The URL is included so any
+      // remaining warning pinpoints the exact endpoint.
+      const target = response.url ? ` for ${response.url}` : '';
+      const line = `server replied ${response.status}${target}: ${message}`;
+      if (response.status >= 500) {
+        console.warn(`[MarketplaceApi] ${line}`);
+      } else {
+        console.log(`[MarketplaceApi] ${line}`);
+      }
     }
 
     return message;
