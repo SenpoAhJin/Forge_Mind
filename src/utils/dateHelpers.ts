@@ -164,3 +164,31 @@ export const formatCountdown = (targetDateStr: string, todayStr: string): string
  *   getDate() → 21
  *   Result: "2026-09-21" ✅ CORRECT
  */
+
+/**
+ * "Updated <relative time>" for the offline marketplace note, e.g.
+ * "just now", "5 minutes ago", "2 hours ago", "3 days ago".
+ * Returns null when the timestamp is missing, unparsable or in the future,
+ * so the caller can fall back to the plain wording.
+ */
+export const formatRelativeTime = (iso: string | null | undefined): string | null => {
+  if (typeof iso !== 'string' || iso.trim() === '') return null;
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return null;
+  const now = Date.now();
+  if (then > now) return null;
+  const seconds = Math.floor((now - then) / 1000);
+
+  if (seconds < 30) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years === 1 ? '' : 's'} ago`;
+};

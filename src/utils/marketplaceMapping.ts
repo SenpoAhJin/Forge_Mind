@@ -170,13 +170,45 @@ export function mapServerListings(raw: unknown): Listing[] {
  * Read the offline cache. Anything that is not an array of listing-shaped rows
  * (missing, null, empty, unparsable, or the old local object shape) is ignored
  * and reported as an empty list, so a bad cache can never reach a screen.
+ *
+ * Accepts both the v2 envelope ({ version: 2, items, savedAt }) and the flat
+ * array the old key held, so the one-time migration can read either.
  */
 export function parseCachedListings(raw: string | null | undefined): Listing[] {
-  if (typeof raw !== 'string' || raw.trim() === '') return [];
+  const parsed = parseCachedCache(raw);
+  return parsed.items;
+}
+
+/** The saved-at timestamp carried by a v2 envelope, or null for a flat array. */
+export function parseCachedSavedAt(raw: string | null | undefined): string | null {
+  return parseCachedCache(raw).savedAt;
+}
+
+export interface ParsedCache {
+  /** The listings, mapped to the phone shape. */
+  items: Listing[];
+  /** ISO timestamp from the v2 envelope, or null when the value was a flat array. */
+  savedAt: string | null;
+}
+
+/**
+ * Parse a cached value into items plus its save time without throwing.
+ * The v2 envelope is { version: 2, savedAt: <ISO>, items: <raw server posts> };
+ * anything else is treated as a flat array of raw server posts.
+ */
+export function parseCachedCache(raw: string | null | undefined): ParsedCache {
+  if (typeof raw !== 'string' || raw.trim() === '') return { items: [], savedAt: null };
   try {
-    return mapServerListings(JSON.parse(raw));
+    const parsed: unknown = JSON.parse(raw);
+    if (isRecord(parsed) && parsed.version === 2 && Array.isArray(parsed.items)) {
+      const savedAt = typeof parsed.savedAt === 'string' && parsed.savedAt.trim() !== ''
+        ? parsed.savedAt
+        : null;
+      return { items: savedAt === null ? [] : mapServerListings(parsed.items), savedAt };
+    }
+    return { items: mapServerListings(parsed), savedAt: null };
   } catch {
-    return [];
+    return { items: [], savedAt: null };
   }
 }
 

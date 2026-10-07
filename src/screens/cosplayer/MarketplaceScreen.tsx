@@ -20,6 +20,7 @@ import { useChat } from '../../contexts/ChatContext';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Listing } from '../../types/marketplace';
 import { getListingPriceLabel } from '../../utils/marketplaceMapping';
+import { formatRelativeTime } from '../../utils/dateHelpers';
 
 export const MarketplaceScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -175,7 +176,7 @@ export const MarketplaceScreen: React.FC = () => {
 const MarketplaceBrowse: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useUser();
-  const { getActiveListings, isLoading, isOffline, refreshListings } = useMarketplace();
+  const { getActiveListings, isLoading, isOffline, lastUpdatedAt, refreshListings } = useMarketplace();
   const { getUnreadCount } = useChat();
   const insets = useSafeAreaInsets();
   
@@ -366,7 +367,9 @@ const MarketplaceBrowse: React.FC = () => {
         <View style={styles.offlineNote}>
           <Ionicons name="cloud-offline-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.offlineNoteText}>
-            You are offline. Showing the saved copy of the listings.
+            {formatRelativeTime(lastUpdatedAt) !== null
+              ? `You are offline. Showing the saved copy of the listings. Updated ${formatRelativeTime(lastUpdatedAt)}.`
+              : 'You are offline. Showing the saved copy of the listings.'}
           </Text>
         </View>
       ) : null}
