@@ -71,7 +71,7 @@ interface UserContextType {
   isLoading: boolean;
   
   // Auth operations (FE-4.5)
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; fieldErrors?: Record<string, string> }>;
   logout: () => Promise<void>;
   register: (
     email: string,
@@ -81,7 +81,7 @@ interface UserContextType {
     isOrganizer: boolean,
     baseBody: 'male' | 'female',
     bodySize: number
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; fieldErrors?: Record<string, string> }>;
   
   // Refresh user data from backend
   refreshUser: () => Promise<void>;

@@ -100,7 +100,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         // Success - restore full state, route to correct tab set
         onSuccess();
       } else {
-        setLoginError(result.error || 'Login failed. Please try again.');
+        // If fieldErrors present, set specific field errors
+        if (result.fieldErrors) {
+          if (result.fieldErrors.email) {
+            setEmailError(result.fieldErrors.email);
+          }
+          if (result.fieldErrors.password) {
+            setPasswordError(result.fieldErrors.password);
+          }
+          // If no fields returned but got 400, show generic message
+          if (Object.keys(result.fieldErrors).length === 0) {
+            setLoginError('Please enter a valid email and password.');
+          }
+        } else {
+          // No fieldErrors - show error in red box
+          setLoginError(result.error || 'Login failed. Please try again.');
+        }
       }
     } catch (error) {
       setLoginError('An unexpected error occurred. Please try again.');

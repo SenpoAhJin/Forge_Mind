@@ -154,7 +154,25 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         // Show success modal, then redirect to login (no auto-login)
         setShowSuccessModal(true);
       } else {
-        setRegisterError(result.error || 'Registration failed. Please try again.');
+        // If fieldErrors present, set specific field errors
+        if (result.fieldErrors) {
+          if (result.fieldErrors.email) {
+            setEmailError(result.fieldErrors.email);
+          }
+          if (result.fieldErrors.password) {
+            setPasswordError(result.fieldErrors.password);
+          }
+          if (result.fieldErrors.display_name) {
+            setDisplayNameError(result.fieldErrors.display_name);
+          }
+          // If no fields returned but got 400, show generic message
+          if (Object.keys(result.fieldErrors).length === 0) {
+            setRegisterError('Please check your information and try again.');
+          }
+        } else {
+          // No fieldErrors - show error in red box
+          setRegisterError(result.error || 'Registration failed. Please try again.');
+        }
       }
     } catch (error) {
       setRegisterError('An unexpected error occurred. Please try again.');
