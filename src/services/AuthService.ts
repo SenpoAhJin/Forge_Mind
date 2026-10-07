@@ -201,7 +201,10 @@ export class AuthService {
 
   /** POST to the auth API with a timeout, so a dead backend cannot hang the UI. */
   private static async authFetch(path: string, init: RequestInit): Promise<Response> {
-    return fetchWithTimeout(authUrl(path), init, REQUEST_TIMEOUT_MS);
+    return fetchWithTimeout(authUrl(path), {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+    }, REQUEST_TIMEOUT_MS);
   }
 
   /**
