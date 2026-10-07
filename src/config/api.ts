@@ -13,28 +13,12 @@
  *   - a physical phone   -> `localhost` is the PHONE. Nothing is listening there.
  *   - an Android emulator-> `localhost` is the emulator itself.
  *
- * That is why registering from a physical Android phone in Expo Go failed with
- * `java.net.ConnectException: Failed to connect to localhost/127.0.0.1:3000`
- * while the same build worked in a PC browser.
+ * The resolution order lives in `apiBaseUrl.ts` (pure, testable):
  *
- * THE FIX
- *
- * On native we ask Metro which host it is serving on. That host is by definition
- * the PC the phone is already talking to in order to load the JS bundle, so it
- * is reachable by definition and it changes automatically when the network
- * changes. The IP therefore never has to be edited by hand.
- *
- * RESOLUTION ORDER
- *
- *   a. `EXPO_PUBLIC_API_URL`, if set and not a loopback address on native.
- *   b. native: `http://<Metro host>:3000`, from `expo-constants`.
- *   c. web: `http://localhost:3000`.
+ *   a. `EXPO_PUBLIC_API_URL`, if set (web and native).
+ *   b. web: `window.location.hostname:3000` — never Metro's hostUri.
+ *   c. native: `http://<Metro host>:3000`, from `expo-constants`.
  *   d. Android emulator fallback: `http://10.0.2.2:3000`.
- *
- * A loopback `EXPO_PUBLIC_API_URL` is deliberately ignored on native, because it
- * is the exact value that fails there. Leaving `.env.local` at
- * `http://localhost:3000` is therefore safe: web and the iOS simulator use it,
- * and the phone ignores it in favour of (b).
  *
  * Changing the value requires restarting Metro with the cache cleared, because
  * Expo inlines `process.env.EXPO_PUBLIC_*` into the bundle at build time:
@@ -44,93 +28,25 @@
 
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import {
+  getApiBaseUrl,
+  parseHost,
+  isLoopbackHost,
+  HEALTH_PING_TIMEOUT_MS,
+  REQUEST_TIMEOUT_MS,
+} from './apiBaseUrl';
 
-/** Port the backend listens on. Must match `PORT` in forgemind-backend/.env. */
-const DEFAULT_API_PORT = 3000;
+export { parseHost, isLoopbackHost, HEALTH_PING_TIMEOUT_MS, REQUEST_TIMEOUT_MS };
 
-/** Web: the browser and the backend are the same machine. */
-const WEB_BASE_URL = `http://localhost:${DEFAULT_API_PORT}`;
-
-/**
- * Android emulator: 10.0.2.2 is the host machine as seen from inside the
- * emulator. Used only when Metro did not report a usable host.
- */
-const ANDROID_EMULATOR_BASE_URL = `http://10.0.2.2:${DEFAULT_API_PORT}`;
-
-/**
- * The inlined env value. MUST be read as a static dot-notation property access —
- * Expo's inlining only works that way, so `process.env['EXPO_PUBLIC_API_URL']`
- * or destructuring would silently resolve to undefined.
- */
-const envUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').trim();
-
-/** Strips trailing slashes so `${base}/auth/login` never doubles up. */
-function normalise(url: string): string {
-  return url.replace(/\/+$/, '');
-}
-
-/**
- * Extracts a bare hostname from anything Metro or a URL hands us:
- * `192.168.1.5:8081`, `exp://192.168.1.5:8081`, `http://192.168.1.5:3000/api`,
- * `localhost`. IPv6 literals keep their brackets stripped.
- */
-export function parseHost(value: string): string {
-  let rest = value.trim();
-  if (rest === '') return '';
-  rest = rest.replace(/^[a-z][a-z0-9+.-]*:\/\//i, ''); // scheme
-  rest = rest.split('/')[0]; // path
-  rest = rest.split('?')[0];
-  if (rest.startsWith('[')) {
-    const end = rest.indexOf(']');
-    return end === -1 ? '' : rest.slice(1, end);
-  }
-  const colon = rest.lastIndexOf(':');
-  // A trailing `:8081` is a port; a bare IPv6 address has several colons.
-  if (colon > -1 && /^\d+$/.test(rest.slice(colon + 1))) {
-    rest = rest.slice(0, colon);
-  }
-  return rest.toLowerCase();
-}
-
-/** True for addresses that only ever mean "this device". */
-function isLoopbackHost(host: string): boolean {
-  return (
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '0.0.0.0' ||
-    host === '::1' ||
-    host.endsWith('.localhost')
-  );
-}
-
-function resolveBaseUrl(): { url: string; source: string } {
-  // (a) Explicit configuration wins — except a loopback value on native, which is
-  // the precise value that cannot work there.
-  if (envUrl !== '' && !(Platform.OS !== 'web' && isLoopbackHost(parseHost(envUrl)))) {
-    return { url: normalise(envUrl), source: 'EXPO_PUBLIC_API_URL' };
-  }
-
-  if (Platform.OS !== 'web') {
-    // (b) Ask Metro which host it is serving. On a physical phone this is the
-    // PC's LAN address, which is the same machine that just delivered the
-    // bundle — so it is reachable, with no manual IP editing.
-    const metroHost = parseHost(Constants.expoConfig?.hostUri ?? '');
-    if (metroHost !== '' && !isLoopbackHost(metroHost)) {
-      return { url: `http://${metroHost}:${DEFAULT_API_PORT}`, source: 'Metro hostUri' };
-    }
-    // (d) Android emulator alias, when Metro reported nothing usable.
-    if (Platform.OS === 'android') {
-      return { url: ANDROID_EMULATOR_BASE_URL, source: 'Android emulator alias' };
-    }
-    // iOS simulator with no usable Metro host. Best available guess.
-    return { url: WEB_BASE_URL, source: 'loopback fallback' };
-  }
-
-  // (c) Web.
-  return { url: WEB_BASE_URL, source: 'web default' };
-}
-
-const resolved = resolveBaseUrl();
+const resolved = getApiBaseUrl({
+  platform: Platform.OS,
+  hostUri: Platform.OS !== 'web' ? (Constants.expoConfig?.hostUri ?? '') : '',
+  windowLocationHost:
+    Platform.OS === 'web' && typeof window !== 'undefined' && window.location
+      ? window.location.hostname
+      : '',
+  envUrl: process.env.EXPO_PUBLIC_API_URL ?? '',
+});
 
 /** The one base URL every backend call must use. */
 export const API_BASE_URL = resolved.url;
@@ -159,25 +75,30 @@ if (__DEV__) {
    * "Fetch request has been canceled" on the device. One line at startup says
    * which of those it is, before the user types a password.
    *
-   * Fire-and-forget: it never rejects, never throws and never blocks the bundle.
+   * Fire-and-forget: it never rejects, never throws and never blocks the bundle,
+   * and it is bounded by HEALTH_PING_TIMEOUT_MS so the first render, the login
+   * screen and the session restore are never held up by a dead backend.
    * A 500 still proves the phone reached the server, so the status is reported
    * alongside a readable result rather than treated as a failure.
    */
   void (async () => {
     const url = `${API_BASE_URL}/health`;
     const startedAt = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HEALTH_PING_TIMEOUT_MS);
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: controller.signal });
       const ms = Date.now() - startedAt;
       const reachable = response.ok ? 'reachable' : `reachable (HTTP ${response.status})`;
       console.log(`[api] health ping ${url} -> ${reachable} in ${ms} ms`);
     } catch (error) {
       const ms = Date.now() - startedAt;
       const name = (error as { name?: string } | null)?.name ?? 'Error';
-      console.warn(
-        `[api] health ping ${url} -> unreachable after ${ms} ms (${name}). ` +
-          'Check the server is running, the port is right, and Windows Firewall allows it.',
+      console.log(
+        `[api] health ping ${url} -> unreachable after ${ms} ms (${name})`,
       );
+    } finally {
+      clearTimeout(timer);
     }
   })();
 }
