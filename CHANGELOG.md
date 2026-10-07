@@ -1,7 +1,30 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 7, 2026 (your phone and your computer now use the same marketplace backend)
+**Last updated:** Saturday, October 3, 2026 (login/register now highlights which fields are wrong)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 3, 2026 (login/register shows which fields have errors)
+
+**Summary**
+
+When you type the wrong password or forget to fill in a field, the login and registration screens now highlight exactly which field is wrong instead of showing a generic "check the highlighted fields" message with nothing highlighted. The server already sent back which fields had problems, but the app wasn't reading that part of the response. Now it does.
+
+**What changed**
+
+- Login and registration screens extract field-specific errors from 400 responses and highlight the wrong input boxes.
+- If the server sends back an empty list of fields (shouldn't happen), the screen shows the generic message as before.
+- Debug logs now include which field names the server flagged (no user data logged).
+
+**Files changed**
+
+- Mobile: src/services/AuthService.ts, src/screens/auth/LoginScreen.tsx, src/screens/auth/RegisterScreen.tsx, src/contexts/UserContext.tsx.
+
+**NOT TESTED (needs manual testing on both platforms)**
+
+- Android: Empty email+password → both fields highlighted red. Email only → password highlighted. Password only → email highlighted. Wrong password → password highlighted with "Incorrect credentials".
+- iOS: Same cases.
 
 ---
 
