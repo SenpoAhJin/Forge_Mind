@@ -1,7 +1,47 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 3, 2026, 14:30 (login and register work again from web and phone)
+**Last updated:** Saturday, October 7, 2026, 16:15 (backend now supports photo uploads for marketplace listings)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 7, 2026, 16:15 (backend photo upload ready, mobile app not yet updated)
+
+**Summary**
+
+The backend API now supports photo uploads for marketplace listings. Sellers can upload up to 5 photos per listing. This is BACKEND ONLY — the mobile app has not been updated yet and still cannot upload or display listing photos. This changelog entry documents the backend capability that is now available for future mobile implementation.
+
+**What changed (backend only)**
+
+- New endpoint: `POST /marketplace/photos` uploads a photo (returns photo_id and path).
+- Enhanced endpoint: `POST /marketplace/listings` now accepts optional `photo_ids` array (max 5 photos).
+- Enhanced responses: `GET /marketplace/listings`, `GET /marketplace/listings/:id`, and `GET /marketplace/listings/mine` now return a `photos` array for each listing (empty array for non-owners viewing non-active listings).
+- Enhanced endpoint: `DELETE /marketplace/listings/:id` now also deletes associated photo files from disk.
+- Photos stored on disk at `uploads/listings/` with UUID filenames, accessible via `/uploads/listings/...` static route.
+- Pending photos (uploaded but not attached to any listing) are automatically deleted after 24 hours.
+- Validation: Max 5 photos per listing, max 5MB per photo, JPEG/PNG/WebP only, magic byte validation, max 10 pending photos per user.
+
+**What did NOT change (mobile app unchanged)**
+
+- The mobile app DOES NOT have UI for uploading photos yet.
+- The mobile app DOES NOT display listing photos yet.
+- Marketplace screens and forms are unchanged.
+
+**Files changed**
+
+- Backend: migrations/018_listing_photos.js, src/marketplace/photoLimits.ts, src/marketplace/photosRouter.ts, src/marketplace/listings.ts, src/marketplace/listingsRouter.ts, src/marketplace/photoCleanup.ts, scripts/verify_photos.ps1
+- Mobile: CHANGELOG.md only (this entry)
+
+**NOT IMPLEMENTED**
+
+- EXIF metadata stripping (sharp library not installed; photos keep original EXIF data)
+- Mobile app photo upload UI
+- Mobile app photo display in listing cards and detail screens
+
+**Verified**
+
+- Backend verification script passes 31/33 checks (2 failures due to pre-existing blocked-listing database bug unrelated to photos)
+- All photo-specific functionality verified: upload, ownership validation, attachment to listings, visibility rules, file cleanup, permission checks
 
 ---
 
