@@ -347,12 +347,15 @@ export const ListingDetailScreen: React.FC = () => {
         onCancel={() => setDeleteModalVisible(false)}
       />
 
-      {/* Error Modal */}
+      {/* Error Modal (OK-only: cancelText hidden via empty string) */}
       <ConfirmationModal
         visible={errorVisible}
         title="Something went wrong"
         message={errorMessage}
         confirmText="OK"
+        confirmStyle="destructive"
+        icon="alert-circle-outline"
+        cancelText=""
         onConfirm={() => setErrorVisible(false)}
         onCancel={() => setErrorVisible(false)}
       />

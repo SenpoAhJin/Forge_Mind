@@ -26,6 +26,7 @@ import { CalendarProvider } from './src/contexts/CalendarContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { DiaryProvider } from './src/contexts/DiaryContext';
 import { ConsentBanner, AppNoticeHost } from './src/components';
+import { ServerStatusBanner } from './src/components/ServerStatusBanner';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { PhoneFrame } from './src/components/testing/PhoneFrame';
@@ -90,6 +91,7 @@ export default function App() {
                                 <ContestProvider>
                                   <LogisticsProvider>
                                     <CalendarProvider>
+                                      <ServerStatusBanner />
                                       <RootNavigator />
                                       <ConsentBanner />
                                       <AppNoticeHost />

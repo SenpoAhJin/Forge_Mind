@@ -4,7 +4,8 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '../config/api';
+import { fetchWithTimeout } from './http';
 import type { GetUsersParams, UsersResponse, VerificationDecision } from '../types/api/users';
 import type { ApiUser } from './AuthService';
 
@@ -102,13 +103,13 @@ export async function refreshCurrentUser(): Promise<ApiUser> {
   const token = await getAuthToken();
   if (!token) throw new Error('No session token');
 
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/auth/me`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-  });
+  }, REQUEST_TIMEOUT_MS);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to refresh user' }));

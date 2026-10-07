@@ -16,7 +16,9 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { authUrl, API_BASE_URL } from '../config/api';
+import { authUrl, API_BASE_URL, REQUEST_TIMEOUT_MS } from '../config/api';
+import { fetchWithTimeout, isNetworkError } from './http';
+import { logApiIssue } from '../utils/debugLog';
 import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
 
 // Storage keys
@@ -25,18 +27,6 @@ const STORAGE_KEYS = {
   ACTIVE_SESSION: '@forgemind:active_session',
   SESSION_TOKEN: '@forgemind:session_token',
 } as const;
-
-/**
- * Request timeout for auth calls, in ms.
- *
- * 15 s rather than 10 s: a cold server has to hash the password with bcrypt on
- * the first login after a restart, and on a phone the same request also crosses
- * Wi-Fi. 10 s aborted those requests and the abort surfaced to the user as
- * "Fetch request has been canceled", which reads like a bug rather than a slow
- * server. An abort is still reported as a network error - never as bad
- * credentials.
- */
-const AUTH_TIMEOUT_MS = 15000;
 
 /**
  * Organizer columns sent with a registration so the Head/Staff role is created
@@ -210,17 +200,7 @@ export class AuthService {
 
   /** POST to the auth API with a timeout, so a dead backend cannot hang the UI. */
   private static async authFetch(path: string, init: RequestInit): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
-    try {
-      return await fetch(authUrl(path), {
-        ...init,
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-      });
-    } finally {
-      clearTimeout(timer);
-    }
+    return fetchWithTimeout(authUrl(path), init, REQUEST_TIMEOUT_MS);
   }
 
   /**
@@ -277,10 +257,15 @@ export class AuthService {
    */
   private static transportErrorMessage(error: unknown): string {
     // An abort and a refused connection are the same class of problem from the
-    // user's point of view: no response arrived. React Native reports both as
-    // "fetch failed: Fetch request has been canceled", so both get the one
-    // message that tells them what to actually check.
-    return "Can't reach the server. Check that your phone and PC are on the same Wi-Fi.";
+    // user's point of view: no response arrived. The platform-correct advice:
+    // on a phone also tell them to check the Wi-Fi network; on the web the
+    // browser and the backend are the same machine, so "the backend is running"
+    // is the only thing that makes sense there.
+    logApiIssue('AuthService', 'network', 'unreachable');
+    void error;
+    return Platform.OS === 'web'
+      ? 'Can\'t reach the server. Check that the backend is running.'
+      : 'Can\'t reach the server. Check that the backend is running and that your phone and PC are on the same Wi-Fi.';
   }
 
   /** Best-effort device description stored in sessions.device_info. */
@@ -440,7 +425,8 @@ export class AuthService {
 
       return { success: true, account };
     } catch (error) {
-      console.warn('[AuthService] Registration failed (network):', (error as Error).message);
+      if (isNetworkError(error)) logApiIssue('AuthService', 'network', 'unreachable');
+      else console.error('[AuthService] Registration failed:', error);
       return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
@@ -483,7 +469,8 @@ export class AuthService {
 
       return { success: true, account };
     } catch (error) {
-      console.warn('[AuthService] Login failed (network):', (error as Error).message);
+      if (isNetworkError(error)) logApiIssue('AuthService', 'network', 'unreachable');
+      else console.error('[AuthService] Login failed:', error);
       return { success: false, error: AuthService.transportErrorMessage(error) };
     }
   }
@@ -530,7 +517,8 @@ export class AuthService {
         } catch (error) {
           // A failed revoke must never strand the user in a logged-in state, so
           // local state is cleared regardless of what the server said.
-          console.warn('[AuthService] Server logout failed (network):', (error as Error).message);
+          if (isNetworkError(error)) logApiIssue('AuthService', 'network', 'unreachable');
+          else console.error('[AuthService] Server logout failed:', error);
         }
       }
       await AsyncStorage.multiRemove([STORAGE_KEYS.ACTIVE_SESSION, STORAGE_KEYS.SESSION_TOKEN]);

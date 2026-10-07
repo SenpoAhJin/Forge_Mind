@@ -6,10 +6,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
-import { debugLog } from '../utils/debugLog';
+import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '../config/api';
+import { fetchWithTimeout, isNetworkError } from './http';
+import { debugLog, logApiIssue } from '../utils/debugLog';
 
-const MARKETPLACE_TIMEOUT_MS = 15000;
 const STORAGE_KEYS = {
   SESSION_TOKEN: '@forgemind:session_token',
 } as const;
@@ -218,9 +218,6 @@ class MarketplaceApi {
 
   /** Fetch with authorization header and timeout */
   private static async apiFetch(url: string, init: RequestInit): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), MARKETPLACE_TIMEOUT_MS);
-
     try {
       const sessionToken = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
       const headers: Record<string, string> = {
@@ -232,13 +229,9 @@ class MarketplaceApi {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
 
-      return await fetch(url, {
-        ...init,
-        signal: controller.signal,
-        headers,
-      });
+      return await fetchWithTimeout(url, { ...init, headers }, REQUEST_TIMEOUT_MS);
     } finally {
-      clearTimeout(timer);
+      // timeouts and reachability are owned by fetchWithTimeout
     }
   }
 
@@ -287,13 +280,12 @@ class MarketplaceApi {
    * Following AuthService pattern
    */
   private static transportErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        return 'The request took too long. Please check your connection and try again.';
-      }
-      if (error.message.includes('Network request failed')) {
-        return 'Cannot reach the server. Please check your internet connection.';
-      }
+    if (isNetworkError(error)) {
+      logApiIssue('MarketplaceApi', 'network', 'unreachable');
+      return 'Can\'t reach the server. Check your connection and try again.';
+    }
+    if (error instanceof Error && error.name === 'AbortError') {
+      return 'The request took too long. Please check your connection and try again.';
     }
     return 'Network error. Please check your connection and try again.';
   }

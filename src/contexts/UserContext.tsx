@@ -7,8 +7,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { AuthService, StoredAccount } from '../services/AuthService';
 import { refreshCurrentUser } from '../services/UserService';
+import { isNetworkError } from '../services/http';
+import { isServerReachable, subscribeServerStatus } from '../services/serverStatus';
+import { logApiIssue } from '../utils/debugLog';
 import { StaffDepartment, DepartmentVerificationStatus } from '../types/organizer';
 import { BaseBodySelection } from '../constants/bodyType';
 
@@ -169,7 +173,7 @@ const updatedUser = await refreshCurrentUser();
     
     const handleAppStateChange = (nextAppState: string) => {
       if (nextAppState === 'active' && user) {
-        refreshUser().catch(err => console.log('[UserContext] AppState refresh failed:', err));
+        refreshUser().catch(() => {});
       }
     };
 
@@ -177,6 +181,50 @@ const updatedUser = await refreshCurrentUser();
 
     return () => {
       subscription?.remove();
+    };
+  }, [user]);
+
+  // While the server is unreachable, keep retrying quietly: every 30 s in the
+  // foreground, when the server comes back, and on web when the tab becomes
+  // visible or the "online" event fires. All timers and listeners are cleaned
+  // up on unmount. A network failure must never log an error or log the user
+  // out — only a 401 does.
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshOnce = async (): Promise<void> => {
+      if (!isServerReachable()) {
+        await refreshUser().catch(() => {});
+      }
+    };
+
+    const interval = setInterval(refreshOnce, 30000);
+    const unsubscribeStatus = subscribeServerStatus((reachable) => {
+      if (reachable) refreshUser().catch(() => {});
+    });
+
+    let onlineCleanup: (() => void) | undefined;
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const onVisible = (): void => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+          refreshOnce();
+        }
+      };
+      const onOnline = (): void => {
+        refreshOnce();
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('online', onOnline);
+      onlineCleanup = () => {
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('online', onOnline);
+      };
+    }
+
+    return () => {
+      clearInterval(interval);
+      unsubscribeStatus();
+      onlineCleanup?.();
     };
   }, [user]);
 
@@ -267,14 +315,20 @@ const updatedUser = await refreshCurrentUser();
       setUser(merged);
       await AuthService.setActiveSession(merged);
     } catch (error: unknown) {
-      console.error('[UserContext] refreshUser failed:', error);
       // If 401, session expired - logout
       const errorMessage = error instanceof Error ? error.message : '';
       if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
         console.log('[UserContext] Session expired, logging out');
         await logout();
+        return;
       }
-      // Network errors: keep current user, don't crash
+      if (isNetworkError(error)) {
+        // Expected while the server is unreachable: keep the cached user, log
+        // one quiet throttled line, and let the 30 s retry loop pick it up.
+        logApiIssue('UserContext', 'network', 'unreachable');
+        return;
+      }
+      console.error('[UserContext] refreshUser failed:', error);
     }
   };
 

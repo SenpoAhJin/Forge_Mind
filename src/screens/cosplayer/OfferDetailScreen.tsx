@@ -380,6 +380,9 @@ export const OfferDetailScreen: React.FC = () => {
         title="Something went wrong"
         message={errorMessage}
         confirmText="OK"
+        confirmStyle="destructive"
+        icon="alert-circle-outline"
+        cancelText=""
         onConfirm={() => setErrorVisible(false)}
         onCancel={() => setErrorVisible(false)}
       />

@@ -23,6 +23,11 @@ interface ConfirmationModalProps {
   confirmText?: string;
   cancelText?: string;
   confirmStyle?: 'default' | 'destructive';
+  /**
+   * Optional Ionicons name overriding the default check/alert icon.
+   * The icon follows the confirmStyle colour (error-red in 'destructive').
+   */
+  icon?: keyof typeof Ionicons.glyphMap;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -70,6 +75,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   confirmStyle = 'default',
+  icon,
   onConfirm,
   onCancel,
 }) => {
@@ -89,7 +95,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {/* Header */}
             <View style={styles.header}>
               <Ionicons
-                name={confirmStyle === 'destructive' ? 'alert-circle-outline' : 'checkmark-circle-outline'}
+                name={icon ?? (confirmStyle === 'destructive' ? 'alert-circle-outline' : 'checkmark-circle-outline')}
                 size={32}
                 color={confirmStyle === 'destructive' ? dynamicStyles.iconDestructiveColor : dynamicStyles.iconColor}
               />
