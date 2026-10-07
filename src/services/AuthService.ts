@@ -173,7 +173,7 @@ export class AuthService {
   private static async patchOrganizerFieldsOnServer(
     email: string,
     fields: Record<string, unknown>
-  ): Promise<{ success: boolean; skipped?: boolean; error?: string; user?: ApiUser }> {
+  ): Promise<{ success: boolean; skipped?: boolean; error?: string; user?: ApiUser; fieldErrors?: Record<string, string> }> {
     let token: string | null = null;
     try {
       token = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
@@ -189,7 +189,8 @@ export class AuthService {
         body: JSON.stringify({ email: email.trim().toLowerCase(), ...fields }),
       });
       if (!response.ok) {
-        return { success: false, error: await AuthService.errorMessage(response) };
+        const errorData = await AuthService.errorMessage(response);
+        return { success: false, error: errorData.message, fieldErrors: errorData.fields };
       }
       const data = (await response.json()) as { user: ApiUser };
       return { success: true, user: data.user };
@@ -204,10 +205,11 @@ export class AuthService {
   }
 
   /**
-   * Maps HTTP status + error body to a user-facing message.
+   * Maps HTTP status + error body to a user-facing message and field errors.
    * Each failure mode is distinguishable and actionable.
+   * Returns { message, fields } where fields is from 400 validation responses.
    */
-  private static async errorMessage(response: Response): Promise<string> {
+  private static async errorMessage(response: Response): Promise<{ message: string; fields?: Record<string, string> }> {
     // Default messages by status code
     const statusDefaults: Record<number, string> = {
       503: 'The server is running but its database is not available. Tell the person running the server.',
@@ -217,6 +219,7 @@ export class AuthService {
     };
 
     let message = statusDefaults[response.status] ?? 'Something went wrong. Please try again.';
+    let fields: Record<string, string> | undefined;
 
     try {
       const data = await response.json();
@@ -225,9 +228,12 @@ export class AuthService {
       if (response.status === 503 && data.error === 'db_unavailable') {
         message = statusDefaults[503];
       }
-      // 400 validation errors: show field-specific message
+      // 400 validation errors: show field-specific message and extract fields
       else if (response.status === 400 && data.message) {
         message = data.message;
+        if (data.fields && typeof data.fields === 'object') {
+          fields = data.fields;
+        }
       }
       // Other errors: use server message if provided, otherwise default
       else if (data && typeof data.message === 'string' && data.message.trim() !== '') {
@@ -243,13 +249,14 @@ export class AuthService {
       // they are logged quietly. The full URL is included so any remaining
       // warning pinpoints the exact endpoint.
       const target = response.url ? ` ${response.url}` : ` ${API_BASE_URL}`;
+      const fieldNames = fields ? ` fields=${Object.keys(fields).join(',')}` : '';
       if (response.status >= 500) {
         console.warn(`[AuthService] server replied ${response.status} for${target}: ${message}`);
       } else {
-        console.log(`[AuthService] server replied ${response.status} for${target}: ${message}`);
+        console.log(`[AuthService] server replied ${response.status} for${target}: ${message}${fieldNames}`);
       }
     }
-    return message;
+    return { message, fields };
   }
 
   /**
@@ -398,7 +405,7 @@ export class AuthService {
     baseBody: 'male' | 'female',
     bodySize: number,
     organizer?: OrganizerRegistration
-  ): Promise<{ success: boolean; error?: string; account?: StoredAccount }> {
+  ): Promise<{ success: boolean; error?: string; account?: StoredAccount; fieldErrors?: Record<string, string> }> {
     try {
       const response = await AuthService.authFetch('/register', {
         method: 'POST',
@@ -419,7 +426,8 @@ export class AuthService {
       });
 
       if (!response.ok) {
-        return { success: false, error: await AuthService.errorMessage(response) };
+        const errorData = await AuthService.errorMessage(response);
+        return { success: false, error: errorData.message, fieldErrors: errorData.fields };
       }
 
       const data = (await response.json()) as { user: ApiUser };
@@ -447,7 +455,7 @@ export class AuthService {
   static async login(
     email: string,
     password: string
-  ): Promise<{ success: boolean; error?: string; account?: StoredAccount }> {
+  ): Promise<{ success: boolean; error?: string; account?: StoredAccount; fieldErrors?: Record<string, string> }> {
     try {
       const response = await AuthService.authFetch('/login', {
         method: 'POST',
@@ -459,7 +467,8 @@ export class AuthService {
       });
 
       if (!response.ok) {
-        return { success: false, error: await AuthService.errorMessage(response) };
+        const errorData = await AuthService.errorMessage(response);
+        return { success: false, error: errorData.message, fieldErrors: errorData.fields };
       }
 
       const data = (await response.json()) as { user: ApiUser; session_token: string };
