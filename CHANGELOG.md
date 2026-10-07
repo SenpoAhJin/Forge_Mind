@@ -1,7 +1,37 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Tuesday, October 6, 2026 (delete listing crash fix)
+**Last updated:** Wednesday, October 7, 2026 (your phone and your computer now use the same marketplace backend)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 7, 2026 (marketplace now uses one shared server for web + phone)
+
+**Summary**
+
+The marketplace no longer shows different or made-up data depending on where you open it. Previously the web version (running at localhost) and the phone version (running at your PC's Wi-Fi address) could talk to the same backend or different ones by accident, and the app had a built-in list of "demo" marketplace items that were meant only for early design tests. Now both builds point at the SAME server and database, so your phone and your computer always show the identical listings. The six demo test listings no longer appear on the live feed. The app also handles a server that is turned off more politely: it stops shouting about it, remembers the last good list, and quietly tries again every 30 seconds until the server is back.
+
+**What changed**
+
+- Web and phone now reach the same backend; the app automatically picks the right server address (localhost for web, your LAN IP for the phone build).
+- The web browser is allowed to talk to the server (CORS), including the new `127.0.0.1` address web builds sometimes use.
+- The six demo seed listings (the old built-in test data) are hidden from the browse feed and from "my listings".
+- When the server can't be reached, the app: shows a small banner, keeps showing the last known listing list with "Updated <time>", logs quietly, and retries every 30 seconds.
+- Login/registration messages now say whether to check the backend or to check that your phone and PC are on the same Wi-Fi.
+- Error popups (the red "Something went wrong" style) no longer offer a fake Cancel button.
+- The cached listing data was upgraded to a versioned format with a timestamp and a per-account "my listings" cache.
+
+**Files changed**
+
+- Mobile: src/config/apiBaseUrl.ts (new), src/config/api.ts, src/services/http.ts (new), src/services/serverStatus.ts (new), src/utils/debugLog.ts, src/components/ServerStatusBanner.tsx (new), src/App.tsx, src/services/AuthService.ts, src/services/MarketplaceApi.ts, src/services/UserService.ts, src/contexts/UserContext.tsx, src/contexts/MarketplaceContext.tsx, src/utils/marketplaceMapping.ts, src/utils/dateHelpers.ts, src/components/ConfirmationModal.tsx, src/screens/cosplayer/ListingDetailScreen.tsx, src/screens/cosplayer/OfferDetailScreen.tsx, src/screens/cosplayer/MarketplaceScreen.tsx.
+- Backend: src/marketplace/listings.ts, src/marketplace/listingsRouter.ts, scripts/verify_shared_listings.ps1 (new).
+
+**NOT TESTED (needs manual testing)**
+
+- Open the web version and then the phone version on the same Wi-Fi and confirm the marketplace lists match exactly.
+- Turn off the backend and confirm: banner appears, last list stays visible with "Updated ...", and it recovers on its own when the backend comes back.
+- Confirm the login screen's wording differs between web (check the backend) and phone (also check Wi-Fi).
+- Confirm a non-cosplay/foreign website at the PC firewall can't reach port 3000 (only report the needed firewall rule to the PC owner).
 
 ---
 
