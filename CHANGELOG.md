@@ -1,7 +1,61 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 7, 2026, 16:15 (backend now supports photo uploads for marketplace listings)
+**Last updated:** Saturday, October 10, 2026, 21:21 (mobile app photo upload complete)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 10, 2026, 21:21 (marketplace photo upload, mobile app)
+
+**Summary**
+
+The mobile app now supports uploading and viewing photos for marketplace listings. Sellers can pick up to 5 photos from their gallery or camera (native only), upload them individually before submitting the listing, and see upload progress per photo. Buyers see the first photo as a thumbnail in the browse feed and can swipe through all photos in a horizontal gallery on the detail screen.
+
+**What changed (mobile app)**
+
+- **CreateListingScreen**: Added photo upload section with gallery/camera picker, up to 5 photos, shows upload states (uploading/uploaded/failed) with retry button, client-side validation (type and 5 MB size), best-effort cleanup of unattached photos on unmount.
+- **MarketplaceScreen (browse)**: Shows first photo as thumbnail, falls back to category icon when no photos.
+- **ListingDetailScreen**: Horizontal paged photo gallery with page indicators when multiple photos exist.
+- **PhotoService**: New service for uploading/deleting photos via `POST /marketplace/photos` and `DELETE /marketplace/photos/:photo_id`. Maps server `{photo_id, path}` to app `{photo_id, url}` format. Handles all error codes from backend (unsupported_type, photo_too_large, too_many_pending, no_file, 401).
+- **PhotoUploadSection**: New reusable component for photo management UI.
+- **Permission handling**: Requests camera roll permission with "Open Settings" link on native when denied.
+- **URL mapping**: All photo URL construction happens in one place (marketplaceMapping.ts using API_BASE_URL).
+
+**Verified**
+
+- TypeScript compilation: PASS (npx tsc --noEmit exit code 0).
+- Code structure: All files checked in code only, no runtime verification.
+- Photo upload flow: NOT TESTED (requires running app and backend).
+- Browse thumbnail: NOT TESTED.
+- Detail gallery: NOT TESTED.
+- Permission handling: NOT TESTED.
+
+**Known gaps**
+
+- No HEIC handling: iOS may return HEIC images. expo-image-picker v57 compatible output options not verified. Users may see "unsupported type" error if HEIC is returned.
+- No image compression beyond picker quality: Large photos near 5 MB may fail backend 413 if actual size exceeds limit after encoding.
+- Cleanup on unmount is best-effort only: If app crashes or user force-closes, pending photos remain on server until 24h cleanup.
+
+**Files changed**
+
+- src/services/PhotoService.ts (new, 295 lines)
+- src/components/PhotoUploadSection.tsx (new, 474 lines)
+- src/components/index.ts (+1 line export)
+- src/contexts/MarketplaceContext.tsx (+5 lines, photo_ids passthrough)
+- src/screens/cosplayer/CreateListingScreen.tsx (+39 lines, photo section + cleanup)
+- src/screens/cosplayer/MarketplaceScreen.tsx (+2 lines, thumbnail URL change)
+- src/screens/cosplayer/ListingDetailScreen.tsx (+78 lines, photo gallery)
+- src/services/MarketplaceApi.ts (+2 lines, photo_ids in CreateListingRequest)
+- src/types/marketplace.ts (+3 lines, photos array type change)
+- src/utils/marketplaceMapping.ts (+13 lines, photo mapping with API_BASE_URL)
+
+**Decisions made**
+
+- Camera picker hidden on web (Platform.OS check).
+- First photo is always the cover (no reordering UI).
+- Photos upload immediately after picking (not batched at submit time).
+- Failed uploads block submit until retried or removed.
+- Photo URLs built once in mapping layer, screens never construct URLs.
 
 ---
 
