@@ -3,7 +3,7 @@
  * Shows full listing details with offer buttons and messaging
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Dimensions,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -41,6 +43,8 @@ export const ListingDetailScreen: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
   const [serverSoonNote, setServerSoonNote] = useState<string | null>(null);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const photoScrollRef = useRef<FlatList>(null);
 
   const listing = getListingById(route.params.listingId);
 
@@ -219,6 +223,47 @@ export const ListingDetailScreen: React.FC = () => {
           </Text>
         </View>
       </View>
+
+      {/* Photo Gallery */}
+      {listing.photos && listing.photos.length > 0 && (
+        <View style={styles.photoGallery}>
+          <FlatList
+            ref={photoScrollRef}
+            data={listing.photos}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(event) => {
+              const index = Math.round(
+                event.nativeEvent.contentOffset.x / Dimensions.get('window').width
+              );
+              setCurrentPhotoIndex(index);
+            }}
+            scrollEventThrottle={16}
+            renderItem={({ item }) => (
+              <Image
+                source={{ uri: item.url }}
+                style={styles.galleryPhoto}
+                resizeMode="cover"
+              />
+            )}
+            keyExtractor={(item) => item.photo_id}
+          />
+          {listing.photos.length > 1 && (
+            <View style={styles.photoIndicator}>
+              {listing.photos.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicatorDot,
+                    index === currentPhotoIndex && styles.indicatorDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Category */}
       <View style={styles.infoRow}>
@@ -548,5 +593,36 @@ const styles = StyleSheet.create({
     ...typography.buttonText,
     color: colors.surface,
     fontWeight: '600',
+  },
+  photoGallery: {
+    width: Dimensions.get('window').width,
+    height: 300,
+    backgroundColor: colors.backgroundDark,
+    position: 'relative',
+  },
+  galleryPhoto: {
+    width: Dimensions.get('window').width,
+    height: 300,
+  },
+  photoIndicator: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  indicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.backgroundLight,
+    opacity: 0.5,
+  },
+  indicatorDotActive: {
+    opacity: 1,
+    backgroundColor: colors.primary,
   },
 });

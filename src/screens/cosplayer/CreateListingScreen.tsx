@@ -3,7 +3,7 @@
  * Create marketplace listing with validation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,13 +19,14 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
-import { TextInputField, TextAreaField, Button, ConfirmationModal } from '../../components';
+import { TextInputField, TextAreaField, Button, ConfirmationModal, PhotoUploadSection } from '../../components';
 import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { MarketplaceCondition, TransactionType } from '../../types/marketplace';
 import { checkListing } from '../../services/MarketplaceService';
 import { sanitizeDecimalInput } from '../../utils/numericInput';
 import { MAX_AMOUNT_PHP } from '../../utils/marketplaceLimits';
 import { showNotice } from '../../utils/appNotice';
+import PhotoService from '../../services/PhotoService';
 
 interface CreateListingScreenProps {
   onSuccess: () => void;
@@ -42,6 +43,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
   const [transactionType, setTransactionType] = useState<TransactionType | ''>('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<MarketplaceCondition | ''>('');
+  const [photoIds, setPhotoIds] = useState<string[]>([]);
 
   const [titleError, setTitleError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
@@ -55,6 +57,24 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
   // Duplicate listing modal
   const [duplicateModalVisible, setDuplicateModalVisible] = useState(false);
   const [duplicateMessage, setDuplicateMessage] = useState('');
+
+  // Track uploaded photos for cleanup
+  const uploadedPhotoIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    uploadedPhotoIdsRef.current = photoIds;
+  }, [photoIds]);
+
+  // Cleanup unattached photos on unmount
+  useEffect(() => {
+    return () => {
+      const idsToDelete = uploadedPhotoIdsRef.current;
+      if (idsToDelete.length > 0) {
+        // Best-effort cleanup - fire and forget
+        Promise.all(idsToDelete.map((id) => PhotoService.deletePhoto(id))).catch(() => {});
+      }
+    };
+  }, []);
 
   const validateFields = (): boolean => {
     let isValid = true;
@@ -198,7 +218,8 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
       transaction_type: transactionType as TransactionType,
       price: transactionType === 'trade' ? 0 : Number(price),
       condition: condition as MarketplaceCondition,
-      photos: [],
+      photos: [], // Legacy field
+      photo_ids: photoIds, // New - attach uploaded photos
     };
 
     try {
@@ -472,13 +493,11 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
             {conditionError ? <Text style={styles.errorText}>{conditionError}</Text> : null}
           </View>
 
-          {/* Photo Note */}
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={18} color={colors.info} />
-            <Text style={styles.infoText}>
-              Photo upload will be added in a later update. For now, describe your item thoroughly.
-            </Text>
-          </View>
+          {/* Photos */}
+          <PhotoUploadSection
+            onPhotosChange={setPhotoIds}
+            disabled={isLoading}
+          />
 
           {/* Prohibited-items notice */}
           <View style={styles.noticeBox}>

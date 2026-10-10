@@ -24,6 +24,7 @@ export interface CreateListingRequest {
   rate?: number;
   trade_offered_item?: string;
   trade_wanted_item?: string;
+  photo_ids?: string[];
 }
 
 export interface Listing {
@@ -44,6 +45,7 @@ export interface Listing {
   seller_user_id?: string;
   seller_name?: string;
   created_at: string;
+  photos?: Array<{ photo_id: string; url: string }>;
 }
 
 export interface ApiResponse<T> {

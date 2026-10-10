@@ -204,7 +204,7 @@ const MarketplaceBrowse: React.FC = () => {
   }, [selectedCategory, getActiveListings]);
 
   const renderListingCard = ({ item }: { item: Listing }) => {
-    const photoUri = item.photos && item.photos.length > 0 ? item.photos[0] : null;
+    const photoUrl = item.photos && item.photos.length > 0 ? item.photos[0].url : null;
     const categoryIcon = CATEGORY_ICONS[item.category] ?? DEFAULT_CATEGORY_ICON;
 
     return (
@@ -216,9 +216,9 @@ const MarketplaceBrowse: React.FC = () => {
         <View style={styles.cardContent}>
           {/* Thumbnail: photo when present, category icon otherwise */}
           <View style={styles.listingThumbnail}>
-            {photoUri ? (
+            {photoUrl ? (
               <Image
-                source={{ uri: photoUri }}
+                source={{ uri: photoUrl }}
                 style={styles.listingPhoto}
                 resizeMode="cover"
               />

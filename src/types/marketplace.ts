@@ -51,7 +51,7 @@ export interface Listing {
   transaction_type: ServerPostType;
 
   condition: string;
-  photos: string[];
+  photos: Array<{ photo_id: string; url: string }>;
 
   // Money fields are null when the listing has no such amount (a commission
   // listing has a rate and no price, for example). 0 is a real amount.
@@ -112,5 +112,6 @@ export interface CreateListingInput {
   open_to_trade?: boolean;
 
   condition: MarketplaceCondition;
-  photos: string[];
+  photos: string[]; // Legacy - kept for old screens
+  photo_ids?: string[]; // New - photo UUIDs to attach
 }

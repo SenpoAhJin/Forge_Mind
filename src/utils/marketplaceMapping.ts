@@ -12,6 +12,7 @@
  */
 
 import { formatPHP } from './formatCurrency';
+import { API_BASE_URL } from '../config/api';
 import type {
   AppealStatus,
   Listing,
@@ -115,6 +116,17 @@ export function mapServerListing(raw: unknown): Listing {
   const price = money(row.price);
   const rate = money(row.rate);
 
+  // Map photos from server format to { photo_id, url }
+  const rawPhotos = Array.isArray(row.photos) ? row.photos : [];
+  const photos = rawPhotos
+    .filter((p): p is { photo_id: string; path: string } => 
+      isRecord(p) && typeof p.photo_id === 'string' && typeof p.path === 'string'
+    )
+    .map((p) => ({
+      photo_id: p.photo_id,
+      url: `${API_BASE_URL}/uploads/${p.path}`,
+    }));
+
   return {
     id: text(row.id),
     title: text(row.title),
@@ -125,7 +137,7 @@ export function mapServerListing(raw: unknown): Listing {
     transaction_type: postType(row.post_type),
 
     condition: text(row.condition, 'unspecified'),
-    photos: stringList(row.photos),
+    photos,
 
     price,
     budget: money(row.budget),

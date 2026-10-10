@@ -57,6 +57,7 @@ export interface LegacyCreateListingInput {
   condition?: string;
   trade_offered_item?: string;
   trade_wanted_item?: string;
+  photo_ids?: string[]; // New - photo UUIDs to attach
   [key: string]: unknown;
 }
 
@@ -85,6 +86,10 @@ function toCreateListingRequest(input: LegacyCreateListingInput): CreateListingR
   }
   if (typeof input.trade_wanted_item === 'string' && input.trade_wanted_item !== '') {
     request.trade_wanted_item = input.trade_wanted_item;
+  }
+  // Pass through photo_ids if provided
+  if (Array.isArray(input.photo_ids) && input.photo_ids.length > 0) {
+    request.photo_ids = input.photo_ids;
   }
   return request;
 }
