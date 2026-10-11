@@ -215,7 +215,13 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
           <Ionicons name="alert-circle" size={18} color={colors.error} />
           <Text style={styles.permissionErrorText}>{permissionError}</Text>
           {Platform.OS !== 'web' && (
-            <TouchableOpacity onPress={openSettings} style={styles.settingsButton}>
+            <TouchableOpacity 
+              onPress={openSettings} 
+              style={styles.settingsButton}
+              activeOpacity={0.7}
+              accessibilityLabel="Open device settings to grant camera roll permission"
+              accessibilityRole="button"
+            >
               <Text style={styles.settingsButtonText}>Open Settings</Text>
             </TouchableOpacity>
           )}
@@ -239,6 +245,8 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
                 source={{ uri: photo.localUri }}
                 style={styles.photoImage}
                 resizeMode="cover"
+                accessibilityLabel={index === 0 ? `Cover photo, ${index + 1} of ${photos.length}` : `Photo ${index + 1} of ${photos.length}`}
+                accessibilityRole="image"
               />
 
               {/* Status Overlay */}
@@ -262,6 +270,9 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
                   <TouchableOpacity
                     style={styles.retryButton}
                     onPress={() => retryUpload(index)}
+                    activeOpacity={0.7}
+                    accessibilityLabel={`Retry uploading photo ${index + 1}`}
+                    accessibilityRole="button"
                   >
                     <Text style={styles.retryButtonText}>Retry</Text>
                   </TouchableOpacity>
@@ -274,6 +285,9 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
                   style={styles.removeButton}
                   onPress={() => removePhoto(index)}
                   disabled={disabled}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`Remove photo ${index + 1}`}
+                  accessibilityRole="button"
                 >
                   <Ionicons name="close-circle" size={24} color={colors.error} />
                 </TouchableOpacity>
@@ -290,6 +304,10 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
             style={styles.addButton}
             onPress={() => pickImage(false)}
             disabled={hasUploading}
+            activeOpacity={0.7}
+            accessibilityLabel="Add photo from gallery"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: hasUploading }}
           >
             <Ionicons name="images-outline" size={24} color={colors.tertiary} />
             <Text style={styles.addButtonText}>Gallery</Text>
@@ -300,6 +318,10 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
               style={styles.addButton}
               onPress={() => pickImage(true)}
               disabled={hasUploading}
+              activeOpacity={0.7}
+              accessibilityLabel="Take photo with camera"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: hasUploading }}
             >
               <Ionicons name="camera-outline" size={24} color={colors.tertiary} />
               <Text style={styles.addButtonText}>Camera</Text>

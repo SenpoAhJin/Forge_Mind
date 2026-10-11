@@ -221,6 +221,8 @@ const MarketplaceBrowse: React.FC = () => {
                 source={{ uri: photoUrl }}
                 style={styles.listingPhoto}
                 resizeMode="cover"
+                accessibilityLabel={`${item.title} listing photo`}
+                accessibilityRole="image"
               />
             ) : (
               <Ionicons name={categoryIcon} size={32} color={colors.tertiary} />

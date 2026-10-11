@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Dimensions,
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +43,7 @@ export const ListingDetailScreen: React.FC = () => {
   const [isMounted, setIsMounted] = useState(true);
   const [serverSoonNote, setServerSoonNote] = useState<string | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [galleryWidth, setGalleryWidth] = useState(0);
   const photoScrollRef = useRef<FlatList>(null);
 
   const listing = getListingById(route.params.listingId);
@@ -226,29 +226,39 @@ export const ListingDetailScreen: React.FC = () => {
 
       {/* Photo Gallery */}
       {listing.photos && listing.photos.length > 0 && (
-        <View style={styles.photoGallery}>
-          <FlatList
-            ref={photoScrollRef}
-            data={listing.photos}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={(event) => {
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x / Dimensions.get('window').width
-              );
-              setCurrentPhotoIndex(index);
-            }}
-            scrollEventThrottle={16}
-            renderItem={({ item }) => (
-              <Image
-                source={{ uri: item.url }}
-                style={styles.galleryPhoto}
-                resizeMode="cover"
-              />
-            )}
-            keyExtractor={(item) => item.photo_id}
-          />
+        <View 
+          style={styles.photoGallery}
+          onLayout={(event) => {
+            const { width } = event.nativeEvent.layout;
+            setGalleryWidth(width);
+          }}
+        >
+          {galleryWidth > 0 && (
+            <FlatList
+              ref={photoScrollRef}
+              data={listing.photos}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={(event) => {
+                const index = Math.round(
+                  event.nativeEvent.contentOffset.x / galleryWidth
+                );
+                setCurrentPhotoIndex(index);
+              }}
+              scrollEventThrottle={16}
+              renderItem={({ item }) => (
+                <Image
+                  source={{ uri: item.url }}
+                  style={[styles.galleryPhoto, { width: galleryWidth }]}
+                  resizeMode="contain"
+                  accessibilityLabel={`Listing photo ${listing.photos.indexOf(item) + 1} of ${listing.photos.length}`}
+                  accessibilityRole="image"
+                />
+              )}
+              keyExtractor={(item) => item.photo_id}
+            />
+          )}
           {listing.photos.length > 1 && (
             <View style={styles.photoIndicator}>
               {listing.photos.map((_, index) => (
@@ -595,13 +605,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   photoGallery: {
-    width: Dimensions.get('window').width,
+    width: '100%',
     height: 300,
-    backgroundColor: colors.backgroundDark,
+    backgroundColor: colors.surface,
     position: 'relative',
   },
   galleryPhoto: {
-    width: Dimensions.get('window').width,
     height: 300,
   },
   photoIndicator: {

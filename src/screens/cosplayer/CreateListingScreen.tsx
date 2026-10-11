@@ -258,6 +258,8 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
         return;
       }
       
+      // Clear the ref so cleanup on unmount doesn't delete attached photos
+      uploadedPhotoIdsRef.current = [];
       showNotice('success', 'Listing created successfully!');
       onSuccess();
     } catch (error) {
