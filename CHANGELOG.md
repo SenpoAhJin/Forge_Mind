@@ -1,7 +1,44 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 10, 2026, 21:21 (mobile app photo upload complete)
+**Last updated:** Saturday, October 11, 2026, 09:45 (photo display fixes)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 11, 2026, 09:45 (photo display fixes)
+
+**Summary**
+
+Fixed photo display issues in gallery and browse screens: gallery overflow, incorrect resize modes, missing accessibility labels, and a critical bug where successfully attached photos would be deleted on unmount.
+
+**What changed**
+
+- **ListingDetailScreen gallery**: Fixed 16dp overflow by using onLayout to measure container width instead of Dimensions.get('window').width. Each gallery page now uses the measured width. Changed resizeMode from 'cover' to 'contain' with surface background (not black). Added accessibility labels to gallery images.
+- **MarketplaceScreen thumbnails**: Added accessibility labels to thumbnail images (already had correct fixed-size frame with resizeMode 'cover').
+- **PhotoUploadSection**: Added activeOpacity (0.7) press feedback to all buttons. Added comprehensive accessibility labels and roles to buttons and photo preview images.
+- **CreateListingScreen**: Fixed critical bug where uploadedPhotoIdsRef was not cleared on successful listing creation, causing cleanup to delete photos that were successfully attached to the listing.
+
+**Verified**
+
+- TypeScript compilation: PASS (npx tsc --noEmit exit code 0, $LASTEXITCODE = 0).
+- Code structure: All fixes CHECKED IN CODE ONLY, no runtime testing.
+- Gallery width measurement: CHECKED IN CODE ONLY (onLayout callback sets galleryWidth state, FlatList only renders when width > 0).
+- Cleanup fix: CHECKED IN CODE ONLY (uploadedPhotoIdsRef.current cleared to empty array after successful createListing, before onSuccess call).
+- Accessibility: CHECKED IN CODE ONLY (accessibilityLabel and accessibilityRole added to all images and buttons).
+- Press feedback: CHECKED IN CODE ONLY (activeOpacity={0.7} added to all TouchableOpacity components).
+
+**EXIF/rotation report**
+
+- **expo-image-picker**: Uses allowsEditing: true and quality: 0.8. According to Expo docs, allowsEditing may strip EXIF on some platforms. The quality parameter compresses the image, which may also affect EXIF preservation. EXIF orientation is typically respected by the picker's output, so images should appear correctly oriented in the app.
+- **PhotoService**: Does NOT rotate or resize. Uploads the file exactly as received from the picker (uri passed directly to FormData). All image processing happens at the picker level.
+- **Web blob path**: On web, PhotoService fetches the URI as a Blob, then creates a File from the Blob. The Blob API preserves the binary data as-is, so if the picker output includes EXIF, it should be preserved through upload.
+
+**Files changed**
+
+- src/screens/cosplayer/ListingDetailScreen.tsx (gallery: onLayout measurement, resizeMode contain, surface background, accessibility, removed Dimensions import)
+- src/screens/cosplayer/MarketplaceScreen.tsx (thumbnail: accessibility labels)
+- src/components/PhotoUploadSection.tsx (press feedback activeOpacity, accessibility labels and roles on all controls)
+- src/screens/cosplayer/CreateListingScreen.tsx (clear uploadedPhotoIdsRef on successful creation to prevent deletion of attached photos)
 
 ---
 
