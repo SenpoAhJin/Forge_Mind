@@ -63,7 +63,7 @@ export const OfferLogScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<OfferLogRouteProp>();
   const { user } = useUser();
-  const { getOffersSentBy, getOffersReceivedFor, isLoading, refreshOffers } = useOffers();
+  const { getOffersSentBy, getOffersReceivedFor, isLoading, refreshOffers, needsRelogin } = useOffers();
   const { getProgressPercentage } = useCommissionMilestones();
 
   const role = user?.marketplace_registration?.marketplace_role;
@@ -166,6 +166,23 @@ export const OfferLogScreen: React.FC = () => {
   }
 
   const emptyState = () => {
+    // Show relogin message if user session lacks user_id
+    if (needsRelogin) {
+      return (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyStateCard}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="refresh-circle-outline" size={80} color={colors.warning} />
+            </View>
+            <Text style={styles.emptyTitle}>Session Update Required</Text>
+            <Text style={styles.emptyText}>
+              Please log out and log in again to load your offers. This is a one-time update for server integration.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     const isFiltered = filter !== 'all';
     if (filteredOffers.length > 0) {
       return renderOffersList();

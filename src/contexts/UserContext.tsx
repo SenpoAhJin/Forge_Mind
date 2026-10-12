@@ -144,14 +144,29 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (session) {
           setUser(session);
           await checkForNotifications(session);
-          // Refresh from backend to get latest verification status
-          try {
-const updatedUser = await refreshCurrentUser();
-             const merged = AuthService.accountFromServerUser(updatedUser, session);
-             setUser(merged);
-             await AuthService.setActiveSession(merged);
-          } catch (error) {
-            console.log('[UserContext] Backend refresh failed on mount, using cached session');
+          
+          // If session lacks user_id (old cached session), force refresh from server
+          if (!session.user_id) {
+            console.log('[UserContext] Session missing user_id, forcing backend refresh');
+            try {
+              const updatedUser = await refreshCurrentUser();
+              const merged = AuthService.accountFromServerUser(updatedUser, session);
+              setUser(merged);
+              await AuthService.setActiveSession(merged);
+              console.log('[UserContext] Session updated with user_id:', merged.user_id);
+            } catch (error) {
+              console.warn('[UserContext] Failed to refresh session with user_id, offers may not load');
+            }
+          } else {
+            // Normal refresh for verification status updates
+            try {
+              const updatedUser = await refreshCurrentUser();
+              const merged = AuthService.accountFromServerUser(updatedUser, session);
+              setUser(merged);
+              await AuthService.setActiveSession(merged);
+            } catch (error) {
+              console.log('[UserContext] Backend refresh failed on mount, using cached session');
+            }
           }
         }
       } catch (error) {

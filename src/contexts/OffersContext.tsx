@@ -27,6 +27,7 @@ type OfferResult = { success: boolean; error?: string; offer?: Offer };
 interface OffersContextType {
   offers: Offer[];
   isLoading: boolean;
+  needsRelogin: boolean;  // True if user session lacks user_id
   createOffer: (proposerEmail: string, input: CreateOfferInput) => Promise<OfferResult>;
   getOffersSentBy: (email: string) => Offer[];
   getOffersReceivedFor: (sellerEmail: string) => Offer[];
@@ -56,6 +57,9 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Combined offers array for backward compatibility
   const offers = [...sentOffers, ...receivedOffers];
+  
+  // Check if user session lacks user_id (old cached session)
+  const needsRelogin = user !== null && !user.user_id;
 
   const refreshOffers = useCallback(async () => {
     if (!user?.user_id) {
@@ -178,6 +182,7 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       value={{
         offers,
         isLoading,
+        needsRelogin,
         createOffer,
         getOffersSentBy,
         getOffersReceivedFor,
