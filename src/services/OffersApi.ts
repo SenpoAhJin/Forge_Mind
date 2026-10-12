@@ -6,10 +6,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isNetworkError } from './http';
+import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '../config/api';
+import { fetchWithTimeout, isNetworkError } from './http';
 import { Offer, CreateOfferInput, OfferType, OfferStatus } from '../types/offers';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 const STORAGE_KEYS = {
   SESSION_TOKEN: '@forgemind:session_token',
 } as const;
@@ -76,25 +76,28 @@ function mapServerOffer(serverOffer: ServerOffer, options: { isReceived?: boolea
  * Map error response to user-friendly message
  */
 function mapErrorMessage(status: number, error: any): string {
-  if (isNetworkError(error)) {
+  // Only show network message for REAL transport failures
+  if (status === 0 && isNetworkError(error)) {
     return 'Unable to reach the server. Please check your connection and try again.';
   }
 
   switch (status) {
     case 401:
-      return 'Your session has expired. Please log in again.';
+      return 'Please log in again to continue.';
     case 403:
-      return 'You do not have permission to perform this action. Marketplace verification may be required.';
+      return 'You do not have permission to perform this action.';
     case 404:
-      return 'The listing or offer was not found. It may have been removed.';
+      return 'Listing not found. It may have been removed.';
     case 409:
-      return 'This action cannot be completed. You may already have a pending offer on this listing.';
     case 400:
+      // Use server's own message when present
       const message = error?.message || error?.error;
       if (typeof message === 'string' && message.length > 0 && message.length < 200) {
         return message;
       }
-      return 'Invalid request. Please check your input and try again.';
+      return status === 409
+        ? 'This action cannot be completed. You may already have a pending offer.'
+        : 'Invalid request. Please check your input and try again.';
     default:
       return 'An unexpected error occurred. Please try again.';
   }
@@ -113,14 +116,18 @@ export async function createOffer(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
       },
-      body: JSON.stringify(input),
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -147,12 +154,16 @@ export async function getSentOffers(currentUserId: string): Promise<{ success: t
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers/sent`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/sent`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       },
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -178,12 +189,16 @@ export async function getReceivedOffers(currentUserId: string): Promise<{ succes
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers/received`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/received`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       },
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -211,12 +226,16 @@ export async function getOffer(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers/${offerId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/${offerId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       },
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -244,14 +263,18 @@ export async function acceptOffer(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers/${offerId}/accept`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/${offerId}/accept`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
       },
-      body: JSON.stringify({}),
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -277,14 +300,18 @@ export async function declineOffer(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers/${offerId}/decline`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/${offerId}/decline`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
       },
-      body: JSON.stringify({}),
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -310,14 +337,18 @@ export async function withdrawOffer(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/marketplace/offers/${offerId}/withdraw`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/${offerId}/withdraw`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
       },
-      body: JSON.stringify({}),
-    });
+      REQUEST_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));

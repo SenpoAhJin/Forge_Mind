@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { subscribeToNotices, Notice, NoticeType } from '../utils/appNotice';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -29,7 +29,7 @@ export function AppNoticeHost() {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: ANIMATION_DURATION_MS,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start();
 
       // Auto-dismiss after duration
@@ -49,7 +49,7 @@ export function AppNoticeHost() {
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: ANIMATION_DURATION_MS,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start(() => {
       setNotices((prev) => prev.filter((n) => n.id !== id));
       fadeAnims.delete(id);

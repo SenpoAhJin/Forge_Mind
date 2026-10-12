@@ -13,6 +13,7 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, borderRadius } from '../theme';
@@ -80,19 +81,19 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 200,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
           tension: 50,
           friction: 7,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.spring(checkmarkAnim, {
           toValue: 1,
           tension: 40,
           friction: 5,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]).start();
     } else {
