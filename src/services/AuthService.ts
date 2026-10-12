@@ -88,6 +88,7 @@ export interface ApiUser {
 
 // User account structure - matches v0.2.1 schema
 export interface StoredAccount {
+  user_id?: string;                     // User.user_id from server (UUID)
   email: string;                        // User.email (String(255), required)
   /** Always ''. Passwords are verified server-side; see file header. */
   password_hash: string;                // User.password_hash (String(255), required)
@@ -303,6 +304,7 @@ export class AuthService {
     bodySizeSlider?: number,
   ): StoredAccount {
     const account: StoredAccount = {
+      user_id: user.user_id,
       email: user.email,
       password_hash: '',
       display_name: user.display_name,

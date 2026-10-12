@@ -104,12 +104,18 @@ export const ListingDetailScreen: React.FC = () => {
     listing.status === 'active' &&
     user?.marketplace_registration?.marketplace_role !== 'seller';
 
-  // The signed-in user record has no server id, so an offer or a chat thread
+  // The signed-in user record has no server id, so a chat thread
   // cannot yet be tied to a seller without an email, which the server does not
-  // hand out. Both entry points say so instead of starting a broken flow.
+  // hand out. Chat entry point shows a note instead of starting a broken flow.
+  // Offers now work via the server.
 
-  const handleOfferUnavailable = () => {
-    setServerSoonNote('Offers and chat will use the server in an upcoming update.');
+  const handleMessageUnavailable = () => {
+    setServerSoonNote('Chat will use the server in an upcoming update.');
+  };
+
+  const handleMakeOffer = (offerType: OfferType) => {
+    if (!listing) return;
+    navigation.navigate('MakeOffer', { listingId: listing.id, offerType: offerType });
   };
 
   const handleViewMessages = () => {
@@ -333,7 +339,7 @@ export const ListingDetailScreen: React.FC = () => {
             <Button
               key={offerType}
               title={offerButtonLabels[offerType]}
-              onPress={handleOfferUnavailable}
+              onPress={() => handleMakeOffer(offerType)}
               variant="primary"
               fullWidth
             />
@@ -345,7 +351,7 @@ export const ListingDetailScreen: React.FC = () => {
       {canMessageSeller ? (
         <Button
           title="Message Seller"
-          onPress={handleOfferUnavailable}
+          onPress={handleMessageUnavailable}
           variant="secondary"
           fullWidth
         />

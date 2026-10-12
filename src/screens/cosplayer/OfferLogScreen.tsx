@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
@@ -63,7 +63,7 @@ export const OfferLogScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<OfferLogRouteProp>();
   const { user } = useUser();
-  const { getOffersSentBy, getOffersReceivedFor, isLoading } = useOffers();
+  const { getOffersSentBy, getOffersReceivedFor, isLoading, refreshOffers } = useOffers();
   const { getProgressPercentage } = useCommissionMilestones();
 
   const role = user?.marketplace_registration?.marketplace_role;
@@ -74,6 +74,13 @@ export const OfferLogScreen: React.FC = () => {
     !canReceive && initialTab === 'received' ? 'sent' : initialTab
   );
   const [filter, setFilter] = useState<OfferStatusFilter>('all');
+
+  // Refresh offers when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshOffers();
+    }, [refreshOffers])
+  );
 
   const offers = tab === 'sent'
     ? getOffersSentBy(user?.email ?? '')

@@ -20,6 +20,9 @@ const NOTIFICATION_SEEN_KEY = '@forgemind:notification_seen';
 
 // User entity from v0.2.1 schema
 interface User {
+  // Server identity
+  user_id?: string;                     // User.user_id from server (UUID)
+  
   // Account fields
   email: string;                        // User.email (String(255), required)
   password_hash: string;                // User.password_hash (String(255), required) - plain for now, real hashing in BE-1

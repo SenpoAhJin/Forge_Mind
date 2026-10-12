@@ -1,33 +1,26 @@
 /**
- * ForgeMind - Offers Context (FE-6 Step 3)
+ * ForgeMind - Offers Context (FE-6 Step 3 - Server Integration)
  *
- * Manages structured trade / commission / purchase offers (mock data,
- * persisted with the same AsyncStorage pattern as MarketplaceContext).
- * NO seed offers: offers only exist once a user creates them through the flow.
+ * Manages structured trade / commission / purchase offers from the server.
+ * All offer data now comes from forgemind-backend/src/marketplace/offersRouter.ts.
  *
- * Context guards mirror the spec boundary:
+ * Context guards mirror the server rules:
  *  - createOffer: listing active, proposer is not the seller, offer type allowed
  *    for the category, and no pending offer by the same proposer on the listing.
  *  - accept/decline: seller only, pending only.
  *  - withdraw: proposer only, pending only.
  *  - For purchase/trade offers, accepting is refused if another offer is already
- *    accepted on the listing. Commissions may be accepted several times.
- * Accepting an offer does NOT change the listing status or any other offers
- * (finalization of the listing is explicitly out of scope for this step).
+ *    accepted on the listing (enforced server-side). Commissions may be accepted multiple times.
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Offer,
   CreateOfferInput,
-  OfferType,
 } from '../types/offers';
-import { isOfferTypeAllowed } from '../utils/offerRules';
-import { useMarketplace } from './MarketplaceContext';
-import { getListingSellerName } from '../utils/marketplaceMapping';
-
-const STORAGE_KEY = '@forgemind:marketplace_offers';
+import * as OffersApi from '../services/OffersApi';
+import { useUser } from './UserContext';
 
 type OfferResult = { success: boolean; error?: string; offer?: Offer };
 
@@ -42,6 +35,7 @@ interface OffersContextType {
   acceptOffer: (offerId: string, sellerEmail: string) => Promise<OfferResult>;
   declineOffer: (offerId: string, sellerEmail: string) => Promise<OfferResult>;
   withdrawOffer: (offerId: string, proposerEmail: string) => Promise<OfferResult>;
+  refreshOffers: () => Promise<void>;
 }
 
 const OffersContext = createContext<OffersContextType | undefined>(undefined);
@@ -54,108 +48,67 @@ export const useOffers = (): OffersContextType => {
   return context;
 };
 
-// A proposer's own display name is the handle in their email, because the
-// signed-in user record has no server id to read a display name from. Safe on a
-// missing email: it returns an empty handle instead of throwing.
-const displayNameFromEmail = (email: string | null | undefined): string => {
-  if (typeof email !== 'string') return '';
-  const handle = email.split('@')[0];
-  return handle || 'Member';
-};
-
 export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { getListingById } = useMarketplace();
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const { user } = useUser();
+  const [sentOffers, setSentOffers] = useState<Offer[]>([]);
+  const [receivedOffers, setReceivedOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadOffers();
-  }, []);
+  // Combined offers array for backward compatibility
+  const offers = [...sentOffers, ...receivedOffers];
 
-  const loadOffers = async () => {
+  const refreshOffers = useCallback(async () => {
+    if (!user?.user_id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setOffers(JSON.parse(stored));
-      } else {
-        setOffers([]);
+      const [sentResult, receivedResult] = await Promise.all([
+        OffersApi.getSentOffers(user.user_id),
+        OffersApi.getReceivedOffers(user.user_id),
+      ]);
+
+      if (sentResult.success) {
+        setSentOffers(sentResult.offers);
+      }
+      if (receivedResult.success) {
+        setReceivedOffers(receivedResult.offers);
       }
     } catch (error) {
-      console.error('[OffersContext] Failed to load offers:', error);
-      setOffers([]);
+      console.error('[OffersContext] Failed to refresh offers:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.user_id]);
 
-  const saveOffers = async (updatedOffers: Offer[]) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOffers));
-      setOffers(updatedOffers);
-    } catch (error) {
-      console.error('[OffersContext] Failed to save offers:', error);
-    }
-  };
+  useEffect(() => {
+    refreshOffers();
+  }, [refreshOffers]);
 
   const createOffer = async (proposerEmail: string, input: CreateOfferInput): Promise<OfferResult> => {
-    const listing = getListingById(input.listing_id);
-    if (!listing) {
-      return { success: false, error: 'That listing no longer exists.' };
+    const result = await OffersApi.createOffer(input);
+    
+    if (result.success) {
+      // Add to local state immediately for optimistic UI
+      setSentOffers(prev => [result.offer, ...prev]);
+      return { success: true, offer: result.offer };
     }
-    if (listing.status !== 'active') {
-      return { success: false, error: 'That listing is no longer accepting offers.' };
-    }
-    // Ownership comes from the server's is_owner flag. The seller email is
-    // gone for good (the server never returns it), so it is not matched on.
-    if (listing.is_owner) {
-      return { success: false, error: 'You cannot make an offer on your own listing.' };
-    }
-    if (!isOfferTypeAllowed(listing.category, input.offer_type)) {
-      return { success: false, error: 'That offer type is not available for this listing.' };
-    }
-
-    const existingPending = offers.some(
-      offer =>
-        offer.listing_id === input.listing_id &&
-        offer.proposer_email === proposerEmail &&
-        offer.status === 'pending'
-    );
-    if (existingPending) {
-      return { success: false, error: 'You already have a pending offer on this listing.' };
-    }
-
-    const newOffer: Offer = {
-      id: `offer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      listing_id: listing.id,
-      listing_title: listing.title,
-      listing_price: listing.price ?? 0,
-      listing_seller_email: '',
-      listing_seller_user_id: listing.seller_user_id,
-      seller_display_name: getListingSellerName(listing),
-      proposer_email: proposerEmail,
-      proposer_display_name: displayNameFromEmail(proposerEmail),
-      offer_type: input.offer_type,
-      status: 'pending',
-      offered_price: input.offered_price,
-      trade_offered_item: input.trade_offered_item,
-      trade_offered_condition: input.trade_offered_condition,
-      trade_offered_est_value: input.trade_offered_est_value,
-      commission_description: input.commission_description,
-      timeline_days: input.timeline_days,
-      created_at: new Date().toISOString(),
-    };
-
-    const updatedOffers = [newOffer, ...offers];
-    await saveOffers(updatedOffers);
-    return { success: true, offer: newOffer };
+    
+    return { success: false, error: result.error };
   };
 
   const getOffersSentBy = (email: string): Offer[] => {
-    return offers.filter(offer => offer.proposer_email === email);
+    // email parameter kept for backward compatibility but not used
+    // since we're already filtering by current user on the server
+    return sentOffers;
   };
 
   const getOffersReceivedFor = (sellerEmail: string): Offer[] => {
-    return offers.filter(offer => offer.listing_seller_email === sellerEmail);
+    // email parameter kept for backward compatibility but not used
+    // since we're already filtering by current user (as seller) on the server
+    return receivedOffers;
   };
 
   const getOffersForListing = (listingId: string): Offer[] => {
@@ -167,78 +120,57 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const acceptOffer = async (offerId: string, sellerEmail: string): Promise<OfferResult> => {
-    const offer = getOfferById(offerId);
-    if (!offer) {
-      return { success: false, error: 'Offer not found.' };
-    }
-    if (offer.listing_seller_email !== sellerEmail) {
-      return { success: false, error: 'Only the seller can accept this offer.' };
-    }
-    if (offer.status !== 'pending') {
-      return { success: false, error: 'Only pending offers can be accepted.' };
-    }
-    if (offer.offer_type !== 'commission') {
-      const listingOffers = getOffersForListing(offer.listing_id);
-      const alreadyAccepted = listingOffers.some(
-        other => other.id !== offer.id && other.status === 'accepted'
+    const result = await OffersApi.acceptOffer(offerId);
+    
+    if (result.success) {
+      // Update local state
+      setReceivedOffers(prev =>
+        prev.map(offer =>
+          offer.id === offerId
+            ? { ...offer, status: 'accepted', responded_at: new Date().toISOString() }
+            : offer
+        )
       );
-      if (alreadyAccepted) {
-        return {
-          success: false,
-          error: 'Another offer is already accepted on this listing. One item can only be sold or traded once.',
-        };
-      }
+      return { success: true };
     }
-
-    const updatedOffers = offers.map(current =>
-      current.id === offerId
-        ? { ...current, status: 'accepted' as const, responded_at: new Date().toISOString() }
-        : current
-    );
-    await saveOffers(updatedOffers);
-    return { success: true };
+    
+    return { success: false, error: result.error };
   };
 
   const declineOffer = async (offerId: string, sellerEmail: string): Promise<OfferResult> => {
-    const offer = getOfferById(offerId);
-    if (!offer) {
-      return { success: false, error: 'Offer not found.' };
+    const result = await OffersApi.declineOffer(offerId);
+    
+    if (result.success) {
+      // Update local state
+      setReceivedOffers(prev =>
+        prev.map(offer =>
+          offer.id === offerId
+            ? { ...offer, status: 'declined', responded_at: new Date().toISOString() }
+            : offer
+        )
+      );
+      return { success: true };
     }
-    if (offer.listing_seller_email !== sellerEmail) {
-      return { success: false, error: 'Only the seller can decline this offer.' };
-    }
-    if (offer.status !== 'pending') {
-      return { success: false, error: 'Only pending offers can be declined.' };
-    }
-
-    const updatedOffers = offers.map(current =>
-      current.id === offerId
-        ? { ...current, status: 'declined' as const, responded_at: new Date().toISOString() }
-        : current
-    );
-    await saveOffers(updatedOffers);
-    return { success: true };
+    
+    return { success: false, error: result.error };
   };
 
   const withdrawOffer = async (offerId: string, proposerEmail: string): Promise<OfferResult> => {
-    const offer = getOfferById(offerId);
-    if (!offer) {
-      return { success: false, error: 'Offer not found.' };
+    const result = await OffersApi.withdrawOffer(offerId);
+    
+    if (result.success) {
+      // Update local state
+      setSentOffers(prev =>
+        prev.map(offer =>
+          offer.id === offerId
+            ? { ...offer, status: 'withdrawn', responded_at: new Date().toISOString() }
+            : offer
+        )
+      );
+      return { success: true };
     }
-    if (offer.proposer_email !== proposerEmail) {
-      return { success: false, error: 'Only the proposer can withdraw this offer.' };
-    }
-    if (offer.status !== 'pending') {
-      return { success: false, error: 'Only pending offers can be withdrawn.' };
-    }
-
-    const updatedOffers = offers.map(current =>
-      current.id === offerId
-        ? { ...current, status: 'withdrawn' as const, responded_at: new Date().toISOString() }
-        : current
-    );
-    await saveOffers(updatedOffers);
-    return { success: true };
+    
+    return { success: false, error: result.error };
   };
 
   return (
@@ -254,6 +186,7 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         acceptOffer,
         declineOffer,
         withdrawOffer,
+        refreshOffers,
       }}
     >
       {children}

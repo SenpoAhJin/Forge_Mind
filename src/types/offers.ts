@@ -29,6 +29,8 @@ export interface Offer {
   /** The seller's server id. Null until the listing carries one. */
   listing_seller_user_id?: string | null;
   seller_display_name: string;         // Snapshot, surface display only
+  /** The proposer's server id. */
+  proposer_user_id?: string | null;
   proposer_email: string;
   proposer_display_name: string;       // Snapshot, surface display only
   offer_type: OfferType;

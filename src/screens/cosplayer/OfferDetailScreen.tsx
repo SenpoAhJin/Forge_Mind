@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
@@ -47,9 +47,16 @@ export const OfferDetailScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<OfferDetailRouteProp>();
   const { user } = useUser();
-  const { getOfferById, acceptOffer, declineOffer, withdrawOffer } = useOffers();
+  const { getOfferById, acceptOffer, declineOffer, withdrawOffer, refreshOffers } = useOffers();
   const { getOrCreateThread } = useChat();
   const { createMilestonesForOffer, getProgressPercentage } = useCommissionMilestones();
+
+  // Refresh offer when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshOffers();
+    }, [refreshOffers])
+  );
 
   const [confirmAcceptVisible, setConfirmAcceptVisible] = useState(false);
   const [confirmDeclineVisible, setConfirmDeclineVisible] = useState(false);
@@ -90,8 +97,8 @@ export const OfferDetailScreen: React.FC = () => {
     );
   }
 
-  const isRecipient = user?.email === offer.listing_seller_email;
-  const isProposer = user?.email === offer.proposer_email;
+  const isRecipient = user?.user_id === offer.listing_seller_user_id;
+  const isProposer = user?.user_id === offer.proposer_user_id;
   const isPending = offer.status === 'pending';
   const isParticipant = isRecipient || isProposer;
   const isVerified = user?.verification_status === 'verified';
@@ -250,14 +257,12 @@ export const OfferDetailScreen: React.FC = () => {
           <Text style={styles.partyRole}>From</Text>
           <View style={styles.partyInfo}>
             <Text style={styles.partyName}>{offer.proposer_display_name}</Text>
-            <Text style={styles.partyEmail}>{offer.proposer_email}</Text>
           </View>
         </View>
         <View style={styles.row}>
           <Text style={styles.partyRole}>To</Text>
           <View style={styles.partyInfo}>
             <Text style={styles.partyName}>{offer.seller_display_name}</Text>
-            <Text style={styles.partyEmail}>{offer.listing_seller_email}</Text>
           </View>
         </View>
         <View style={styles.row}>
@@ -317,15 +322,15 @@ export const OfferDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Message button (FE-6 Step 4) */}
+      {/* Message button (FE-6 Step 4) - Coming soon */}
       {isVerified && isParticipant && (
         <View style={styles.messageButtonContainer}>
-          <Button
-            title="Message"
-            onPress={handleMessage}
-            variant="secondary"
-            fullWidth
-          />
+          <View style={styles.ineligibleBanner}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+            <Text style={styles.ineligibleText}>
+              Chat will use the server in an upcoming update.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -517,6 +522,19 @@ const styles = StyleSheet.create({
   },
   messageButtonContainer: {
     marginTop: spacing.md,
+  },
+  ineligibleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: spacing.sm,
+    gap: spacing.sm,
+  },
+  ineligibleText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    flex: 1,
   },
   errorContainer: {
     flex: 1,
