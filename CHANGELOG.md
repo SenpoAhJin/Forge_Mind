@@ -1,7 +1,102 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 11, 2026, 09:45 (photo display fixes)
+**Last updated:** Saturday, October 3, 2026, 14:30 (offers connectivity and console fixes)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 3, 2026, 14:30 (offers connectivity and console fixes)
+
+**Summary**
+
+Fixed critical connectivity issue where marketplace offers failed on Android phones with "Unable to reach the server" error. The root cause was OffersApi using hardcoded `http://localhost:3000` which points to the phone itself, not the development PC. Now uses the shared API configuration that automatically resolves to the PC's LAN address (e.g., `http://192.168.254.168:3000`) via Metro's hostUri. Also fixed console warnings about useNativeDriver on web builds.
+
+**What changed**
+
+- **OffersApi connectivity fix**: Changed from hardcoded `http://localhost:3000` to `API_BASE_URL` from `config/api.ts`. This shared configuration automatically detects Metro's hostUri on native (resolves to PC's LAN address) and uses window.location.hostname on web. Also switched from raw `fetch()` to `fetchWithTimeout()` which adds 10-second timeout and tracks server reachability status.
+- **Error message improvements**: Network error message ("Unable to reach the server") now only shows for REAL transport failures (connection refused, timeout, fetch failed). HTTP errors now show status-specific messages: 401 "Please log in again", 404 "Listing not found", 400/409 use server's own error message when available.
+- **useNativeDriver warnings eliminated**: Fixed 7 Animated calls that used `useNativeDriver: true` unconditionally. Changed to `useNativeDriver: Platform.OS !== 'web'` to avoid console warnings on web builds. Affected RegistrationSuccessModal (3 animations), AppNoticeHost (2 animations), and VoiceEntryScreen (2 animations).
+
+**Verified**
+
+- TypeScript compilation: PASS (npx tsc --noEmit exit code 0)
+- useNativeDriver grep: 0 occurrences of `useNativeDriver: true`, 7 of `useNativeDriver: Platform.OS !== 'web'`
+- Web export: SUCCESS (npx expo export --platform web completed, dist folder generated and deleted)
+- Port 3000: Free (no server left running)
+
+**Files changed**
+
+- src/services/OffersApi.ts (use shared API_BASE_URL, fetchWithTimeout, REQUEST_TIMEOUT_MS; improved error mapping)
+- src/components/RegistrationSuccessModal.tsx (Platform import, 3 useNativeDriver fixes)
+- src/components/AppNoticeHost.tsx (Platform import, 2 useNativeDriver fixes)
+- src/screens/cosplayer/VoiceEntryScreen.tsx (Platform import, 2 useNativeDriver fixes)
+
+**Testing needed (requires device)**
+
+Cannot verify without phone/emulator running:
+- Android native: API_BASE_URL resolves to PC's LAN address (not localhost)
+- Offer creation succeeds from phone when backend is on PC
+- Network error message appears only when backend truly unreachable
+- No useNativeDriver warnings in web browser console
+
+---
+
+## Session — Saturday, October 3, 2026, 12:40 (old session user_id fix)
+
+**Summary**
+
+Fixed issue where users with sessions cached before the user_id field was added would see empty offer lists instead of their actual offers. UserContext now automatically refreshes user data from the server when it detects a missing user_id, populating it without requiring manual logout/login. If the server is unreachable, users see a helpful "Session Update Required" message instead of a silent empty state.
+
+**What changed**
+
+- **UserContext automatic refresh**: On app startup, if cached session lacks user_id, UserContext now forces a backend refresh to populate it. If refresh succeeds, user_id is saved immediately and offers load normally. If refresh fails (network error), user continues with cached session but sees relogin prompt in offer screens.
+- **OffersContext relogin detection**: Added `needsRelogin` flag (true when user exists but user_id is missing). Exposed in context for screens to check. When true, refreshOffers exits early without calling the API (preventing silent failures).
+- **OfferLogScreen helpful message**: When needsRelogin is true, shows "Session Update Required" message with refresh icon (warning color) and text: "Please log out and log in again to load your offers. This is a one-time update for server integration."
+
+**Verified**
+
+- TypeScript compilation: PASS (npx tsc --noEmit exit code 0)
+
+**Files changed**
+
+- src/contexts/UserContext.tsx (detect missing user_id, force backend refresh, log success/failure)
+- src/contexts/OffersContext.tsx (add needsRelogin flag, check user_id before API calls)
+- src/screens/cosplayer/OfferLogScreen.tsx (show relogin message when needsRelogin is true)
+
+**User behavior**
+
+- **Scenario A** (app startup with network): UserContext detects missing user_id, fetches from backend, populates user_id, saves session. Offers load normally without user action.
+- **Scenario B** (app startup without network): UserContext tries to refresh but fails. OfferLogScreen shows "Session Update Required" prompt. User logs out/in when network returns, offers load after fresh login.
+
+---
+
+## Session — Saturday, October 3, 2026, 11:20 (diagnosed received offers not showing)
+
+**Summary**
+
+Diagnosed why received offer wasn't showing for seller ahruy@gmail.com on phone. Database query was correct (offer exists, seller_user_id matches). Root cause: phone session was cached BEFORE user_id field was added (October 12 commit 0176b63). Backend refresh failed at startup, so cached session without user_id stayed active. OffersContext sees `user?.user_id === undefined` and exits refreshOffers early without calling the API, resulting in empty list.
+
+**Database findings**
+
+- Offer `0cf0a69e-ee78-4436-bb39-cdb15a24a83a` exists (pending, created Oct 12 12:38 PM)
+- Listing "Gunshot" seller_user_id: `05fef81e-f006-4936-9570-125f1acc5f6f`
+- User ahruy@gmail.com user_id: `05fef81e-f006-4936-9570-125f1acc5f6f` (MATCH ✅)
+- Proposer: rebelynn@gmail.com (`7d57647f-5a45-4d3c-b5b0-5143b3b9103a`)
+- Only 1 "Ahruy" user in database
+
+**Server query**
+
+Backend GET /marketplace/offers/received filters: `l.seller_user_id = caller.user_id` (from JWT token)
+
+**App code**
+
+OffersContext refreshOffers: `if (!user?.user_id) { setIsLoading(false); return; }` - early return without API call when user_id missing.
+
+UserContext on mount: tries `refreshCurrentUser()` from backend. If it succeeds, updates session with user_id. If it fails (line 155: "Backend refresh failed on mount, using cached session"), falls back to OLD cached session without user_id.
+
+**Most likely cause**
+
+Phone session cached before user_id field was added (today). Backend refresh failed at startup, so cached session without user_id is active. OffersContext sees undefined user_id and never calls received offers API. (This diagnosis led to the fix in session 12:40 above.)
 
 ---
 
