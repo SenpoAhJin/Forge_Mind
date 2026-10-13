@@ -134,7 +134,7 @@ export const OfferDetailScreen: React.FC = () => {
   };
 
   const handleOpenChat = () => {
-    if (!isRecipient) return;
+    if (!isRecipient || !offer.proposer_user_id) return;
     
     // Find thread for this listing where buyer is the proposer
     const existingThread = getThreadForListing(offer.listing_id, offer.proposer_user_id);
@@ -144,19 +144,7 @@ export const OfferDetailScreen: React.FC = () => {
     }
   };
 
-  const canOpenChat = isRecipient && !!getThreadForListing(offer.listing_id, offer.proposer_user_id);
-
-  const handleMessage = async () => {
-    if (!user?.email || !isParticipant) return;
-    const buyerEmail = offer.proposer_email;
-    const result = await getOrCreateThread(offer.listing_id, buyerEmail);
-    if (result.success && result.thread) {
-      navigation.navigate('ChatThread', { threadId: result.thread.id });
-    } else {
-      setErrorMessage(result.error || 'Failed to open conversation.');
-      setErrorVisible(true);
-    }
-  };
+  const canOpenChat = isRecipient && !!offer.proposer_user_id && !!getThreadForListing(offer.listing_id, offer.proposer_user_id);
 
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString('en-US', {

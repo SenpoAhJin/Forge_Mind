@@ -116,7 +116,7 @@ export const ListingDetailScreen: React.FC = () => {
     if (!listing) return;
     
     setIsCreatingThread(true);
-    const result = await startThread(listing.listing_id);
+    const result = await startThread(listing.id);
     setIsCreatingThread(false);
 
     if (result.success) {
