@@ -82,8 +82,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const unreadIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const unreadIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingThreadIdRef = useRef<string | null>(null);
   const isPollingRef = useRef(false);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
