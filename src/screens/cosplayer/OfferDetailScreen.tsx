@@ -48,7 +48,7 @@ export const OfferDetailScreen: React.FC = () => {
   const route = useRoute<OfferDetailRouteProp>();
   const { user } = useUser();
   const { getOfferById, acceptOffer, declineOffer, withdrawOffer, refreshOffers } = useOffers();
-  const { getOrCreateThread } = useChat();
+  const { startThread, getThreadForListing, threads } = useChat();
   const { createMilestonesForOffer, getProgressPercentage } = useCommissionMilestones();
 
   // Refresh offer when screen comes into focus
@@ -67,6 +67,7 @@ export const OfferDetailScreen: React.FC = () => {
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
 
   const offer = getOfferById(route.params.offerId);
 
@@ -102,6 +103,48 @@ export const OfferDetailScreen: React.FC = () => {
   const isPending = offer.status === 'pending';
   const isParticipant = isRecipient || isProposer;
   const isVerified = user?.verification_status === 'verified';
+
+  // Proposer/buyer: create thread -> navigate
+  // Seller: open existing thread only if it exists
+  const handleMessageSeller = async () => {
+    if (!isProposer) return;
+    
+    setIsCreatingThread(true);
+    const result = await startThread(offer.listing_id);
+    setIsCreatingThread(false);
+
+    if (result.success) {
+      navigation.navigate('ChatThread', { threadId: result.thread.thread_id });
+    } else {
+      let userMessage = 'Unable to start conversation.';
+      
+      if (result.error === 'unverified_user') {
+        userMessage = 'You must be verified to message sellers.';
+      } else if (result.error === 'listing_not_found' || result.error === 'invalid_listing_id') {
+        userMessage = 'Listing no longer available.';
+      } else if (result.error === 'listing_not_active') {
+        userMessage = 'Listing is not accepting messages.';
+      } else if (result.error === 'network_error') {
+        userMessage = 'Network error. Please check your connection.';
+      }
+
+      setErrorMessage(userMessage);
+      setErrorVisible(true);
+    }
+  };
+
+  const handleOpenChat = () => {
+    if (!isRecipient) return;
+    
+    // Find thread for this listing where buyer is the proposer
+    const existingThread = getThreadForListing(offer.listing_id, offer.proposer_user_id);
+    
+    if (existingThread) {
+      navigation.navigate('ChatThread', { threadId: existingThread.thread_id });
+    }
+  };
+
+  const canOpenChat = isRecipient && !!getThreadForListing(offer.listing_id, offer.proposer_user_id);
 
   const handleMessage = async () => {
     if (!user?.email || !isParticipant) return;
@@ -322,15 +365,32 @@ export const OfferDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Message button (FE-6 Step 4) - Coming soon */}
+      {/* Message button (FE-6 Step 4) */}
       {isVerified && isParticipant && (
         <View style={styles.messageButtonContainer}>
-          <View style={styles.ineligibleBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.ineligibleText}>
-              Chat will use the server in an upcoming update.
-            </Text>
-          </View>
+          {isProposer ? (
+            <Button
+              title={isCreatingThread ? "Starting chat..." : "Message Seller"}
+              onPress={handleMessageSeller}
+              variant="secondary"
+              fullWidth
+              disabled={isCreatingThread}
+            />
+          ) : canOpenChat ? (
+            <Button
+              title="Open Chat"
+              onPress={handleOpenChat}
+              variant="secondary"
+              fullWidth
+            />
+          ) : (
+            <View style={styles.ineligibleBanner}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.ineligibleText}>
+                Chat opens when the buyer messages you.
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
