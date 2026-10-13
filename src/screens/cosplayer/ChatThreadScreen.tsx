@@ -1,13 +1,13 @@
 /**
- * ForgeMind - Chat Thread Screen (FE-6 Step 4)
+ * ForgeMind - Chat Thread Screen (Server Integration)
  * 
- * Chat content is transaction-scoped and is never screened, classified, scored,
- * or used as input to any AI/rule computation (see spec).
+ * Server screens messages at send-time with rule-based word filter (no AI).
+ * Chat content is not stored for analysis.
  * 
  * Shows individual conversation between buyer and seller for one listing.
- * Route-level guard: user must be verified and one of the two participants.
+ * Route-level guard: user must be verified and participant (by user_id).
  * Open thread: send messages, close conversation action.
- * Closed thread: read-only with reason banner, input disabled.
+ * Closed thread: read-only with reason banner, input disabled, history readable.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -20,8 +20,10 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MarketplaceStackParamList } from '../../navigation/MarketplaceStackNavigator';
 import { colors, typography, spacing, borderRadius } from '../../theme';
@@ -37,49 +39,141 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
   const { threadId } = route.params;
   const { user } = useUser();
   const {
-    getThreadById,
-    getMessages,
-    sendMessage,
-    closeThread,
+    activeThread,
+    loadThread,
+    sendMessage: sendMessageApi,
+    closeThread: closeThreadApi,
     markThreadRead,
-    getEffectiveStatus,
+    startPolling,
+    stopPolling,
+    needsRelogin,
   } = useChat();
 
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [confirmCloseVisible, setConfirmCloseVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [blockNotice, setBlockNotice] = useState<string | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const thread = getThreadById(threadId);
-  const messages = thread ? getMessages(threadId) : [];
-  const effectiveStatus = thread ? getEffectiveStatus(thread) : { status: 'closed' as const };
+  const thread = activeThread?.thread;
+  const messages = activeThread?.messages || [];
 
   const isVerified = user?.verification_status === 'verified';
   const isParticipant = thread
-    ? thread.seller_email === user?.email || thread.buyer_email === user?.email
+    ? thread.seller_user_id === user?.user_id || thread.buyer_user_id === user?.user_id
     : false;
 
   const counterpartName = thread
-    ? thread.seller_email === user?.email
+    ? thread.seller_user_id === user?.user_id
       ? thread.buyer_display_name
       : thread.seller_display_name
     : '';
 
-  const isBuyer = thread?.buyer_email === user?.email;
+  const isClosed = thread?.status === 'closed';
+  const closedReason = thread?.closed_reason;
+
+  // Load thread on mount and start polling
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      const result = await loadThread(threadId);
+      setIsLoading(false);
+      
+      if (!result.success) {
+        setErrorMessage(result.error);
+        setErrorVisible(true);
+      }
+    };
+    
+    load();
+  }, [threadId]);
+
+  // Start/stop polling when focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (thread && !isClosed) {
+        startPolling(threadId);
+      }
+      
+      return () => {
+        stopPolling();
+      };
+    }, [threadId, isClosed])
+  );
+
+  // Mark as read on mount and when messages change
+  useEffect(() => {
+    if (user?.user_id && thread && messages.length > 0) {
+      markThreadRead(threadId);
+    }
+  }, [threadId, messages.length]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollViewRef.current && messages.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length]);
 
   // Route-level guard
-  if (!user || !isVerified || !thread || !isParticipant) {
+  if (needsRelogin) {
+    return (
+      <View style={styles.blockedContainer}>
+        <Ionicons name="lock-closed-outline" size={64} color={colors.textDisabled} />
+        <Text style={styles.blockedTitle}>Session Expired</Text>
+        <Text style={styles.blockedText}>
+          Please log in again to view conversations.
+        </Text>
+        <Button
+          title="Go Back"
+          onPress={() => navigation.goBack()}
+          variant="secondary"
+          style={styles.blockedButton}
+        />
+      </View>
+    );
+  }
+
+  if (!user || !isVerified) {
     return (
       <View style={styles.blockedContainer}>
         <Ionicons name="lock-closed-outline" size={64} color={colors.textDisabled} />
         <Text style={styles.blockedTitle}>Access Restricted</Text>
         <Text style={styles.blockedText}>
-          {!user || !isVerified
-            ? 'Only verified marketplace users can access conversations.'
-            : !thread
+          Only verified marketplace users can access conversations.
+        </Text>
+        <Button
+          title="Go Back"
+          onPress={() => navigation.goBack()}
+          variant="secondary"
+          style={styles.blockedButton}
+        />
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading conversation...</Text>
+      </View>
+    );
+  }
+
+  if (!thread || !isParticipant) {
+    return (
+      <View style={styles.blockedContainer}>
+        <Ionicons name="lock-closed-outline" size={64} color={colors.textDisabled} />
+        <Text style={styles.blockedTitle}>Access Restricted</Text>
+        <Text style={styles.blockedText}>
+          {!thread
             ? 'This conversation does not exist.'
             : 'You are not a participant in this conversation.'}
         </Text>
@@ -93,243 +187,314 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   }
 
-  // Mark as read on mount and when messages change
-  useEffect(() => {
-    if (user?.email && thread) {
-      markThreadRead(threadId, user.email);
-    }
-  }, [messages.length, threadId, user?.email]);
-
-  // Scroll to bottom when messages load or new message sent
-  useEffect(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages.length]);
-
   const handleSend = async () => {
-    if (!user?.email || !messageText.trim() || isSending) return;
+    const trimmed = messageText.trim();
+    if (!trimmed || isSending) return;
+
+    if (trimmed.length > 1000) {
+      setErrorMessage('Message is too long (max 1000 characters).');
+      setErrorVisible(true);
+      return;
+    }
 
     setIsSending(true);
-    const result = await sendMessage(threadId, user.email, messageText);
+    setBlockNotice(null);
+
+    const result = await sendMessageApi(threadId, trimmed);
     setIsSending(false);
 
     if (result.success) {
-      setMessageText('');
-      // Scroll handled by useEffect
+      setMessageText(''); // Clear input only on success
+      setBlockNotice(null);
     } else {
-      setErrorMessage(result.error || 'Failed to send message.');
-      setErrorVisible(true);
+      // 422 blocked: show notice, keep typed text
+      if (result.blocked && result.blockMessage) {
+        setBlockNotice(result.blockMessage);
+        // Keep messageText as is - DO NOT clear
+      } else {
+        setErrorMessage(result.error);
+        setErrorVisible(true);
+      }
     }
   };
 
   const handleClose = async () => {
-    if (!user?.email) return;
-    const result = await closeThread(threadId, user.email);
-    if (result.success) {
-      setConfirmCloseVisible(false);
-      // Thread will re-render as closed
-    } else {
-      setConfirmCloseVisible(false);
-      setErrorMessage(result.error || 'Failed to close conversation.');
+    setConfirmCloseVisible(false);
+    const result = await closeThreadApi(threadId);
+    if (!result.success) {
+      setErrorMessage(result.error);
       setErrorVisible(true);
     }
   };
 
-  const handleListingPress = () => {
-    navigation.navigate('ListingDetail', { listingId: thread.listing_id });
-  };
-
-  const handleActionPress = () => {
-    if (isBuyer) {
-      navigation.navigate('ListingDetail', { listingId: thread.listing_id });
-    } else {
-      navigation.navigate('OfferLog', { initialTab: 'received' });
+  const getClosedBannerText = () => {
+    if (closedReason === 'listing_unavailable') {
+      return 'This listing is no longer available.';
     }
+    return 'This conversation is closed.';
   };
 
-  const isOpen = effectiveStatus.status === 'open';
-  const closedReasonText =
-    effectiveStatus.reason === 'listing_unavailable'
-      ? 'This listing is no longer available.'
-      : 'This conversation was closed.';
-
-  const ContentArea = (
-    <View style={styles.container}>
-      {/* Header */}
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.counterpartName}>{counterpartName}</Text>
-          {!isOpen && (
-            <View style={styles.closedBadge}>
-              <Text style={styles.closedBadgeText}>Closed</Text>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity onPress={handleListingPress} activeOpacity={0.7}>
-          <Text style={styles.listingTitle} numberOfLines={1}>
-            {thread.listing_title}
-          </Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>{counterpartName}</Text>
+          <Text style={styles.headerSubtitle}>{thread.listing_title}</Text>
+        </View>
+        {!isClosed && (
+          <TouchableOpacity
+            onPress={() => setConfirmCloseVisible(true)}
+            style={styles.closeButton}
+          >
+            <Ionicons name="close-circle-outline" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Info Banner */}
-      {isOpen && (
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.info} />
-          <View style={styles.infoBannerTextContainer}>
-            <Text style={styles.infoBannerText}>
-              Chat is for questions and clarification. Any final price or timeline must be
-              submitted as a structured offer.
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.infoBannerAction}
-            onPress={handleActionPress}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.infoBannerActionText}>
-              {isBuyer ? 'Go to Listing' : 'View Offers'}
-            </Text>
-          </TouchableOpacity>
+      {isClosed && (
+        <View style={styles.closedBanner}>
+          <Ionicons name="lock-closed" size={16} color={colors.textDisabled} />
+          <Text style={styles.closedBannerText}>{getClosedBannerText()}</Text>
         </View>
       )}
 
-      {/* Messages Area */}
       <ScrollView
         ref={scrollViewRef}
-        style={styles.messagesScroll}
+        style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
-        keyboardShouldPersistTaps="handled"
       >
         {messages.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={48} color={colors.textDisabled} />
-            <Text style={styles.emptyStateText}>No messages yet. Start the conversation!</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No messages yet</Text>
+            <Text style={styles.emptySubtext}>Start the conversation below</Text>
           </View>
         ) : (
           messages.map((msg) => {
-            const isSender = msg.sender_email === user?.email;
+            const isSender = msg.sender_user_id === user?.user_id;
             const timestamp = new Date(msg.created_at).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
             });
+
             return (
               <ChatBubble
-                key={msg.id}
-                type={isSender ? 'sender' : 'receiver'}
+                key={msg.message_id}
                 message={msg.body}
                 timestamp={timestamp}
+                isSender={isSender}
+                senderName={isSender ? 'You' : msg.sender_display_name}
               />
             );
           })
         )}
       </ScrollView>
 
-      {/* Input Bar or Closed Notice */}
-      {isOpen ? (
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.textDisabled}
-            value={messageText}
-            onChangeText={setMessageText}
-            multiline
-            maxLength={1000}
-            editable={!isSending}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!messageText.trim() || isSending) && styles.sendButtonDisabled,
-            ]}
-            onPress={handleSend}
-            disabled={!messageText.trim() || isSending}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="send"
-              size={20}
-              color={messageText.trim() && !isSending ? colors.backgroundLight : colors.textDisabled}
-            />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.closedNotice}>
-          <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
-          <Text style={styles.closedNoticeText}>{closedReasonText}</Text>
+      {blockNotice && (
+        <View style={styles.blockNotice}>
+          <Ionicons name="warning" size={16} color={colors.error} />
+          <Text style={styles.blockNoticeText}>{blockNotice}</Text>
         </View>
       )}
 
-      {/* Close Action (Open threads only) */}
-      {isOpen && (
-        <View style={styles.closeActionBar}>
-          <TouchableOpacity
-            style={styles.closeActionButton}
-            onPress={() => setConfirmCloseVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close-circle-outline" size={18} color={colors.error} />
-            <Text style={styles.closeActionText}>Close conversation</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[
+            styles.input,
+            isClosed && styles.inputDisabled,
+          ]}
+          value={messageText}
+          onChangeText={setMessageText}
+          placeholder={isClosed ? 'Conversation closed' : 'Type a message...'}
+          placeholderTextColor={colors.textDisabled}
+          multiline
+          maxLength={1000}
+          editable={!isClosed && !isSending}
+        />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            (isClosed || isSending || !messageText.trim()) && styles.sendButtonDisabled,
+          ]}
+          onPress={handleSend}
+          disabled={isClosed || isSending || !messageText.trim()}
+        >
+          {isSending ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Ionicons name="send" size={20} color={colors.white} />
+          )}
+        </TouchableOpacity>
+      </View>
 
-      {/* Modals */}
       <ConfirmationModal
         visible={confirmCloseVisible}
         title="Close Conversation"
-        message="Are you sure you want to close this conversation? Both participants will no longer be able to send messages."
+        message="Are you sure you want to close this conversation? This cannot be undone."
         confirmText="Close"
         cancelText="Cancel"
-        confirmStyle="destructive"
         onConfirm={handleClose}
         onCancel={() => setConfirmCloseVisible(false)}
+        variant="warning"
       />
+
       <ConfirmationModal
         visible={errorVisible}
         title="Error"
         message={errorMessage}
         confirmText="OK"
         onConfirm={() => setErrorVisible(false)}
-        onCancel={() => setErrorVisible(false)}
+        variant="error"
       />
-    </View>
+    </KeyboardAvoidingView>
   );
-
-  // KeyboardAvoidingView only on native
-  if (Platform.OS === 'ios' || Platform.OS === 'android') {
-    return (
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={90}
-      >
-        {ContentArea}
-      </KeyboardAvoidingView>
-    );
-  }
-
-  return ContentArea;
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    marginRight: spacing.sm,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    ...typography.heading3,
+    color: colors.text,
+  },
+  headerSubtitle: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  closeButton: {
+    marginLeft: spacing.sm,
+  },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.warning + '20',
+    gap: spacing.xs,
+  },
+  closedBannerText: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  messagesContainer: {
+    flex: 1,
+  },
+  messagesContent: {
+    padding: spacing.md,
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  emptySubtext: {
+    ...typography.small,
+    color: colors.textDisabled,
+  },
+  blockNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.error + '15',
+    gap: spacing.xs,
+  },
+  blockNoticeText: {
+    ...typography.small,
+    color: colors.error,
+    flex: 1,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  input: {
+    flex: 1,
+    ...typography.body,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    maxHeight: 100,
+    color: colors.text,
+  },
+  inputDisabled: {
+    backgroundColor: colors.disabled,
+    color: colors.textDisabled,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.disabled,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   blockedContainer: {
     flex: 1,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.background,
   },
   blockedTitle: {
-    ...typography.h2,
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
+    ...typography.heading2,
+    color: colors.text,
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
   blockedText: {
@@ -340,150 +505,5 @@ const styles = StyleSheet.create({
   },
   blockedButton: {
     minWidth: 120,
-  },
-  header: {
-    padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  counterpartName: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  closedBadge: {
-    backgroundColor: colors.textDisabled,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  closedBadgeText: {
-    ...typography.caption,
-    color: colors.backgroundLight,
-    fontWeight: '600',
-  },
-  listingTitle: {
-    ...typography.body,
-    color: colors.tertiary,
-    textDecorationLine: 'underline',
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: spacing.md,
-    backgroundColor: colors.info + '10',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.sm,
-  },
-  infoBannerTextContainer: {
-    flex: 1,
-  },
-  infoBannerText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    lineHeight: 16,
-  },
-  infoBannerAction: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-  },
-  infoBannerActionText: {
-    ...typography.caption,
-    color: colors.backgroundLight,
-    fontWeight: '600',
-  },
-  messagesScroll: {
-    flex: 1,
-  },
-  messagesContent: {
-    padding: spacing.md,
-    flexGrow: 1,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  emptyStateText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    ...typography.body,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  closedNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.sm,
-  },
-  closedNoticeText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  closeActionBar: {
-    padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  closeActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  closeActionText: {
-    ...typography.body,
-    color: colors.error,
   },
 });
