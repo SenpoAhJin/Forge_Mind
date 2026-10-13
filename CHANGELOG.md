@@ -1,7 +1,83 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 3, 2026, 14:30 (offers connectivity and console fixes)
+**Last updated:** Tuesday, October 13, 2026, 14:23 (marketplace chat server integration)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Tuesday, October 13, 2026, 14:23 (marketplace chat server integration)
+
+**Summary**
+
+Wired marketplace chat to forgemind-backend server (chat API merged to main on October 12). Chat conversations now persist on server instead of local storage. Only buyers can start threads. Server screens messages at send-time with rule-based word filter (no AI). Chat content is not stored for analysis.
+
+**What changed**
+
+- **ChatApi service**: 7 endpoints (createThread, getThreads, getThread, sendMessage, closeThread, markThreadRead, getUnreadCount) with ServerThread and ServerMessage types. Identity is user_id (never email). 422 blocked messages return server text without saving.
+- **ChatContext rewrite**: Manages threads from server, polling for active thread (~5s), unread count refresh (~20s), pauses when app backgrounded. Exposes startThread, loadThread, sendMessage, closeThread, markThreadRead, getThreadForListing.
+- **ChatThreadScreen**: Polls when focused, stops on blur/unmount. Send disabled while in flight. 422 blocked messages keep typed text and show server reason. Trim + 1000 max. Closed threads show reason banner (listing_unavailable), input disabled, history readable. markRead on open and new messages. ConfirmationModal for close action.
+- **ChatListScreen**: Open/Closed tabs filtered by status/closed_reason. Unread dot from has_unread. Counterpart name, listing title, last message preview.
+- **ListingDetailScreen**: Contact Seller button for verified non-seller on active listing calls startThread then navigates to ChatThread. Seller on own listing / unverified / inactive → disabled WITH reason text. Maps server errors (403 unverified, 400 invalid_listing_id, 404 listing_not_found, 403 cannot_message_own_listing, 400 listing_not_active) to plain text.
+- **OfferDetailScreen**: Proposer/buyer → "Message Seller" creates thread then navigates. Seller → "Open Chat" ONLY if thread exists (find by listing_id + buyer_user_id === offer.proposer_user_id) else shows note "Chat opens when the buyer messages you."
+- **MarketplaceScreen**: Unread badge from ChatContext.unreadCount (server value, not local count).
+- **Privacy text updated**: All chat file headers changed from "never screened/classified" to "server screens at send-time with rule-based word filter (no AI), chat content not stored for analysis."
+
+**Verified**
+
+- TypeScript compilation: PASS (npx tsc --noEmit exit code 0)
+- No console.log with message body: 0 matches
+- No useNativeDriver: true: 0 matches
+- No @forgemind:marketplace_chat: 0 matches
+- No seller_email/buyer_email/sender_email in chat code: 0 matches
+- No imports of removed getOrCreateThread: 0 matches
+- Web export: SUCCESS (npx expo export --platform web completed)
+- Port 3000: Free
+
+**Files changed (7 commits)**
+
+- src/services/ChatApi.ts (new, 7 endpoints + server types)
+- src/contexts/ChatContext.tsx (rewrite for server, polling, user_id identity)
+- src/types/chat.ts (update to server types, remove email fields)
+- src/screens/cosplayer/ChatThreadScreen.tsx (server API, polling, blocked message handling)
+- src/screens/cosplayer/ChatListScreen.tsx (server API, Open/Closed tabs, has_unread)
+- src/screens/cosplayer/ListingDetailScreen.tsx (Contact Seller → startThread + navigate, error mapping)
+- src/screens/cosplayer/OfferDetailScreen.tsx (proposer creates thread, seller opens existing only)
+- src/screens/cosplayer/MarketplaceScreen.tsx (unreadCount from ChatContext)
+
+**Testing needed (NOT tested by agent)**
+
+- Polling behavior (5s active thread, 20s unread count)
+- Unread dots appear/disappear correctly
+- Closed tab shows listing_unavailable threads
+- ChatThreadScreen visual match vs old local design
+- Backend running from main (chat merged, migration 020 applied)
+- Two verified marketplace accounts (seller + buyer), one active listing
+- Buyer opens listing → Contact Seller → thread opens
+- Send message B→A and A→B
+- Seller sees thread in list with unread dot, buyer's own message has no dot
+- Blocked message shows server text and KEEPS typed text
+- Tab badge on MarketplaceScreen counts unread
+- Close thread → input gone, history readable
+- Remove seller's listing → thread appears in Closed (listing_unavailable)
+- Seller cannot message own listing
+- Seller on offer screen sees "Open chat" only after buyer started thread
+- Logout A, login B → only B's threads visible
+- Offline/server down → plain error, no crash
+- Web + phone both work
+
+**Commits**
+- 85a209f feat(chat): add ChatApi service with 7 endpoints, server type shapes
+- b2c001c feat(chat): rewrite ChatContext for server integration, polling, user_id identity
+- 5efc621 refactor(chat): update chat types to use server types, remove email fields
+- 34714f3 fix(chat): use ReturnType<typeof setInterval> instead of NodeJS.Timeout for RN
+- c4ed263 feat(chat): convert ChatThreadScreen to server API
+- cba49f5 feat(chat): convert ChatListScreen to server API
+- 9c59805 fix: TypeScript errors in ChatThreadScreen and ChatListScreen
+- 9ac5df5 feat(chat): wire Contact Seller in ListingDetailScreen to startThread + navigate
+- 3cc2447 feat(chat): wire OfferDetailScreen - proposer creates thread, seller opens existing
+- 0e9e051 fix(chat): use unreadCount from ChatContext instead of getUnreadCount function
+- 6b2c8ce docs(chat): update privacy text - server screens at send-time, no AI, not stored for analysis
+- b535d7f fix(chat): correct listing.id reference and add proposer_user_id null guards
 
 ---
 
@@ -4187,7 +4263,7 @@ It is being built **mobile-first** (a phone app) using Expo (a tool that lets on
 
 ## 2. Current Status (one paragraph)
 
-The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), **owned-item logging** (photo/text/voice input with AI categorization), **staff/Head Organizer verification** (pending/approved/rejected department access requests), and a **full marketplace** (create listings, browse with category screener, make/receive purchase/trade/commission offers, transaction-scoped chat between buyers and sellers). All text inputs now automatically apply **proper case formatting** (first letter of each word capitalized) for consistency across the app. Everything still uses **demo (mock) data** — there is no real server or AI yet, by design.
+The app currently has a complete **design foundation** (a consistent look-and-feel across every screen), a fully working **4-step welcome/setup flow**, a **persisted account system** (register/login/logout that survive reload), a **working character browser** (search characters, pick a variant, see a matching preview), a **working project dashboard** (tasks, budget, readiness score), **owned-item logging** (photo/text/voice input with AI categorization), **staff/Head Organizer verification** (pending/approved/rejected department access requests), and a **full marketplace** (create listings, browse with category screener, make/receive purchase/trade/commission offers, **server-based chat** between buyers and sellers with send-time rule-based screening). All text inputs now automatically apply **proper case formatting** (first letter of each word capitalized) for consistency across the app. Chat conversations persist on the server (forgemind-backend). Offers and listings connect to server APIs. Server screens chat messages at send-time with rule-based word filter (no AI); chat content is not stored for analysis. Only buyers can start chat threads.
 
 ---
 
@@ -4772,11 +4848,11 @@ So **role-based navigation is implemented** (tab sets + the Both-roles pill), bu
 1. ~~**FE-3 — Character Browse & Variant Selection**~~ **(done — Sept 15, 2026)**: searching characters, choosing a variant, seeing match results against your owned items.
 2. ~~**FE-4 — Project Dashboard & Readiness**~~ **(done — Sept 16, 2026)**: creating projects, task lists, budgets, readiness score, 3D preview placeholder.
 3. ~~**FE-5 — Owned-Item Logging**~~ **(done — Sept 16, 2026)**: photo/text/voice input with AI categorization.
-4. ~~**FE-6 — Marketplace**~~ **(done — Sept 20, 2026)**:
+4. ~~**FE-6 — Marketplace**~~ **(done — Sept 20, 2026 + Oct 13, 2026)**:
    - Step 1: Browse listings + create listing with category screener (block/appeal flow)
    - Step 2: Permitted-category listing screener (mock rule-based)
    - Step 3: Structured purchase/trade/commission offers with offer log
-   - Step 4: Transaction-scoped chat (listing+buyer threads)
+   - ~~Step 4: Transaction-scoped chat (listing+buyer threads)~~ **(done — Oct 13, 2026, server integration)**
 5. **FE-7 — Organizer tools** (in progress):
    - ~~Step 1: Events (organizer-confirmed event details)~~ **(done)**
    - ~~Step 2: Logistics tracker (guests/sponsors/performers, structured fields, completion status)~~ **(done)**
