@@ -1,8 +1,8 @@
 /**
  * ForgeMind - Chat List Screen (FE-6 Step 4)
  * 
- * Chat content is transaction-scoped and is never screened, classified, scored,
- * or used as input to any AI/rule computation (see spec).
+ * Server screens messages at send-time with rule-based word filter (no AI).
+ * Chat content is not stored for analysis.
  * 
  * Shows all conversations for the current verified marketplace user.
  * Fixed-height chip bar: Open / Closed tabs.
