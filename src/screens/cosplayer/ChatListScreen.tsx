@@ -148,7 +148,7 @@ export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <TouchableOpacity
         style={styles.threadCard}
-        onPress={() => navigation.navigate('ChatThread', { threadId: item.id })}
+        onPress={() => navigation.navigate('ChatThread', { threadId: item.thread_id })}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
@@ -254,7 +254,7 @@ export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
       <FlatList
         data={displayedThreads}
         renderItem={renderThreadCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.thread_id}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmptyState}
       />

@@ -245,7 +245,7 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{counterpartName}</Text>
@@ -289,10 +289,9 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
             return (
               <ChatBubble
                 key={msg.message_id}
+                type={isSender ? 'sender' : 'receiver'}
                 message={msg.body}
                 timestamp={timestamp}
-                isSender={isSender}
-                senderName={isSender ? 'You' : msg.sender_display_name}
               />
             );
           })
@@ -329,9 +328,9 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
           disabled={isClosed || isSending || !messageText.trim()}
         >
           {isSending ? (
-            <ActivityIndicator size="small" color={colors.white} />
+            <ActivityIndicator size="small" color={colors.backgroundLight} />
           ) : (
-            <Ionicons name="send" size={20} color={colors.white} />
+            <Ionicons name="send" size={20} color={colors.backgroundLight} />
           )}
         </TouchableOpacity>
       </View>
@@ -344,7 +343,7 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
         cancelText="Cancel"
         onConfirm={handleClose}
         onCancel={() => setConfirmCloseVisible(false)}
-        variant="warning"
+        confirmStyle="destructive"
       />
 
       <ConfirmationModal
@@ -353,7 +352,8 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
         message={errorMessage}
         confirmText="OK"
         onConfirm={() => setErrorVisible(false)}
-        variant="error"
+        onCancel={() => setErrorVisible(false)}
+        confirmStyle="default"
       />
     </KeyboardAvoidingView>
   );
@@ -362,7 +362,7 @@ export const ChatThreadScreen: React.FC<Props> = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   header: {
     flexDirection: 'row',
@@ -380,11 +380,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    ...typography.heading3,
-    color: colors.text,
+    ...typography.h3,
+    color: colors.textPrimary,
   },
   headerSubtitle: {
-    ...typography.small,
+    ...typography.caption,
     color: colors.textSecondary,
   },
   closeButton: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   closedBannerText: {
-    ...typography.small,
+    ...typography.caption,
     color: colors.textSecondary,
   },
   messagesContainer: {
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   emptySubtext: {
-    ...typography.small,
+    ...typography.caption,
     color: colors.textDisabled,
   },
   blockNotice: {
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   blockNoticeText: {
-    ...typography.small,
+    ...typography.caption,
     color: colors.error,
     flex: 1,
   },
@@ -451,15 +451,15 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...typography.body,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     maxHeight: 100,
-    color: colors.text,
+    color: colors.textPrimary,
   },
   inputDisabled: {
-    backgroundColor: colors.disabled,
+    backgroundColor: colors.surface,
     color: colors.textDisabled,
   },
   sendButton: {
@@ -471,13 +471,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: colors.disabled,
+    backgroundColor: colors.textDisabled,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   loadingText: {
     ...typography.body,
@@ -489,11 +489,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   blockedTitle: {
-    ...typography.heading2,
-    color: colors.text,
+    ...typography.h2,
+    color: colors.textPrimary,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
