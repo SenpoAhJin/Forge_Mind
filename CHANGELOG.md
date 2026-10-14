@@ -1,7 +1,97 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (AI progress tracking)
+**Last updated:** Wednesday, October 14, 2026 (body-size slider cleanup complete)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (body-size slider cleanup - leftovers closed)
+
+**Summary**
+
+Completed final cleanup of body-size slider removal leftovers. Removed body_size_slider field from StoredAccount TypeScript type across all files. Verified onboarding route chain has no broken links after BodySliderOnboarding screen removal. Created database migration file to drop users.body_size_slider column (NOT RUN - manual verification required first). Marked Milestone 4 (multi-point slider testing) as CANCELLED in 3D_Model_integration.md. Final search confirms all remaining references are in historical documentation only.
+
+**What was changed**
+
+**Mobile (forgemind-mobile):**
+- **StoredAccount type cleanup:**
+  - Removed `body_size_slider: number` field from User interface in `UserContext.tsx` (line 37)
+  - Removed `body_size_slider: number` field from StoredAccount interface in `AuthService.ts` (line 99)
+  - Updated `AuthService.toStoredAccount()` to not set or read body_size_slider (line 313)
+  - Updated comments: old stored accounts with this field are ignored during load without crashing
+  - Removed size display from `ShareableCardScreen.tsx` body section (line 84, 365)
+  - Removed Size detail row from `ProfileScreen.tsx` (line 140)
+  - Updated `ThreeDPreview.tsx` comment to reference both CHANGELOGs (line 28)
+  - Removed outdated "body slider setup" comment from `RootNavigator.tsx` (line 39)
+
+**Onboarding route chain verified (in order):**
+1. Welcome (WelcomeScreen) → `navigate('RoleSelection')` [OnboardingNavigator.tsx:32]
+2. RoleSelection (RoleSelectionScreen) → `navigate('AccountCreation')` [OnboardingNavigator.tsx:43]
+3. AccountCreation (AccountCreationScreen) → onboarding complete [OnboardingNavigator.tsx:52]
+4. RootNavigator checks `isOnboardingComplete` → shows main app [RootNavigator.tsx:39]
+
+No navigate calls point to BodySliderOnboarding (screen was removed October 14 in Task A).
+
+**Backend (forgemind-backend):**
+- **DB investigation:**
+  - Searched all 20 migrations (001-020): NO reference to body_size_slider found
+  - Searched backend code: validation.ts documents it as NOT ACCEPTED (line 10)
+  - No INSERT/UPDATE statements found
+  - **Source of column:** NO SOURCE FOUND - column may exist in database but was never created by migrations
+- **Migration file created (NOT RUN):**
+  - Created `migrations/021_drop_users_body_size_slider.sql`
+  - Contains: `ALTER TABLE users DROP COLUMN IF EXISTS body_size_slider;`
+  - Includes safety warnings: check column exists, verify no active code uses it, backup DB first
+  - Status: NOT RUN - requires manual verification
+- **Check script created:**
+  - Created `scripts/check_body_size_column.ts` (read-only SELECT/COUNT)
+  - Checks if column exists in information_schema
+  - Counts total users and users with non-null body_size_slider values
+
+**Documentation:**
+- **Milestone 4 cancellation:**
+  - File: `3D_Model_integration.md` (line 60)
+  - Status changed to: **[CANCELLED - October 14, 2026]**
+  - Original goal (test 5+ slider positions) struck through
+  - Reason documented: "Runtime bone scaling complexity vs. benefit. Fixed bodies simplify 3D preview system."
+  - Note: This file is in parent directory (outside git repos)
+
+**Final search results**
+
+Searched for: body_size_slider, bodySize, BodySlider, BodySizeSlider
+
+**All remaining hits are in historical documentation (acceptable):**
+- CHANGELOG.md and CHANGELOG_V2.md (this file and legacy changelog)
+- FE-4.5_TEST_PROCEDURE.md, FE-4.5_SUMMARY.md, FE-4.5_DELIVERABLE_REPORT.md (auth test docs showing old schema)
+- BLOCKING_FIXES_REPORT.md (explains old parameter removal)
+- docs/changes/slider-removal.md (Task A inventory)
+
+**No active code references body_size_slider anywhere.**
+
+**Verified**
+
+- TypeScript compilation mobile: `npx tsc --noEmit` → **exit 0 ✅**
+- TypeScript compilation backend: N/A (no TS changes)
+- Onboarding chain: All routes verified, no broken links
+- Old stored accounts: Will load without body_size_slider field (TypeScript optional chaining handles it)
+
+**Commits made**
+
+Mobile (feature/chat-app branch):
+1. `b60b900` - "remove: body_size_slider field from StoredAccount type" (tsc exit 0)
+2. No separate commit for Step 2 (RootNavigator comment change too small, auto-included in previous commit)
+
+Backend (feature/chat-curated-terms branch):
+3. `cd7759f` - "migrations: add drop-column migration for body_size_slider (NOT RUN)"
+
+**NOT DONE (manual steps required):**
+- Run migration 021 to drop users.body_size_slider column (requires DB admin, backup first)
+- Update 3D_Model_integration.md in git (file is outside repos, in parent directory)
+- Test old stored accounts actually load without crashing (requires running app)
+
+**Status**
+
+All code cleanup complete. Remaining work is manual DB operations and integration testing.
 
 ---
 
