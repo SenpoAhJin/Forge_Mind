@@ -300,8 +300,7 @@ export class AuthService {
    */
   private static toStoredAccount(
     user: ApiUser,
-    existing: StoredAccount | null,
-    bodySizeSlider?: number,
+    existing: StoredAccount | null
   ): StoredAccount {
     const account: StoredAccount = {
       user_id: user.user_id,
@@ -311,7 +310,7 @@ export class AuthService {
       is_cosplayer: user.is_cosplayer,
       is_organizer: user.is_organizer,
       base_body_selection: user.base_body_selection,
-      body_size_slider: existing?.body_size_slider ?? bodySizeSlider ?? 0.5,
+      body_size_slider: existing?.body_size_slider ?? 0.5, // Fixed default, slider removed
       is_holder_verified: user.is_holder_verified,
       verification_status: user.verification_status,
       organizer_role: user.organizer_role,
@@ -375,7 +374,7 @@ export class AuthService {
    * preserved.
    */
   static accountFromServerUser(user: ApiUser, existing: StoredAccount | null): StoredAccount {
-    return AuthService.toStoredAccount(user, existing, existing?.body_size_slider);
+    return AuthService.toStoredAccount(user, existing);
   }
 
   /** Inserts or updates the account in the local cache array. */
@@ -408,7 +407,6 @@ export class AuthService {
     isCosplayer: boolean,
     isOrganizer: boolean,
     baseBody: 'male' | 'female',
-    bodySize: number,
     organizer?: OrganizerRegistration
   ): Promise<{ success: boolean; error?: string; account?: StoredAccount; fieldErrors?: Record<string, string> }> {
     try {
@@ -440,7 +438,7 @@ export class AuthService {
       // Keep a local cache so the untouched local-only features (organizer
       // roles, marketplace, portfolio, body slider) behave exactly as before.
       // The password is not part of this record.
-      const account = AuthService.toStoredAccount(data.user, null, bodySize);
+      const account = AuthService.toStoredAccount(data.user, null);
       await AuthService.upsertLocalAccount(account);
 
       return { success: true, account };
@@ -485,7 +483,7 @@ export class AuthService {
         accounts.find((acc) => acc.email.toLowerCase() === data.user.email.toLowerCase()) ?? null;
       // body_size_slider and portfolio_photos have no server column, so they are
       // carried over from the local record rather than reset.
-      const account = AuthService.toStoredAccount(data.user, existing, existing?.body_size_slider);
+      const account = AuthService.toStoredAccount(data.user, existing);
       await AuthService.upsertLocalAccount(account, accounts);
 
       return { success: true, account };

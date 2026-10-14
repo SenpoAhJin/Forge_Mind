@@ -123,7 +123,6 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)
-        0.5,    // bodySize (placeholder - not used for organizers)
         department
           ? {
               organizer_role: 'staff',

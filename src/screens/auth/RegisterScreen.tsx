@@ -43,9 +43,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
-  // Body representation - defaults (not used for organizers, but required by register function)
+  // Body representation - defaults (not used for organizers, but structure kept for consistency)
   const [baseBody] = useState<'male' | 'female'>('male');
-  const [bodySize] = useState(0.5);
 
   // Validation errors
   const [emailError, setEmailError] = useState('');
@@ -146,8 +145,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         displayName,
         true,  // is_cosplayer (always true)
         false, // is_organizer (always false - must request separately)
-        baseBody,
-        bodySize
+        baseBody
       );
 
       if (result.success) {

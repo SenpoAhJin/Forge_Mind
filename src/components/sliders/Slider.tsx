@@ -1,47 +1,14 @@
 /**
  * ForgeMind Design System - Slider Components
- * Types: Body Size (continuous 0.0-1.0), Condition (discrete 1-5)
+ * Types: Condition (discrete 1-5)
+ * 
+ * NOTE: Body Size Slider removed (October 14, 2026) - feature cancelled.
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { colors, typography, spacing } from '../../theme';
-
-// Body Size Slider: Continuous, 0.0–1.0, thumb with label, track shows gradient
-interface BodySizeSliderProps {
-  value: number;
-  onValueChange: (value: number) => void;
-  label?: string;
-}
-
-export const BodySizeSlider: React.FC<BodySizeSliderProps> = ({
-  value,
-  onValueChange,
-  label = 'Body Size',
-}) => {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
-      <Slider
-        style={styles.slider}
-        value={value}
-        onValueChange={onValueChange}
-        minimumValue={0}
-        maximumValue={1}
-        step={0.01}
-        minimumTrackTintColor={colors.primary}
-        maximumTrackTintColor={colors.border}
-        thumbTintColor={colors.primary}
-      />
-      <View style={styles.valueContainer}>
-        <Text style={styles.valueLabel}>Smaller</Text>
-        <Text style={styles.valueText}>{value.toFixed(2)}</Text>
-        <Text style={styles.valueLabel}>Larger</Text>
-      </View>
-    </View>
-  );
-};
 
 // Condition Slider: 1–5 discrete steps, each step labeled with icon (poor → new)
 interface ConditionSliderProps {

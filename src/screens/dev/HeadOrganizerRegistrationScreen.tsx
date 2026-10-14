@@ -136,7 +136,6 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)
-        0.5,    // bodySize (placeholder - not used for organizers)
         {
           organizer_role: 'head',
           head_organizer_department: department,
