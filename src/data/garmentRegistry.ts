@@ -55,9 +55,7 @@ export const garmentRegistry: GarmentEntry[] = [
     asset: null,
     placeholder: {
       type: 'sphere',
-      position: [0, 0.75, 0], // Approxim
-
-ate head center (Y between 0.65-0.94)
+      position: [0, 0.75, 0], // Approximate head center (Y between 0.65-0.94)
       scale: 0.15, // Radius in units
       color: '#FF6B6B', // Visible red color
     },

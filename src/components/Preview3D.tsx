@@ -1,9 +1,12 @@
-import React, { Suspense, useRef, ErrorInfo, Component } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import React, { Suspense, useRef, ErrorInfo, Component, useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Box } from '@react-three/drei';
 import BodyModel from './BodyModel';
+import GarmentLayer from './GarmentLayer';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
+import { getGarmentsForBodyType } from '../data/garmentRegistry';
+import { colors, spacing, typography } from '../theme';
 
 /**
  * Error Boundary for 3D Canvas
@@ -101,6 +104,22 @@ export default function Preview3D({
   bodyType = DEFAULT_BASE_BODY,
   showTestCubes = false
 }: Preview3DProps) {
+  // Garment visibility state (all off by default)
+  const availableGarments = getGarmentsForBodyType(bodyType);
+  const [visibleGarments, setVisibleGarments] = useState<Set<string>>(new Set());
+
+  const toggleGarment = (garmentId: string) => {
+    setVisibleGarments((prev) => {
+      const next = new Set(prev);
+      if (next.has(garmentId)) {
+        next.delete(garmentId);
+      } else {
+        next.add(garmentId);
+      }
+      return next;
+    });
+  };
+
   return (
     <Canvas3DErrorBoundary>
       <View style={styles.container}>
@@ -180,6 +199,16 @@ export default function Preview3D({
           {!showTestCubes && (
             <Suspense fallback={null}>
               <BodyModel bodyType={bodyType} />
+              
+              {/* Garment Layers: Render each visible garment on top of body */}
+              {availableGarments.map((garment) => (
+                <GarmentLayer
+                  key={garment.id}
+                  garment={garment}
+                  bodyType={bodyType}
+                  visible={visibleGarments.has(garment.id)}
+                />
+              ))}
             </Suspense>
           )}
 
@@ -189,6 +218,39 @@ export default function Preview3D({
             <meshStandardMaterial color="#95a5a6" opacity={0.3} transparent />
           </mesh>
         </Canvas>
+
+        {/* Garment Controls: Toggle visibility of each garment */}
+        {!showTestCubes && availableGarments.length > 0 && (
+          <View style={styles.garmentControls}>
+            <Text style={styles.garmentControlsTitle}>Garments:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.garmentList}>
+              {availableGarments.map((garment) => {
+                const isVisible = visibleGarments.has(garment.id);
+                return (
+                  <TouchableOpacity
+                    key={garment.id}
+                    style={[
+                      styles.garmentButton,
+                      isVisible && styles.garmentButtonActive,
+                    ]}
+                    onPress={() => toggleGarment(garment.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.garmentButtonText,
+                        isVisible && styles.garmentButtonTextActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {garment.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
       </View>
     </Canvas3DErrorBoundary>
   );
@@ -219,5 +281,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7f8c8d',
     textAlign: 'center',
+  },
+  garmentControls: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingVertical: spacing.sm,
+  },
+  garmentControlsTitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    fontWeight: '600',
+  },
+  garmentList: {
+    flexDirection: 'row',
+  },
+  garmentButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginRight: spacing.sm,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  garmentButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  garmentButtonText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  garmentButtonTextActive: {
+    color: colors.backgroundLight,
+    fontWeight: '600',
   },
 });

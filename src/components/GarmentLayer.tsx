@@ -66,7 +66,7 @@ function PlaceholderPrimitive({ garment }: { garment: GarmentEntry }) {
   const [x, y, z] = position;
 
   // Determine geometry and scale
-  let geometry: JSX.Element;
+  let geometry: React.ReactElement;
   if (type === 'sphere') {
     const radius = typeof scale === 'number' ? scale : scale[0];
     geometry = <sphereGeometry args={[radius, 16, 16]} />;
