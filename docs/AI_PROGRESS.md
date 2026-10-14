@@ -25,6 +25,14 @@
 - Match endpoint: `/api/match` returned 404 (Character dataset not found) - expected because no datasets created yet
 - Test endpoint: `/api/test` returned mock owned_items structure showing expected field format
 
+**Dataset Investigation (October 14, 2026):**
+- Flask expects datasets at: `../datasets/cosplay_matches/` (api.py:16 passes `"../datasets"` to AttireMatcher, attire_matcher.py:21 appends `/cosplay_matches`)
+- Actual location: `../chracters_datasets/cosplay_matches/` (typo in folder name: "chracters" not "characters")
+- Result of mismatch: Flask matcher line 32 builds path `../datasets/cosplay_matches/{character_variant_id}.json`, file does not exist there, returns 404
+- Files in actual folder: 0 JSON files found in `chracters_datasets/cosplay_matches/`
+- **Verdict: Wrong path + missing data.** Flask looks in `datasets` but folder is spelled `chracters_datasets`, AND that folder is empty (no character variant JSON files created yet).
+- **To fix:** Either (1) rename `chracters_datasets` → `datasets`, or (2) start Flask with `datasets_path="../chracters_datasets"` environment variable/argument, AND create at least one character variant JSON file following the template structure.
+
 **Flask Request Fields (what Flask expects):**
 - `character_variant_id` (string, e.g. "gojo-satoru_season-2-uniform")
 - `owned_items` (array of objects with: `id`, `name`, `category`, `subcategory`, `color`, `tags[]`)
