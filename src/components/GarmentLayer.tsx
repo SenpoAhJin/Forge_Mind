@@ -56,14 +56,16 @@ function GarmentGLB({ assetModule }: { assetModule: number | string }) {
  * Placeholder Primitive Renderer
  * Renders a code-generated primitive shape positioned using verified body measurements
  */
-function PlaceholderPrimitive({ garment }: { garment: GarmentEntry }) {
+function PlaceholderPrimitive({ garment, bodyType }: { garment: GarmentEntry; bodyType: BodyType }) {
   if (!garment.placeholder) {
     console.warn(`[GarmentLayer] Garment "${garment.id}" has no placeholder defined`);
     return null;
   }
 
   const { type, position, scale, color } = garment.placeholder;
-  const [x, y, z] = position;
+  
+  // Resolve position (may be static array or function of bodyType)
+  const [x, y, z] = typeof position === 'function' ? position(bodyType) : position;
 
   // Determine geometry and scale
   let geometry: React.ReactElement;
@@ -115,7 +117,7 @@ export default function GarmentLayer({ garment, bodyType, visible = true }: Garm
 
   // Otherwise render placeholder
   if (garment.isPlaceholder && garment.placeholder) {
-    return <PlaceholderPrimitive garment={garment} />;
+    return <PlaceholderPrimitive garment={garment} bodyType={bodyType} />;
   }
 
   // No asset and no placeholder - log warning and render nothing
