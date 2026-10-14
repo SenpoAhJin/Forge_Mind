@@ -177,36 +177,43 @@ After creating and placing your garment file, add it to the garment registry at 
 
 ## Slot Anchor Points
 
-Garments attach to the body at these approximate positions (in body-local coordinates):
+Garments attach to the body at these approximate positions (verified from body bounding boxes):
+
+**Male body:** Y range -0.950 (feet) to +0.931 (head)  
+**Female body:** Y range -0.951 (feet) to +0.944 (head)
 
 | Slot | Anchor Point (Y coordinate) | Description |
 |------|---------------------------|-------------|
-| **head** | Y ≈ 0.70 to 0.93 | Top of head to neck |
-| **torso** | Y ≈ 0.20 to 0.60 | Chest, shoulders, upper body |
-| **legs** | Y ≈ -0.40 to 0.20 | Waist to knees |
-| **hands** | Y ≈ 0.10 to 0.30 | Wrist, palm area (X ±0.3 for left/right) |
-| **feet** | Y ≈ -0.95 to -0.80 | Ankle, foot |
+| **head** | Y ≈ 0.65 to 0.94 | Top of head to neck (male max 0.931, female max 0.944) |
+| **torso** | Y ≈ 0.10 to 0.60 | Chest, shoulders, upper body |
+| **legs** | Y ≈ -0.50 to 0.10 | Waist to knees |
+| **hands** | Y ≈ 0.00 to 0.30 | Wrist, palm area (X ±0.35 for left/right) |
+| **feet** | Y ≈ -0.95 to -0.75 | Ankle, foot (min is -0.950 male, -0.951 female) |
 | **prop** | Variable | Held items, backpacks, accessories |
 
-**Note:** These are approximate guidelines derived from body bounding boxes. Verify exact bone positions by importing body GLB into Blender.
+**Note:** Ranges verified against actual body bounding boxes (male min/max: [-0.440, -0.950, -0.174] / [0.436, 0.931, 0.150], female: [-0.404, -0.951, -0.185] / [0.399, 0.944, 0.189]). Import body GLB into Blender to verify exact bone positions for rigged garments.
 
 ---
 
 ## Attachment Behavior
 
-The app uses **world-space positioning:**
+The app uses **world-space positioning** with no runtime animations:
 - Garment shares the body's transform (position, rotation, scale)
-- No runtime bone-parenting code (static attachment)
-- GLB loads at the position/rotation you exported from Blender
+- **Bodies render in T-pose** (rest pose from Blender export, no animations applied at runtime)
+- Static garments parented to the body root will follow the body's transform (position/rotation) but remain rigid
+- No runtime bone-parenting code exists - attachment is world-space only
 
 **This means:**
 - If you model a wig on the body's head in Blender at (0, 0.8, 0), it exports at (0, 0.8, 0) and renders at (0, 0.8, 0) in the app
 - **No extra code needed** to position the garment - it "just works" if modeled correctly
+- Bodies remain in T-pose (no animations, no pose changes at runtime - verified in `BodyModel.tsx` and `Preview3D.tsx`)
+- A static garment parented to the body root in this app will move/rotate with the body but stay rigid
 
 **For rigged garments:**
-- Bone weights drive deformation
-- Body animates → garment deforms with it
-- Requires matching bone names and proper weight painting
+- Bone weights drive deformation (if body were animated, garment would follow)
+- Currently bodies render static (T-pose), so rigged garments appear same as static
+- Rigging infrastructure exists (skinned meshes with 706-707 bones) but no runtime animation applied
+- Future: if animations added, rigged garments will deform automatically; static garments will remain rigid
 
 ---
 
