@@ -202,25 +202,48 @@
 
 ---
 
-## Summary Counts
+## Summary Table (7 AI/ML Features)
 
-| Feature | Status | Evidence Location | Runs On | Connected |
-|---------|--------|------------------|---------|-----------|
-| Attire Matching | BUILT + MOCK | Flask: `forgemind-ai/src/api.py:26`<br/>Mobile: `MatchResultsScreen.tsx:27` | Flask | ❌ No |
-| Attire Suggestions | MISSING | N/A | N/A | ❌ No |
-| Budgeting | MOCK | `src/data/budget_items.json` | Device | ⚠️ Static JSON |
-| Readiness Forecast | BUILT | `src/utils/readiness.ts:1` | Device | ✅ Yes (simple calc) |
-| Listing Screener | MOCK | `src/utils/listingScreener.ts:16` | Device | ⚠️ Word list |
-| Photo Categorization | MISSING | N/A | N/A | ❌ No |
-| Voice Transcription | MISSING | N/A | N/A | ❌ No |
+| Feature | Status | Evidence | Runs Where | Connected to Screen |
+|---------|--------|----------|------------|-------------------|
+| 1. Attire Matching | BUILT (Flask) + MOCK (Mobile) | `forgemind-ai/src/api.py:28`, `MatchResultsScreen.tsx:27` | Flask port 5000 | ❌ MatchResultsScreen (mock data) |
+| 2. Attire Suggestions | MISSING | No implementation | N/A | ❌ Not built |
+| 3. Budgeting | RULE-BASED (Device) | `src/data/budget_items.json`, `index.ts:40-51` | Device JSON | ✅ ProjectDashboardScreen |
+| 4. Readiness Forecast | RULE-BASED (Device) | `src/utils/readiness.ts:1-80` (formula) | Device calc | ✅ ProjectDashboardScreen, EventDetailScreen |
+| 5. Listing Screener | RULE-BASED (Backend + Mobile) | `backend/src/moderation/index.ts:31`, `mobile/src/utils/listingScreener.ts:32` | Backend + Device | ✅ CreateListingScreen + backend POST |
+| 6. Photo Categorization | MISSING | No implementation, manual category chips at `CreateListingScreen.tsx:330` | N/A | ❌ Not built |
+| 7. Voice Transcription | MISSING | No implementation, manual TextInput only | N/A | ❌ Not built |
 
-**BUILT:** 1 (attire matching Flask backend)  
-**PARTIAL/MOCK:** 3 (attire matching mobile, budgeting, screener, readiness simple)  
-**MISSING:** 3 (suggestions, photo categorization, voice)
+**Status Counts:**
+- **BUILT (Flask, not connected):** 1 (attire matcher)
+- **RULE-BASED (working):** 3 (budgeting, readiness, listing screener)
+- **MISSING:** 3 (suggestions, photo categorization, voice)
 
 ---
 
-## Connection Map
+## Wearing Pipeline Status (Task C2/C2b)
+
+**Status:** SCAFFOLD (placeholder only, not tested on device)
+
+**What exists:**
+- Body models: Male/female GLB files loaded via `BodyModel.tsx` (1.4 MB / 1.3 MB, skinned with 706-707 Rigify bones, T-pose rest state)
+- Body bounds: `src/data/bodyBounds.ts` with male/female min/max coordinates
+- Garment registry: `src/data/garmentRegistry.ts` with 1 placeholder entry (head hat cylinder, positioned per-body using `getHeadTopY()`)
+- Garment component: `src/components/GarmentLayer.tsx` (loads GLB or renders placeholder primitive, error-safe)
+- Preview UI: `src/components/Preview3D.tsx` with garment visibility toggles (horizontal scroll bar at bottom)
+- Validation: `scripts/check_garment_registry.js` (validates slots, bodyTypes, asset imports, isPlaceholder consistency)
+- Documentation: `docs/GARMENT_SPEC.md` (Blender export guide, body measurements, slot anchors, attachment behavior)
+
+**What is missing:**
+1. **Real garment GLB:** No garment asset exists (only placeholder red cylinder above head). Need to create at least one garment in Blender (wig recommended) following GARMENT_SPEC.md, export as GLB <1MB <10k triangles, place in `assets/models/garments/`.
+2. **Link from owned attire to garment:** OwnedAttire type has no garment_id field. Need to add mapping: owned attire → garment registry entry.
+3. **Matcher-driven choice:** Flask matcher returns `suggested_outfit` with item_ids, but no code connects matcher output to garment registry to show matched garment in 3D preview.
+4. **Device testing:** Placeholder has not been tested on physical device via Expo Go. Unknown if red cylinder renders correctly positioned above male/female heads.
+
+**Next 3 steps:**
+1. Test placeholder on device: Open Expo Go, navigate to Preview3DTestScreen, toggle "Head Hat (placeholder)", verify red cylinder appears above head on both male/female bodies.
+2. Create first real garment: Export wig GLB from Blender following spec, add static import to garmentRegistry.ts, validate with check script, test on device.
+3. Connect matcher to garment preview: When Flask matcher returns suggested_outfit, map item_ids to garment registry, render matched garments in Preview3D alongside body.
 
 | AI Feature | Data In | Data Out | App Screen | Backend Route | Flask Route | Connected | Next Link to Build |
 |------------|---------|----------|------------|---------------|-------------|-----------|-------------------|
@@ -252,97 +275,6 @@
 - Deploy as Flask endpoint `/api/screen-listing`
 - Mobile app calls backend instead of client-side word list
 - Estimated effort: 8-12 hours (including data labeling)
-
----
-
-## Wearing: Audit (Task B STEP 3)
-
-### Body GLB Loading
-
-**File:** `src/components/BodyModel.tsx:5`  
-**Method:** `useGLTF` from `@react-three/drei`  
-**Assets:**
-- Male: `assets/models/3D_Model_Male.glb` (1.4 MB)
-- Female: `assets/models/3D_Model_Female.glb` (1.3 MB)
-
-**Loading logic:**
-1. `resolveModelUri()` converts Metro asset ID to URI via `expo-asset`
-2. `useGLTF(uri)` loads and caches the GLB
-3. Component returns `<primitive object={gltf.scene} />` (whole scene, not just mesh)
-4. Skinned mesh + bone hierarchy must stay together in scene graph
-
-**Key constraint:** BodyModel renders the entire `gltf.scene` as a primitive. To add a garment, it must be:
-- Loaded as a separate GLB via another `useGLTF` call, OR
-- Added as a child of the body scene after loading
-
-### Garment Assets Available
-
-**Search performed:** Recursive search for `.glb`, `.gltf`, `.fbx`, `.obj` in forgemind-mobile  
-**Result:** ❌ **NO GARMENT ASSETS EXIST**
-
-**Files found:**
-1. `assets/models/3D_Model_Male.glb` (1403512 bytes)
-2. `assets/models/3D_Model_Female.glb` (1253432 bytes)
-3. `assets/models/body_size_bone_scale.json` (deprecated, slider removal)
-4. `assets/models/README.md` (documentation)
-
-**Conclusion:** No wig, clothing, or prop GLB files exist in the repo.
-
-### Owned Attire Storage Format
-
-**Type definition:** `src/types/owned-attire.ts:35` (OwnedAttire interface)  
-**Storage:** AsyncStorage at `@forgemind:owned_attire` (device-side JSON)  
-**Context:** OwnedAttireContext provides `items: OwnedAttire[]`
-
-**Key fields (relevant to wearing):**
-- `attire_id` (string, UUID)
-- `auto_categorized_type` (AttireCategory enum: wig, clothing, footwear, accessory, armor, weapon, prop, fabric, material, other)
-- `auto_categorized_color` (string, hex color)
-- `auto_categorized_style` (string, freeform description)
-- `photo_urls` (array of strings, user-uploaded photos)
-- `availability_status` ('free' | 'committed')
-- `committed_to_project_id` (string | null)
-
-**Gap:** OwnedAttire stores metadata but NO 3D model path. The `photo_urls` field contains 2D photos only, not GLB/GLTF files.
-
-### Flask Matcher Output
-
-**Endpoint:** `/api/match` in `forgemind-ai/src/api.py:26`  
-**Output fields (relevant to garment selection):**
-```json
-{
-  "suggested_outfit": {
-    "wig": { "item_id": "item001", "name": "White Spiky Wig", "score": 0.95, "confidence": "excellent" },
-    "clothing": { ... },
-    "footwear": { ... }
-  },
-  "alternatives": { "wig": [...], "clothing": [...] },
-  "missing_items": [],
-  "match_quality": { "overall_score": 0.9, "quality_label": "excellent" }
-}
-```
-
-**What it provides:** Item ID + category (wig, clothing, etc.) from owned items  
-**What it does NOT provide:** 3D model path or GLB reference
-
-### Precondition Check
-
-**Precondition (a):** A garment asset exists in GLB format  
-**Result:** ❌ **FAILED** - No garment GLB files found
-
-**Precondition (b):** Body loader can accept a second mesh without changes to body files  
-**Result:** ✅ **MET** - BodyModel uses `<primitive object={gltf.scene} />`, so a garment GLB loaded via another `useGLTF` call can be added as a sibling or child in the same scene
-
-### BLOCKER: Wearing Feature Cannot Be Built
-
-**Reason:** No garment 3D assets exist in the repository.
-
-**What is needed from user:**
-1. **Format:** GLB or GLTF (same format as body models, compatible with `useGLTF`)
-2. **Content:** At least one sample garment (wig recommended as simplest test case)
-3. **Rig requirement:** NO rigging needed if garment is static (e.g., wig, hat, prop). If clothing needs to deform with body (e.g., shirt, pants), garment must be skinned to same bone names as body rig
-4. **Placement:** `forgemind-mobile/assets/models/garments/` directory (to be created)
-5. **File naming:** Descriptive, e.g., `Wig_White_Spiky.glb`, `Shirt_Black_TShirt.glb`
 6. **Size:** Positioned/scaled to fit the body in Blender before export (no runtime scaling implemented yet)
 
 **Example minimal test case:**
