@@ -113,27 +113,29 @@ readiness = (matched_components + obtained_components) / total_required_componen
 
 ### 5. Listing Screener (Marketplace content moderation)
 
-**Status:** MOCK (Word list, NOT ML)  
+**Status:** RULE-BASED (Backend term lists + language rules)  
 **Evidence:**
-- Utils: `src/utils/listingScreener.ts:1` (BLOCKLISTED_TERMS array)
-- Comments: Lines 5-10 document "THIS IS A MOCK RULE-BASED SCREENER for Phase 1"
+- Backend: `forgemind-backend/src/moderation/index.ts:31-35` (VULGAR_TERMS, ADULT_TERMS, HATE_TERMS, PROHIBITED_ITEM_TERMS, UNRELATED_TERMS imported from rules)
+- Backend: `forgemind-backend/src/marketplace/screener.ts:24-131` (calls moderateListing, merges violations, has AI second layer hook but deliberately no-op)
+- Backend: `forgemind-backend/src/marketplace/listingsRouter.ts:60` (imports checkListingContent from screener, calls it on every listing write)
+- Mobile: `src/utils/listingScreener.ts:32` (BLOCKLISTED_TERMS word list, 48 terms, client-side pre-check only)
+- Mobile: `src/screens/cosplayer/MarketplaceCreateListingScreen.tsx` (calls screenListing before submit)
 
-**Where it runs:** Device (TypeScript substring matching)  
-**App screens:** MarketplaceCreateListingScreen (at post time)  
-**Connection status:** ⚠️ MOCK - Uses hard-coded word list, not logistic regression or ML classifier
+**Where it runs:** Backend (Node.js rule-based screener) + Mobile (device-side word list pre-check)  
+**App screens:** MarketplaceCreateListingScreen (mobile pre-check), then server-side on POST  
+**Connection status:** ✅ LIVE - Backend rule-based screener (SCREENER_VERSION 2) runs on every listing write
 
 **Current implementation:**
-- Case-insensitive substring match against BLOCKLISTED_TERMS (48 terms)
-- Categories checked: weapons, drugs, adult content, hate speech, counterfeit, animals
-- Known limitation: "substring match will block legitimate cosplay listings containing blocked words (e.g. 'prop gun replica')"
+- **Backend (authority):** Term lists (vulgar, adult, hate, prohibited items, unrelated) + language rules + generated 3-term list from data corpus. Pure function, no ML. Version 2 measured at precision 73.30%, recall 48.25% on held-out data.
+- **Mobile (UX pre-check only):** Case-insensitive substring match against 48-term BLOCKLISTED_TERMS. Not trusted by backend - every listing rescreened server-side.
+- **Trained classifier EXISTS but NOT LOADED:** scikit-learn TF-IDF + logistic regression trained on labeled data, stored at `forgemind-ai/models/marketplace_screener_lr.joblib`. Measured at precision 73.14%, recall 81.01% (catches materially more than rules but also wrongly blocks 987 vs rules' 582). Hook exists at screener.ts:119 `aiSecondLayerNoop` but returns `{allowed: true}` always.
 
-**Real AI screener:**
-- Input: listing title, description, category, photo embeddings
-- Output: permitted/blocked classification, confidence score, flagged categories
-- Model: Logistic regression OR neural classifier trained on labeled marketplace data
-- Training data: permitted cosplay listings vs blocked listings (weapons, drugs, adult, etc.)
+**Known limitations:**
+- Rules-only cannot catch semantic violations (weapon described without the word, off-topic listing with clean words)
+- Substring matching blocks legitimate cosplay (e.g. "prop gun replica" matches "gun")
+- No second pass: the trained classifier exists but decision to deploy it is pending
 
-**Smallest viable step:** Backend endpoint `/marketplace/listings/screen` that runs same word-list check server-side (no ML yet, but centralized for future ML upgrade)
+**Smallest viable step:** Wire up the trained classifier as second layer (load model in screener.ts:119, call it after rules pass, block when either layer blocks)
 
 ---
 
