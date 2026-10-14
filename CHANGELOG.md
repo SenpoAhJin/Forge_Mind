@@ -1,7 +1,82 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (Wearing pipeline fixes)
+**Last updated:** Wednesday, October 14, 2026 (AI_PROGRESS.md corrections)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (AI_PROGRESS.md corrections)
+
+**Summary**
+
+Corrected AI_PROGRESS.md feature statuses based on code verification. Listing screener relabeled from MOCK to RULE-BASED (backend term lists + language rules live, trained classifier exists but not loaded). Photo categorization and voice transcription confirmed MISSING with file:line evidence for manual implementations. Flask attire matcher tested: started cleanly on port 5000, health check passed, match endpoint returned 404 (no character datasets), recorded request/response field structure and analyzed mobile OwnedAttire field mapping (matches: attire_id→id, auto_categorized_type→category, auto_categorized_color→color; mismatches: no name field, no tags array, no subcategory). Budgeting and readiness relabeled from MOCK/BUILT to RULE-BASED (budgeting uses static JSON, readiness uses formula not ML). Fixed summary table: now 7 rows (was 8), removed grep hit counts, accurate statuses (1 BUILT Flask, 3 RULE-BASED, 3 MISSING). Updated wearing section: status SCAFFOLD (placeholder hat only), documented what exists (bounds, registry, component, preview toggles), what's missing (real garment GLB, owned attire link, matcher connection, device testing), next 3 steps. Mobile tsc exit 0, backend tsc exit 0.
+
+**What was corrected**
+
+**Listing Screener (MOCK → RULE-BASED):**
+- **Backend (authority):** `forgemind-backend/src/moderation/index.ts:31-35` imports VULGAR_TERMS, ADULT_TERMS, HATE_TERMS, PROHIBITED_ITEM_TERMS, UNRELATED_TERMS from rules. `forgemind-backend/src/marketplace/screener.ts:24-131` calls moderateListing (pure function, term lists + language rules + 3-term generated list). Version 2 measured at precision 73.30%, recall 48.25%.
+- **Backend screening live:** `forgemind-backend/src/marketplace/listingsRouter.ts:60` imports checkListingContent, calls it on every listing write POST. SCREENER_VERSION 2 runs on every marketplace listing.
+- **Mobile (pre-check only):** `src/utils/listingScreener.ts:32` has 48-term BLOCKLISTED_TERMS, case-insensitive substring match. Not trusted by backend - every listing rescreened server-side.
+- **Trained classifier exists but NOT loaded:** scikit-learn TF-IDF + logistic regression at `forgemind-ai/models/marketplace_screener_lr.joblib`, measured at precision 73.14%, recall 81.01%. Hook at `screener.ts:119` `aiSecondLayerNoop` returns `{allowed: true}` always.
+- **Relabel reason:** Backend rule-based screener is live and working (not mock). Mobile word list is a UX pre-check. The trained ML classifier exists but decision to deploy it is pending.
+
+**Photo Categorization and Voice (MISSING confirmed):**
+- **Photo categorization:** No implementation in any repo. Category selection is manual via chip buttons in `src/screens/cosplayer/CreateListingScreen.tsx:330-352` (user taps category from MARKETPLACE_CATEGORIES array). No photo analysis, no ML, no "suggest category" button.
+- **Voice transcription:** No implementation in any repo. Text inputs (title, description) are manual TextInput fields in CreateListingScreen with no voice input UI, no speech-to-text hooks, no microphone icon.
+- **Evidence:** Grep searches for photo categorization (`categorize.*photo`, `detectCategory`) and voice (`voice.*transcri`, `speech.*recognition`, `whisper`) returned zero implementations.
+
+**Flask Attire Matcher Test (October 14, 2026):**
+- **Server:** Started cleanly on port 5000 using `forgemind-ai/venv/Scripts/python.exe src/api.py` ✅
+- **Health check:** `GET /health` returned `{status: "healthy", service: "forgemind-ai", version: "1.0.0"}` ✅
+- **Match endpoint:** `POST /api/match` with sample payload returned 404 "Character variant not found" (expected - no character datasets created yet)
+- **Test endpoint:** `GET /api/test` returned mock owned_items structure showing Flask expects: `id`, `name`, `category`, `subcategory`, `color`, `tags[]`
+- **Mobile OwnedAttire fields:** `attire_id` (maps to id), `auto_categorized_type` (maps to category), `auto_categorized_color` (maps to color), `auto_categorized_style` (could map to subcategory/tags)
+- **Field mismatches:** Mobile has NO `name` field (use `original_input_text` or synthesize), NO `tags[]` array (derive from style or leave empty), NO `subcategory` (use style or same as category)
+- **Gap documented:** Need adapter function to transform OwnedAttire[] → Flask owned_items[] format before calling /api/match
+
+**Budgeting and Readiness (MOCK/BUILT → RULE-BASED):**
+- **Budgeting:** Uses static JSON at `src/data/budget_items.json`, exported by `src/data/index.ts:40-51` with `getBudgetForProject()` filter. No ML forecasting, no cost prediction. Relabeled RULE-BASED because it's device-side static data, not AI.
+- **Readiness:** Uses formula at `src/utils/readiness.ts:1-80`: `readiness = (taskCompletion*0.4 + itemMatch*0.3 + budgetHealth*0.3)` where each component is 0-1 score. Not ML-based prediction. Relabeled RULE-BASED because it's a deterministic calculation.
+
+**Summary Table Fixed:**
+- **Was:** 8 rows (attire matching listed twice), grep hit counts as evidence (139 matcher hits, 952 screener hits, etc.), inconsistent status labels (MOCK used for both rule-based and missing)
+- **Now:** 7 rows (one per feature), file:line evidence only, accurate status labels:
+  1. Attire Matching: BUILT (Flask) + MOCK (Mobile)
+  2. Attire Suggestions: MISSING
+  3. Budgeting: RULE-BASED (Device)
+  4. Readiness Forecast: RULE-BASED (Device)
+  5. Listing Screener: RULE-BASED (Backend + Mobile)
+  6. Photo Categorization: MISSING
+  7. Voice Transcription: MISSING
+- **Counts:** 1 BUILT (Flask not connected), 3 RULE-BASED (working), 3 MISSING
+
+**Wearing Section Updated:**
+- **Status:** SCAFFOLD (was "BLOCKED - no garment assets")
+- **What exists:** Body models (male/female GLB), bodyBounds module with min/max coordinates, garment registry with 1 placeholder (head hat cylinder positioned per-body), GarmentLayer component (GLB loader + placeholder renderer), Preview3D garment toggles, validation script, GARMENT_SPEC.md documentation
+- **What is missing:** Real garment GLB (only placeholder), link from owned attire to garment registry, matcher→garment connection, device testing
+- **Next 3 steps:** 1) Test placeholder on device (toggle on, verify red cylinder above head), 2) Create first real wig GLB following spec, 3) Connect Flask matcher output to garment preview
+
+**Verified**
+
+- Flask test: Started on port 5000, health check exit 0 ✅
+- Mobile tsc: exit 0 ✅
+- Backend tsc: exit 0 ✅
+- Git: forgemind-mobile clean (branch feature/chat-app)
+- Git: forgemind-backend clean (branch feature/chat-curated-terms)
+
+**Commits made**
+
+Mobile (feature/chat-app branch):
+1. `30bf574` - "docs: correct listing screener status to RULE-BASED (Task C3 STEP 1)"
+2. `f5f71f7` - "docs: add evidence for photo/voice MISSING status (Task C3 STEP 2)"
+3. `208cdaa` - "docs: Flask matcher test results and field mapping analysis (Task C3 STEP 3)"
+4. `6650b78` - "docs: relabel budgeting/readiness to RULE-BASED with formulas (Task C3 STEP 4)"
+5. `40bfd8f` - "docs: fix count table (7 rows) and update wearing status to SCAFFOLD (Task C3 STEP 5)"
+6. _(This commit)_ - "docs: update CHANGELOG for Task C3 (AI_PROGRESS corrections)"
+
+**Status**
+
+AI_PROGRESS.md corrections complete. All feature statuses verified against code with file:line evidence. Flask matcher tested and field mapping documented. Summary table fixed (7 rows, no grep counts). Wearing section updated to reflect scaffold state. All relabels justified with evidence.
 
 ---
 
