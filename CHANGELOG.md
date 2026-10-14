@@ -1,7 +1,100 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Monday, October 14, 2026 (body-size slider removal)
+**Last updated:** Wednesday, October 14, 2026 (AI progress tracking)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (AI progress tracking)
+
+**Summary**
+
+Created comprehensive AI feature tracker documenting implementation status of all 7 AI/ML features in ForgeMind. Findings: 1 feature fully built (Flask attire matcher), 5 mocked client-side (listing screener, photo categorization, voice transcription, readiness forecast, budgeting), 1 missing (attire suggestions). Priority gap: Flask matcher exists but mobile app uses hard-coded JSON instead of calling it.
+
+**What was created**
+
+- **AI_PROGRESS.md** (`docs/AI_PROGRESS.md`): Single tracking document with 4 sections:
+  1. **Feature Inventory** (7 AI features): Status (BUILT/PARTIAL/MOCK/MISSING), evidence (file:line), where it runs (device/Node/Flask), app screens that call it, input/output fields, connection status
+  2. **Connection Map** (table): Maps each feature to data flow, screens, backend routes, Flask routes, and connection status with "Next link to build"
+  3. **"Wearing Sample Attire" Build Plan**: 6 testable steps (A-F, ~20 hours total) to show matched garments on 3D body, starting with single wig box mesh
+  4. **Budgeting & Suggestions Analysis**: Real AI requirements and minimum viable steps for both features
+
+**Key findings**
+
+Status distribution:
+- **BUILT (Flask):** Attire matching (`forgemind-ai/src/attire_matcher.py`, `/api/match` endpoint) - rule-based scoring using color/tags/categories
+- **PARTIAL (Backend):** Listing screener (backend has word-list moderation, mobile has client-side mock that violates architecture)
+- **MOCK (Mobile):** Photo categorization, voice transcription, readiness forecast, budgeting suggestions - all run deterministic formulas or random selection client-side
+- **MISSING:** Attire suggestions (would query marketplace for missing components)
+
+Top 3 gaps:
+1. **Flask matcher not connected**: Mobile uses `src/data/match_components.json` (3 hard-coded items) instead of calling Flask `/api/match`. Field name mismatch between OwnedAttire schema and Flask expected format.
+2. **No garment layer**: 3D preview shows body only (2 GLB files: male 1.34 MB, female 1.20 MB). Zero garment meshes exist. Build plan: start with simple wig box, build to 5-slot outfit (wig/top/bottom/footwear/accessory).
+3. **Budget API missing**: Backend has `budget_line_items` table but no CRUD routes. Projects can't persist budgets to server.
+
+**Where each AI feature runs**
+
+| Feature | Current Location | Should Run | Connected? |
+|---------|-----------------|------------|------------|
+| Attire matching | Hard-coded JSON (mobile) | Flask `/api/match` | ❌ No |
+| Listing screener | Client-side mock + backend word list | Backend only | ⚠️ Partial |
+| Photo categorization | Client-side mock (`mockPhotoCategorization`) | Backend/Flask + Vision API | ❌ No |
+| Voice transcription | Client-side mock (`mockTranscription`) | Backend + Speech-to-Text API | ❌ No |
+| Readiness forecast | Client-side formula (`computeReadiness`) | Flask forecasting model | ❌ No |
+| Budgeting | Client-side formula (budget health) | Flask cost estimation model | ❌ No |
+| Attire suggestions | Not implemented | Backend query + Flask scoring | ❌ No |
+
+**"Wearing Sample Attire" build plan**
+
+6 steps, each producing visible result on phone:
+- **Step A** (4h): Create one sample wig box GLB, attach to body head bone, render on male body
+- **Step B** (3h): Map attire match result → garment asset path, load dynamically
+- **Step C** (2h): Add second garment slot (top/shirt), prove layering works
+- **Step D** (3h): Color tinting - match color drives material color (white wig shows white)
+- **Step E** (4h): Full 5-slot outfit (wig, top, bottom, footwear, accessory)
+- **Step F** (4h): End-to-end - user's owned item → Flask match → 3D render with garment
+
+**Blocker:** Step F requires Flask matcher connected (current priority gap).
+
+**Technical details verified**
+
+Body loading (works):
+1. `BodyModel.tsx:65` receives `bodyType` prop ('male' | 'female')
+2. `resolveModelUri()` gets asset URI from `Asset.fromModule(GLB_MODULES[bodyType])`
+3. `useGLTF(uri)` loads and caches GLB
+4. Returns `<primitive object={gltf.scene} />` mounting entire scene including bones
+
+Garment loading (not implemented):
+- No garment GLB files exist in `assets/models/` (only 2 body files + 1 obsolete JSON)
+- No code to attach/render garment meshes on body
+- Attire match returns labels but no 3D asset references
+- Owned attire table has no `glb_asset_path` field
+
+Budget/suggestions blockers:
+- **Budget estimates:** Need marketplace price statistics (minimum 20 listings per component type; current: 6 seed listings total - insufficient)
+- **Attire suggestions:** Need Flask matcher connected to get missing_items, then query marketplace with filters
+
+**Files created**
+
+- `docs/AI_PROGRESS.md` (new): Comprehensive AI tracker with 340+ lines covering all 7 features, connection map, garment build plan, budget/suggestions analysis
+
+**Commits made**
+
+1. `899d649` - "docs: create AI_PROGRESS.md tracker - inventory of 7 AI features"
+2. `8cd99a9` - "docs: add Steps 2-4 to AI_PROGRESS.md" (connection map, garment plan, budget/suggestions)
+
+**Next steps (priority order)**
+
+1. **Connect Flask matcher** (highest ROI): Create `AttireMatcherService.ts`, map OwnedAttire → Flask format, replace hard-coded import
+2. **Budget API routes**: Add backend CRUD for budget_line_items
+3. **Fix listing screener architecture**: Remove client-side mock, backend handles all screening
+4. **Photo & voice entry**: Build one (photo categorization via Vision API), replicate pattern for voice
+
+**NOT TESTED (requires servers running)**
+
+- Flask API health check (exists at `http://localhost:5000/health`)
+- Attire matching with real character variant data
+- End-to-end flow: log owned item → select character → Flask match → see results
 
 ---
 
