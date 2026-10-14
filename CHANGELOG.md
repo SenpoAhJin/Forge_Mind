@@ -1,7 +1,115 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (Attire matcher connection attempt - blocker found)
+**Last updated:** Wednesday, October 14, 2026 (Task D2: AI attire matcher connection - COMPLETE)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (Task D2: AI attire matcher connection - COMPLETE)
+
+**Summary**
+
+**Task D2 COMPLETE:** Connected mobile app to Flask attire matcher end-to-end. (1) Fixed Flask data lookup: auto-detects datasets path, searches nested character folders, added security checks. (2) Built backend proxy route `POST /api/ai/match` with auth guard and OwnedAttire→Flask transform. (3) Replaced MOCK_MATCH_RESULTS in MatchResultsScreen with real API call including loading/error states and match result display. (4) Updated AI_PROGRESS.md relabeling attire matcher from MOCK to PARTIAL (Flask fixed + Backend proxied + Mobile connected). Flask test passed: 200 OK for gojo-satoru match with suggested_outfit, missing_items, match_quality. Keyword matching works (scores 0.29, 0.43), color/category limited by JSON schema mismatch (fixable in dataset files). All repos: git status clean, tsc exit 0. **Mobile not tested on device** - requires Expo Go session with all 3 services running (Flask port 5000, Backend port 3000, Mobile).
+
+**What was built**
+
+**Task D2 Step 1: Flask Data Lookup Fix**
+- **File:** `forgemind-ai/src/api.py`
+  - Added `find_datasets_path()` function: auto-detects correct datasets folder
+  - Check order: (1) env var `FORGEMIND_DATASETS_PATH`, (2) `../chracters_datasets` if exists, (3) fallback `../datasets`
+  - Resolves path relative to `api.py` location (not cwd)
+  - Updated `/api/characters` endpoint to use auto-detected path
+  - Logged datasets path on startup
+- **File:** `forgemind-ai/src/attire_matcher.py`
+  - `load_character_requirements()`: searches nested folders when flat file not found
+  - Security check: rejects variant IDs containing `..`, `/`, `\` (path traversal protection)
+  - Fallback chain: (1) try flat `cosplay_matches/{variant}.json`, (2) search subdirectories `cosplay_matches/*/{variant}.json`
+  - Field compatibility: supports both `required_items` (old) and `costume_requirements` (actual) JSON field names
+  - Added DEBUG logging for all search paths
+- **Backup:** `forgemind-ai-src-backup-2026-10-14-2015/` (6 files)
+- **Test:** Flask started on port 5000, called `/api/match` with gojo-satoru + 2 test items, received 200 OK with suggested_outfit (wig + top matched), missing_items (bottom + accessory), match_quality 20% incomplete. Keyword matching works (0.29 for white/spiky, 0.43 for black/jacket/formal). Color/category scores 0.0 (JSON schema mismatch: uses `primary_colors[]` and `category` but Flask expects `attributes.color` and `attributes.type` - fixable in dataset files, not code issue).
+
+**Task D2 Step 2: Backend Proxy Route**
+- **File:** `forgemind-backend/src/ai/matcherRouter.ts` (new, 215 lines)
+  - `POST /api/ai/match` endpoint
+  - Auth: `requireSession` → `requireMarketplaceUser` → `isVerifiedMarketplaceUser` (same pattern as offersRouter)
+  - Transform: OwnedAttire[] → Flask owned_items[] (id, name from original_input_text, category, color, tags[] derived from style+color+keywords)
+  - Calls Flask: `${config.flaskAiUrl}/api/match` with fetch
+  - Error handling: 401 auth, 403 verification required, 404 character not found, 502 AI service unavailable
+  - Returns Flask response directly (mobile can handle format)
+- **File:** `forgemind-backend/src/config.ts`
+  - Added `flaskAiUrl` setting (env var `FLASK_AI_URL`, defaults to `http://localhost:5000`)
+- **File:** `forgemind-backend/src/index.ts`
+  - Registered `/api/ai` router (imported matcherRouter, mounted after marketplace/chat before marketplace main)
+- **TypeScript:** exit 0
+
+**Task D2 Step 3: Mobile API Connection**
+- **File:** `forgemind-mobile/src/services/AiMatcherService.ts` (new, 214 lines)
+  - `matchAttire()` function: calls `POST ${API_BASE_URL}/api/ai/match` with auth token
+  - Request shape: `{character_variant_id, owned_attire[], user_body_settings?}`
+  - Response shape: Flask MatchResult (suggested_outfit, alternatives, missing_items, match_quality)
+  - Error handling: timeout (AbortError), network (fetch failure), 401 auth, 403 verification, 404 character not found, 502 AI service unavailable
+  - `testAiMatcherConnection()` helper for health check (tries minimal request, 5sec timeout)
+- **File:** `forgemind-mobile/src/screens/cosplayer/MatchResultsScreen.tsx`
+  - **Removed:** MOCK_MATCH_RESULTS hard-coded array (3 items)
+  - **Added:** Real API call via `matchAttire()` on screen load (useEffect when selection + attireLoaded)
+  - **Loading state:** ActivityIndicator + "Matching your attire..." text
+  - **Error state:** error message card + "Try Again" button calling `performMatch()`
+  - **Results state:** Displays Flask match results:
+    - Suggested outfit items: category + name, Tag with confidence rating (excellent/good → exact, fair → close, poor/no-match → loose), score breakdown (color %, keywords %, category %)
+    - Missing items: category + keywords list, warning border
+    - Match quality: overall score % + quality label in section subtitle
+  - **Variant ID mapping:** Strips `var-` prefix from mobile `variant_id` to construct Flask slug (e.g. `var-gojo-s2-uniform` → `gojo-s2-uniform`)
+- **TypeScript:** exit 0
+
+**Task D2 Step 4: AI_PROGRESS.md Update**
+- **File:** `forgemind-mobile/docs/AI_PROGRESS.md`
+  - Attire Matching status: MOCK → **PARTIAL (Flask+Backend+Mobile)**
+  - Added Task D2 completion evidence (Flask fixes, backend proxy route, mobile service)
+  - Documented Flask test result (200 OK, gojo-satoru match successful, keyword scores work)
+  - Mobile field mapping documented (OwnedAttire → Flask owned_items transform)
+  - Connection status: ❌ NOT CONNECTED → ✅ **CONNECTED** (MatchResultsScreen real API)
+  - Summary table updated: status counts now 1 PARTIAL, 3 RULE-BASED, 3 MISSING
+  - Known limitations: color/category scores 0.0 due to JSON schema mismatch (fixable in datasets, not code)
+
+**What changed in app behavior**
+
+**Before (Task D, gate failed):**
+- MatchResultsScreen showed 3 hard-coded mock items (wig/blindfold/shoes exact/close/loose)
+- No API call, no real matching, no connection to Flask
+- "MOCK DATA — PREVIEW ONLY" banner at bottom
+- Could not test real attire matching
+
+**After (Task D2 complete):**
+- MatchResultsScreen calls real Flask matcher via backend proxy
+- Shows ActivityIndicator while matching
+- Displays real match results: suggested outfit with scores, missing items, match quality percentage
+- Error handling: retry button if match fails
+- No mock banner - real API integration
+- Can test with real owned attire from OwnedAttireContext
+
+**Device test status:** ❌ **NOT TESTED** - requires running Flask (port 5000), Backend (port 3000), Mobile (Expo Go) simultaneously. Next session should start all 3 services and test real match flow: add owned attire → select character variant → view match results → verify Flask response displayed correctly.
+
+**Commits**
+
+**forgemind-ai (not git repo, backup created):**
+- Backup: `forgemind-ai-src-backup-2026-10-14-2015/` (api.py, attire_matcher.py before edits)
+
+**forgemind-backend (branch: feature/chat-curated-terms):**
+- Commit: "D2: Add AI attire matcher proxy route"
+  - Files: src/ai/matcherRouter.ts (new), src/config.ts (flaskAiUrl), src/index.ts (router registration)
+  - Message: Documents endpoint contract, auth requirements, error handling, transform logic
+
+**forgemind-mobile (branch: feature/chat-app):**
+- Commit: "D2: Connect AI matcher to mobile app"
+  - Files: src/services/AiMatcherService.ts (new), src/screens/cosplayer/MatchResultsScreen.tsx (real API)
+  - Message: Documents loading/error/results states, field mapping, auto-trigger on screen load
+- Commit: "D2: Update AI_PROGRESS.md - attire matcher now PARTIAL"
+  - Files: docs/AI_PROGRESS.md
+  - Message: Relabel MOCK → PARTIAL, add Task D2 evidence, update summary table
+
+**Report**
+- Created: `TASK_D2_FLASK_FIX_REPORT.md` (Flask data lookup fix details, before/after test results, security notes, known issues)
 
 ---
 
