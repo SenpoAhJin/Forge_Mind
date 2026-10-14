@@ -1,7 +1,48 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (Wearing pipeline scaffold with placeholder garment)
+**Last updated:** Wednesday, October 14, 2026 (Wearing pipeline fixes)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (Wearing pipeline fixes)
+
+**Summary**
+
+Fixed wearing pipeline scaffold issues found in code review. Verified transform group structure (BodyModel and GarmentLayer both render at world origin - correct). Created bodyBounds module with male/female bounding box measurements. Replaced placeholder sphere-inside-head with visible hat-like cylinder positioned above head top using per-body bounds. Aligned slot names to head/torso/legs/hands/prop across registry, check script, and spec. Changed asset field to use static imports like BodyModel (not require() strings). Corrected GARMENT_SPEC.md: body centers nearly identical (male [-0.002, -0.010, -0.012], female [-0.003, -0.004, 0.002]), one garment could fit both but visual check still required. Validation script exit 0, tsc exit 0. **NO REAL GARMENT EXISTS** - placeholder demonstrates pipeline only, nothing tested on device.
+
+**What was changed**
+
+- **Transform Group Verification** (Step 1): Documented that BodyModel and GarmentLayer are siblings at world origin with no wrapping transforms - correct structure for garments fitted in Blender. No code change needed.
+
+- **Per-Body Placeholder** (Step 2): Created `src/data/bodyBounds.ts` module holding male/female min/max coordinates and helper functions (getBodyCenter, getHeadTopY, getFeetY). Updated placeholder from sphere at Y=0.75 (inside head) to cylinder at per-body head top (male Y=0.931+0.06, female Y=0.944+0.06), visible above head. Updated PlaceholderShape.position to support function: `(bodyType: BodyType) => [x,y,z]`. Updated GarmentLayer.tsx PlaceholderPrimitive to resolve function-based positions. Updated registry entry: id `placeholder-head-hat`, label "Head Hat (placeholder)", type cylinder, scale [0.12, 0.12, 0.12].
+
+- **Slot Names Aligned** (Step 3): Changed VALID_SLOTS in `scripts/check_garment_registry.js` from ['head','torso','legs','feet','accessories'] to ['head','torso','legs','hands','prop']. Updated `docs/GARMENT_SPEC.md` slot anchor table: removed "feet" row, updated "prop" description to include footwear. Now consistent: registry type, check script, spec docs all use same 5 slots.
+
+- **Asset Bundling** (Step 4): Changed GarmentEntry.asset type from `number | string | null` to `number | null` (static import module only). Updated `docs/GARMENT_SPEC.md` registry example: now shows two-step process (1. add static import at top, 2. use constant in entry), not require() string. Updated `scripts/check_garment_registry.js` to check that asset variable has matching import statement in file.
+
+- **Spec Corrections** (Step 5): Updated `docs/GARMENT_SPEC.md` Body Measurements table: added "Bounding Box Center" row showing male [-0.002, -0.010, -0.012] and female [-0.003, -0.004, 0.002]. Removed "Origin Match: NO" claim, replaced with: "centers nearly identical (within 0.014 units), single garment could fit both BUT visual fit check still required (male wider, female taller)".
+
+**Verified**
+
+- Transform structure: BodyModel.tsx:75 `<primitive object={gltf.scene} />`, GarmentLayer.tsx:115-118 returns primitives, both siblings at origin ✅
+- Registry validation: exit 0 ✅ (1 entry placeholder-head-hat, 0 errors, 0 warnings)
+- Mobile tsc: exit 0 ✅
+- Git: forgemind-mobile clean (branch feature/chat-app)
+
+**Commits made**
+
+Mobile (feature/chat-app branch):
+1. `5d25c7a` - "docs: verify transform group structure (Task C2b STEP 1)"
+2. `3417cd2` - "feat: per-body placeholder hat using bodyBounds (Task C2b STEP 2)"
+3. `1cb9500` - "docs: align slot names to head/torso/legs/hands/prop (Task C2b STEP 3)"
+4. `69b0a7e` - "feat: use static imports for garment GLBs like BodyModel (Task C2b STEP 4)"
+5. `86e906d` - "docs: correct body center positions in GARMENT_SPEC (Task C2b STEP 5)"
+6. _(This commit)_ - "docs: update CHANGELOG for Task C2b (wearing pipeline fixes)"
+
+**Status**
+
+Wearing pipeline scaffold fixes complete. Placeholder now visible (hat above head, not sphere inside). Asset bundling matches BodyModel pattern (static imports). Slot names consistent. Body centers documented accurately. **NO REAL GARMENT ASSET EXISTS** - pipeline not tested on device yet. Next: user must test placeholder hat on physical device (toggle on, verify red cylinder appears above head on male/female), then add real garment GLB.
 
 ---
 
