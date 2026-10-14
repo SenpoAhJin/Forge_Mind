@@ -230,5 +230,110 @@ readiness = (matched_components + obtained_components) / total_required_componen
 
 ## Wearing: Audit (Task B STEP 3)
 
-_This section populated in STEP 3_
+### Body GLB Loading
 
+**File:** `src/components/BodyModel.tsx:5`  
+**Method:** `useGLTF` from `@react-three/drei`  
+**Assets:**
+- Male: `assets/models/3D_Model_Male.glb` (1.4 MB)
+- Female: `assets/models/3D_Model_Female.glb` (1.3 MB)
+
+**Loading logic:**
+1. `resolveModelUri()` converts Metro asset ID to URI via `expo-asset`
+2. `useGLTF(uri)` loads and caches the GLB
+3. Component returns `<primitive object={gltf.scene} />` (whole scene, not just mesh)
+4. Skinned mesh + bone hierarchy must stay together in scene graph
+
+**Key constraint:** BodyModel renders the entire `gltf.scene` as a primitive. To add a garment, it must be:
+- Loaded as a separate GLB via another `useGLTF` call, OR
+- Added as a child of the body scene after loading
+
+### Garment Assets Available
+
+**Search performed:** Recursive search for `.glb`, `.gltf`, `.fbx`, `.obj` in forgemind-mobile  
+**Result:** ❌ **NO GARMENT ASSETS EXIST**
+
+**Files found:**
+1. `assets/models/3D_Model_Male.glb` (1403512 bytes)
+2. `assets/models/3D_Model_Female.glb` (1253432 bytes)
+3. `assets/models/body_size_bone_scale.json` (deprecated, slider removal)
+4. `assets/models/README.md` (documentation)
+
+**Conclusion:** No wig, clothing, or prop GLB files exist in the repo.
+
+### Owned Attire Storage Format
+
+**Type definition:** `src/types/owned-attire.ts:35` (OwnedAttire interface)  
+**Storage:** AsyncStorage at `@forgemind:owned_attire` (device-side JSON)  
+**Context:** OwnedAttireContext provides `items: OwnedAttire[]`
+
+**Key fields (relevant to wearing):**
+- `attire_id` (string, UUID)
+- `auto_categorized_type` (AttireCategory enum: wig, clothing, footwear, accessory, armor, weapon, prop, fabric, material, other)
+- `auto_categorized_color` (string, hex color)
+- `auto_categorized_style` (string, freeform description)
+- `photo_urls` (array of strings, user-uploaded photos)
+- `availability_status` ('free' | 'committed')
+- `committed_to_project_id` (string | null)
+
+**Gap:** OwnedAttire stores metadata but NO 3D model path. The `photo_urls` field contains 2D photos only, not GLB/GLTF files.
+
+### Flask Matcher Output
+
+**Endpoint:** `/api/match` in `forgemind-ai/src/api.py:26`  
+**Output fields (relevant to garment selection):**
+```json
+{
+  "suggested_outfit": {
+    "wig": { "item_id": "item001", "name": "White Spiky Wig", "score": 0.95, "confidence": "excellent" },
+    "clothing": { ... },
+    "footwear": { ... }
+  },
+  "alternatives": { "wig": [...], "clothing": [...] },
+  "missing_items": [],
+  "match_quality": { "overall_score": 0.9, "quality_label": "excellent" }
+}
+```
+
+**What it provides:** Item ID + category (wig, clothing, etc.) from owned items  
+**What it does NOT provide:** 3D model path or GLB reference
+
+### Precondition Check
+
+**Precondition (a):** A garment asset exists in GLB format  
+**Result:** ❌ **FAILED** - No garment GLB files found
+
+**Precondition (b):** Body loader can accept a second mesh without changes to body files  
+**Result:** ✅ **MET** - BodyModel uses `<primitive object={gltf.scene} />`, so a garment GLB loaded via another `useGLTF` call can be added as a sibling or child in the same scene
+
+### BLOCKER: Wearing Feature Cannot Be Built
+
+**Reason:** No garment 3D assets exist in the repository.
+
+**What is needed from user:**
+1. **Format:** GLB or GLTF (same format as body models, compatible with `useGLTF`)
+2. **Content:** At least one sample garment (wig recommended as simplest test case)
+3. **Rig requirement:** NO rigging needed if garment is static (e.g., wig, hat, prop). If clothing needs to deform with body (e.g., shirt, pants), garment must be skinned to same bone names as body rig
+4. **Placement:** `forgemind-mobile/assets/models/garments/` directory (to be created)
+5. **File naming:** Descriptive, e.g., `Wig_White_Spiky.glb`, `Shirt_Black_TShirt.glb`
+6. **Size:** Positioned/scaled to fit the body in Blender before export (no runtime scaling implemented yet)
+
+**Example minimal test case:**
+- File: `assets/models/garments/Wig_Sample.glb`
+- Content: Simple wig mesh positioned on male body head
+- Size: < 1 MB
+- Bones: None (static mesh parented to head bone, or positioned at origin)
+
+**Once asset provided, implementation would be:**
+1. Create `assets/models/garments/` directory
+2. Add `Wig_Sample.glb` file
+3. Create `src/components/GarmentModel.tsx` component using `useGLTF`
+4. Add garment as child of body scene in `BodyModel.tsx` or `Preview3D.tsx`
+5. Add toggle button to show/hide garment
+6. Handle loading errors gracefully (body still renders if garment fails)
+
+**Estimated effort (if asset exists):** 3-4 hours
+
+---
+
+## Budgeting & Suggestions: Read-Only Analysis (Task B STEP 5)
