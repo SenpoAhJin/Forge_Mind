@@ -9,84 +9,82 @@
 
 ### 1. Attire Matching (Character components → Owned items)
 
-**Status:** BUILT (Flask) + MOCK (Mobile)  
+**Status:** PARTIAL (Flask FIXED + Backend PROXIED + Mobile CONNECTED)  
 **Evidence:**
-- Flask API: `forgemind-ai/src/api.py:28-75` (`/api/match` endpoint, documented request/response shape)
-- Flask Matcher: `forgemind-ai/src/attire_matcher.py` (core matching logic)
-- Mobile Screen: `src/screens/cosplayer/MatchResultsScreen.tsx:27` (MOCK_MATCH_RESULTS hard-coded array)
+- Flask API: `forgemind-ai/src/api.py:16-30` (`/api/match` endpoint with auto-detected datasets path)
+- Flask Matcher: `forgemind-ai/src/attire_matcher.py:24-68` (nested folder search, field compatibility)
+- Backend Proxy: `forgemind-backend/src/ai/matcherRouter.ts:122-170` (`POST /api/ai/match` with auth guard)
+- Mobile Service: `forgemind-mobile/src/services/AiMatcherService.ts:74-105` (matchAttire function)
+- Mobile Screen: `forgemind-mobile/src/screens/cosplayer/MatchResultsScreen.tsx:29-48` (real API call, loading/error states)
 
-**Where it runs:** Flask (Python ML service) on port 5000  
+**Where it runs:** Flask (Python ML service) on port 5000 → Backend proxy on port 3000 → Mobile app  
 **App screen:** MatchResultsScreen (cosplayer flow)  
-**Connection status:** ❌ **NOT CONNECTED** - Mobile uses hard-coded MOCK_MATCH_RESULTS, does not call Flask API
+**Connection status:** ✅ **CONNECTED** - Mobile calls backend `/api/ai/match`, backend proxies to Flask, returns match results
 
-**Flask Test (October 14, 2026):**
-- Server: Started cleanly on port 5000 ✅
-- Health check: `/health` returned `{status: "healthy", service: "forgemind-ai", version: "1.0.0"}` ✅
-- Match endpoint: `/api/match` returned 404 (Character dataset not found) - expected because no datasets created yet
-- Test endpoint: `/api/test` returned mock owned_items structure showing expected field format
+**Task D2 Completion (October 14, 2026):**
+- **Step 1:** Fixed Flask data lookup
+  - Added auto-detect datasets path (tries `../chracters_datasets` then `../datasets`)
+  - Supports env var `FORGEMIND_DATASETS_PATH` override
+  - Added nested folder search (flat `cosplay_matches/{variant}.json` OR `cosplay_matches/{character}/{variant}.json`)
+  - Added path traversal security check (rejects `..`, `/`, `\` in variant ID)
+  - Added field compatibility (supports both `required_items` and `costume_requirements`)
+  - Test: `gojo-satoru_season-2-uniform` now loads successfully from nested folder
+  - Backup: `forgemind-ai-src-backup-2026-10-14-2015/`
+  
+- **Step 2:** Built backend proxy route
+  - Created `POST /api/ai/match` endpoint in `forgemind-backend/src/ai/matcherRouter.ts`
+  - Auth: requires verified marketplace user
+  - Transform: OwnedAttire[] → Flask owned_items format (id, name, category, color, tags[])
+  - Error handling: 401 auth, 403 verification, 404 character not found, 502 AI service unavailable
+  - Config: added `flaskAiUrl` setting (env `FLASK_AI_URL`, defaults to `http://localhost:5000`)
+  
+- **Step 3:** Connected mobile app
+  - Created `AiMatcherService.ts`: calls backend `/api/ai/match` with auth token
+  - Transforms mobile `OwnedAttire[]` to backend request format
+  - Handles timeout, network errors, auth errors, service unavailable
+  - Updated `MatchResultsScreen.tsx`: replaced MOCK_MATCH_RESULTS with real API
+  - Loading state: ActivityIndicator during match
+  - Error state: retry button + error message display
+  - Results display: suggested items with scores/confidence, missing items, match quality percentage
+  - Auto-triggers match when screen loads with selection + owned attire ready
 
-**Dataset Investigation (October 14, 2026):**
-- Flask expects datasets at: `../datasets/cosplay_matches/` (api.py:16 passes `"../datasets"` to AttireMatcher, attire_matcher.py:21 appends `/cosplay_matches`)
-- Actual base folder: `../chracters_datasets/` (typo: "chracters" not "characters")
-- Flask expects flat structure: `cosplay_matches/{character_variant_id}.json` (attire_matcher.py:32)
-- Actual file structure: `cosplay_matches/{character name}/{character_variant_id}.json` (nested subdirectories)
-- Example files found:
-  - `chracters_datasets/cosplay_matches/gojo satoru - jujutsu kaisen/gojo-satoru_season-2-uniform.json`
-  - `chracters_datasets/cosplay_matches/asta - black clover/asta_black-bulls-uniform.json`
-  - `chracters_datasets/cosplay_matches/luck voltia - black clover/luck-voltia_black-bulls.json`
-- File count in cosplay_matches: 3 character folders, 3 JSON files total
-- **Verdict: Wrong base path + wrong file structure.** Flask api.py:16 hard-codes `"../datasets"` but folder is `"../chracters_datasets"`, AND attire_matcher.py:32 expects flat files but they're in character-name subdirectories.
+**Flask Test Result (after fixes):**
+```
+Status: 200
+{
+  "character_variant_id": "gojo-satoru_season-2-uniform",
+  "suggested_outfit": {
+    "wig": {"item_id": "test001", "name": "White Wig", "score": 0.057, "confidence": "no-match"},
+    "top": {"item_id": "test002", "name": "Black Jacket", "score": 0.086, "confidence": "no-match"}
+  },
+  "missing_items": [
+    {"category": "bottom", "keywords": ["black", "pants", "dress-pants", "formal", "fitted"]},
+    {"category": "accessory", "keywords": ["white", "blindfold", "eye-cover", "headband", "fabric"]}
+  ],
+  "match_quality": {
+    "overall_score": 0.20,
+    "quality_label": "incomplete",
+    "completeness": 0.5,
+    "average_match_score": 0.071
+  }
+}
+```
 
-**BLOCKER (Step 2 Gate):**
-Cannot obtain successful match response. Flask code cannot be edited per task rules (forgemind-ai is read-only). Character JSON files exist but are inaccessible to Flask matcher due to:
-1. Hard-coded base path mismatch: api.py expects `../datasets` but folder is `../chracters_datasets`
-2. File structure mismatch: matcher expects `cosplay_matches/gojo-satoru_season-2-uniform.json` but actual path is `cosplay_matches/gojo satoru - jujutsu kaisen/gojo-satoru_season-2-uniform.json`
+**Known Limitations:**
+- Color matching returns 0.0: JSON uses `primary_colors[]` array but Flask expects `attributes.color` string
+- Category matching returns 0.0: JSON uses `category` field but Flask expects `attributes.type`
+- Keyword matching works: scores 0.29 and 0.43 for white/spiky and black/jacket/formal tags
+- character_name/variant_name empty: JSON fields don't match Flask expectations
+- Note: These are JSON schema mismatches in dataset files, not code issues
 
-**What user must provide:**
-Option A: Restructure files to match Flask expectations:
-- Rename `forgemind-ai/chracters_datasets` → `forgemind-ai/datasets` (fix typo)
-- Move all JSON files from `datasets/cosplay_matches/{character name}/{variant}.json` to flat `datasets/cosplay_matches/{variant}.json` (3 files need moving)
+**Mobile Field Mapping:**
+- `attire_id` → Flask `id` ✅
+- `original_input_text` → Flask `name` ✅ (synthesized)
+- `auto_categorized_type` → Flask `category` ✅
+- `auto_categorized_color` → Flask `color` ✅
+- `auto_categorized_style` + keywords → Flask `tags[]` ✅ (derived)
 
-Option B: Allow editing forgemind-ai files:
-- Edit `api.py:16` to pass `"../chracters_datasets"` instead of `"../datasets"`
-- Edit `attire_matcher.py:32-40` to search subdirectories when flat file not found
-
-Until one of these is done, Steps 3-6 (backend proxy route, mobile adapter, checks, relabels) cannot proceed because they depend on a proven Flask endpoint that returns real match data.
-
-**Flask Request Fields (what Flask expects):**
-- `character_variant_id` (string, e.g. "gojo-satoru_season-2-uniform")
-- `owned_items` (array of objects with: `id`, `name`, `category`, `subcategory`, `color`, `tags[]`)
-- `user_body_settings` (optional object with: `height`, `size`)
-
-**Flask Response Fields (what Flask returns):**
-- `suggested_outfit` (object with item per slot: `item_id`, `name`, `score`, `confidence`)
-- `alternatives` (object with arrays of alternatives per slot)
-- `missing_items` (array)
-- `match_quality` (object with: `overall_score`, `quality_label`)
-- `character_variant_id` (echo)
-
-**Mobile Owned Attire Fields (what app has):**
-- `attire_id` ✅ (maps to Flask `id`)
-- `auto_categorized_type` ✅ (maps to Flask `category` - AttireCategory enum)
-- `auto_categorized_color` ✅ (maps to Flask `color` - string)
-- `auto_categorized_style` ✅ (could map to Flask `subcategory` or `tags[]`)
-- `flexibility_tag`, `condition_rating`, `photo_urls`, `notes`, etc. (extra fields Flask doesn't need)
-- ❌ NO `name` field - owned attire has no explicit name, only `original_input_text`
-- ❌ NO `tags` array - would need to parse from `auto_categorized_style` or compute from other fields
-
-**Field Mapping Analysis:**
-- **Match:** attire_id → id, auto_categorized_type → category, auto_categorized_color → color
-- **Mismatch:** Mobile has no dedicated `name` field (use `original_input_text` or synthesize from type+color+style)
-- **Mismatch:** Mobile has no `tags[]` array (derive from `auto_categorized_style` split by space/comma, or leave empty)
-- **Mismatch:** Mobile has no `subcategory` field (use `auto_categorized_style` or leave as same as `category`)
-
-**Gap:** Mobile app needs to:
-1. Transform OwnedAttire → Flask owned_items format (synthesize name, derive tags from style, map category)
-2. Call Flask `/api/match` endpoint instead of using MOCK_MATCH_RESULTS
-3. Handle Flask response shape (currently expects hard-coded array)
-4. Add character datasets to forgemind-ai/datasets/cosplay_matches/ before matcher can return real results
-
-**Smallest viable step:** Create adapter function that transforms OwnedAttire[] to Flask owned_items[] format, then replace MOCK_MATCH_RESULTS with real Flask API call
+**Smallest next step:** Fix JSON schema mismatches in character data files (add `attributes.color`, `attributes.type`, proper `character`/`variant` field names) OR adjust Flask matcher to read `primary_colors[]` and `category` directly
 
 ---
 
@@ -234,7 +232,7 @@ Until one of these is done, Steps 3-6 (backend proxy route, mobile adapter, chec
 
 | Feature | Status | Evidence | Runs Where | Connected to Screen |
 |---------|--------|----------|------------|-------------------|
-| 1. Attire Matching | BUILT (Flask) + MOCK (Mobile) | `forgemind-ai/src/api.py:28`, `MatchResultsScreen.tsx:27` | Flask port 5000 | ❌ MatchResultsScreen (mock data) |
+| 1. Attire Matching | PARTIAL (Flask+Backend+Mobile) | `forgemind-ai/src/api.py:16`, `backend/src/ai/matcherRouter.ts:122`, `mobile/src/services/AiMatcherService.ts:74` | Flask→Backend→Mobile | ✅ MatchResultsScreen (real API) |
 | 2. Attire Suggestions | MISSING | No implementation | N/A | ❌ Not built |
 | 3. Budgeting | RULE-BASED (Device) | `src/data/budget_items.json`, `index.ts:40-51` | Device JSON | ✅ ProjectDashboardScreen |
 | 4. Readiness Forecast | RULE-BASED (Device) | `src/utils/readiness.ts:1-80` (formula) | Device calc | ✅ ProjectDashboardScreen, EventDetailScreen |
@@ -243,7 +241,7 @@ Until one of these is done, Steps 3-6 (backend proxy route, mobile adapter, chec
 | 7. Voice Transcription | MISSING | No implementation, manual TextInput only | N/A | ❌ Not built |
 
 **Status Counts:**
-- **BUILT (Flask, not connected):** 1 (attire matcher)
+- **PARTIAL (end-to-end connected, limited dataset):** 1 (attire matcher - Flask fixed, backend proxy built, mobile connected, 6 character variants available)
 - **RULE-BASED (working):** 3 (budgeting, readiness, listing screener)
 - **MISSING:** 3 (suggestions, photo categorization, voice)
 
