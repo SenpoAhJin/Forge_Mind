@@ -1,7 +1,90 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Tuesday, October 13, 2026, 14:23 (marketplace chat server integration)
+**Last updated:** Monday, October 14, 2026 (body-size slider removal)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Monday, October 14, 2026 (body-size slider removal)
+
+**Summary**
+
+The body-size slider feature has been permanently cancelled. The app now uses fixed male and female 3D body models only, with no runtime scaling, no slider UI component, and no body_size field in forms or API calls. This decision simplifies the 3D preview system to focus on the two base body types without variable sizing.
+
+**What was removed**
+
+- **Slider UI and onboarding screen**: Deleted entire `BodySliderOnboardingScreen.tsx` and removed `BodySizeSlider` component from `Slider.tsx`. The onboarding flow now completes at `AccountCreationScreen` without a body slider step.
+- **API parameters**: Removed `bodySize` parameter from `register()`, `setUserBody()`, and `AuthService.toStoredAccount()`. Registration and user context functions no longer accept or pass body size values.
+- **State management**: Updated `UserContext` to use fixed default value (0.5) for `body_size_slider` field instead of user-provided values. Old stored accounts continue working without migration.
+- **Component exports**: Removed `BodySizeSlider` from component exports and demo showcase screen.
+
+**What stayed (for compatibility)**
+
+- **StoredAccount type**: The `body_size_slider` field remains in the TypeScript type (defaults to 0.5). Old cached user data will not crash the app.
+- **Backend**: No backend code existed for body_size (validation.ts already documented it as NOT accepted). No database schema changes made.
+- **GLB body models**: Male and female GLB files (`3D_Model_Male.glb`, `3D_Model_Female.glb`) are still loaded and used for 3D preview at fixed scale.
+
+**Documentation updates**
+
+- Marked FE-3D Milestone 2 (runtime scaling) and Milestone 4 (multi-point slider testing) as CANCELLED in milestone docs with October 14, 2026 date and reason.
+- Updated `assets/models/README.md` to mark `body_size_bone_scale.json` as obsolete and strike through bone scaling sections.
+- Created `docs/changes/slider-removal.md` with inventory table showing what was removed, what was edited, and what is report-only (historical docs, datasets, binaries).
+
+**Files changed**
+
+Mobile app (forgemind-mobile):
+- Deleted: `src/screens/onboarding/BodySliderOnboardingScreen.tsx`
+- Edited: `src/components/sliders/Slider.tsx` (removed BodySizeSlider component)
+- Edited: `src/contexts/UserContext.tsx` (removed bodySize parameters)
+- Edited: `src/services/AuthService.ts` (removed bodySize parameters)
+- Edited: `src/navigation/OnboardingNavigator.tsx` (removed BodySliderOnboarding route)
+- Edited: `src/screens/onboarding/index.ts` (removed export)
+- Edited: `src/screens/shared/ComponentShowcaseScreen.tsx` (removed slider demo)
+- Edited: `src/screens/auth/RegisterScreen.tsx` (removed bodySize state)
+- Edited: `src/screens/dev/StaffRegistrationScreen.tsx` (removed bodySize param)
+- Edited: `src/screens/dev/HeadOrganizerRegistrationScreen.tsx` (removed bodySize param)
+- Edited: `FE-3D_MILESTONE_2_SUMMARY.md` (marked Part 3 cancelled)
+- Edited: `FE-3D_MILESTONE_2_VERIFICATION.md` (updated cancellation notice)
+- Edited: `assets/models/README.md` (marked body_size sections obsolete)
+- Created: `docs/changes/slider-removal.md` (removal inventory)
+
+Backend (forgemind-backend):
+- No changes needed (already clean - no body_size code existed)
+
+**Verified**
+
+- TypeScript compilation: PASS (npx tsc --noEmit exit 0 for both mobile and backend)
+- Male/Female GLB models: Still referenced in `BodyModel.tsx` and `bodyType.ts`
+- Remaining "slider" references: All in historical docs, comments explaining removal, or unrelated dataset text (verified with search)
+- Old stored accounts: Will continue working (body_size_slider field preserved with default value)
+
+**Report-only items (NOT removed)**
+
+Database cleanup (manual, when ready):
+```sql
+-- Check if column exists:
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'characters' AND column_name = 'body_size';
+
+-- If it exists, drop it:
+ALTER TABLE characters DROP COLUMN IF EXISTS body_size;
+```
+
+Blender files:
+- `chracters_datasets/Female_3D_Model/3D_Model_Female.blend1` (binary, don't touch)
+- `chracters_datasets/Male_3D_Model/3D_Model_Male.blend1` (binary, don't touch)
+- Scale tables and scripts in forgemind-ai that only served the slider feature (preserved as-is)
+
+Historical documentation:
+- CHANGELOG.md and CHANGELOG_V2.md entries (preserved for historical record)
+- Milestone docs, test reports, sprint plans (preserved for reference)
+
+**NOT TESTED (requires running app)**
+
+- Onboarding flow completes without slider screen
+- Registration works with only base body selection (no size input)
+- Old accounts with cached body_size_slider values load without errors
+- 3D preview still shows male/female bodies at fixed scale
 
 ---
 
