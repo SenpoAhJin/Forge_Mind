@@ -1,11 +1,81 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (AI_PROGRESS.md corrections)
+**Last updated:** Wednesday, October 14, 2026 (Attire matcher connection attempt - blocker found)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
 
 ---
 
-## Session — Wednesday, October 14, 2026 (AI_PROGRESS.md corrections)
+## Session — Wednesday, October 14, 2026 (Attire matcher connection attempt - blocker found)
+
+**Summary**
+
+Attempted to connect mobile app to Flask attire matcher (Task D). Completed preflight checks (both repos clean, tsc exit 0). Investigated Flask dataset paths: Flask expects flat files at `../datasets/cosplay_matches/{variant}.json` (api.py:16 hard-codes `"../datasets"`, attire_matcher.py:32 builds flat path), but actual structure is `../chracters_datasets/cosplay_matches/{character name}/{variant}.json` (typo in base folder name + nested subdirectories). Found 3 character JSON files in nested structure: gojo-satoru_season-2-uniform.json, asta_black-bulls-uniform.json, luck-voltia_black-bulls.json. **BLOCKER:** Cannot obtain successful match response because Flask code is read-only (forgemind-ai cannot be edited per task rules) and files are inaccessible due to path+structure mismatch. Steps 3-6 (backend proxy route, mobile adapter, validation checks) not started because they depend on proven Flask endpoint. Documented blocker with two options for user: (A) restructure files to flat structure Flask expects, or (B) allow editing Flask code to handle subdirectories. Mobile tsc exit 0, backend tsc exit 0. **Nothing tested on phone** - connection not built.
+
+**What was investigated**
+
+**Dataset Path Investigation (Step 1):**
+- Flask base path: `../datasets` (hard-coded in api.py:16, passed to AttireMatcher constructor)
+- Flask builds: `../datasets/cosplay_matches/{character_variant_id}.json` (attire_matcher.py:21 appends `/cosplay_matches`, line 32 appends `/{variant}.json`)
+- Actual base path: `../chracters_datasets/` (typo: "chracters" not "characters")
+- Actual file locations found:
+  1. `chracters_datasets/cosplay_matches/gojo satoru - jujutsu kaisen/gojo-satoru_season-2-uniform.json`
+  2. `chracters_datasets/cosplay_matches/asta - black clover/asta_black-bulls-uniform.json`
+  3. `chracters_datasets/cosplay_matches/luck voltia - black clover/luck-voltia_black-bulls.json`
+- Mismatch 1: Base folder name (`datasets` vs `chracters_datasets`)
+- Mismatch 2: File structure (flat vs nested in character-name subdirectories)
+
+**Blocker (Step 2 Gate):**
+- Cannot make real match call because Flask cannot find files
+- Flask code is read-only (task rules forbid editing forgemind-ai)
+- api.py:16 hard-codes `datasets_path="../datasets"` (no env var support)
+- attire_matcher.py:32 expects flat files (no subdirectory search)
+- Result: Step 2 gate failed, no successful match response obtained
+
+**What was NOT built (gate failure):**
+- Step 3: Backend proxy route (`/api/ai/match`) - not started
+- Step 4: Mobile adapter + service call - not started
+- Step 5: Validation check scripts - not started
+- Step 6: AI_PROGRESS.md relabels - not started (no new evidence without working endpoint)
+
+**User options to proceed:**
+
+**Option A (file restructure, recommended):**
+1. Rename `forgemind-ai/chracters_datasets` → `forgemind-ai/datasets` (fix typo)
+2. Move 3 JSON files from nested subdirectories to flat structure:
+   - FROM: `datasets/cosplay_matches/gojo satoru - jujutsu kaisen/gojo-satoru_season-2-uniform.json`
+   - TO: `datasets/cosplay_matches/gojo-satoru_season-2-uniform.json`
+   - (Repeat for asta and luck-voltia files)
+3. Re-run Task D starting from Step 2
+
+**Option B (code edit):**
+1. Allow editing forgemind-ai files
+2. Edit `src/api.py:16` to pass `"../chracters_datasets"`
+3. Edit `src/attire_matcher.py:32-40` to search character subdirectories when flat file not found
+4. Re-run Task D starting from Step 2
+
+**Verified**
+
+- Mobile git status: clean ✅
+- Backend git status: clean ✅
+- Mobile tsc: exit 0 ✅
+- Backend tsc: exit 0 ✅
+- Port 5000: free ✅
+- Character files: 3 found in nested structure ✅
+
+**Commits made**
+
+Mobile (feature/chat-app branch):
+1. `725504b` - "docs: dataset investigation - wrong path + missing data (Task D STEP 1)"
+2. `5c7d34f` - "docs: blocker - Flask files in nested dirs, cannot edit (Task D STEP 2 GATE FAILED)"
+3. _(This commit)_ - "docs: update CHANGELOG for Task D (blocker found, connection not built)"
+
+**Status**
+
+Task D incomplete. Dataset investigation complete (Step 1). Real match call gate failed (Step 2) due to Flask file access blocker. Backend proxy route, mobile adapter, and checks not built. Matcher connection work blocked until user restructures files or allows Flask code edits. **Nothing tested on phone.**
+
+---
+
+## Session — Wednesday, October 14, 2026 (AI_PROGRESS corrections)
 
 **Summary**
 
