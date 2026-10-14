@@ -34,7 +34,6 @@ interface User {
   
   // Body representation fields
   base_body_selection: 'male' | 'female'; // User.base_body_selection (Enum, required)
-  body_size_slider: number;             // User.body_size_slider (Float, required) - 0.0-1.0
   
   // Status fields (set to defaults for mock)
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
@@ -423,7 +422,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         is_cosplayer: false,
         is_organizer: false,
         base_body_selection: 'male',
-        body_size_slider: 0.5,
         is_holder_verified: false,
         verification_status: 'pending',
         organizer_role: null,
@@ -438,7 +436,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser((prev) => ({
       ...prev!,
       base_body_selection: baseBody,
-      body_size_slider: 0.5, // Fixed default value, slider removed
     }));
   };
 

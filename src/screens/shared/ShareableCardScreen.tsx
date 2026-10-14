@@ -81,7 +81,6 @@ export const ShareableCardScreen: React.FC = () => {
         ].filter(Boolean),
         body: {
           base: user?.base_body_selection,
-          size: user?.body_size_slider,
         },
         stats: {
           projects: projects.length,
@@ -362,7 +361,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         <View style={styles.bodySection}>
           <Text style={styles.bodySectionLabel}>Body Representation</Text>
           <Text style={styles.bodyInfo}>
-            {bodyTypeLabel(user?.base_body_selection)} • Size {user?.body_size_slider?.toFixed(2) || '0.50'}
+            {bodyTypeLabel(user?.base_body_selection)}
           </Text>
         </View>
       </View>

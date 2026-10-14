@@ -96,7 +96,6 @@ export interface StoredAccount {
   is_cosplayer: boolean;                // User.is_cosplayer (Boolean, required)
   is_organizer: boolean;                // User.is_organizer (Boolean, required)
   base_body_selection: 'male' | 'female'; // User.base_body_selection (Enum, required)
-  body_size_slider: number;             // User.body_size_slider (Float, required) - 0.0-1.0
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
   verification_status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'; // User.verification_status (Enum)
   organizer_role: 'head' | 'staff' | null; // User.organizer_role (FE-5.5 - Enum, nullable)
@@ -295,8 +294,8 @@ export class AuthService {
    * Projects the API's flat `user` row onto the local StoredAccount shape.
    *
    * `password_hash` is always '' — the server never sends a hash, and the local
-   * User type in UserContext requires the key to exist. Local-only fields
-   * (body_size_slider, portfolio_photos) are carried over from `existing`.
+   * User type in UserContext requires the key to exist.
+   * Old stored accounts may still have body_size_slider; it is ignored during load.
    */
   private static toStoredAccount(
     user: ApiUser,
@@ -310,7 +309,6 @@ export class AuthService {
       is_cosplayer: user.is_cosplayer,
       is_organizer: user.is_organizer,
       base_body_selection: user.base_body_selection,
-      body_size_slider: existing?.body_size_slider ?? 0.5, // Fixed default, slider removed
       is_holder_verified: user.is_holder_verified,
       verification_status: user.verification_status,
       organizer_role: user.organizer_role,
@@ -481,8 +479,7 @@ export class AuthService {
       const accounts = await this.getAccounts();
       const existing =
         accounts.find((acc) => acc.email.toLowerCase() === data.user.email.toLowerCase()) ?? null;
-      // body_size_slider and portfolio_photos have no server column, so they are
-      // carried over from the local record rather than reset.
+      // Old stored accounts may have body_size_slider; it is ignored during load.
       const account = AuthService.toStoredAccount(data.user, existing);
       await AuthService.upsertLocalAccount(account, accounts);
 
