@@ -35,7 +35,6 @@ export const RootNavigator: React.FC = () => {
   }
 
   // Active session but onboarding not complete - show onboarding
-  // (This handles body slider setup for newly registered accounts)
   if (!isOnboardingComplete) {
     return (
       <NavigationContainer>
