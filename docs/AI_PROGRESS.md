@@ -142,11 +142,11 @@ readiness = (matched_components + obtained_components) / total_required_componen
 ### 6. Photo Categorization (Auto-tag uploaded listing photos)
 
 **Status:** MISSING  
-**Evidence:** No implementation found
+**Evidence:** No implementation found in any repo. Category selection is manual via chip buttons in `src/screens/cosplayer/CreateListingScreen.tsx:330-352` (MARKETPLACE_CATEGORIES array, user taps one category).
 
 **Where it should run:** Flask (image classification model) OR Backend (if using external API)  
-**App screens:** Would integrate into MarketplaceCreateListingScreen photo upload flow  
-**Connection status:** ❌ NOT BUILT
+**App screens:** Would integrate into CreateListingScreen photo upload flow  
+**Connection status:** ❌ NOT BUILT - No photo analysis, no ML categorization, no "suggest category" feature
 
 **What it needs:**
 - Input: uploaded photo (base64 or file path)
@@ -161,11 +161,11 @@ readiness = (matched_components + obtained_components) / total_required_componen
 ### 7. Voice Input / Transcription (Voice-to-text for item descriptions)
 
 **Status:** MISSING  
-**Evidence:** No implementation found
+**Evidence:** No implementation found in any repo. Text inputs (title, description) are manual TextInput fields in `src/screens/cosplayer/CreateListingScreen.tsx` with no voice input UI or transcription hooks.
 
 **Where it should run:** Device (expo-speech-recognition or external API like Whisper)  
 **App screens:** Would integrate into any text input (marketplace descriptions, project notes, chat)  
-**Connection status:** ❌ NOT BUILT
+**Connection status:** ❌ NOT BUILT - No voice recording UI, no speech-to-text, no microphone icon
 
 **What it needs:**
 - Input: audio recording (WAV, MP3, or stream)
@@ -173,7 +173,7 @@ readiness = (matched_components + obtained_components) / total_required_componen
 - Library options: expo-speech-recognition (device), OpenAI Whisper API (cloud), Google Speech-to-Text
 - Privacy: Device-side preferred for sensitive notes; cloud OK for marketplace descriptions
 
-**Smallest viable step:** Add microphone icon to MarketplaceCreateListingScreen description field that records 30sec audio, sends to Whisper API, fills textarea with transcript
+**Smallest viable step:** Add microphone icon to CreateListingScreen description field that records 30sec audio, sends to Whisper API, fills textarea with transcript
 
 ---
 
