@@ -193,6 +193,20 @@ readiness = (matched_components + obtained_components) / total_required_componen
 
 ---
 
+## Connection Map
+
+| AI Feature | Data In | Data Out | App Screen | Backend Route | Flask Route | Connected | Next Link to Build |
+|------------|---------|----------|------------|---------------|-------------|-----------|-------------------|
+| Attire Matching | character_variant_id,<br/>owned_items[],<br/>user_body_settings | suggested_outfit{},<br/>alternatives[],<br/>missing_items[],<br/>match_quality{} | MatchResultsScreen | None (direct to Flask) | `/api/match` | ❌ No | Mobile→Flask: Add API call in MatchResultsScreen replacing MOCK_MATCH_RESULTS |
+| Attire Suggestions | character_variant_id,<br/>owned_items[],<br/>user_budget,<br/>user_skill_level | suggested_items[],<br/>priority_scores[],<br/>estimated_costs[] | MatchResultsScreen (future) | TBD | TBD | ❌ No | Build Flask endpoint `/api/suggest-items` using matcher missing_items + marketplace price data |
+| Budgeting | project_id,<br/>missing_components[] | estimated_costs[],<br/>confidence_intervals[],<br/>cost_breakdown{} | ProjectDashboardScreen | None | None | ⚠️ Mock (JSON) | Mobile stores budget_items.json locally. Next: Flask `/api/estimate-costs` using marketplace price history |
+| Readiness Forecast | project_id,<br/>tasks[],<br/>days_until_event,<br/>task_velocity | predicted_completion_date,<br/>confidence_%,<br/>risk_factors[] | ProjectDashboardScreen,<br/>EventDetailScreen | None | None | ✅ Simple calc | Runs device-side via `utils/readiness.ts`. Next: Add ML-based date prediction in Flask `/api/forecast-readiness` |
+| Listing Screener | listing_title,<br/>listing_description,<br/>category | permitted/blocked,<br/>confidence_score,<br/>flagged_categories[] | MarketplaceCreate<br/>ListingScreen | None | None | ⚠️ Word list | Runs device-side `utils/listingScreener.ts`. Next: Backend `/marketplace/listings/screen` then Flask `/api/screen-listing` with logistic regression |
+| Photo Categorization | uploaded_photo (base64) | detected_category,<br/>confidence_score,<br/>alt_categories[] | MarketplaceCreate<br/>ListingScreen | TBD | `/api/categorize-photo` | ❌ No | Build Flask CNN classifier endpoint, add "Suggest Category" button to photo upload flow |
+| Voice Transcription | audio_recording (WAV/MP3) | transcribed_text | Any text input field | TBD (if using Whisper API) | TBD | ❌ No | Add expo-speech-recognition OR Whisper API call, microphone icon on description fields |
+
+---
+
 ## Next Steps
 
 **Priority 1 (Highest Impact):** Connect mobile app to Flask attire matcher
