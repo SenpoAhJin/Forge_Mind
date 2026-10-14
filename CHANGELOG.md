@@ -1,7 +1,65 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (AI progress tracker + wearing audit)
+**Last updated:** Wednesday, October 14, 2026 (Wearing pipeline scaffold with placeholder garment)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (Wearing pipeline scaffold with placeholder garment)
+
+**Summary**
+
+Built wearing pipeline scaffold with code-generated placeholder garment (red sphere). Verified GARMENT_SPEC.md slot anchors against actual body measurements. Created garment registry with 1 placeholder entry (head slot, male+female compatible). Built GarmentLayer component (GLB loader + placeholder renderer). Added garment visibility toggles to Preview3D. Validation script confirms registry structure. tsc exit 0. **NO REAL GARMENT EXISTS** - placeholder demonstrates pipeline only, cannot test with actual costume assets yet.
+
+**What was created**
+
+- **GARMENT_SPEC.md corrections** (`docs/GARMENT_SPEC.md`): Re-verified slot anchor ranges against body min/max coordinates (head: Y 0.65-0.94, feet: Y -0.95 to -0.75). Added attachment behavior documentation: bodies render in T-pose (rest pose), no runtime animations applied, garments use world-space positioning following body transform.
+
+- **Garment Registry** (`src/data/garmentRegistry.ts`): TypeScript module with types (GarmentSlot, BodyType, PlaceholderShape, GarmentEntry) and registry array. Contains 1 entry: `placeholder-head-sphere` (slot: head, bodyTypes: male+female, asset: null, placeholder: sphere at Y=0.75 radius 0.15 red color, isPlaceholder: true). Helper functions: `getGarmentsForBodyType()`, `getGarmentById()`, `getGarmentsBySlot()`.
+
+- **GarmentLayer Component** (`src/components/GarmentLayer.tsx`): Renders garment GLB via `useGLTF` with error-safe fallback, OR renders code-generated placeholder primitive (sphere/box/cylinder). Props: garment entry, bodyType, visible. Routes to GarmentGLB (real asset) or PlaceholderPrimitive based on isPlaceholder flag. Suspense wrapper handles async loading.
+
+- **Preview3D Garment Controls** (`src/components/Preview3D.tsx`): Added garment visibility state (Set<string>), toggleGarment function, GarmentLayer map inside Canvas rendering each garment conditionally. Added horizontal scrolling garment control bar at bottom with toggle buttons (active state shows primary color background, inactive shows light background). Uses theme colors (primary, backgroundLight, surface, border, textPrimary, textSecondary).
+
+- **Validation Script** (`scripts/check_garment_registry.js`): Node.js script that parses garmentRegistry.ts source, validates: slot values (must be in VALID_SLOTS), bodyTypes (must be in VALID_BODY_TYPES), isPlaceholder consistency (true => asset null + placeholder defined), asset paths exist (if not placeholder). Run: `node scripts/check_garment_registry.js`. Result: ✅ 1 entry, 0 errors, 0 warnings.
+
+**Body Measurements (verified via glb_inspect.js)**
+
+| Body | Min X | Min Y | Min Z | Max X | Max Y | Max Z | Width | Height | Depth | Triangles | Joints |
+|------|-------|-------|-------|-------|-------|-------|-------|--------|-------|-----------|--------|
+| Male | -0.440 | -0.950 | -0.174 | 0.436 | 0.931 | 0.150 | 0.876 | 1.881 | 0.324 | 19451 | 706 |
+| Female | -0.404 | -0.951 | -0.185 | 0.399 | 0.944 | 0.189 | 0.804 | 1.895 | 0.374 | 19882 | 707 |
+
+Both bodies: skinned (Rigify armature), 0 animations, 0 materials, origins don't match (male at origin, female offset).
+
+**Runtime Animation Status**
+
+Bodies render in **T-pose (rest pose)** with NO runtime animations applied. Evidence:
+- `BodyModel.tsx:16-17`: `useGLTF` loads static GLB, no `useAnimations` call
+- `Preview3D.tsx:75`: No `useFrame` bone manipulation
+- GLB inspection: 0 animation clips in both files
+
+**What this means for garments:** Slot anchors are static Y-ranges; garments positioned in world space follow body transform but don't need per-frame bone tracking.
+
+**Verified**
+
+- Registry validation: exit 0 ✅ (1 entry, 0 errors, 0 warnings)
+- Mobile tsc: exit 0 ✅
+- Git: forgemind-mobile clean (branch feature/chat-app)
+
+**Commits made**
+
+Mobile (feature/chat-app branch):
+1. `7eeb540` - "docs: correct slot anchors and clarify static attachment (Task C2 STEP A)"
+2. `0049d28` - "feat: add garment registry with head placeholder (Task C2 STEP B)"
+3. `9c87c6f` - "feat: add GarmentLayer component with GLB and placeholder support (Task C2 STEP C)"
+4. `312d888` - "feat: add garment toggle UI to Preview3D (Task C2 STEP D)"
+5. `2a9be3c` - "test: add garment registry validation script (Task C2 STEP E)"
+6. _(This commit)_ - "docs: update CHANGELOG for Task C2 (wearing pipeline scaffold)"
+
+**Status**
+
+Wearing pipeline scaffold complete. Placeholder demonstrates UI flow (toggle on, red sphere renders at head position on both male/female bodies). **NEXT STEP (requires user):** Add real garment GLB file to `assets/models/garments/`, add entry to garmentRegistry.ts, test on physical device via Expo Go.
 
 ---
 
