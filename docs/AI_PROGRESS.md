@@ -27,11 +27,31 @@
 
 **Dataset Investigation (October 14, 2026):**
 - Flask expects datasets at: `../datasets/cosplay_matches/` (api.py:16 passes `"../datasets"` to AttireMatcher, attire_matcher.py:21 appends `/cosplay_matches`)
-- Actual location: `../chracters_datasets/cosplay_matches/` (typo in folder name: "chracters" not "characters")
-- Result of mismatch: Flask matcher line 32 builds path `../datasets/cosplay_matches/{character_variant_id}.json`, file does not exist there, returns 404
-- Files in actual folder: 0 JSON files found in `chracters_datasets/cosplay_matches/`
-- **Verdict: Wrong path + missing data.** Flask looks in `datasets` but folder is spelled `chracters_datasets`, AND that folder is empty (no character variant JSON files created yet).
-- **To fix:** Either (1) rename `chracters_datasets` → `datasets`, or (2) start Flask with `datasets_path="../chracters_datasets"` environment variable/argument, AND create at least one character variant JSON file following the template structure.
+- Actual base folder: `../chracters_datasets/` (typo: "chracters" not "characters")
+- Flask expects flat structure: `cosplay_matches/{character_variant_id}.json` (attire_matcher.py:32)
+- Actual file structure: `cosplay_matches/{character name}/{character_variant_id}.json` (nested subdirectories)
+- Example files found:
+  - `chracters_datasets/cosplay_matches/gojo satoru - jujutsu kaisen/gojo-satoru_season-2-uniform.json`
+  - `chracters_datasets/cosplay_matches/asta - black clover/asta_black-bulls-uniform.json`
+  - `chracters_datasets/cosplay_matches/luck voltia - black clover/luck-voltia_black-bulls.json`
+- File count in cosplay_matches: 3 character folders, 3 JSON files total
+- **Verdict: Wrong base path + wrong file structure.** Flask api.py:16 hard-codes `"../datasets"` but folder is `"../chracters_datasets"`, AND attire_matcher.py:32 expects flat files but they're in character-name subdirectories.
+
+**BLOCKER (Step 2 Gate):**
+Cannot obtain successful match response. Flask code cannot be edited per task rules (forgemind-ai is read-only). Character JSON files exist but are inaccessible to Flask matcher due to:
+1. Hard-coded base path mismatch: api.py expects `../datasets` but folder is `../chracters_datasets`
+2. File structure mismatch: matcher expects `cosplay_matches/gojo-satoru_season-2-uniform.json` but actual path is `cosplay_matches/gojo satoru - jujutsu kaisen/gojo-satoru_season-2-uniform.json`
+
+**What user must provide:**
+Option A: Restructure files to match Flask expectations:
+- Rename `forgemind-ai/chracters_datasets` → `forgemind-ai/datasets` (fix typo)
+- Move all JSON files from `datasets/cosplay_matches/{character name}/{variant}.json` to flat `datasets/cosplay_matches/{variant}.json` (3 files need moving)
+
+Option B: Allow editing forgemind-ai files:
+- Edit `api.py:16` to pass `"../chracters_datasets"` instead of `"../datasets"`
+- Edit `attire_matcher.py:32-40` to search subdirectories when flat file not found
+
+Until one of these is done, Steps 3-6 (backend proxy route, mobile adapter, checks, relabels) cannot proceed because they depend on a proven Flask endpoint that returns real match data.
 
 **Flask Request Fields (what Flask expects):**
 - `character_variant_id` (string, e.g. "gojo-satoru_season-2-uniform")
