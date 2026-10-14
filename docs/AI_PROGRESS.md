@@ -337,3 +337,101 @@ readiness = (matched_components + obtained_components) / total_required_componen
 ---
 
 ## Budgeting & Suggestions: Read-Only Analysis (Task B STEP 5)
+
+
+### Current Budget Data Location
+
+**Storage:** Device-side (AsyncStorage)  
+**Format:** JSON array per project  
+**Context:** ProjectsContext manages budget items  
+**Type:** `src/types/projects.ts:48` (BudgetLineItem interface)
+
+**Fields stored:**
+```typescript
+{
+  budget_item_id: string;      // UUID
+  project_id: string;           // Links to Project
+  description: string;          // User-entered text
+  estimated_cost: number;       // User's estimate
+  actual_cost: number | null;   // After purchase
+  is_complete: boolean;         // Whether purchased
+}
+```
+
+**Data flow:**
+1. User creates project → empty budget array initialized
+2. User manually adds budget items (description + estimated cost)
+3. User marks items complete → sets actual_cost
+4. ProjectDashboardScreen displays total estimated vs actual
+
+**No AI/ML:** Budget items are 100% user-entered. No automated cost estimation exists.
+
+### What Budgeting AI Would Need
+
+**Input data required:**
+- `character_variant_id` (which character/costume)
+- `missing_components[]` (from attire matcher output)
+- `user_location` (for shipping cost estimation, optional)
+- `marketplace_price_history` (historical transaction data from backend)
+
+**Output data:**
+- `estimated_costs[]` (per component: min, avg, max price)
+- `confidence_intervals[]` (e.g., "80% of wigs for this character cost $20-45")
+- `cost_breakdown` (by category: wigs $X, clothing $Y, props $Z)
+- `total_range` (min/max total project cost)
+
+**Data source:** Backend `marketplace_transactions` table (if exists) or external marketplace API
+
+**Smallest real AI step:**
+1. Backend endpoint `/api/budget/estimate` that queries marketplace transaction history
+2. Group transactions by `category` + `title` keywords
+3. Return percentile costs (p25, p50, p75) per category
+4. No ML model needed yet - simple SQL aggregations
+5. Mobile app calls endpoint after matcher runs, pre-fills budget items with estimates
+
+### What Attire Suggestions AI Would Need
+
+**Input data required:**
+- `character_variant_id` (target costume)
+- `owned_items[]` (what user already has)
+- `missing_components[]` (from matcher output)
+- `user_budget` (optional spending limit)
+- `user_skill_level` (beginner/intermediate/advanced for DIY suggestions)
+- `marketplace_active_listings` (current available items for purchase)
+
+**Output data:**
+- `suggested_purchases[]` (marketplace listings matching missing components, sorted by match quality + price)
+- `diy_suggestions[]` (tutorials/patterns for making missing items)
+- `priority_scores[]` (which items to buy/make first based on difficulty + visibility)
+- `estimated_effort_hours[]` (time to complete DIY items)
+
+**Data sources:**
+1. Marketplace listings (backend database)
+2. Matcher missing_items output (Flask API)
+3. DIY pattern/tutorial database (external or curated)
+4. User skill ratings (from user profile)
+
+**Smallest real AI step:**
+1. Flask endpoint `/api/suggest-items` that receives missing_components from matcher
+2. Query marketplace listings for matching items (category + color + style keywords)
+3. Rank results by: (a) match confidence, (b) price (lower better), (c) seller rating
+4. Return top 3 suggestions per missing component
+5. Mobile app displays "Suggested Purchases" section in MatchResultsScreen
+
+### Implementation Priority
+
+**Budget AI:**
+- Dependency: Marketplace transaction history (BE-7 not built yet per task notes)
+- Complexity: Low (SQL aggregations, no ML model)
+- Value: Medium (helps users plan spending)
+- Effort: 4-6 hours (backend endpoint + mobile integration)
+- **Blocker:** Requires completed transactions table to have data
+
+**Suggestions AI:**
+- Dependency: Marketplace listings + matcher integration
+- Complexity: Medium (keyword matching → ML classifier upgrade later)
+- Value: High (direct path from "what I need" to "where to buy it")
+- Effort: 6-8 hours (Flask endpoint + marketplace query + mobile UI)
+- **Ready to build:** Marketplace listings exist (FE-6 per changelog)
+
+**Recommendation:** Build Attire Suggestions first (simpler, higher value, no transaction history dependency)
