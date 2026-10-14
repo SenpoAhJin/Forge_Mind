@@ -65,7 +65,7 @@
 ### 2. Attire Suggestions (AI-recommended items to buy/make)
 
 **Status:** MISSING  
-**Evidence:** No implementation found in any repo
+**Evidence:** No implementation found in any repo. No suggestion UI in MatchResultsScreen or any other screen.
 
 **Where it should run:** Flask (requires trained model) OR Backend (simpler rule-based)  
 **App screen:** Would integrate into MatchResultsScreen or ProjectDashboardScreen  
@@ -82,23 +82,21 @@
 
 ### 3. Budgeting Suggestions (Cost forecasting for a project)
 
-**Status:** MOCK (Device-side JSON)  
+**Status:** RULE-BASED (Device-side static JSON)  
 **Evidence:**
-- Data: `src/data/budget_items.json` (hard-coded budget line items)
-- Type: `src/types/projects.ts:48` (BudgetLineItem interface)
-- Context: Uses ProjectsContext to store budget items per project
+- Data: `src/data/budget_items.json` (static budget line items)
+- Type: `src/types/projects.ts:51` (BudgetLineItem interface)
+- Context: `src/data/index.ts:40-51` (budgetItems exported, getBudgetForProject filter function)
+- Utils: `src/utils/readiness.ts:45` (projectBudget param used in readiness formula)
 
-**Where it runs:** Device (JSON file, no AI/ML)  
+**Where it runs:** Device (JSON file, no AI/ML or forecasting)  
 **App screens:** ProjectDashboardScreen, BudgetScreen (if exists)  
-**Connection status:** ⚠️ MOCK - Uses static JSON, no ML forecasting
+**Connection status:** ✅ WORKS - But uses static JSON, no ML cost prediction
 
-**Current budget data (per project):**
-- `budget_item_id` (string)
-- `project_id` (string)
-- `description` (string)
-- `estimated_cost` (number)
-- `actual_cost` (number | null)
-- `is_complete` (boolean)
+**Current budget data (per project line item):**
+- `budget_line_item_id`, `project_id`, `description`, `estimated_cost`, `actual_cost`, `is_complete`
+- Stored device-side in JSON, filtered by project_id
+- Used in readiness formula as budgetHealth metric (spent vs stated_budget)
 
 **Real AI would need:**
 - Input: character_variant_id, owned_items (what's already available), user location (shipping costs)
@@ -111,28 +109,30 @@
 
 ### 4. Readiness Forecast (Project completion prediction)
 
-**Status:** BUILT (Device-side calculation, NOT ML-based)  
+**Status:** RULE-BASED (Device-side formula, NOT ML)  
 **Evidence:**
-- Utils: `src/utils/readiness.ts:1` (computeReadiness function)
-- Utils: `src/utils/readinessAggregate.ts:1` (computeEventReadinessAggregate for organizers)
+- Utils: `src/utils/readiness.ts:1-80` (computeReadiness function with explicit formula documented)
+- Utils: `src/utils/readinessAggregate.ts:1-90` (computeEventReadinessAggregate for organizers)
+- Formula: `readiness = (taskCompletion*0.4 + itemMatch*0.3 + budgetHealth*0.3)` where task/match/budget are 0-1 scores
 - Screen: `src/screens/organizer/EventDetailScreen.tsx:44` (Group Readiness display)
-- Screen: `src/screens/cosplayer/ProjectDashboardScreen.tsx` (individual readiness)
+- Screen: `src/screens/cosplayer/ProjectDashboardScreen.tsx` (individual readiness percentage)
 
 **Where it runs:** Device (TypeScript calculation, no ML)  
 **App screens:** ProjectDashboardScreen (cosplayer), EventDetailScreen (organizer aggregate)  
-**Connection status:** ✅ BUILT - But uses simple percentage calculation, not ML forecasting
+**Connection status:** ✅ WORKS - Computes readiness % from task completion, item matches, and budget spent
 
 **Current readiness calculation:**
-```
-readiness = (matched_components + obtained_components) / total_required_components
-```
+- taskCompletion = mean(task status: completed=1.0, in-progress=0.5, pending/skipped=0) × 40%
+- itemMatch = mean(match quality: exact=1.0, close=0.5, loose=0.25) × 30%
+- budgetHealth = 1 - min(1, spent/budget) × 30%
+- Output: Single readiness score 0-100%, displayed as percentage
 
 **Real AI forecasting would add:**
-- Input: current readiness %, days until event, user build velocity (tasks completed/week), budget spent vs total
+- Input: current readiness %, days until event, user build velocity (tasks/week), budget spent vs total
 - Output: predicted completion date, confidence interval, risk factors (low velocity, tight budget, complex builds)
 - Training data: historical project timelines, task completion rates, budget overruns
 
-**Smallest viable step:** Add "Predicted Completion Date" to ProjectDashboardScreen using simple linear extrapolation from task velocity (tasks_completed / days_elapsed * days_remaining)
+**Smallest viable step:** Add "Predicted Completion Date" to ProjectDashboardScreen using simple linear extrapolation from task velocity (tasks_completed / days_elapsed × days_remaining)
 
 ---
 
