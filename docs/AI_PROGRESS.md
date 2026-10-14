@@ -336,5 +336,341 @@ curl http://localhost:5000/health
 
 ---
 
+## 3. "Wearing Sample Attire" Build Plan
+
+### Current State: 3D Body Exists, NO Garment Layer
+
+**What Exists:**
+- ✅ **3D Rendering:** `Preview3D.tsx` using react-three-fiber + expo-gl
+- ✅ **Base Bodies:** 2 GLB files in `assets/models/` (Male: 1.34 MB, Female: 1.20 MB)
+- ✅ **Body Loader:** `BodyModel.tsx` loads GLB via `@react-three/drei/useGLTF`
+- ✅ **Body Selection:** `BodyTypeSelector.tsx` + `UserContext.updateBodyType()`
+- ✅ **Viewer Integration:** `ThreeDPreview.tsx` wrapper used in screens
+
+**What Does NOT Exist:**
+- ❌ **No Garment Meshes:** Zero GLB/glTF files for clothing items (checked `assets/models/` - only 2 body files + 1 JSON)
+- ❌ **No Garment Loader:** No code to attach/render garment meshes on body
+- ❌ **No Garment Data:** Attire matching returns match labels but no 3D asset references
+- ❌ **No Material/Texture System:** Bodies render with default materials only
+
+**How Body Loads:**
+1. `BodyModel.tsx:65` receives `bodyType` prop ('male' or 'female')
+2. `resolveModelUri()` at line 45 gets asset URI from `Asset.fromModule()`
+3. `useGLTF(uri)` at line 66 loads and caches the GLB
+4. Returns `<primitive object={gltf.scene} />` - mounts entire scene graph including bones
+
+**Owned Attire Storage:**
+- **Table:** `owned_attire` (backend schema)
+- **Fields Used for Matching:**
+  - `auto_categorized_type` (wig, clothing, footwear, accessory, armor, weapon, prop)
+  - `auto_categorized_color` (string)
+  - `flexibility_tag` (exact-match-only, close-enough, very-flexible)
+- **Missing Field:** No `glb_asset_path` or `model_reference` column
+
+**Attire Match Output (Flask):**
+```json
+{
+  "suggested_outfit": {
+    "wig": {
+      "item_id": "item001",
+      "name": "White Spiky Wig",
+      "score": 0.95,
+      "confidence": "excellent"
+    }
+  }
+}
+```
+**Gap:** Match result has no 3D model path - only item metadata
+
+---
+
+### Build Plan: 6 Testable Steps
+
+Each step produces a visible result on a phone.
+
+#### STEP A: Create ONE Sample Garment Asset (Smallest Visible Win)
+
+**Goal:** Show ONE piece of geometry (a simple wig box) on the existing male body
+
+**Tasks:**
+1. In Blender: Create simple box mesh sized for wig (e.g. 0.3×0.3×0.2 units), position above head
+2. Parent to body's head bone (so it follows head rotation/animation if any)
+3. Export as `sample_wig_male.glb` (< 50 KB)
+4. Place in `assets/models/garments/`
+5. Update `BodyModel.tsx`:
+   - Add `garments?: string[]` prop
+   - If `garments` includes 'wig', call `useGLTF('../../assets/models/garments/sample_wig_male.glb')`
+   - Mount garment scene as child of body scene
+6. Update `Preview3D.tsx`: pass `garments={['wig']}` to BodyModel
+7. **Test:** Open `Preview3DTestScreen` → see box floating above head
+
+**Exit Criteria:** Wig box visible, stays attached when camera rotates
+
+**Risks:**
+- Bone naming mismatch (Blender bone name ≠ GLB bone name)
+- Scale mismatch (garment too big/small)
+- Position offset (wig not centered on head)
+
+**Mitigation:** Use Blender's GLB preview to verify bone hierarchy before export
+
+---
+
+#### STEP B: Map Match Result → Garment Path
+
+**Goal:** When attire matcher says "wig: exact match", load the wig asset
+
+**Tasks:**
+1. Create `src/utils/garmentAssetMapper.ts`:
+   ```ts
+   export function getGarmentAsset(
+     componentType: string,
+     bodyType: 'male' | 'female'
+   ): string | null {
+     const key = `${componentType}_${bodyType}`;
+     return GARMENT_ASSETS[key] ?? null;
+   }
+   
+   const GARMENT_ASSETS: Record<string, string> = {
+     'wig_male': require('../../assets/models/garments/sample_wig_male.glb'),
+     'wig_female': require('../../assets/models/garments/sample_wig_female.glb'),
+   };
+   ```
+2. Update `BodyModel.tsx`:
+   - Accept `matchedComponents: MatchComponent[]` prop (from attire match result)
+   - For each component with quality 'exact' or 'close', call `getGarmentAsset()`
+   - Load all returned GLB paths via `useGLTF`
+   - Mount each garment scene
+3. Update call sites to pass `matchedComponents` from `computeReadiness()` result
+
+**Test:** Hard-code matchedComponents = [{component_id: 'wig', match_quality: 'exact'}] → wig appears
+
+**Exit Criteria:** Wig shows when match result includes wig component, hidden when not
+
+---
+
+#### STEP C: Add Second Garment Slot (Top/Shirt)
+
+**Goal:** Prove layering works for 2+ garments
+
+**Tasks:**
+1. Create `sample_top_male.glb` (simple box parented to spine/chest bone)
+2. Add 'top_male' entry to GARMENT_ASSETS map
+3. **Test:** matchedComponents = [{...wig}, {...top}] → both visible
+
+**Exit Criteria:** Wig + top both render, no z-fighting or clipping
+
+**Known Risk:** Garments overlap (e.g. top clips through wig). Solution: Adjust bone offsets in Blender or add layer ordering.
+
+---
+
+#### STEP D: Color Tinting (Match Color → Material Color)
+
+**Goal:** Wig matched as "white" shows white, "black" shows black
+
+**Tasks:**
+1. Attire match returns `auto_categorized_color` field
+2. Update `BodyModel.tsx` garment loader:
+   - After loading GLB, traverse `gltf.scene` to find meshes
+   - For each mesh with material, set `material.color = new THREE.Color(matchColor)`
+3. Add fallback: if color is "unclear" or missing, leave material as-is
+
+**Test:** 
+- Match with color="white" → wig renders white
+- Match with color="black" → wig renders black
+
+**Exit Criteria:** 3 different colors tested and visually distinct
+
+**Trade-off:** Simple color tint vs texture maps. Start with tint (Step D), add textures later (Step F).
+
+---
+
+#### STEP E: Full 5-Slot Outfit (Wig, Top, Bottom, Footwear, Accessory)
+
+**Goal:** Complete outfit from head to toe
+
+**Tasks:**
+1. Create 3 more sample garments: `sample_bottom_male.glb`, `sample_footwear_male.glb`, `sample_accessory_male.glb`
+2. Update GARMENT_ASSETS map with all 5 slots
+3. Update garmentAssetMapper to handle all component types
+4. **Test:** Full match result with 5 components → all 5 render
+
+**Exit Criteria:** 5 distinct garments visible simultaneously, no crashes
+
+---
+
+#### STEP F: Real Garment from Owned Attire (End-to-End)
+
+**Goal:** User's owned item drives what appears on body
+
+**Flow:**
+1. User logs owned item via PhotoEntryScreen → stored in OwnedAttire table with `auto_categorized_type='wig'`, `auto_categorized_color='white'`
+2. User selects character variant
+3. App calls Flask `/api/match` with owned items
+4. Flask returns suggested_outfit with wig component
+5. Mobile maps component → garment GLB path
+6. BodyModel renders body + matched garments
+7. **Test on phone:** Log wig → select character → see wig on 3D body
+
+**Exit Criteria:** 
+- Owned item with exact match: garment shows
+- Owned item with no match: slot empty (shows bare body part)
+- Different colors: different tints applied
+
+---
+
+### Technical Decisions
+
+**Q: How to handle missing garment assets?**
+A: Graceful degradation - if `getGarmentAsset()` returns null, skip that slot. Body always renders, garments optional.
+
+**Q: Bone parent vs position offset?**
+A: Bone parent (Blender) preferred - garments follow body animations automatically. If bones don't match, fall back to manual position offset in Three.js.
+
+**Q: One GLB per garment or multi-garment GLB?**
+A: One GLB per garment - easier to swap, smaller files, simpler caching.
+
+**Q: Where do real garment assets come from?**
+A: Phase 1 (Steps A-F): Placeholder boxes and simple meshes created in Blender. Phase 2: Replace with real cosplay garment models (TurboSquid, Marvelous Designer, or hand-modeled).
+
+**Q: Male and female variants?**
+A: Start with male-only (Steps A-E), duplicate for female in Step F. Bone names may differ between rigs.
+
+**Q: Performance - how many garments before lag?**
+A: Target: 5 garments + body = 6 GLBs loaded. Each < 200 KB. Total < 1.5 MB. Test on mid-range Android (target 30 FPS).
+
+---
+
+### Estimated Effort Per Step
+
+| Step | Effort | Blocker Dependencies |
+|------|--------|---------------------|
+| A - One sample garment | 4 hours | None - can start immediately |
+| B - Map match → asset | 3 hours | Step A complete |
+| C - Second slot | 2 hours | Step B complete |
+| D - Color tinting | 3 hours | Step C complete |
+| E - Five slots | 4 hours | Step D complete |
+| F - End-to-end with API | 4 hours | Flask matcher connected (current gap) |
+| **Total** | **20 hours** (~2.5 days) | |
+
+**Critical Path:** Step F blocked until Flask matcher is connected to mobile (AI item #1 priority).
+
+---
+
+---
+
+## 4. Budgeting and Suggestions: Smallest Real AI Steps
+
+### Budget Data Current State
+
+**Where Budget Lives:**
+- **Device:** ProjectsContext manages local budget state
+- **Backend Table:** `budget_line_items` exists (schema at `forgemind-backend/src/scripts/seed.ts:443`)
+- **Backend API:** ❌ **MISSING** - No CRUD routes for budget_line_items
+  - Searched `forgemind-backend/src/**/*.ts` for budget routes: NONE found
+  - Projects can't persist budgets to server
+
+**Current Algorithm (Client-Side):**
+```typescript
+// src/utils/readiness.ts:58-61
+const spent = projectBudget.reduce((sum, b) => sum + b.actual_amount, 0);
+const statedBudget = project.stated_budget ?? planned;
+const budgetHealth = statedBudget > 0 ? 1 - Math.min(1, spent / statedBudget) : 1;
+```
+- **Input:** planned_amount, actual_amount per line item
+- **Output:** budgetHealth score (0-1), budget_utilization percentage
+- **Runs:** Pure math on device, no AI
+
+### What Real Budget Suggestions Need
+
+**Minimum AI Input (per project):**
+1. **Component list from character variant** (e.g. "wig, jacket, pants, boots, accessory")
+2. **User's existing items** (already logged in owned_attire)
+3. **Match quality** (from attire matcher) → tells which components need to be purchased
+4. **Historical marketplace data:**
+   - Average price per component type (e.g. wigs: $30-80 median)
+   - Price variance by condition (new vs used)
+   - Shipping cost estimates (domestic vs international)
+5. **User skill level** (beginner buys more, expert crafts more → affects material costs)
+6. **Event deadline** (rush = higher costs for expedited shipping)
+
+**Smallest Real AI Step:**
+1. Backend endpoint: `GET /api/projects/:id/budget-estimate`
+2. Input: project_id (includes character_id, variant_id, user_id, target_completion_date)
+3. Flask service: `POST /api/estimate-budget`
+   - Queries: character requirements, user's owned items, match quality
+   - Calculates: missing components → marketplace price stats → estimated total
+4. Output:
+   ```json
+   {
+     "estimated_total": 15000,
+     "currency": "PHP",
+     "breakdown": [
+       {"component": "wig", "price_range": [2500, 4500], "confidence": "high"},
+       {"component": "boots", "price_range": [3000, 6000], "confidence": "medium"}
+     ],
+     "assumptions": ["used condition", "domestic shipping", "45-day timeline"]
+   }
+   ```
+
+**Backend Data Requirement:**
+- Marketplace listings with prices → compute percentiles per component type
+- Minimum: 20 listings per component for meaningful stats
+- Current: 6 seed listings total (**insufficient**)
+- **Blocker:** Real budget estimates blocked until marketplace has volume
+
+---
+
+### What Attire Suggestions Need
+
+**Flow:**
+1. Attire matcher returns `missing_items: ["boots", "accessory"]`
+2. Query marketplace: `GET /marketplace/listings?category=footwear&post_type=sell&status=active`
+3. Filter by character tags (e.g. "black", "combat boots" from variant requirements)
+4. Rank by:
+   - **Relevance:** color/style match to requirements (use same scoring as attire matcher)
+   - **Price:** prefer items within user's stated budget
+   - **Seller rating:** prefer verified sellers with good history (future - not implemented)
+   - **Location:** prefer local (shipping cost/time lower)
+5. Return top 3-5 suggestions per missing component
+
+**Smallest Real AI Step:**
+1. Backend endpoint: `GET /api/projects/:id/attire-suggestions`
+2. Input: project_id
+3. Backend queries:
+   - Get project's character variant requirements
+   - Call Flask `/api/match` to get missing_items
+   - For each missing component:
+     - Query marketplace with filters
+     - Score listings using simplified attire matcher logic
+     - Sort by composite score (relevance × budget fit × seller quality)
+4. Output:
+   ```json
+   {
+     "suggestions": {
+       "boots": [
+         {
+           "listing_id": "...",
+           "title": "Black Combat Boots Size 9",
+           "price": 3500,
+           "match_score": 0.85,
+           "reason": "Color and style match requirements"
+         }
+       ]
+     }
+   }
+   ```
+
+**Dependencies:**
+- Attire matcher connected (Step 1 priority)
+- Marketplace has listings with proper categories/tags
+- Variant requirements include detailed color/style metadata
+
+**Blocker:** Suggestions blocked until attire matcher connected to mobile
+
+---
+
 **Last Updated:** October 14, 2026  
-**Status:** STEP 1 COMPLETE - Initial inventory recorded
+**Status:** STEP 1 COMPLETE - Initial inventory recorded  
+**Status:** STEP 2 COMPLETE - Connection map added  
+**Status:** STEP 3 COMPLETE - Attire-wearing build plan (6 steps, A-F)  
+**Status:** STEP 4 COMPLETE - Budget/suggestions real AI steps documented
