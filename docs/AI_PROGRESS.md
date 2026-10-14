@@ -11,29 +11,54 @@
 
 **Status:** BUILT (Flask) + MOCK (Mobile)  
 **Evidence:**
-- Flask API: `forgemind-ai/src/api.py:26` (`/api/match` endpoint)
+- Flask API: `forgemind-ai/src/api.py:28-75` (`/api/match` endpoint, documented request/response shape)
 - Flask Matcher: `forgemind-ai/src/attire_matcher.py` (core matching logic)
-- Mobile Screen: `src/screens/cosplayer/MatchResultsScreen.tsx:1` (MOCK DATA - hard-coded results)
+- Mobile Screen: `src/screens/cosplayer/MatchResultsScreen.tsx:27` (MOCK_MATCH_RESULTS hard-coded array)
 
-**Where it runs:** Flask (Python ML service)  
+**Where it runs:** Flask (Python ML service) on port 5000  
 **App screen:** MatchResultsScreen (cosplayer flow)  
 **Connection status:** ❌ **NOT CONNECTED** - Mobile uses hard-coded MOCK_MATCH_RESULTS, does not call Flask API
 
-**Input fields (Flask expects):**
-- `character_variant_id` (string)
-- `owned_items` (array of objects with: id, name, category, subcategory, color, tags)
-- `user_body_settings` (optional: height, size)
+**Flask Test (October 14, 2026):**
+- Server: Started cleanly on port 5000 ✅
+- Health check: `/health` returned `{status: "healthy", service: "forgemind-ai", version: "1.0.0"}` ✅
+- Match endpoint: `/api/match` returned 404 (Character dataset not found) - expected because no datasets created yet
+- Test endpoint: `/api/test` returned mock owned_items structure showing expected field format
 
-**Output labels (Flask returns):**
-- `suggested_outfit` (object with item_id, name, score, confidence per slot)
-- `alternatives` (array of alternative matches)
-- `missing_items` (array of missing components)
-- `match_quality` (overall_score, quality_label)
+**Flask Request Fields (what Flask expects):**
+- `character_variant_id` (string, e.g. "gojo-satoru_season-2-uniform")
+- `owned_items` (array of objects with: `id`, `name`, `category`, `subcategory`, `color`, `tags[]`)
+- `user_body_settings` (optional object with: `height`, `size`)
+
+**Flask Response Fields (what Flask returns):**
+- `suggested_outfit` (object with item per slot: `item_id`, `name`, `score`, `confidence`)
+- `alternatives` (object with arrays of alternatives per slot)
+- `missing_items` (array)
+- `match_quality` (object with: `overall_score`, `quality_label`)
+- `character_variant_id` (echo)
+
+**Mobile Owned Attire Fields (what app has):**
+- `attire_id` ✅ (maps to Flask `id`)
+- `auto_categorized_type` ✅ (maps to Flask `category` - AttireCategory enum)
+- `auto_categorized_color` ✅ (maps to Flask `color` - string)
+- `auto_categorized_style` ✅ (could map to Flask `subcategory` or `tags[]`)
+- `flexibility_tag`, `condition_rating`, `photo_urls`, `notes`, etc. (extra fields Flask doesn't need)
+- ❌ NO `name` field - owned attire has no explicit name, only `original_input_text`
+- ❌ NO `tags` array - would need to parse from `auto_categorized_style` or compute from other fields
+
+**Field Mapping Analysis:**
+- **Match:** attire_id → id, auto_categorized_type → category, auto_categorized_color → color
+- **Mismatch:** Mobile has no dedicated `name` field (use `original_input_text` or synthesize from type+color+style)
+- **Mismatch:** Mobile has no `tags[]` array (derive from `auto_categorized_style` split by space/comma, or leave empty)
+- **Mismatch:** Mobile has no `subcategory` field (use `auto_categorized_style` or leave as same as `category`)
 
 **Gap:** Mobile app needs to:
-1. Call Flask `/api/match` endpoint instead of using MOCK_MATCH_RESULTS
-2. Pass owned_items from OwnedAttireContext
+1. Transform OwnedAttire → Flask owned_items format (synthesize name, derive tags from style, map category)
+2. Call Flask `/api/match` endpoint instead of using MOCK_MATCH_RESULTS
 3. Handle Flask response shape (currently expects hard-coded array)
+4. Add character datasets to forgemind-ai/datasets/cosplay_matches/ before matcher can return real results
+
+**Smallest viable step:** Create adapter function that transforms OwnedAttire[] to Flask owned_items[] format, then replace MOCK_MATCH_RESULTS with real Flask API call
 
 ---
 
