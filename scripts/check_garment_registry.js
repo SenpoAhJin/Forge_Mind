@@ -114,17 +114,18 @@ for (const entry of entries) {
       console.log(`  ✓ placeholder definition present`);
     }
   } else {
-    // Non-placeholder: should have asset path
+    // Non-placeholder: should have asset (a variable name or import)
     if (asset === null) {
       console.warn(`  ⚠️  Non-placeholder garment has no asset (will fail at runtime)`);
       warningCount++;
     } else {
-      // Check if asset file exists
-      const assetPath = path.join(__dirname, '..', 'assets', 'models', asset);
-      if (fs.existsSync(assetPath)) {
-        console.log(`  ✓ asset: ${asset} (exists)`);
+      // Asset should be a variable name (uppercase constant from import)
+      // Check if that import exists in the file
+      const importRegex = new RegExp(`import\\s+${asset}\\s+from.*\\.glb['"]`);
+      if (registrySource.match(importRegex)) {
+        console.log(`  ✓ asset: ${asset} (import found)`);
       } else {
-        console.error(`  ❌ asset: ${asset} (NOT FOUND at ${assetPath})`);
+        console.error(`  ❌ asset: ${asset} (import NOT FOUND - add: import ${asset} from '../../assets/models/garments/...')`);
         errorCount++;
       }
     }

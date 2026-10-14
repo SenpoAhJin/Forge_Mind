@@ -152,13 +152,19 @@ forgemind-mobile/
 
 After creating and placing your garment file, add it to the garment registry at `src/data/garmentRegistry.ts`:
 
+**Step 1:** Add a static import at the top of the file:
+```typescript
+import WIG_WHITE_SPIKY_MALE from '../../assets/models/garments/Wig_White_Spiky_Male.glb';
+```
+
+**Step 2:** Add the registry entry:
 ```typescript
 {
   id: 'wig-white-spiky-male',
   label: 'White Spiky Wig',
   slot: 'head',
   bodyTypes: ['male'],
-  asset: require('../../assets/models/garments/Wig_White_Spiky_Male.glb'),
+  asset: WIG_WHITE_SPIKY_MALE,
   placeholder: null,
   isPlaceholder: false,
 }
@@ -169,7 +175,7 @@ After creating and placing your garment file, add it to the garment registry at 
 - `label`: Human-readable display name
 - `slot`: One of: `head`, `torso`, `legs`, `hands`, `prop`
 - `bodyTypes`: Array of `'male'`, `'female'`, or both
-- `asset`: `require()` statement pointing to GLB file (Metro bundler resolves)
+- `asset`: Static import constant (e.g., `WIG_WHITE_SPIKY_MALE`) or null for placeholder
 - `placeholder`: null (only used when asset is null)
 - `isPlaceholder`: false (true only for placeholder entries)
 

@@ -32,8 +32,8 @@ export interface GarmentEntry {
   slot: GarmentSlot;
   /** Which body types this garment supports */
   bodyTypes: BodyType[];
-  /** GLB asset (Metro require) or null for placeholder */
-  asset: number | string | null;
+  /** GLB asset module (static import: import GLB from '../../assets/...') or null for placeholder */
+  asset: number | null;
   /** Placeholder shape definition (used when asset is null) */
   placeholder: PlaceholderShape | null;
   /** True if this is a placeholder (no real asset exists) */
