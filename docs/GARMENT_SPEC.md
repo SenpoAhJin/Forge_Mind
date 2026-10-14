@@ -167,7 +167,7 @@ After creating and placing your garment file, add it to the garment registry at 
 **Fields:**
 - `id`: Unique kebab-case identifier
 - `label`: Human-readable display name
-- `slot`: One of: `head`, `torso`, `legs`, `hands`, `feet`, `prop`
+- `slot`: One of: `head`, `torso`, `legs`, `hands`, `prop`
 - `bodyTypes`: Array of `'male'`, `'female'`, or both
 - `asset`: `require()` statement pointing to GLB file (Metro bundler resolves)
 - `placeholder`: null (only used when asset is null)
@@ -188,8 +188,7 @@ Garments attach to the body at these approximate positions (verified from body b
 | **torso** | Y ≈ 0.10 to 0.60 | Chest, shoulders, upper body |
 | **legs** | Y ≈ -0.50 to 0.10 | Waist to knees |
 | **hands** | Y ≈ 0.00 to 0.30 | Wrist, palm area (X ±0.35 for left/right) |
-| **feet** | Y ≈ -0.95 to -0.75 | Ankle, foot (min is -0.950 male, -0.951 female) |
-| **prop** | Variable | Held items, backpacks, accessories |
+| **prop** | Variable | Held items, backpacks, accessories, footwear |
 
 **Note:** Ranges verified against actual body bounding boxes (male min/max: [-0.440, -0.950, -0.174] / [0.436, 0.931, 0.150], female: [-0.404, -0.951, -0.185] / [0.399, 0.944, 0.189]). Import body GLB into Blender to verify exact bone positions for rigged garments.
 

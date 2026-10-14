@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Valid enums (must match garmentRegistry.ts)
-const VALID_SLOTS = ['head', 'torso', 'legs', 'feet', 'accessories'];
+const VALID_SLOTS = ['head', 'torso', 'legs', 'hands', 'prop'];
 const VALID_BODY_TYPES = ['male', 'female'];
 
 // Read and parse registry (simple require since it's TS)
