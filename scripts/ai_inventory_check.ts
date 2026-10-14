@@ -1,10 +1,13 @@
 /**
  * AI Feature Inventory Check
  * Searches for evidence of 7 AI features in the codebase
+ * 
+ * NOTE: This is a Node.js utility script, run via `npx tsx` (not compiled by React Native tsconfig)
+ * @ts-nocheck
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
 
 interface SearchResult {
   file: string;
@@ -15,7 +18,7 @@ interface SearchResult {
 async function searchFiles(dir: string, pattern: RegExp, extensions: string[]): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
   
-  async function walk(currentDir: string) {
+  async function walk(currentDir: string): Promise<void> {
     const entries = await fs.readdir(currentDir, { withFileTypes: true });
     
     for (const entry of entries) {
@@ -50,8 +53,8 @@ async function searchFiles(dir: string, pattern: RegExp, extensions: string[]): 
   return results;
 }
 
-async function main() {
-  const mobileRoot = path.join(__dirname, '..');
+async function main(): Promise<void> {
+  const mobileRoot = path.join(process.cwd(), '..');
   
   console.log('=== AI FEATURE INVENTORY ===\n');
   

@@ -1,7 +1,71 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (body-size slider cleanup complete)
+**Last updated:** Wednesday, October 14, 2026 (AI progress tracker + wearing audit)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 14, 2026 (AI progress tracker + wearing audit)
+
+**Summary**
+
+Created comprehensive AI feature inventory tracking all 7 AI/ML components in ForgeMind. Findings: Flask attire matcher is BUILT but mobile app uses mock data (not connected); readiness forecast and listing screener are mock/simple implementations; attire suggestions, photo categorization, and voice transcription are missing. Audited "wearing sample attire" 3D preview: BLOCKED - no garment GLB assets exist in repo (only body models). Analyzed budgeting and suggestions features: budgeting uses static JSON (no ML), suggestions not built (would need marketplace query + matcher integration). All docs committed. tsc exit 0 both repos.
+
+**What was created**
+
+- **AI_PROGRESS.md** (`docs/AI_PROGRESS.md`): Comprehensive tracking document with 3 sections:
+  1. **Feature Inventory** (7 AI features): Status (BUILT/MOCK/MISSING), evidence (file:line), where it runs (device/Node/Flask), app screens, input/output fields, connection status
+  2. **Connection Map** (table): Data flow, routes, and "Next link to build" for each feature
+  3. **Wearing Audit**: Body GLB loading analysis, garment asset search (none found), owned attire storage format, Flask matcher output shape, precondition check (FAILED - no garment assets)
+  4. **Budgeting & Suggestions Analysis**: Current budget data (device JSON), what real AI needs (marketplace history, ML models), smallest viable steps
+
+- **ai_inventory_check.ts** (`scripts/ai_inventory_check.ts`): Automated search script that scans codebase for AI feature references (139 matching hits, 952 screener hits, 164 budget hits, 143 readiness hits, etc.)
+
+**Findings Summary**
+
+**AI Feature Status:**
+- **BUILT (Flask):** Attire Matcher (`forgemind-ai/src/api.py:26` `/api/match` endpoint)
+- **MOCK (Mobile):** Attire Matcher (MatchResultsScreen uses hard-coded MOCK_MATCH_RESULTS), Listing Screener (word list, not ML), Budgeting (static JSON, no forecasting)
+- **BUILT (Simple):** Readiness Forecast (`src/utils/readiness.ts` - percentage calculation, not ML prediction)
+- **MISSING:** Attire Suggestions, Photo Categorization, Voice Transcription
+
+**Key Gap:** Flask matcher exists and works, but mobile app never calls it - uses mock data instead
+
+**Wearing Feature (3D Garment Preview):**
+- **Status:** BLOCKED - Cannot build
+- **Reason:** No garment GLB assets found in repository
+- **Body loading:** `src/components/BodyModel.tsx:5` uses `useGLTF` from `@react-three/drei`
+- **Assets available:** Only `3D_Model_Male.glb` (1.4MB) and `3D_Model_Female.glb` (1.3MB)
+- **Owned attire:** Stores metadata only (category, color, style, photos) - no 3D model paths
+- **What's needed:** At least one garment GLB (wig recommended), placed in `assets/models/garments/`, positioned/scaled to fit body in Blender before export
+- **Preconditions:** (a) Garment asset exists ❌ FAILED, (b) Body loader can accept second mesh ✅ MET
+
+**Budgeting & Suggestions:**
+- Budget data lives device-side (AsyncStorage, ProjectsContext)
+- Real budget AI needs marketplace transaction history (SQL aggregations, no ML required yet)
+- Real suggestions AI needs marketplace listings + matcher missing_items (keyword matching → ML upgrade later)
+- Priority: Build suggestions first (marketplace listings exist, higher value, no transaction dependency)
+
+**Verified**
+
+- Mobile tsc: exit 0 ✅
+- Backend tsc: exit 0 ✅
+- Git: forgemind-mobile clean (branch feature/chat-app)
+- Git: forgemind-backend clean (branch feature/chat-curated-terms)
+- Git: forgemind-ai not a git repo (expected)
+
+**Commits made**
+
+Mobile (feature/chat-app branch):
+1. `9117b86` - "docs: AI feature inventory (Task B STEP 1)"
+2. `7ad398b` - "docs: add AI connection map (Task B STEP 2)"
+3. `6e9ba7f` - "docs: wearing audit - blocked (no garment assets) (Task B STEP 3)"
+4. `81d8ff3` - "docs: budgeting and suggestions analysis (Task B STEP 5)"
+5. _(This commit)_ - "docs: update CHANGELOG for Task B (AI progress tracker)"
+
+**Status**
+
+AI inventory complete. Wearing feature blocked on missing garment assets. Next priorities: (1) Connect mobile app to Flask matcher, (2) Build attire suggestions, (3) Upgrade listing screener to ML classifier.
 
 ---
 
