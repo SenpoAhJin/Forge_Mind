@@ -17,11 +17,13 @@
 | **Depth** | 0.324 units | 0.374 units | Front-to-back |
 | **Min (X, Y, Z)** | [-0.440, -0.950, -0.174] | [-0.404, -0.951, -0.185] | Bottom-left-back corner |
 | **Max (X, Y, Z)** | [0.436, 0.931, 0.150] | [0.399, 0.944, 0.189] | Top-right-front corner |
+| **Bounding Box Center** | [-0.002, -0.010, -0.012] | [-0.003, -0.004, 0.002] | Nearly identical centers |
 | **Rig Type** | Skinned (706 joints) | Skinned (707 joints) | Rigify armature |
 | **Animations** | 0 | 0 | Static pose (T-pose) |
 | **Materials** | 0 | 0 | Exported without materials |
 
-**Origin Match:** NO - Bodies have different center positions  
+**Bounding Box Centers:** Male [-0.002, -0.010, -0.012] and female [-0.003, -0.004, 0.002] are nearly identical (within 0.014 units). A single garment file positioned at origin could fit both bodies with minimal error, BUT a visual fit check on each body is still required to ensure proportions match (male is wider, female is taller).
+
 **Coordinate System:** Both use glTF standard (+Y up, -Z forward, +X right)
 
 ---
