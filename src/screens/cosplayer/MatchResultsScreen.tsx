@@ -9,8 +9,11 @@ import { Button, StandardCard, Tag } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
+import { useUser } from '../../contexts/UserContext';
 import { matchAttire, type MatchResult, type MatchedItem } from '../../services/AiMatcherService';
 import { getMatcherSlug } from '../../data/matcherSlugs';
+import { buildWornGarments } from '../../utils/wearing';
+import Preview3D from '../../components/Preview3D';
 
 interface MatchResultsScreenProps {
   onBackToBrowse: () => void;
@@ -20,10 +23,12 @@ interface MatchResultsScreenProps {
 export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackToBrowse, onStartProject }) => {
   const { selection } = useSelection();
   const { items: ownedAttire, isLoaded: attireLoaded } = useOwnedAttire();
+  const { user } = useUser();
   
   const [loading, setLoading] = useState(false);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [show3DPreview, setShow3DPreview] = useState(false);
 
   // Trigger match when screen loads with valid selection
   useEffect(() => {
@@ -135,6 +140,12 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
   if (matchResult) {
     const suggestedItems = Object.entries(matchResult.suggested_outfit);
     const hasMissingItems = matchResult.missing_items.length > 0;
+    
+    // Build worn garments for 3D preview
+    const bodyType = user?.base_body_selection || 'male';
+    const wornGarments = buildWornGarments(matchResult, ownedAttire, bodyType);
+    const filledSlots = wornGarments.filter(g => g.itemId !== null).length;
+    const totalSlots = wornGarments.length;
 
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -158,6 +169,48 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
             Overall: {matchResult.match_quality.quality_label} ({Math.round(matchResult.match_quality.overall_score * 100)}%)
           </Text>
         </View>
+
+        {/* 3D Preview Toggle */}
+        <StandardCard style={styles.previewCard}>
+          <View style={styles.previewHeader}>
+            <View>
+              <Text style={styles.previewTitle}>3D Body Preview</Text>
+              <Text style={styles.previewSubtitle}>
+                {filledSlots}/{totalSlots} slots filled
+              </Text>
+            </View>
+            <Button
+              title={show3DPreview ? "Hide Preview" : "View on Body"}
+              onPress={() => setShow3DPreview(!show3DPreview)}
+              variant="secondary"
+            />
+          </View>
+          
+          {show3DPreview && (
+            <View style={styles.previewContainer}>
+              <Preview3D
+                bodyType={bodyType}
+                wornGarments={wornGarments}
+              />
+              
+              {/* Slot indicators */}
+              <View style={styles.slotIndicators}>
+                {wornGarments.map((garment) => (
+                  <View key={garment.slot} style={styles.slotRow}>
+                    <Text style={styles.slotLabel}>
+                      {garment.slot.charAt(0).toUpperCase() + garment.slot.slice(1)}:
+                    </Text>
+                    {garment.itemId ? (
+                      <Text style={styles.slotFilled}>✓ Matched</Text>
+                    ) : (
+                      <Text style={styles.slotMissing}>○ Missing</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </StandardCard>
 
         {suggestedItems.length > 0 ? (
           suggestedItems.map(([category, item]) => (
@@ -356,5 +409,49 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  previewCard: {
+    marginBottom: spacing.lg,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  previewTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  previewSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  previewContainer: {
+    marginTop: spacing.md,
+  },
+  slotIndicators: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  slotLabel: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  slotFilled: {
+    ...typography.body,
+    color: colors.success,
+  },
+  slotMissing: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
 });

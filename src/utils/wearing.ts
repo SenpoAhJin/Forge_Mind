@@ -98,27 +98,32 @@ export type PlaceholderShape =
  */
 export interface WornGarment {
   slot: GarmentSlot;
-  itemId: string; // owned_attire.attire_id
-  label: string; // e.g. "black wig"
+  itemId: string | null; // owned_attire.attire_id or null if slot is empty
+  label: string; // e.g. "black wig" or "Missing"
   colorHex: string; // from colorNameToHex
   shape: PlaceholderShape; // PLACEHOLDER until real GLB exists
 }
 
 /**
  * Build worn garments array from matcher result.
- * Only includes slots the matcher filled (suggested_outfit keys).
+ * Returns ALL garment slots (head, torso, legs, prop) with itemId=null for missing slots.
  * 
  * @param matchResult - Matcher response with suggested_outfit per slot
  * @param ownedItems - Full owned attire inventory (to look up color)
  * @param bodyType - 'male' or 'female' (not used yet, for future scaling)
- * @returns Array of worn garments with placeholder shapes
+ * @returns Array of worn garments with placeholder shapes (includes empty slots)
  */
 export function buildWornGarments(
   matchResult: MatchResult,
   ownedItems: OwnedAttire[],
   bodyType: 'male' | 'female'
 ): WornGarment[] {
+  // All possible garment slots
+  const allSlots: GarmentSlot[] = ['head', 'torso', 'legs', 'prop'];
   const worn: WornGarment[] = [];
+  
+  // Build map of matcher slots to matched items
+  const matchedBySlot = new Map<GarmentSlot, { itemId: string; label: string; colorHex: string }>();
   
   for (const [matcherSlot, matchedItem] of Object.entries(matchResult.suggested_outfit)) {
     const garmentSlot = matcherSlotToGarmentSlot(matcherSlot);
@@ -131,11 +136,18 @@ export function buildWornGarments(
     const colorHex = colorNameToHex(ownedItem.auto_categorized_color);
     const label = `${ownedItem.auto_categorized_color} ${ownedItem.auto_categorized_type}`;
     
+    matchedBySlot.set(garmentSlot, { itemId: matchedItem.item_id, label, colorHex });
+  }
+  
+  // Create worn garment for each slot (filled or empty)
+  for (const slot of allSlots) {
+    const matched = matchedBySlot.get(slot);
+    
     // PLACEHOLDER SHAPES per slot (positioned from bodyBounds for BOTH bodies)
     // Body Y ranges: male -0.950 to 0.931, female -0.951 to 0.944
     let shape: PlaceholderShape;
     
-    switch (garmentSlot) {
+    switch (slot) {
       case 'head':
         // Cap sitting on head top (Y ≈ 0.65 to 0.94)
         shape = { type: 'cap', radius: 0.15 };
@@ -159,10 +171,10 @@ export function buildWornGarments(
     }
     
     worn.push({
-      slot: garmentSlot,
-      itemId: matchedItem.item_id,
-      label,
-      colorHex,
+      slot,
+      itemId: matched?.itemId || null,
+      label: matched?.label || 'Missing',
+      colorHex: matched?.colorHex || '#808080', // Gray for missing
       shape,
     });
   }

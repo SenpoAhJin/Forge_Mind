@@ -72,8 +72,8 @@ for (const test of colorTests) {
   }
 }
 
-// TEST 4: buildWornGarments with matcher result (wig/top/bottom filled, accessory missing)
-console.log('\n--- Test 4: buildWornGarments (3 slots filled) ---');
+// TEST 4: buildWornGarments with matcher result (wig/top/bottom filled, prop missing)
+console.log('\n--- Test 4: buildWornGarments (4 slots total, 3 filled, 1 missing) ---');
 
 const mockMatchResult = {
   character_variant_id: 'char-var-1',
@@ -101,7 +101,7 @@ const mockMatchResult = {
       confidence: 'good',
       breakdown: { color: 0.8, keywords: 0.85, category: 1.0 },
     },
-    // accessory missing (not in suggested_outfit)
+    // accessory/footwear missing (prop slot will be empty)
   },
   alternatives: {},
   missing_items: [],
@@ -179,23 +179,23 @@ const mockOwnedItems = [
 
 const wornGarments = buildWornGarments(mockMatchResult, mockOwnedItems, 'male');
 
-// Check count (should be 3: wig, top, bottom)
-if (wornGarments.length === 3) {
-  console.log(`  ✓ Count: ${wornGarments.length} garments`);
+// Check count (should be 4: all slots including empty ones)
+if (wornGarments.length === 4) {
+  console.log(`  ✓ Count: ${wornGarments.length} garments (all slots)`);
   passCount++;
 } else {
-  console.error(`  ✗ Count: ${wornGarments.length} (expected 3)`);
+  console.error(`  ✗ Count: ${wornGarments.length} (expected 4)`);
   failCount++;
 }
 
-// Check each garment
-const expected = [
+// Check filled garments
+const expectedFilled = [
   { slot: 'head', itemId: 'attr-1', colorHex: '#000000', label: 'black wig' },
   { slot: 'torso', itemId: 'attr-2', colorHex: '#FF0000', label: 'red clothing' },
   { slot: 'legs', itemId: 'attr-3', colorHex: '#0000FF', label: 'blue clothing' },
 ];
 
-for (const exp of expected) {
+for (const exp of expectedFilled) {
   const found = wornGarments.find(w => w.slot === exp.slot);
   if (found) {
     let allMatch = true;
@@ -227,8 +227,21 @@ for (const exp of expected) {
   }
 }
 
-// TEST 5: Empty result returns []
-console.log('\n--- Test 5: Empty Result Returns [] ---');
+// Check missing slot (prop should have itemId === null)
+const propSlot = wornGarments.find(w => w.slot === 'prop');
+if (propSlot && propSlot.itemId === null && propSlot.label === 'Missing') {
+  console.log(`  ✓ prop: Missing (null itemId, grey color)`);
+  passCount++;
+} else if (propSlot) {
+  console.error(`  ✗ prop: itemId=${propSlot.itemId}, label="${propSlot.label}" (expected null, "Missing")`);
+  failCount++;
+} else {
+  console.error(`  ✗ prop slot not found`);
+  failCount++;
+}
+
+// TEST 5: Empty result returns all slots with itemId=null
+console.log('\n--- Test 5: Empty Result Returns All Empty Slots ---');
 const emptyMatchResult = {
   character_variant_id: 'char-var-2',
   character_name: 'Empty Character',
@@ -243,11 +256,11 @@ const emptyMatchResult = {
 };
 
 const emptyWorn = buildWornGarments(emptyMatchResult, mockOwnedItems, 'male');
-if (emptyWorn.length === 0) {
-  console.log(`  ✓ Empty result → [] (length ${emptyWorn.length})`);
+if (emptyWorn.length === 4 && emptyWorn.every(g => g.itemId === null && g.label === 'Missing')) {
+  console.log(`  ✓ Empty result → 4 slots, all missing (itemId=null)`);
   passCount++;
 } else {
-  console.error(`  ✗ Empty result → length ${emptyWorn.length} (expected 0)`);
+  console.error(`  ✗ Empty result → length ${emptyWorn.length}, filled: ${emptyWorn.filter(g => g.itemId !== null).length} (expected 4 slots, 0 filled)`);
   failCount++;
 }
 
@@ -262,6 +275,7 @@ console.log(`TOTAL: ${passCount + failCount}`);
 if (failCount === 0) {
   console.log('\n✅ ALL TESTS PASSED');
   console.log('Slot map, color map, and buildWornGarments work correctly.');
+  console.log('Function now returns all 4 slots (head/torso/legs/prop) with itemId=null for missing items.');
   process.exit(0);
 } else {
   console.log('\n❌ SOME TESTS FAILED');

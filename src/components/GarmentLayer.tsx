@@ -59,8 +59,14 @@ function GarmentGLB({ assetModule }: { assetModule: number | string }) {
 /**
  * Runtime Garment Renderer
  * Renders placeholder shapes for worn garments (no registry entry)
+ * Returns null if the garment slot is empty (itemId === null)
  */
 function RuntimeGarmentPrimitive({ garment, bodyType }: { garment: WornGarment; bodyType: BodyType }) {
+  // Skip rendering for empty slots
+  if (garment.itemId === null) {
+    return null;
+  }
+  
   const { shape, colorHex, slot } = garment;
   
   // PLACEHOLDER SHAPES positioned from bodyBounds (docs/GARMENT_SPEC.md)
