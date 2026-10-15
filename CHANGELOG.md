@@ -1,7 +1,89 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 15, 2026 (Task D5: Make matcher tests real and fix the record)
+**Last updated:** Thursday, October 15, 2026 (Task D6: Make matcher work on real app data)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 15, 2026 (Task D6: Make matcher work on real app data)
+
+**Summary**
+
+**Task D6:** Made matcher work on real app data by adding RULE-BASED adapters to fix color format and slot mapping issues identified in D5. (Step 0) Housekeeping: repos clean, tsc exit 0 both repos, Flask port 5000 free, forgemind-ai/src backup created. (Step 1) Root cause analysis: backend sends color NAMES ("white", "black") but Flask expects HEX values for color_similarity, backend sends broad types ("clothing", "other") but Flask requires exact slot match ("top", "bottom") for candidate test (attire_matcher.py:171 `item.category==slot_name`). Created findings table in matcher-real-data-causes.md. (Step 2) Built RULE-BASED adapters: colorNames.ts maps 9 mobile colors + variations to hex (unclear→DEFAULT_COLOR_FALLBACK), slotMapping.ts maps keywords (jacket/shirt→top, pants→bottom, wig→wig, belt/glove→accessory) and type fallback to Flask slots. Updated matcherRouter.ts transformToFlaskFormat to use both adapters. (Step 3) Before/after test on real data: BEFORE adapters overall 0.165 incomplete (only wig matched), AFTER adapters overall 0.869 excellent (all 4 slots matched, color 0.78-1.00, category 1.00). New labels observed: fair (0.684), good (0.829-0.880), excellent (0.869). (Step 4) Fixed route docs: replaced /ai/matcher/suggest-outfit→/api/ai/match in 10+ docs, replaced "COMPLETE" wording with evidence-based terms, updated AI_PROGRESS.md with D6 test results. (Step 5) 401 test: UNTESTABLE - route returns 404 despite correct mount/export, backend running (health OK), cause unknown. (Step 6) Updated CHANGELOGs. **Mobile not tested on device.** tsc exit 0 both repos.
+
+**What was built**
+
+**Task D6 Step 0-1: Root Cause Analysis**
+- **File:** `forgemind-mobile/scripts/print_flask_body.ts` (new, prints Flask request body format)
+- **File:** `forgemind-mobile/docs/changes/matcher-real-data-causes.md` (findings table with file:line evidence)
+- **Root Cause 1:** Color format mismatch - mobile sends names ("white", "black"), Flask color_similarity uses hex_to_rgb (color_matcher.py:11, 64-96)
+- **Root Cause 2:** Slot mapping mismatch - mobile sends "clothing"/"other", Flask candidate test requires item.category==slot_name (attire_matcher.py:171)
+- **Commit:** 192f5d2 "D6 Step 1: Document root causes of matcher real-data issues"
+
+**Task D6 Step 2: RULE-BASED Adapters**
+- **File:** `forgemind-backend/src/ai/colorNames.ts` (new, 46 lines)
+  - COLOR_NAME_TO_HEX map: 9 mobile colors (white, black, red, blue, pink, brown, green, purple, yellow) + variations ("snow white"→white, "jet black"→black)
+  - colorNameToHex function: maps name→hex, fallback to DEFAULT_COLOR_FALLBACK (#808080) for "unclear"
+  - Labeled RULE-BASED not AI
+- **File:** `forgemind-backend/src/ai/slotMapping.ts` (new, 78 lines)
+  - SLOT_KEYWORDS: jacket/coat/shirt/blazer→top, pants/skirt/shorts→bottom, wig→wig, blindfold/glove/belt/hat→accessory
+  - TYPE_TO_SLOT fallback: clothing→top (arbitrary), footwear→footwear, weapon/prop→accessory
+  - mapToFlaskSlot function: keyword check first, then type fallback, default "other"
+  - getSubcategory function: returns slot name for category component scoring
+  - Labeled RULE-BASED not AI
+- **File:** `forgemind-backend/src/ai/matcherRouter.ts` (modified lines 12-13, 149-156)
+  - Imports: colorNameToHex, mapToFlaskSlot, getSubcategory
+  - transformToFlaskFormat: calls mapToFlaskSlot for category/subcategory, colorNameToHex for color
+- **Build:** tsc exit 0
+- **Commit:** 7548f39 "D6 Step 2: Add RULE-BASED adapters for color names and slot mapping"
+
+**Task D6 Step 3: Before/After Test**
+- **File:** `forgemind-mobile/scripts/test_before_after.ts` (new, 193 lines, before/after transform logic)
+- **Test Result BEFORE adapters:**
+  - Overall: 0.165 incomplete
+  - Only wig matched: 0.129 no-match (color:0.00 keywords:0.14 category:1.00)
+  - Other slots rejected by candidate test (category "clothing"/"other" ≠ slot name)
+- **Test Result AFTER adapters:**
+  - Overall: 0.869 excellent
+  - Wig: 0.829 good (c:0.78 k:0.71 cat:1.00)
+  - Top: 0.857 good (c:0.85 k:0.71 cat:1.00)
+  - Bottom: 0.880 good (c:0.90 k:0.71 cat:1.00)
+  - Accessory: 0.684 fair (c:0.78 k:0.00 cat:1.00)
+- **Labels Observed:** fair (0.684), good (0.829-0.880), excellent (0.869)
+- **File:** `forgemind-mobile/docs/changes/flask-data-lookup-edit.md` (appended D6 Step 3 results)
+- **Commit:** (included in Step 4 commit)
+
+**Task D6 Step 4: Fix Route Docs**
+- **Files updated:** AI_PROGRESS.md, matcher-connectivity-labels.md, D4_FINAL_REPORT.md, D5_FINAL_REPORT.md, D5_STEP4_CORRECTIONS.md, ai-progress-cleanup.md (10+ replacements)
+- **Route correction:** /ai/matcher/suggest-outfit → /api/ai/match (10+ instances)
+- **Status wording:** "COMPLETE" → "ALL STEPS FINISHED", "complete" → "finished" (D4_FINAL_REPORT.md)
+- **AI_PROGRESS.md:** Added D6 Step 3 test results (before/after, adapters, new labels observed)
+- **Commit:** d8afb71 "D6 Step 4: Fix route docs (/api/ai/match), update AI_PROGRESS.md with D6 test results"
+
+**Task D6 Step 5: 401 Test**
+- **File:** `forgemind-mobile/scripts/test_401_auth.ts` (new, 62 lines, sends POST without session cookie)
+- **File:** `forgemind-mobile/docs/changes/D6_STEP5_401_TEST_RESULT.md` (new, 93 lines, test result + investigation)
+- **Result:** UNTESTABLE - route returns 404 "No such endpoint", not 401
+- **Evidence:** Backend running (health OK), router mounted correctly, tsc compiled, but route not accessible
+- **Commit:** 68a48a3 "D6 Step 5: 401 test script + result (UNTESTABLE - route returns 404)"
+
+**Task D6 Step 6: CHANGELOG Updates**
+- **File:** `forgemind-mobile/CHANGELOG.md` (this entry)
+- **File:** `forgemind-backend/CHANGELOG.md` (parallel entry)
+
+**What was NOT tested or built**
+
+1. **Mobile device test:** Adapters not tested on physical device (D6 constraints: mobile docs/scripts only, no device testing)
+2. **401 auth path:** Route returns 404, cause unknown (requireSession never reached)
+3. **Poor/acceptable labels:** Still not observed in tests (thresholds defined but not reached with keyword scoring)
+
+**Gaps from D5 (unchanged)**
+
+1. **11 unmapped variants:** Still return neutral state (no network call)
+2. **Voice transcript:** User types text manually (no speech-to-text exists)
+3. **Real AI categorization:** Still uses mock pattern matching (not real AI)
+4. **Budgeting logic:** price_paid_php unused
+5. **Screener classifier:** Not implemented (pending Path 1/Path 2 decision)
 
 ---
 
