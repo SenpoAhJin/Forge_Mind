@@ -174,3 +174,91 @@ Missing items: 4
 ```powershell
 Copy-Item -Path "forgemind-ai-src-backup-2026-10-15-1153\*" -Destination "forgemind-ai\src" -Recurse -Force
 ```
+
+
+---
+
+## D4 Step 1: Scoring Formula Verification (October 15, 2026)
+
+### Formula (attire_matcher.py)
+
+**Item Score (line 137-145):**
+```
+total = color × 0.7 + keywords × 0.2 + category × 0.1
+```
+
+**Confidence Labels (line 196-205):**
+- `excellent`: score ≥ 0.9
+- `good`: score ≥ 0.75
+- `fair`: score ≥ 0.6
+- `poor`: score ≥ 0.4
+- `no-match`: score < 0.4
+
+**Overall Quality (line 329-341):**
+```
+avg_score = mean(all item scores)
+completeness = matched_count / required_count
+overall_score = avg_score × 0.7 + completeness × 0.3
+```
+
+**Quality Labels:**
+- `excellent`: overall ≥ 0.85
+- `good`: overall ≥ 0.7
+- `acceptable`: overall ≥ 0.5
+- `incomplete`: overall < 0.5
+- `no-matches`: 0 items matched (special case)
+
+### Test Results (test_scoring.py)
+
+| Test | Items | Wig Score | Top Score | Bottom Score | Accessory Score | Overall | Quality |
+|------|-------|-----------|-----------|--------------|-----------------|---------|---------|
+| (a) Matching | white wig, black jacket, black pants | 0.914 excellent | 0.814 good | 0.820 good | - | 0.820 | good |
+| (b) Wrong | green hat, red dress, purple scarf | 0.222 no-match | 0.286 no-match | - | 0.306 no-match | 0.415 | incomplete |
+| (c) Minus one | white wig, black pants | 0.914 excellent | - | 0.820 good | - | 0.757 | good |
+| (d) Empty | none | - | - | - | - | 0.000 | no-matches |
+
+**Breakdown Details (Test a):**
+- Wig: color=1.000, keywords=0.571, category=1.000 → total=0.914
+- Jacket: color=1.000, keywords=0.571, category=0.000 → total=0.814
+- Pants: color=1.000, keywords=0.600, category=0.000 → total=0.820
+
+**Arithmetic Verification:**
+- Wig: (1.0×0.7 + 0.571×0.2 + 1.0×0.1) = 0.7 + 0.1142 + 0.1 = 0.9142 ✓
+- Jacket: (1.0×0.7 + 0.571×0.2 + 0×0.1) = 0.7 + 0.1142 + 0 = 0.8142 ✓
+
+### Why Category is 0.0 for top/bottom but 1.0 for wig
+
+**Code (attire_matcher.py:125-135):**
+```python
+req_type = requirements.get('type') or component_data.get('category')
+if req_type and 'subcategory' in item:
+    if req_type.lower() == item['subcategory'].lower():
+        scores['category'] = 1.0
+    elif req_type in item_subcategory or item_subcategory in req_type:
+        scores['category'] = 0.7
+```
+
+**JSON Structure:**
+- Requirements: `{category: "top", ...}` or `{category: "wig", ...}`
+- User items: `{category: "top", subcategory: "jacket", ...}`
+
+**Matching:**
+- Wig: requirements.category="wig", item.subcategory="wig" → match (1.0) ✓
+- Top: requirements.category="top", item.subcategory="jacket" → no match (0.0)
+- Bottom: requirements.category="bottom", item.subcategory="pants" → no match (0.0)
+
+**Design Intent:** "top" is the SLOT (where it goes on the body), "jacket" is the TYPE (what it is). These are different semantic levels. A partial match (0.7) would trigger if one contained the other (e.g., "jacket" contains "jack"), but "top" ⊄ "jacket".
+
+**Conclusion:** Working as designed. Category scoring is correct. The wig matches because its slot name equals its type name. Color and keyword matching carry most of the weight (90%), so overall scores remain high (0.82 "good").
+
+### Observed vs Unverified Labels
+
+**Observed in tests:**
+- Confidence: `excellent`, `good`, `no-match`
+- Quality: `good`, `incomplete`, `no-matches`
+
+**Unverified (never produced):**
+- Confidence: `fair` (0.6-0.74), `poor` (0.4-0.59)
+- Quality: `excellent` (≥0.85), `acceptable` (0.5-0.69)
+
+**To observe:** Would need items scoring in those exact ranges (e.g., wrong color but good keywords for fair/poor).
