@@ -11,13 +11,16 @@
  * - "Try again" clears the error and remounts the children, so a transient
  *   failure (a fetch that came back empty, a listing that vanished) recovers
  *   without restarting the app.
+ * 
+ * D7c: Fallback uses plain View/Text/TouchableOpacity with fixed colors from
+ * theme file. No Button, no useTheme - this boundary is mounted outside
+ * ThemeProvider and must not depend on context.
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../theme';
-import { Button } from './buttons';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -76,12 +79,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </ScrollView>
         ) : null}
 
-        <Button
-          title="Try again"
+        <TouchableOpacity
+          style={styles.retryButton}
           onPress={this.handleReset}
-          variant="primary"
-          fullWidth
-        />
+          activeOpacity={0.7}
+        >
+          <Text style={styles.retryButtonText}>Try again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -135,5 +139,19 @@ const styles = StyleSheet.create({
   debugText: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  retryButton: {
+    width: '100%',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    ...typography.body,
+    color: colors.backgroundLight,
+    fontWeight: '600',
   },
 });
