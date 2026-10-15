@@ -77,7 +77,7 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   const [photos, setPhotos] = useState<string[]>((draft.photo_urls ?? []).filter((u): u is string => u !== null));
 
   const pickPhoto = async (source: 'gallery' | 'camera') => {
-    if (photos.length >= 3) return;
+    if (photos.length >= 5) return; // Increased from 3 to 5 photos
     
     const permission = source === 'camera' 
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -86,8 +86,8 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
     if (!permission.granted) return;
 
     const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ quality: 0.5, allowsEditing: false })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, allowsEditing: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      ? await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false }) // Increased quality
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, allowsEditing: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
 
     if (!result.canceled && result.assets[0]) {
       let uri = result.assets[0].uri;
@@ -99,9 +99,9 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
           const blob = await response.blob();
           const sizeMB = blob.size / (1024 * 1024);
           
-          if (sizeMB > 0.7) {
+          if (sizeMB > 2.0) { // Increased from 0.7 MB to 2 MB per photo
             // Too large for local storage
-            alert(`Photo is too large (${sizeMB.toFixed(1)} MB). Please choose a smaller image (max 700 KB).`);
+            alert(`Photo is too large (${sizeMB.toFixed(1)} MB). Please choose a smaller image (max 2 MB).`);
             return;
           }
           
@@ -185,14 +185,14 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
           ))}
         </View>
       ) : null}
-      {photos.length < 3 ? (
+      {photos.length < 5 ? (
         <View style={styles.photoActions}>
           <TouchableOpacity 
             style={styles.photoButton} 
             onPress={() => pickPhoto('gallery')} 
             activeOpacity={0.7}
           >
-            <Ionicons name="images-outline" size={20} color={colors.primary} />
+            <Ionicons name="images-outline" size={24} color={colors.primary} />
             <Text style={styles.photoButtonText}>Gallery</Text>
           </TouchableOpacity>
           {Platform.OS !== 'web' ? (
@@ -201,13 +201,15 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
               onPress={() => pickPhoto('camera')} 
               activeOpacity={0.7}
             >
-              <Ionicons name="camera-outline" size={20} color={colors.primary} />
+              <Ionicons name="camera-outline" size={24} color={colors.primary} />
               <Text style={styles.photoButtonText}>Camera</Text>
             </TouchableOpacity>
           ) : null}
         </View>
       ) : null}
-      <Text style={styles.photoNotice}>Photos stored locally only. Not sent to matcher.</Text>
+      <Text style={styles.photoNotice}>
+        {photos.length}/5 photos • Max 2 MB each • Stored locally only
+      </Text>
 
       <Text style={styles.sectionTitle}>Auto-categorized (editable)</Text>
 
@@ -398,41 +400,50 @@ const styles = StyleSheet.create({
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   photoThumb: {
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 120,
     position: 'relative',
   },
   photoImage: {
     width: '100%',
     height: '100%',
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     backgroundColor: colors.surface,
   },
   photoRemove: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: -10,
+    right: -10,
     backgroundColor: colors.backgroundLight,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: colors.textPrimary,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   photoActions: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   photoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.primary,
     backgroundColor: colors.backgroundLight,
   },
   photoButtonText: {
@@ -443,7 +454,7 @@ const styles = StyleSheet.create({
   photoNotice: {
     ...typography.caption,
     color: colors.textSecondary,
-    fontStyle: 'italic',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
   },
 });
