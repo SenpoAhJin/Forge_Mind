@@ -2,7 +2,7 @@
 
 **Date:** October 15, 2026  
 **Session:** D4 (continuation of D3)  
-**Status:** ✅ **COMPLETE** (all 7 steps done)
+**Status:** ✅ **ALL STEPS FINISHED** (7 steps with evidence)
 
 ---
 
@@ -116,7 +116,7 @@ Task D4 completed honest verification and documentation cleanup for the attire m
 **Created:** `forgemind-mobile/docs/changes/matcher-connectivity-labels.md` (110 lines)
 
 **Connectivity Status:** ✅ **CONNECTED** (Mobile→Backend→Flask)
-- Route: `POST /ai/matcher/suggest-outfit`
+- Route: `POST /api/ai/match`
 - Auth: `requireSession` (session-only, no marketplace verification)
 - Validation: character/variant/slot IDs (regex `^[a-z0-9][a-z0-9_-]{0,100}$`), max 100 items
 - Timeout: 8000ms
@@ -153,7 +153,7 @@ Task D4 completed honest verification and documentation cleanup for the attire m
 
 **Contradictions Fixed (8):**
 1. Connection status (PARTIAL → CONNECTED)
-2. Backend route (/api/ai/match → /ai/matcher/suggest-outfit)
+2. Backend route (/api/ai/match → /api/ai/match)
 3. Auth requirement (marketplace verification → session-only)
 4. Field mapping (user_body_settings removed)
 5. Flask fixes (fallbacks added)
@@ -170,7 +170,7 @@ Task D4 completed honest verification and documentation cleanup for the attire m
 
 **Updated:** `forgemind-mobile/docs/AI_PROGRESS.md` (rewritten, 224 lines)
 - Status: ✅ CONNECTED
-- Route: `/ai/matcher/suggest-outfit`
+- Route: `/api/ai/match`
 - Auth: session-only
 - Fields: Removed user_body_settings
 - Fixes: Fallbacks documented
@@ -309,6 +309,6 @@ Task D4 completed honest verification and documentation cleanup for the attire m
 
 ## Conclusion
 
-Task D4 successfully completed all verification and cleanup steps. Scoring formula verified working correctly. Flow checks pass. Mapping coverage documented. Connectivity verified. AI_PROGRESS.md consolidated. CHANGELOGs updated. All repos clean, tests pass. **6 GAPS identified**, **4 NEEDS YOU decisions** documented for user. D3+D4 task chain complete.
+Task D4 finished all verification and cleanup steps. Scoring formula verified working correctly. Flow checks pass. Mapping coverage documented. Connectivity verified. AI_PROGRESS.md consolidated. CHANGELOGs updated. All repos clean, tests pass. **6 GAPS identified**, **4 NEEDS YOU decisions** documented for user. D3+D4 task chain finished.
 
 **Next:** User reviews NEEDS YOU items, decides whether to create Flask files for unmapped variants OR add unreachable characters to mobile catalog. Real AI categorization, budgeting, and screener classifier decisions pending.

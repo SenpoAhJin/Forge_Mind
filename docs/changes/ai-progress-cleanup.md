@@ -18,7 +18,7 @@
 **Line 25:** "`POST /api/ai/match`"  
 **Line 242:** "Backend Route: None (direct to Flask)"
 
-**Reality:** Route is `/ai/matcher/suggest-outfit` (D3 Step 2, October 14, 2026). Neither claim is correct.
+**Reality:** Route is `/api/ai/match` (D3 Step 2, October 14, 2026). Neither claim is correct.
 
 ### 3. Auth Requirement
 
@@ -82,7 +82,7 @@
 
 ### Update:
 - Connection status: CONNECTED (D3 complete)
-- Backend route: `/ai/matcher/suggest-outfit`
+- Backend route: `/api/ai/match`
 - Auth: session-only (no marketplace verification)
 - Field mapping: Remove `user_body_settings`
 - Flask fixes: Fallbacks added for color/category

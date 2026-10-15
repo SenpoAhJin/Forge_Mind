@@ -373,3 +373,39 @@ category_score = 1.0 if item_slot == slot else 0.0
 - Backend transform: `forgemind-backend/src/ai/matcherRouter.ts:89-91`
 - Mobile categorizer: `forgemind-mobile/src/utils/mockCatalog.ts:11-19`
 - Flask scoring: `forgemind-ai/src/attire_matcher.py:137-145` (approximate line numbers)
+
+
+---
+
+## D6 Step 3: Before/After with RULE-BASED Adapters (October 15, 2026)
+
+**Test:** 4 items (white cosplay wig, black jacket, black dress pants, blindfold) through OLD vs NEW backend transform
+
+### BEFORE (D5 transform - no adapters):
+- Overall: 0.165 incomplete, Completeness: 0.25
+- Only wig matched (category=wig, color=name): 0.129 no-match (color:0.00 keywords:0.14 category:1.00)
+- jacket/pants (category=clothing, color=names) → not candidates for any slot
+
+### AFTER (D6 transform - with RULE-BASED adapters):
+- Overall: **0.869 excellent**, Completeness: 1.0 (all 4 slots matched)
+- wig: 0.829 good (color:1.00 keywords:0.14 category:1.00)
+- top (jacket): 0.857 good (color:1.00 keywords:0.29 category:1.00)
+- bottom (pants): 0.880 good (color:1.00 keywords:0.40 category:1.00)
+- accessory (blindfold): 0.684 fair (color:0.78 keywords:0.20 category:1.00)
+
+### What Changed:
+1. **Color adapter** (colorNames.ts): Converted "white"→#FFFFFF, "black"→#000000, "unclear"→#808080 → color scores 0.78-1.00 (was 0.00)
+2. **Slot adapter** (slotMapping.ts): Mapped "jacket"→top, "pants"→bottom, "blindfold"→accessory via keywords → items now candidates for correct slots (was blocked)
+3. **Category score**: Now fires for all slots (1.00) because subcategory=slot_name (was 1.00 for wig only, 0.00 for others)
+
+### Labels Observed:
+- Item confidence: **fair** (0.684 blindfold), good (0.829-0.880), ~~excellent~~ not seen in this test
+- Overall quality: **excellent** (0.869), ~~incomplete~~ (was before)
+- Still never seen: poor (<0.4), acceptable (0.5-0.7)
+
+### What's Still Weak:
+- Keywords scoring low (0.14-0.40) because mobile sends generic style tags ("casual everyday wear") not descriptive keywords
+- "unclear" color (blindfold) scored 0.78 (mapped to #808080 gray), not perfect match for white blindfold requirement
+- Labels "poor" and "acceptable" unreachable with current keyword scoring (need items with partial matches, not full mismatches)
+
+**Conclusion:** Scores are NOW MEANINGFUL on real app data. Adapters solve the root causes. Color carries 70% of score and now fires correctly.

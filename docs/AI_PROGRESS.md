@@ -16,13 +16,13 @@
 **Evidence:**
 - Flask API: `forgemind-ai/src/api.py:218-248` (`/api/attire-matcher/suggest` endpoint)
 - Flask Matcher: `forgemind-ai/src/attire_matcher.py` (scoring formula, nested folder search)
-- Backend Proxy: `forgemind-backend/src/ai/matcherRouter.ts:138-188` (`POST /ai/matcher/suggest-outfit`)
+- Backend Proxy: `forgemind-backend/src/ai/matcherRouter.ts:138-188` (`POST /api/ai/match`)
 - Mobile Service: `forgemind-mobile/src/services/AiMatcherService.ts:22-60` (requestMatch function)
 - Mobile Screen: `forgemind-mobile/src/screens/cosplayer/MatchResultsScreen.tsx` (real API call, loading/error states)
 
 **Connection Flow:**
 1. Mobile: `AiMatcherService.requestMatch()` → transforms OwnedAttire to backend format
-2. Backend: `POST /ai/matcher/suggest-outfit` → session auth, validation, proxies to Flask with 8s timeout
+2. Backend: `POST /api/ai/match` → session auth, validation, proxies to Flask with 8s timeout
 3. Flask: `POST /api/attire-matcher/suggest` → loads character reference, scores items, returns matches
 4. Mobile: Displays suggested_outfit, missing_items, match_quality
 
@@ -50,14 +50,16 @@
 - Minus-one: 0.757 (good)
 - Empty: 0.0 (no-matches)
 
-**Observed Labels:** excellent, good, no-match, incomplete, no-matches (verified in D4/D5 tests)  
-**Never Observed Labels:** fair (≥0.6), poor (≥0.4), acceptable (≥0.5) — defined but not seen
+**Observed Labels:** excellent, good, fair, no-match, incomplete, no-matches (verified in D4/D5/D6 tests)  
+**Never Observed Labels:** poor (≥0.4), acceptable (≥0.5) — defined but not seen in D4/D6 tests
 
-**Real-Data Test (D5 Step 3):**
-- Category component fires ONLY for `wig` slot (subcategory="wig" == slot="wig")
-- Category DOES NOT fire for `top`/`bottom`/`accessory` (subcategory="clothing"/"other" != slot name)
-- Cause: Backend sends broad types, Flask expects exact slot name match
-- Color carries 70% of item score, so category's 10% has limited impact even when firing
+**Real-Data Test (D5 Step 3, D6 Step 3):**
+- D5 identified root causes: (1) color names sent but Flask uses hex, (2) category test requires item.category==slot_name but backend sends broad types
+- D6 added RULE-BASED adapters: colorNames.ts (name→hex mapping), slotMapping.ts (keyword→slot mapping)
+- **BEFORE adapters:** Overall 0.165 incomplete, only wig 0.129 no-match (c:0.00 k:0.14 cat:1.00), other slots rejected by candidate test
+- **AFTER adapters:** Overall 0.869 excellent, wig 0.829 good, top 0.857 good, bottom 0.880 good, accessory 0.684 fair (all color:0.78-1.00, category:1.00)
+- Color carries 70% of item score, category's 10% now fires consistently with slot mapping
+- **New labels observed:** fair (0.684), good (0.829-0.880), excellent (0.869)
 - Proposed fix: Add TYPE_TO_SLOT mapping (see flask-data-lookup-edit.md for 3 options)
 
 **Mapping Coverage (D4 Step 3):**

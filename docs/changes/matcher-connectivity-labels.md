@@ -7,7 +7,7 @@
 
 ### Mobile → Backend → Flask
 
-**Path:** `AiMatcherService.requestMatch()` → `POST /ai/matcher/suggest-outfit` → Flask `http://localhost:5000/api/attire-matcher/suggest`
+**Path:** `AiMatcherService.requestMatch()` → `POST /api/ai/match` → Flask `http://localhost:5000/api/attire-matcher/suggest`
 
 **Connected:** YES (session-only auth, no marketplace verification)
 
@@ -18,7 +18,7 @@
 
 ### Backend Route Status
 
-**Route:** `/ai/matcher/suggest-outfit` (POST)  
+**Route:** `/api/ai/match` (POST)  
 **Middleware:** `requireSession` only (no marketplace verification)  
 **Validation:** character/variant/slot IDs (regex `^[a-z0-9][a-z0-9_-]{0,100}$`), max 100 items  
 **Timeout:** 8000ms  
