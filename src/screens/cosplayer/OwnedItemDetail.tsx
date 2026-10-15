@@ -5,8 +5,9 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider, DropdownField, ConfirmationModal } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
@@ -65,6 +66,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
   const [editing, setEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNoProjectsModal, setShowNoProjectsModal] = useState(false);
+  const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
 
   const [type, setType] = useState<AttireCategory>(item?.auto_categorized_type ?? 'other');
   const [color, setColor] = useState(item?.auto_categorized_color ?? '');
@@ -350,6 +352,15 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
         onConfirm={() => setShowNoProjectsModal(false)}
         onCancel={() => setShowNoProjectsModal(false)}
       />
+
+      <Modal visible={enlargedPhoto !== null} transparent onRequestClose={() => setEnlargedPhoto(null)}>
+        <TouchableOpacity style={styles.photoModal} activeOpacity={1} onPress={() => setEnlargedPhoto(null)}>
+          {enlargedPhoto ? <Image source={{ uri: enlargedPhoto }} style={styles.photoModalImage} /> : null}
+          <TouchableOpacity style={styles.photoModalClose} onPress={() => setEnlargedPhoto(null)}>
+            <Ionicons name="close-circle" size={40} color={colors.backgroundLight} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 };
@@ -633,4 +644,35 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
+  photosSection: {
+    marginBottom: spacing.md,
+  },
+  photosScroll: {
+    flexGrow: 0,
+  },
+  photoItem: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  photoModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoModalImage: {
+    width: '90%',
+    height: '70%',
+    resizeMode: 'contain',
+  },
+  photoModalClose: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    padding: spacing.sm,
+  },
 });
+

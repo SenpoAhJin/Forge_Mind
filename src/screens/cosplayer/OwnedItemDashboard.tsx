@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
@@ -81,36 +81,43 @@ export const OwnedItemDashboard: React.FC<OwnedItemDashboardProps> = ({ onAddIte
   const clearFilters =
     statusFilter !== 'all' || typeFilter !== 'all' || colorFilter !== 'all';
 
-  const renderItem = ({ item }: { item: OwnedAttire }) => (
-    <TouchableOpacity style={styles.itemCard} activeOpacity={0.7} onPress={() => onOpenItem(item.attire_id)}>
-      <View style={styles.thumbWrap}>
-        <Ionicons name="shirt-outline" size={28} color={colors.primary} />
-      </View>
-      <View style={styles.itemBody}>
-        <View style={styles.itemTopRow}>
-          <Text style={styles.itemTitle} numberOfLines={1}>
-            {item.auto_categorized_color} {item.auto_categorized_type}
-          </Text>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: item.availability_status === 'free' ? colors.success : colors.secondary },
-            ]}
-          />
+  const renderItem = ({ item }: { item: OwnedAttire }) => {
+    const firstPhoto = item.photo_urls?.[0];
+    return (
+      <TouchableOpacity style={styles.itemCard} activeOpacity={0.7} onPress={() => onOpenItem(item.attire_id)}>
+        <View style={styles.thumbWrap}>
+          {firstPhoto ? (
+            <Image source={{ uri: firstPhoto }} style={styles.thumbImage} />
+          ) : (
+            <Ionicons name="shirt-outline" size={28} color={colors.primary} />
+          )}
         </View>
-        <Text style={styles.itemMeta} numberOfLines={1}>
-          {item.auto_categorized_style}
-        </Text>
-        <View style={styles.itemFooter}>
-          <View style={styles.entryTag}>
-            <Ionicons name={entryIcon(item.entry_method)} size={11} color={colors.textSecondary} />
-            <Text style={styles.entryTagText}>{entryLabel(item.entry_method)}</Text>
+        <View style={styles.itemBody}>
+          <View style={styles.itemTopRow}>
+            <Text style={styles.itemTitle} numberOfLines={1}>
+              {item.auto_categorized_color} {item.auto_categorized_type}
+            </Text>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: item.availability_status === 'free' ? colors.success : colors.secondary },
+              ]}
+            />
           </View>
-          <Text style={styles.conditionText}>Condition {item.condition_rating}/5</Text>
+          <Text style={styles.itemMeta} numberOfLines={1}>
+            {item.auto_categorized_style}
+          </Text>
+          <View style={styles.itemFooter}>
+            <View style={styles.entryTag}>
+              <Ionicons name={entryIcon(item.entry_method)} size={11} color={colors.textSecondary} />
+              <Text style={styles.entryTagText}>{entryLabel(item.entry_method)}</Text>
+            </View>
+            <Text style={styles.conditionText}>Condition {item.condition_rating}/5</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -292,6 +299,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
   },
   itemBody: {
     flex: 1,
