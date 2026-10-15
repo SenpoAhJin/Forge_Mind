@@ -10,6 +10,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useSelection } from '../../contexts/SelectionContext';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import { matchAttire, type MatchResult, type MatchedItem } from '../../services/AiMatcherService';
+import { getMatcherSlug } from '../../data/matcherSlugs';
 
 interface MatchResultsScreenProps {
   onBackToBrowse: () => void;
@@ -34,19 +35,19 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
   const performMatch = async () => {
     if (!selection) return;
 
+    // Check if this variant has Flask matcher data
+    const flaskSlug = getMatcherSlug(selection.variant.variant_id);
+    if (!flaskSlug) {
+      setError('no_data');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Construct Flask character_variant_id from selection
-      // Flask format: "{character-slug}_{variant-slug}"
-      // Example: "gojo-satoru_season-2-uniform"
-      // For now, use variant_id directly and let backend/Flask handle it
-      // TODO: Add proper slug mapping in future
-      const variantSlug = selection.variant.variant_id.replace(/^var-/, '');
-      
       const response = await matchAttire({
-        character_variant_id: variantSlug,
+        character_variant_id: flaskSlug,
         owned_attire: ownedAttire,
       });
 
@@ -98,6 +99,7 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
 
   // Render error state
   if (error) {
+    const isNoData = error === 'no_data';
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <StandardCard style={styles.selectionCard}>
@@ -106,13 +108,23 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
           <Text style={styles.variantName}>{variant.variant_name}</Text>
         </StandardCard>
 
-        <StandardCard style={styles.errorCard}>
-          <Text style={styles.errorTitle}>Match Failed</Text>
-          <Text style={styles.errorText}>{error}</Text>
-        </StandardCard>
+        {isNoData ? (
+          <StandardCard style={styles.neutralCard}>
+            <Text style={styles.neutralTitle}>No match data for this character yet</Text>
+            <Text style={styles.neutralText}>
+              AI matching data is not available for this variant. You can still create a project and track your progress.
+            </Text>
+          </StandardCard>
+        ) : (
+          <StandardCard style={styles.errorCard}>
+            <Text style={styles.errorTitle}>Match Failed</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </StandardCard>
+        )}
 
         <View style={styles.footer}>
-          <Button title="Try Again" onPress={performMatch} fullWidth />
+          {!isNoData && <Button title="Try Again" onPress={performMatch} fullWidth />}
+          <Button title="Start Project with This Variant" onPress={onStartProject} fullWidth />
           <Button title="Back to Variants" variant="secondary" onPress={onBackToBrowse} fullWidth />
         </View>
       </ScrollView>
@@ -313,6 +325,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   errorText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  neutralCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  neutralTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  neutralText: {
     ...typography.body,
     color: colors.textSecondary,
   },
