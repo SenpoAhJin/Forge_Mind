@@ -58,7 +58,7 @@ export interface NewOwnedAttireInput {
   entry_method: EntryMethod;
   entry_language: EntryLanguage;
   original_input_text: string;
-  photo_urls: (string | null)[];
+  photo_urls?: (string | null)[]; // Optional: text/voice entry don't provide photos
   auto_categorized_type: AttireCategory;
   auto_categorized_color: string;
   auto_categorized_style: string;

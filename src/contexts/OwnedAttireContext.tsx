@@ -60,8 +60,13 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const stored = JSON.parse(raw);
+          // Normalize old items missing photo_urls (from text/voice entry before D7a fix)
+          const normalized = stored.map((item: any) => ({
+            ...item,
+            photo_urls: Array.isArray(item.photo_urls) ? item.photo_urls : [],
+          }));
           if (!cancelled) {
-            setItems(stored);
+            setItems(normalized);
             setItems((prev) => (prev.length === 0 ? seedForUser() : prev));
           }
         } else {
@@ -91,15 +96,24 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     });
   }, [items, isLoaded]);
 
+  /**
+   * Normalize input to ensure photo_urls is always an array.
+   * Text and voice entry don't provide photo_urls; old saved items may be missing it.
+   */
+  const normalizePhotoUrls = (photoUrls: (string | null)[] | undefined): (string | null)[] => {
+    return Array.isArray(photoUrls) ? photoUrls : [];
+  };
+
   const addItem = (input: NewOwnedAttireInput): OwnedAttire => {
     const now = nowIso();
+    const photo_urls = normalizePhotoUrls(input.photo_urls);
     const item: OwnedAttire = {
       attire_id: `attr-${Date.now()}`,
       user_id: user?.email ?? 'demo-user-1',
       entry_method: input.entry_method,
       entry_language: input.entry_language,
       original_input_text: input.original_input_text,
-      photo_urls: input.photo_urls,
+      photo_urls,
       auto_categorized_type: input.auto_categorized_type,
       auto_categorized_color: input.auto_categorized_color,
       auto_categorized_style: input.auto_categorized_style,
@@ -108,7 +122,7 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
       condition_photo_history: [
         {
           timestamp: now,
-          photo_url: input.photo_urls[0] ?? null,
+          photo_url: photo_urls[0] ?? null,
           condition_rating: input.condition_rating,
         },
       ],
@@ -130,11 +144,12 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
         if (item.attire_id !== attireId) return item;
         const next = { ...item, ...input, updated_at: nowIso() };
         if (input.condition_rating && input.condition_rating !== item.condition_rating) {
+          const photo_urls = normalizePhotoUrls(item.photo_urls);
           next.condition_photo_history = [
             ...(item.condition_photo_history ?? []),
             {
               timestamp: nowIso(),
-              photo_url: item.photo_urls[0] ?? null,
+              photo_url: photo_urls[0] ?? null,
               condition_rating: input.condition_rating,
             },
           ];
