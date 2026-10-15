@@ -38,11 +38,11 @@
 - Flask timeout/crash → Backend 503 "matcher service unavailable"
 - Flask 500 → Backend 502 "bad response from matcher"
 
-**Scoring Formula (verified D4 Step 1):**
-- Item score: `color*0.7 + keywords*0.2 + category*0.1`
-- Confidence: excellent ≥0.9, good ≥0.75, fair ≥0.6, poor ≥0.4, no-match <0.4
-- Overall: `avg_score*0.7 + completeness*0.3`
-- Quality: excellent ≥0.85, good ≥0.7, acceptable ≥0.5, incomplete <0.5
+**Scoring Formula (verified D4 Step 1, D5 Step 3):**
+- **Item score:** `color * 0.7 + keywords * 0.2 + category * 0.1` (color carries 70% of item score)
+- **Item confidence:** excellent ≥0.9, good ≥0.75, fair ≥0.6, poor ≥0.4, no-match <0.4
+- **Overall score:** `avg_score * 0.7 + completeness * 0.3`
+- **Overall quality:** excellent ≥0.85, good ≥0.7, acceptable ≥0.5, incomplete <0.5
 
 **Test Results (D4 Step 1):**
 - Matching items: wig 0.914 (excellent), jacket 0.814 (good), pants 0.820 (good), overall 0.820 (good)
@@ -50,8 +50,15 @@
 - Minus-one: 0.757 (good)
 - Empty: 0.0 (no-matches)
 
-**Observed Labels:** excellent, good, no-match, incomplete, no-matches  
-**Unverified Labels:** fair, poor, acceptable (defined but not seen in tests)
+**Observed Labels:** excellent, good, no-match, incomplete, no-matches (verified in D4/D5 tests)  
+**Never Observed Labels:** fair (≥0.6), poor (≥0.4), acceptable (≥0.5) — defined but not seen
+
+**Real-Data Test (D5 Step 3):**
+- Category component fires ONLY for `wig` slot (subcategory="wig" == slot="wig")
+- Category DOES NOT fire for `top`/`bottom`/`accessory` (subcategory="clothing"/"other" != slot name)
+- Cause: Backend sends broad types, Flask expects exact slot name match
+- Color carries 70% of item score, so category's 10% has limited impact even when firing
+- Proposed fix: Add TYPE_TO_SLOT mapping (see flask-data-lookup-edit.md for 3 options)
 
 **Mapping Coverage (D4 Step 3):**
 - Total mobile variants: 12
