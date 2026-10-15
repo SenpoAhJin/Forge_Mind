@@ -18,6 +18,7 @@ interface TextEntryScreenProps {
     entry_method: 'text';
     entry_language: EntryLanguage;
     original_input_text: string;
+    photo_urls: string[];
     auto_categorized_type: string;
     auto_categorized_color: string;
     auto_categorized_style: string;
@@ -48,6 +49,7 @@ export const TextEntryScreen: React.FC<TextEntryScreenProps> = ({ onContinue }) 
       entry_method: 'text',
       entry_language: language,
       original_input_text: trimmed,
+      photo_urls: [],
       ...mockCategorizationFromText(trimmed),
       condition_rating: conditionRating,
     });

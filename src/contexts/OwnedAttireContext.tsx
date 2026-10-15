@@ -60,10 +60,14 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const stored = JSON.parse(raw);
-          // Normalize old items missing photo_urls (from text/voice entry before D7a fix)
+          // Normalize old items missing array fields (photo_urls, condition_photo_history)
+          // from text/voice entry before D7a fix or items saved before these fields existed
           const normalized = stored.map((item: any) => ({
             ...item,
             photo_urls: Array.isArray(item.photo_urls) ? item.photo_urls : [],
+            condition_photo_history: Array.isArray(item.condition_photo_history) 
+              ? item.condition_photo_history 
+              : [],
           }));
           if (!cancelled) {
             setItems(normalized);

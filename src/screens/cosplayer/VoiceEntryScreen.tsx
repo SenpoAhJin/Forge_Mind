@@ -18,6 +18,7 @@ interface VoiceEntryScreenProps {
     entry_method: 'voice';
     entry_language: EntryLanguage;
     original_input_text: string;
+    photo_urls: string[];
     auto_categorized_type: string;
     auto_categorized_color: string;
     auto_categorized_style: string;
@@ -100,6 +101,7 @@ export const VoiceEntryScreen: React.FC<VoiceEntryScreenProps> = ({ onContinue }
       entry_method: 'voice',
       entry_language: language,
       original_input_text: trimmed,
+      photo_urls: [],
       ...mockCategorizationFromText(trimmed),
       condition_rating: conditionRating,
     });

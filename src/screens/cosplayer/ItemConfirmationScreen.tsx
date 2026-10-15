@@ -74,7 +74,7 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   const [acquiredDate, setAcquiredDate] = useState(getTodayLocal());
   const [acquisitionCost, setAcquisitionCost] = useState('');
   const [notes, setNotes] = useState('');
-  const [photos, setPhotos] = useState<string[]>(draft.photo_urls.filter((u): u is string => u !== null));
+  const [photos, setPhotos] = useState<string[]>((draft.photo_urls ?? []).filter((u): u is string => u !== null));
 
   const pickPhoto = async (source: 'gallery' | 'camera') => {
     if (photos.length >= 3) return;
