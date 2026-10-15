@@ -1,7 +1,111 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 15, 2026 (Tasks D3+D4: Matcher fixes and cleanup - COMPLETE)
+**Last updated:** Thursday, October 15, 2026 (Task D5: Make matcher tests real and fix the record)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 15, 2026 (Task D5: Real matcher tests and record fixes)
+
+**Summary**
+
+**Task D5:** Made matcher tests use REAL exported functions and real Flask calls, tested with real app data showing category component limitation. (Step 0) Moved test_scoring.py from forgemind-ai/ to mobile scripts/flask_tests/, created backup forgemind-ai-src-backup-2026-10-15-1339 (7 files: 6 Python + .gitkeep). (Step 1) Exported matcher helper functions (transformToFlaskFormat, validateMatchRequest, mapFlaskError, mapFlaskFetchError) and DEFAULT_COLOR_FALLBACK constant (#808080) in matcherRouter.ts, rewrote check_match_flow.ts to import REAL functions instead of copying logic. (Step 2) Ran real Flask calls via exported functions: 3 OwnedAttire samples returned 200 with 7 keys, unknown ID returned 404 mapped correctly, dead port returned 503 within 5ms, validation rejected malformed ID and oversized array. 401 auth test NOT run (requires DB session). (Step 3) Real-data scoring test using REAL mockCategorizationFromText: category fires ONLY for wig slot (subcategory="wig"==slot="wig"), DOES NOT fire for top/bottom/accessory (subcategory="clothing"/"other" != slot name). Category weight is 10%, color carries 70%. Proposed 3 minimal fixes in flask-data-lookup-edit.md (backend TYPE_TO_SLOT mapping, Flask type mapping, or Flask redesign). (Step 4) Documented route correction: real path is /api/ai/match (not /ai/matcher/suggest-outfit as docs claimed), unmapped variants show neutral state (not 404), voice transcript NOT FOUND (user types text, no speech-to-text exists), added scoring weights/thresholds/real-data findings to AI_PROGRESS.md. (Step 5) Updated CHANGELOGs. All repos: tsc exit 0, git clean. **Mobile not tested on device.** **Category component limitation documented, user must choose fix option.**
+
+**What was built**
+
+**Task D5 Step 0: Git Housekeeping**
+- Moved 3 loose reports (FE-6_STEP_3, STEP1_TRANSFORM, TASK_COMPLETION) to docs/changes/
+- Moved test_scoring.py from forgemind-ai/ (root, not src) to forgemind-mobile/scripts/flask_tests/
+- Created backup: forgemind-ai-src-backup-2026-10-15-1339 (7 files: api.py, attire_matcher.py, color_matcher.py, .gitkeep, plus __pycache__)
+- Verified: mobile on feature/chat-app, backend on feature/chat-curated-terms, both clean
+- tsc exit 0 on both, port 5000 free
+
+**Task D5 Step 1: Export Real Functions**
+- **File:** `forgemind-backend/src/ai/matcherRouter.ts`
+  - Added `export` keyword to 4 helper functions: transformToFlaskFormat, validateMatchRequest, mapFlaskError, mapFlaskFetchError
+  - Added `export const DEFAULT_COLOR_FALLBACK = '#808080'` constant (line ~72)
+  - Used constant in transform: `color: item.auto_categorized_color || DEFAULT_COLOR_FALLBACK`
+  - Refactored route handler to call validation/error-mapping functions (removed inline logic)
+- **File:** `forgemind-backend/scripts/check_match_flow.ts` (rewritten)
+  - Now imports REAL functions from matcherRouter (no copied logic)
+  - Uses DEFAULT_COLOR_FALLBACK constant in tests
+  - Tests: transform (8 checks), validation (3 cases), error mapping (4 cases)
+  - Exit 0
+- **Commit:** b80dae3 "D5 Step 1: Export matcher helpers, add DEFAULT_COLOR_FALLBACK constant, rewrite flow check to use REAL functions"
+
+**Task D5 Step 2: Real Calls**
+- **File:** `forgemind-backend/scripts/test_real_calls.ts` (new, 153 lines)
+  - Started Flask on port 5000 (forgemind-ai/.venv/Scripts/python.exe src/api.py)
+  - Test (a): 3 OwnedAttire samples (wig, jacket, pants) → Flask → status 200, keys: alternatives, character_name, character_variant_id, match_quality, missing_items, suggested_outfit, variant_name ✓
+  - Test (b): Unknown ID "unknown-character_unknown-variant" → Flask 404 → Backend mapping 404 'character_not_found' ✓
+  - Test (c): Dead port 9999 → timeout/unreachable within 5ms (under 8s limit) → Backend mapping 503 'ai_service_unavailable' ✓
+  - Test (d): Validation rejects malformed ID "../path-traversal" → 400 'validation_error', oversized array (101 items) → 400 'validation_error' ✓
+  - Test (401 auth): NOT tested (requires DB and session middleware)
+  - Stopped Flask after tests
+- **Commit:** 620d19a "D5 Step 2: Add real Flask call tests (3 samples, 404, 503 timeout, validation) - all pass"
+
+**Task D5 Step 3: Real-Data Scoring Test**
+- **File:** `forgemind-mobile/scripts/test_real_data_scoring.ts` (new, 180 lines)
+  - Uses REAL mockCategorizationFromText from mockCatalog.ts to build OwnedAttire
+  - Items tested: "white cosplay wig", "black jacket", "black dress pants", "blindfold", "red dress", "green hat"
+  - Mobile categorizer returns: type=wig/clothing/other, color=white/black/unclear/red/green, style=random from pool
+  - Backend transform sends: category=type.toLowerCase(), subcategory=category (same value)
+  - Flask response: Only matched wig slot (score 0.129 no-match, but category=1.0)
+  - Breakdown: color=0.000, keywords=0.143, category=1.000 for wig
+  - Overall: 0.165 incomplete, completeness=0.250
+- **Finding:** Category component fires ONLY for wig (subcategory="wig" == slot="wig")
+  - Category DOES NOT fire for top/bottom/accessory (subcategory="clothing"/"other" != slot name)
+  - Cause: Backend (matcherRouter.ts:89-91) sends broad type, Flask (attire_matcher.py:~140) expects exact match
+  - Color carries 70% of item score (not category)
+  - Category is 10% of item score, so limited impact even when firing
+- **Proposed fixes (in flask-data-lookup-edit.md):**
+  1. Backend add TYPE_TO_SLOT mapping ("jacket"→"top", "pants"→"bottom", etc.)
+  2. Flask add type-to-slot mapping in matcher
+  3. Flask compare against reference item type instead of slot name
+- **Commit:** 43ffb97 "D5 Step 3: Real-data scoring test - category fires for wig only, proposed minimal fixes"
+
+**Task D5 Step 4: Fix the Record**
+- **File:** `forgemind-mobile/docs/changes/D5_STEP4_CORRECTIONS.md` (new, 95 lines)
+  - (a) Route correction: REAL path is `/api/ai/match` (mobile AiMatcherService.ts:80, backend index.ts:148 + matcherRouter.ts:223)
+    - WRONG in docs: `/ai/matcher/suggest-outfit` (AI_PROGRESS.md, matcher-connectivity-labels.md, D4_FINAL_REPORT.md, ai-progress-cleanup.md)
+  - (b) Unmapped variant behavior: show neutral state with NO network call (not "return 404")
+    - Evidence: matcherSlugs.ts:25 returns undefined, MatchResultsScreen checks before API call
+  - (c) Voice transcript: NOT FOUND (user types text, no speech-to-text integration exists)
+    - Searched: transcript, voice, speech, dictation, record, audio, mic in services/screens/utils
+  - (d) Scoring details added to AI_PROGRESS.md (see below)
+  - (e) "Complete" wording: deferred to user review (too many instances)
+- **File:** `forgemind-mobile/docs/AI_PROGRESS.md` (updated)
+  - Added scoring formula with weights: item = color*0.7 + keywords*0.2 + category*0.1 (color carries 70%)
+  - Added thresholds: item confidence (excellent/good/fair/poor/no-match), overall quality (excellent/good/acceptable/incomplete)
+  - Updated labels: "Observed" vs "Never Observed", added "(verified in D4/D5 tests)"
+  - Added real-data test findings: category fires for wig only, color carries 70%, proposed fixes
+- **Commit:** 7315263 "D5 Step 4: Document route correction (/api/ai/match not /ai/matcher/suggest-outfit), add scoring details to AI_PROGRESS.md"
+
+**Task D5 Step 5: CHANGELOG Updates**
+- **File:** `forgemind-mobile/CHANGELOG.md` (updated, this entry)
+- **File:** `forgemind-backend/CHANGELOG.md` (next)
+
+**What NOT tested**
+
+- Mobile app on device (requires Expo Go + Flask + Backend running)
+- 401 auth path (requires DB session and middleware, not isolated test)
+- Category component with real fixes applied (user must choose option 1/2/3 first)
+- fair/poor/acceptable labels (need test scores 0.4-0.74 item, 0.5-0.69 overall)
+
+**Known limitations**
+
+- **Category component fires only for wig slot** (subcategory="wig" == slot="wig")
+- **Category DOES NOT fire for top/bottom/accessory** (subcategory="clothing"/"other" != slot name)
+- **Root cause:** Backend sends broad type, Flask expects exact slot match
+- **Impact:** Category weight is 10%, color carries 70%, so limited scoring impact
+- **Fix needed:** User must choose: (1) backend TYPE_TO_SLOT mapping, (2) Flask type mapping, or (3) Flask redesign
+- **11 unmapped variants** still return neutral state (no network call), not fixed
+- **Voice transcript:** User types text manually (no speech-to-text exists)
+- **Route docs:** Many files still say /ai/matcher/suggest-outfit (should be /api/ai/match)
+
+**Files moved out of forgemind-ai**
+
+- test_scoring.py (root) → forgemind-mobile/scripts/flask_tests/test_scoring.py
 
 ---
 
