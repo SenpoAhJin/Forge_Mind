@@ -2,11 +2,13 @@
  * ForgeMind - Item Confirmation (FE-5)
  * Editable categorization + extras shown after any entry method.
  * Save persists to the local inventory via OwnedAttireContext (AsyncStorage).
+ * D7a: Added photo picker (up to 3 photos, local-only, never sent to Flask/backend).
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
@@ -72,13 +74,36 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   const [acquiredDate, setAcquiredDate] = useState(getTodayLocal());
   const [acquisitionCost, setAcquisitionCost] = useState('');
   const [notes, setNotes] = useState('');
+  const [photos, setPhotos] = useState<string[]>(draft.photo_urls.filter((u): u is string => u !== null));
+
+  const pickPhoto = async (source: 'gallery' | 'camera') => {
+    if (photos.length >= 3) return;
+    
+    const permission = source === 'camera' 
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permission.granted) return;
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ quality: 0.5, allowsEditing: false })
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, allowsEditing: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos([...photos, result.assets[0].uri]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
 
   const handleSave = () => {
     const item = addItem({
       entry_method: draft.entry_method,
       entry_language: draft.entry_language,
       original_input_text: draft.original_input_text,
-      photo_urls: draft.photo_urls,
+      photo_urls: photos,
       auto_categorized_type: type,
       auto_categorized_color: color.trim() || 'unclear',
       auto_categorized_style: style.trim() || 'unclear',
