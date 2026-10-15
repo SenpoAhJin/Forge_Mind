@@ -45,3 +45,9 @@ export function getHeadTopY(bodyType: 'male' | 'female'): number {
 export function getFeetY(bodyType: 'male' | 'female'): number {
   return BODY_BOUNDS[bodyType].min.y;
 }
+
+/** Get torso mid Y coordinate (for torso garments) */
+export function getTorsoMidY(bodyType: 'male' | 'female'): number {
+  // Torso band Y ≈ 0.10 to 0.60 (from GARMENT_SPEC.md)
+  return 0.35;
+}

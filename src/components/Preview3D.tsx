@@ -7,6 +7,7 @@ import GarmentLayer from './GarmentLayer';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { getGarmentsForBodyType } from '../data/garmentRegistry';
 import { colors, spacing, typography } from '../theme';
+import type { WornGarment } from '../utils/wearing';
 
 /**
  * Error Boundary for 3D Canvas
@@ -98,13 +99,15 @@ function RotatingBox({ position, scale = 1, color }: RotatingBoxProps) {
 interface Preview3DProps {
   bodyType?: BaseBodySelection; // Which base body to render in body mode
   showTestCubes?: boolean; // Falls back to the animated-primitives test mode
+  wornGarments?: WornGarment[]; // Optional worn garments from matcher (hides registry toggles)
 }
 
 export default function Preview3D({
   bodyType = DEFAULT_BASE_BODY,
-  showTestCubes = false
+  showTestCubes = false,
+  wornGarments
 }: Preview3DProps) {
-  // Garment visibility state (all off by default)
+  // Garment visibility state (all off by default) - only for registry mode
   const availableGarments = getGarmentsForBodyType(bodyType);
   const [visibleGarments, setVisibleGarments] = useState<Set<string>>(new Set());
 
@@ -119,6 +122,9 @@ export default function Preview3D({
       return next;
     });
   };
+  
+  // Worn garments mode (from matcher) vs registry mode (test toggles)
+  const useWornMode = wornGarments !== undefined;
 
   return (
     <Canvas3DErrorBoundary>
@@ -200,15 +206,27 @@ export default function Preview3D({
             <Suspense fallback={null}>
               <BodyModel bodyType={bodyType} />
               
-              {/* Garment Layers: Render each visible garment on top of body */}
-              {availableGarments.map((garment) => (
-                <GarmentLayer
-                  key={garment.id}
-                  garment={garment}
-                  bodyType={bodyType}
-                  visible={visibleGarments.has(garment.id)}
-                />
-              ))}
+              {/* Worn Garments Mode: Render runtime garments from matcher */}
+              {useWornMode ? (
+                wornGarments!.map((wornGarment, index) => (
+                  <GarmentLayer
+                    key={`worn-${index}`}
+                    runtimeGarment={wornGarment}
+                    bodyType={bodyType}
+                    visible={true}
+                  />
+                ))
+              ) : (
+                /* Registry Mode: Render toggleable garments from registry */
+                availableGarments.map((garment) => (
+                  <GarmentLayer
+                    key={garment.id}
+                    garment={garment}
+                    bodyType={bodyType}
+                    visible={visibleGarments.has(garment.id)}
+                  />
+                ))
+              )}
             </Suspense>
           )}
 
@@ -219,8 +237,8 @@ export default function Preview3D({
           </mesh>
         </Canvas>
 
-        {/* Garment Controls: Toggle visibility of each garment */}
-        {!showTestCubes && availableGarments.length > 0 && (
+        {/* Garment Controls: Toggle visibility of each garment (registry mode only) */}
+        {!showTestCubes && !useWornMode && availableGarments.length > 0 && (
           <View style={styles.garmentControls}>
             <Text style={styles.garmentControlsTitle}>Garments:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.garmentList}>
