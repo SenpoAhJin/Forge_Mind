@@ -1,7 +1,175 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 14, 2026 (Task D2: AI attire matcher connection - COMPLETE)
+**Last updated:** Thursday, October 15, 2026 (Tasks D3+D4: Matcher fixes and cleanup - COMPLETE)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 15, 2026 (Tasks D3+D4: Matcher fixes and cleanup - COMPLETE)
+
+**Summary**
+
+**Tasks D3+D4 COMPLETE:** (D3) Fixed matcher variant mapping (1/12 mobile variants mapped), removed marketplace verification from backend route (session-only auth), removed user_body_settings field (Flask never uses it), added Flask fallbacks for color/category/names, removed DEBUG prints. (D4) Verified scoring formula with test_scoring.py (matching 0.914 excellent, wrong 0.222-0.306 no-match, minus-one 0.757 good, empty 0.0 no-matches), created flow check scripts (backend transform, mobile adapter, error paths all verified), generated mapping coverage table (1/12 mobile variants, 6 Flask files, 11 unmapped, 5 Flask files unreachable), documented connectivity/labels/data sources/gaps, consolidated AI_PROGRESS.md (removed contradictions, updated D3/D4 status), updated CHANGELOGs. All repos: git status clean, tsc exit 0, py_compile exit 0. Scoring formula verified: item = color*0.7 + keywords*0.2 + category*0.1, overall = avg_score*0.7 + completeness*0.3. Category 0.0 for slot!=type explained: by design (slot "top" vs type "jacket" is different). **Mobile not tested on device** - requires Expo Go with Flask/Backend/Mobile running. **11 unmapped variants** (91.7% of mobile catalog) return 404. **5 Flask files unreachable** (Asta/Luck/Raiden/Spider-Man/OC) - not in mobile catalog.
+
+**What was built**
+
+**Task D3 Step 1: Variant Mapping**
+- **File:** `forgemind-mobile/src/data/matcherSlugs.ts` (new, 29 lines)
+  - `MATCHER_SLUG_MAP` record: mobile variant_id → Flask file ID
+  - 1 confirmed mapping: `var-gojo-s2-uniform` → `gojo-satoru_season-2-uniform`
+  - 11 unmapped variants: 3 more Gojo (casual-streetwear, unsealed-past, vol0-outfit), 3 Makima, 2 Veira, 3 Zelda
+  - `getMatcherSlug()` function: returns Flask ID or undefined
+  - Comment: Match criteria = character name + variant name must match JSON fields (not guessed slugs)
+- **File:** `forgemind-mobile/src/screens/cosplayer/MatchResultsScreen.tsx`
+  - Updated error state: "No data available" instead of "Character variant not found" (neutral messaging)
+- **Script:** `forgemind-mobile/scripts/check_matcher_slugs.js` (verified 1 mapping, validated regex, exit 0)
+- **Commit:** ba821b4 "D3 Step 1: Add matcher slug mapping (1 confirmed, 11 unmapped)"
+
+**Task D3 Step 2: Backend Route Fixes**
+- **File:** `forgemind-backend/src/ai/matcherRouter.ts`
+  - **Auth:** Removed `requireMarketplaceUser` + `isVerifiedMarketplaceUser` guards (D2 had wrong requirement)
+  - **Auth:** Now session-only (`requireSession` middleware) - matches actual user needs
+  - **Validation:** Added character_variant_id validation (regex `^[a-z0-9][a-z0-9_-]{0,100}$`)
+  - **Validation:** Added max 100 attire items limit
+  - **Timeout:** Added 8000ms timeout for Flask fetch
+  - **Error mapping:** Flask 404 → Backend 404 "character variant not found", Flask timeout → 503 "matcher service unavailable", Flask 500 → 502 "bad response"
+  - **Field removal:** Removed `user_body_settings` from request (Flask never uses it, checked api.py:115,218)
+- **File:** `forgemind-mobile/src/services/AiMatcherService.ts`
+  - **Field removal:** Removed `user_body_settings` from mobile request (line 41-43 deleted)
+- **Commits:** 
+  - Mobile 41479ec "D3 Step 2: Remove user_body_settings from matcher request (Flask never uses it)"
+  - Backend f97ade3 "D3 Step 2: Fix matcher route auth (session-only), add validation, 8s timeout, error mapping"
+
+**Task D3 Step 3: Flask Scoring Fixes**
+- **File:** `forgemind-ai/src/attire_matcher.py`
+  - **Removed:** All DEBUG print statements (lines that logged search paths, color scores, etc.)
+  - **Fallback:** `primary_color = item.get('primary_color') or (item.get('primary_colors') or ['#CCCCCC'])[0]` (supports both field names)
+  - **Fallback:** `item_type = item.get('type') or item.get('category', 'unknown')` (supports both field names)
+  - **Fallback:** `character = data.get('character', 'unknown')`, `variant = data.get('variant', 'unknown')` (handles missing fields)
+- **Test:** `python -m py_compile src/attire_matcher.py` exit 0
+- **Sanity test:** Matching items (wig white/jacket black/pants black) returned 0.914 excellent / 0.82 good, wrong items returned 0.222-0.306 no-match
+- **Commit:** 6b39f19 "D3 Step 3: Remove DEBUG prints, add Flask field fallbacks (primary_colors[0], category, character/variant)"
+
+**Task D4 Step 0: Git Housekeeping**
+- Moved 8 loose report files to `forgemind-mobile/docs/changes/` (A2_UTC, AI_SETUP_FINAL, B1_FINAL, B1_PROGRESS, B2_PROGRESS, B2_RESUME, COMMUNITY_EVENTS, FE-2_PHASE2)
+- Created backup: `forgemind-ai-src-backup-2026-10-15-1252/` (7 files)
+- Verified tsc exit 0 (mobile + backend), port 5000 free, repos clean
+- **Commit:** 1eabf1d "D4 Step 0: Move 8 loose reports to docs/changes/, create backup"
+
+**Task D4 Step 1: Scoring Formula Verification**
+- **File:** `forgemind-ai/tests/test_scoring.py` (new, 180 lines)
+  - Test (a): Matching items → wig 0.914 excellent, jacket 0.814 good, pants 0.820 good, overall 0.820 good ✓
+  - Test (b): Wrong items → 0.222-0.306 no-match, overall 0.415 incomplete ✓
+  - Test (c): Minus-one → 0.757 good (still good with 1 wrong item) ✓
+  - Test (d): Empty → 0.0 no-matches (all zeros) ✓
+  - Arithmetic check: wig 0.914 = 1.0*0.7 + 0.571*0.2 + 1.0*0.1 ✓
+- **Documented:** Category 0.0 for slot!=type is by design (slot "top" vs type "jacket" different, not a bug)
+- **Labels observed:** excellent, good, no-match, incomplete, no-matches
+- **Labels unverified:** fair (≥0.6), poor (≥0.4), acceptable (≥0.5) — defined but not seen in tests
+- **Commit:** 5dc9d53 "D4 Step 1: Add scoring formula tests, verify arithmetic, document category 0.0 explanation"
+
+**Task D4 Step 2: Flow Checks**
+- **File:** `forgemind-backend/scripts/check_match_flow.ts` (new, 76 lines)
+  - Verified backend transforms mobile request → Flask format (character, variant, slot, attire_items)
+  - Verified 11 checks: character/variant/slot/attire_items fields exist, NO user_body_settings field
+  - Documented error paths: Flask 404→Backend 404, Flask timeout→Backend 503
+  - Documented auth/validation: 401 no session, 400 invalid character_id
+  - Exit 0
+- **File:** `forgemind-mobile/scripts/check_match_adapter.ts` (new, 75 lines)
+  - Verified mobile transforms OwnedAttire → backend request format
+  - Verified 13 checks: character/variant/slot fields, attire_items array, id/name/type/primary_color/keywords, fallback to "unknown"/"#CCCCCC", NO user_body_settings
+  - Documented response handling: 200→parse suggested_outfit, 404→"not found", 503→"unavailable"
+  - Exit 0
+- **Commits:**
+  - Mobile d0491b3 "D4 Step 2: Add flow check scripts (mobile adapter, backend transform, error paths)"
+  - Backend a1a55b7 "D4 Step 2: Add backend matcher flow checks (transform, error paths)"
+
+**Task D4 Step 3: Mapping Coverage Table**
+- **File:** `forgemind-mobile/docs/changes/mapping-coverage-table.md` (new, 62 lines)
+  - 12 mobile variants listed (4 Gojo, 3 Makima, 2 Veira, 3 Zelda)
+  - 6 Flask files listed (1 Gojo, 1 Asta, 1 Luck, 1 OC, 1 Raiden, 1 Spider-Man)
+  - 1 confirmed mapping (8.3% coverage)
+  - 11 unmapped mobile variants (91.7%)
+  - 5 unmapped Flask files (83.3%)
+  - Implications: 91.7% of mobile users get 404, 5 Flask files unreachable from mobile
+- **Commit:** 6c5e67d "D4 Step 3: Add matcher variant mapping coverage table (1/12 mobile variants mapped)"
+
+**Task D4 Step 4: Connectivity/Label Verification**
+- **File:** `forgemind-mobile/docs/changes/matcher-connectivity-labels.md` (new, 110 lines)
+  - **Connected:** Mobile→Backend→Flask (session-only auth, 8s timeout, error mapping documented)
+  - **Backend route:** `/ai/matcher/suggest-outfit` (POST, requireSession, validation, timeout 8000ms)
+  - **Mobile API base URL:** Documented resolution order (EXPO_PUBLIC_API_URL → hostUri → fallback)
+  - **auto_categorized fields:** Source = mock pattern matching (NOT real AI), files `mockCatalog.ts`
+  - **Voice transcript:** Source = speech-to-text (NOT verified)
+  - **Budgeting:** NOT IMPLEMENTED (price_paid_php unused)
+  - **Observed labels:** excellent, good, no-match, incomplete, no-matches
+  - **Unverified labels:** fair, poor, acceptable (defined but not seen)
+  - **6 GAPS identified:** no real AI categorization, speech-to-text unverified, no budgeting, 11 unmapped variants, 5 Flask files unreachable, 3 labels untested
+- **Commit:** b799c61 "D4 Step 4: Document matcher connectivity, data field sources, label verification, gaps"
+
+**Task D4 Step 5: AI_PROGRESS.md Consolidation**
+- **File:** `forgemind-mobile/docs/changes/ai-progress-cleanup.md` (new, 80 lines)
+  - Documented 8 contradictions: connection status (PARTIAL vs CONNECTED), backend route (/api/ai/match vs actual), auth requirement (marketplace vs session-only), field mapping (user_body_settings removed), Flask fixes (fallbacks added), test results (0.057 vs 0.914), priority 1 (already done), smallest next step (already done)
+  - Documented stale text: "Smallest viable step" sections, "Next Steps" Priority 1-3, Wearing Pipeline (out of scope), connection table (outdated), Task D2 detail (redundant)
+  - Recommended consolidation: keep feature inventory + summary table + evidence, remove duplicates + speculation + contradictions, update connection status + route + auth + fields + fixes + tests, add D3/D4 refs + mapping coverage + labels + gaps
+- **File:** `forgemind-mobile/docs/AI_PROGRESS.md` (rewritten, 224 lines)
+  - **Status:** ✅ CONNECTED (updated from PARTIAL)
+  - **Route:** `/ai/matcher/suggest-outfit` (corrected)
+  - **Auth:** Session-only (corrected from marketplace verification)
+  - **Fields:** Removed user_body_settings (corrected)
+  - **Fixes:** Fallbacks documented (primary_colors[0], category)
+  - **Tests:** Updated with D4 Step 1 scores (0.914 excellent, etc.)
+  - **Coverage:** 1/12 mobile variants, 6 Flask files, 11 unmapped, 5 unreachable
+  - **Labels:** 6 observed, 3 unverified
+  - **Gaps:** 6 identified (mock categorization, speech-to-text, no budgeting, unmapped variants, unreachable Flask files, untested labels)
+  - **D3/D4 refs:** Added links to all change docs (flask-data-lookup-edit.md, mapping-coverage-table.md, matcher-connectivity-labels.md, ai-progress-cleanup.md)
+  - **Test status table:** Added 7-row table (scoring/matching/wrong/minus-one/empty verified, fair/poor/acceptable unverified, flow/mapping/connectivity verified)
+  - **NEEDS YOU:** 4 user decision items (unmapped variants, mock categorization, budgeting, screener classifier)
+- **Commit:** cbaeab0 "D4 Step 5: Consolidate AI_PROGRESS.md (fix contradictions, remove stale text, add D3/D4 refs)"
+
+**Task D4 Step 6: CHANGELOG Updates**
+- **File:** `forgemind-mobile/CHANGELOG.md` (updated, this entry)
+- **File:** `forgemind-backend/CHANGELOG.md` (next)
+
+**What NOT tested**
+
+- Mobile app on device: requires Expo Go session with Flask port 5000 + Backend port 3000 + Mobile running
+- 11 unmapped variants: Gojo casual-streetwear/unsealed-past/vol0-outfit, Makima (all 3), Veira (both 2), Zelda (all 3)
+- 5 Flask files: Asta/Luck/Raiden/Spider-Man/OC (not in mobile catalog)
+- fair/poor/acceptable labels: defined but not seen in test output
+- Real AI categorization: mock pattern matching only
+- Speech-to-text integration: source unclear
+- Budgeting logic: price_paid_php unused
+
+**Known limitations**
+
+- **Coverage gap:** 11/12 mobile variants (91.7%) return 404 "character variant not found"
+- **Unreachable Flask files:** 5/6 Flask files (83.3%) have no mobile catalog entry
+- **Mock categorization:** auto_categorized_type/color/style use pattern matching (NOT real AI)
+- **No budgeting:** price_paid_php field exists but no aggregation/forecasting logic
+- **Unverified labels:** fair/poor/acceptable defined but not seen (need test scores 0.4-0.74)
+- **Category scoring:** Returns 0.0 when slot != type (by design: slot "top" vs type "jacket" different)
+
+**Backups created**
+
+- `forgemind-ai-src-backup-2026-10-15-1153/` (6 files, D3 start)
+- `forgemind-ai-src-backup-2026-10-15-1252/` (7 files, D4 start)
+
+**Files modified**
+
+- `forgemind-mobile/src/data/matcherSlugs.ts` (created, 1 mapping)
+- `forgemind-mobile/src/screens/cosplayer/MatchResultsScreen.tsx` (neutral error state)
+- `forgemind-mobile/src/services/AiMatcherService.ts` (removed user_body_settings)
+- `forgemind-mobile/scripts/check_matcher_slugs.js` (created, validation)
+- `forgemind-mobile/scripts/check_match_adapter.ts` (created, flow checks)
+- `forgemind-mobile/docs/changes/mapping-coverage-table.md` (created, coverage)
+- `forgemind-mobile/docs/changes/matcher-connectivity-labels.md` (created, connectivity/labels/gaps)
+- `forgemind-mobile/docs/changes/ai-progress-cleanup.md` (created, contradictions)
+- `forgemind-mobile/docs/AI_PROGRESS.md` (rewritten, consolidated)
+- `forgemind-backend/src/ai/matcherRouter.ts` (session-only auth, validation, timeout, error mapping, removed user_body_settings)
+- `forgemind-backend/scripts/check_match_flow.ts` (created, backend flow checks)
+- `forgemind-ai/src/attire_matcher.py` (fallbacks, DEBUG removed)
+- `forgemind-ai/tests/test_scoring.py` (created, scoring verification)
 
 ---
 
