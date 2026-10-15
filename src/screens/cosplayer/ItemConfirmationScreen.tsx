@@ -90,7 +90,35 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
       : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, allowsEditing: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
 
     if (!result.canceled && result.assets[0]) {
-      setPhotos([...photos, result.assets[0].uri]);
+      let uri = result.assets[0].uri;
+      
+      // Web: convert to data URI for persistence (blob: URLs die on reload)
+      if (Platform.OS === 'web') {
+        try {
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          const sizeMB = blob.size / (1024 * 1024);
+          
+          if (sizeMB > 0.7) {
+            // Too large for local storage
+            alert(`Photo is too large (${sizeMB.toFixed(1)} MB). Please choose a smaller image (max 700 KB).`);
+            return;
+          }
+          
+          uri = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          alert('Failed to process photo');
+          return;
+        }
+      }
+      // Native: expo-file-system would copy to document directory here,
+      // but keeping picker URI for now (persistent on device)
+      
+      setPhotos([...photos, uri]);
     }
   };
 
@@ -99,6 +127,7 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   };
 
   const handleSave = () => {
+    // Photos are stored locally only, never sent to Flask matcher or backend API
     const item = addItem({
       entry_method: draft.entry_method,
       entry_language: draft.entry_language,
@@ -138,6 +167,47 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
           <Text style={styles.sourceText}>“{draft.original_input_text}”</Text>
         </View>
       ) : null}
+
+      <Text style={styles.sectionTitle}>Photos (optional)</Text>
+      {photos.length > 0 ? (
+        <View style={styles.photoGrid}>
+          {photos.map((uri, i) => (
+            <View key={i} style={styles.photoThumb}>
+              <Image source={{ uri }} style={styles.photoImage} />
+              <TouchableOpacity 
+                style={styles.photoRemove} 
+                onPress={() => removePhoto(i)} 
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={24} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {photos.length < 3 ? (
+        <View style={styles.photoActions}>
+          <TouchableOpacity 
+            style={styles.photoButton} 
+            onPress={() => pickPhoto('gallery')} 
+            activeOpacity={0.7}
+          >
+            <Ionicons name="images-outline" size={20} color={colors.primary} />
+            <Text style={styles.photoButtonText}>Gallery</Text>
+          </TouchableOpacity>
+          {Platform.OS !== 'web' ? (
+            <TouchableOpacity 
+              style={styles.photoButton} 
+              onPress={() => pickPhoto('camera')} 
+              activeOpacity={0.7}
+            >
+              <Ionicons name="camera-outline" size={20} color={colors.primary} />
+              <Text style={styles.photoButtonText}>Camera</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+      <Text style={styles.photoNotice}>Photos stored locally only. Not sent to matcher.</Text>
 
       <Text style={styles.sectionTitle}>Auto-categorized (editable)</Text>
 
@@ -324,5 +394,56 @@ const styles = StyleSheet.create({
   },
   cancelRow: {
     marginTop: spacing.sm,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  photoThumb: {
+    width: 100,
+    height: 100,
+    position: 'relative',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: colors.backgroundLight,
+    borderRadius: 12,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundLight,
+  },
+  photoButtonText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  photoNotice: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
   },
 });
