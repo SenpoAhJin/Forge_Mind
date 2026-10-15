@@ -262,3 +262,114 @@ if req_type and 'subcategory' in item:
 - Quality: `excellent` (≥0.85), `acceptable` (0.5-0.69)
 
 **To observe:** Would need items scoring in those exact ranges (e.g., wrong color but good keywords for fair/poor).
+
+
+---
+
+## D5 Step 3: Real-Data Scoring Test (October 15, 2026)
+
+**Test:** Sent 6 items through REAL mobile mock categorizer + backend transform + Flask
+
+**Items:**
+1. "white cosplay wig" → type:wig, color:white, subcategory:wig
+2. "black jacket" → type:clothing, color:black, subcategory:clothing
+3. "black dress pants" → type:clothing, color:black, subcategory:clothing
+4. "blindfold" → type:other, color:unclear, subcategory:other
+5. "red dress" → type:clothing, color:red, subcategory:clothing
+6. "green hat" → type:other, color:green, subcategory:other
+
+**Flask Response:**
+- Only matched slot: `wig` (score 0.129 no-match, but category=1.0)
+- Category breakdown: color=0.000, keywords=0.143, **category=1.000**
+- Overall: 0.165 incomplete, completeness=0.250
+
+**Finding:**
+
+Category component FIRES for `wig` slot only because subcategory="wig" == slot="wig".
+
+Category component DOES NOT fire for `top`/`bottom`/`accessory` slots because:
+- Backend sends subcategory="clothing" for jacket/pants (matcherRouter.ts:89-91)
+- Flask compares `item.subcategory == slot_name` (attire_matcher.py:137-145)
+- "clothing" != "top" → category score = 0.0
+- "clothing" != "bottom" → category score = 0.0
+
+**Root Cause:**
+
+Backend transform maps `auto_categorized_type` directly to `category` and `subcategory` fields:
+```typescript
+// forgemind-backend/src/ai/matcherRouter.ts:89-91
+const category = item.auto_categorized_type?.toLowerCase() || 'other';
+return {
+  category: category,
+  subcategory: category,
+  // ...
+};
+```
+
+Mobile mock categorizer returns broad types ("clothing", "wig", "footwear", "accessory", etc.) from `mockCatalog.ts:11-19`.
+
+Flask matcher expects `subcategory` to match slot name exactly:
+```python
+# forgemind-ai/src/attire_matcher.py:137-145 (approximate)
+category_score = 1.0 if item['subcategory'] == slot else 0.0
+```
+
+**Why Category Weight is 70% But Doesn't Help:**
+
+Scoring formula (attire_matcher.py:137-145):
+```
+item_score = color*0.7 + keywords*0.2 + category*0.1
+```
+
+**CORRECTION:** Context claims color carries 70%, but the actual formula shows **color=0.7, keywords=0.2, category=0.1**. Category is only 10% of the score, not the dominant factor. Color carries 70%.
+
+**Proposed Minimal Fix:**
+
+**Option 1 (Backend):** Map auto_categorized_type → slot-compatible subcategory
+```typescript
+// In transformToFlaskFormat, add mapping:
+const TYPE_TO_SLOT: Record<string, string> = {
+  'jacket': 'top',
+  'shirt': 'top',
+  'coat': 'top',
+  'pants': 'bottom',
+  'skirt': 'bottom',
+  'wig': 'wig',
+  'boots': 'footwear',
+  'shoes': 'footwear',
+  'accessory': 'accessory',
+  'necklace': 'accessory',
+  'glove': 'accessory',
+  // ... etc
+};
+const subcategory = TYPE_TO_SLOT[category] || category;
+```
+
+**Option 2 (Flask):** Add type-to-slot mapping in matcher
+```python
+# In attire_matcher.py calculate_item_score:
+TYPE_TO_SLOT = {
+    'jacket': 'top',
+    'shirt': 'top',
+    'coat': 'top',
+    'pants': 'bottom',
+    'skirt': 'bottom',
+    'wig': 'wig',
+    # ... etc
+}
+item_slot = TYPE_TO_SLOT.get(item['subcategory'], item['subcategory'])
+category_score = 1.0 if item_slot == slot else 0.0
+```
+
+**Option 3 (Flask):** Compare against reference item type instead of slot name
+```python
+# Load reference costume requirements and compare item type against required type
+# More complex but more flexible
+```
+
+**Decision:** User must choose which fix to implement. Option 1 (backend mapping) is simplest and keeps Flask logic clean. Option 2 duplicates mapping but centralizes logic. Option 3 is most flexible but requires redesign.
+
+**File:Line References:**
+- Backend transform: `forgemind-backend/src/ai/matcherRouter.ts:89-91`
+- Mobile categorizer: `forgemind-mobile/src/utils/mockCatalog.ts:11-19`
+- Flask scoring: `forgemind-ai/src/attire_matcher.py:137-145` (approximate line numbers)
