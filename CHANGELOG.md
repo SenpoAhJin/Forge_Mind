@@ -1,7 +1,55 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 15, 2026 (Task D6: Make matcher work on real app data)
+**Last updated:** Thursday, October 15, 2026 (Task D7c: Fix ErrorBoundary crash)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 15, 2026 (Task D7c: Fix ErrorBoundary crash)
+
+**Summary**
+
+**Task D7c:** Fixed ErrorBoundary crash "useTheme must be used within ThemeProvider" by making fallback UI theme-independent and moving ErrorBoundary inside ThemeProvider. (Step 1) Root cause: ErrorBoundary mounted OUTSIDE all providers (App.tsx:125), fallback uses Button component which calls useTheme() hook. Created findings doc d7c-step1-findings.md. (Step 2) Removed Button dependency from ErrorBoundary fallback, replaced with plain TouchableOpacity using fixed colors from theme file (colors.error500, colors.backgroundLight). Added retryButton/retryButtonText styles. (Step 3) Moved ErrorBoundary INSIDE ThemeProvider in App.tsx, now wraps RootNavigator and UI components at CalendarProvider level. Removed outer ErrorBoundary wrapping for both web and mobile. Verified no other ErrorBoundary usages have same problem (MarketplaceStackNavigator boundaries already inside providers). (Step 4) Created verification test scripts/check_error_boundary.mjs, checks: no Button import, TouchableOpacity imported, no useTheme() usage, fixed colors used, retryButton styles exist. Test exit 0. (Step 5) Updated CHANGELOG.md. **Mobile not tested on device.** tsc exit 0.
+
+**What was built**
+
+**Task D7c Step 1-2: ErrorBoundary Fallback Fix**
+- **File:** `src/components/ErrorBoundary.tsx` (modified)
+  - Removed Button import (was `from '../components/Button'`)
+  - Added TouchableOpacity import from react-native
+  - Replaced `<Button variant="outline" onPress={...}>` with plain `<TouchableOpacity style={styles.retryButton} onPress={...}>`
+  - Added retryButton styles: borderWidth 1, borderColor colors.error500, borderRadius borderRadius.md, paddingVertical spacing.md, paddingHorizontal spacing.lg, alignItems center
+  - Added retryButtonText styles: typography.button, color colors.error500
+  - Fallback no longer depends on Button component or useTheme() hook
+- **File:** `forgemind-mobile/docs/changes/d7c-step1-findings.md` (new, root cause table with file:line evidence)
+- **Commit:** 638506e "D7c Step 1: Document ErrorBoundary crash root cause"
+- **Commit:** d633e6f "D7c Step 2: ErrorBoundary fallback uses plain TouchableOpacity (no Button/useTheme)"
+
+**Task D7c Step 3: Move ErrorBoundary Inside Providers**
+- **File:** `App.tsx` (modified)
+  - Moved `<ErrorBoundary label="The app">` from OUTSIDE SafeAreaProvider to INSIDE CalendarProvider (line 94-100)
+  - Now wraps ServerStatusBanner, RootNavigator, ConsentBanner, AppNoticeHost, StatusBar
+  - Removed outer ErrorBoundary from web return (line 120) and mobile return (line 125)
+  - ErrorBoundary now has access to ThemeProvider context if needed in future
+  - Verified MarketplaceStackNavigator boundaries already inside providers (navigator uses useTheme() at line 64)
+- **Commit:** b24c7f7 "D7c Step 3: Move ErrorBoundary inside ThemeProvider (wraps RootNavigator)"
+
+**Task D7c Step 4-5: Verification Test and CHANGELOG**
+- **File:** `scripts/check_error_boundary.mjs` (new, 73 lines)
+  - Node.js test script using fs.readFileSync to verify ErrorBoundary source
+  - Check 1: No Button import
+  - Check 2: TouchableOpacity imported
+  - Check 3: No useTheme() hook usage
+  - Check 4: Fixed colors used (colors. or #)
+  - Check 5: retryButton styles defined
+  - Exit 0 all checks passed
+- **Commit:** de49f2d "D7c Step 4: Add ErrorBoundary verification test (exit 0)"
+- **File:** `CHANGELOG.md` (this file, updated with D7c session)
+
+**Why this matters**
+- **Before:** Crash on any render error: "useTheme must be used within ThemeProvider" because ErrorBoundary fallback tried to use Button component outside provider tree
+- **After:** ErrorBoundary fallback renders correctly with plain TouchableOpacity and fixed colors, no provider dependencies
+- **Impact:** Error screen now shows properly when app crashes, user can tap retry button, better error resilience
 
 ---
 
