@@ -13,11 +13,6 @@ import type { OwnedAttire } from '../types/owned-attire';
 export interface MatchRequest {
   character_variant_id: string;
   owned_attire: OwnedAttire[];
-  user_body_settings?: {
-    body_type: 'male' | 'female';
-    height: number;
-    size: number;
-  };
 }
 
 export interface MatchedItem {
