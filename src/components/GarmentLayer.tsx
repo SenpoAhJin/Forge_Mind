@@ -12,7 +12,7 @@
  * - Load failures are caught and logged (body continues rendering)
  */
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { Asset } from 'expo-asset';
 import { GarmentEntry, BodyType } from '../data/garmentRegistry';
@@ -38,22 +38,35 @@ function resolveAssetUri(assetModule: number | string): string {
   return asset.localUri ?? asset.uri;
 }
 
-/**
- * Real GLB Garment Renderer
- * Loads and displays a GLB asset. Wrapped in error boundary to prevent body from unmounting on load failure.
- */
-function GarmentGLB({ assetModule }: { assetModule: number | string }) {
-  try {
-    const uri = resolveAssetUri(assetModule);
-    const gltf = useGLTF(uri);
-    
-    // Render the whole scene (preserves bone hierarchy if rigged)
-    return <primitive object={gltf.scene} />;
-  } catch (error) {
-    console.error('[GarmentLayer] Failed to load garment GLB:', error);
-    // Return null instead of throwing - body will continue rendering
-    return null;
+/** Catches a failed garment load so the body keeps drawing. */
+class GarmentErrorBoundary extends React.Component<
+  { garmentId: string; children: React.ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  
+  static getDerivedStateFromError() {
+    return { failed: true };
   }
+  
+  componentDidCatch(error: unknown) {
+    console.error(`[GarmentLayer] Failed to load garment "${this.props.garmentId}":`, error);
+  }
+  
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/** Real GLB garment. No try/catch here: Suspense needs the loading signal. */
+function GarmentGLB({ assetModule }: { assetModule: number | string }) {
+  const uri = resolveAssetUri(assetModule);
+  const gltf = useGLTF(uri);
+  
+  // Clone so the cached copy is never shared between two places
+  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  
+  return <primitive object={scene} />;
 }
 
 /**
@@ -184,9 +197,11 @@ export default function GarmentLayer({ garment, runtimeGarment, bodyType, visibl
   // If real asset exists, load it
   if (garment.asset !== null) {
     return (
-      <Suspense fallback={null}>
-        <GarmentGLB assetModule={garment.asset} />
-      </Suspense>
+      <GarmentErrorBoundary garmentId={garment.id}>
+        <Suspense fallback={null}>
+          <GarmentGLB assetModule={garment.asset} />
+        </Suspense>
+      </GarmentErrorBoundary>
     );
   }
 
