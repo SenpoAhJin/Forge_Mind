@@ -1,10 +1,64 @@
 /**
  * Wearing System - Data Layer
  * D8a Step 1: Slot mapping, color mapping, and worn garment builder
+ * E1 Step 6: Rule-based garment mapping for owned items
  */
 
 import type { MatchResult } from '../services/AiMatcherService';
 import type { OwnedAttire } from '../types/owned-attire';
+import type { GarmentEntry, BodyType } from '../data/garmentRegistry';
+import { garmentRegistry } from '../data/garmentRegistry';
+
+/**
+ * Get real garment for an owned item (RULE-BASED mapping, not AI).
+ * 
+ * Maps owned attire items to garments that have actual 3D assets.
+ * Only returns a garment if ALL conditions match:
+ * - Registry entry has a real asset (asset !== null)
+ * - Entry supports the given bodyType
+ * - Item type AND color both match
+ * 
+ * Examples:
+ * - white wig + male → wig-white-cap-male
+ * - white wig + female → wig-white-cap-female
+ * - black wig → null (no 3D garment exists yet)
+ * - jacket → null (no 3D garment exists yet)
+ * 
+ * @param item - Owned attire item
+ * @param bodyType - 'male' or 'female'
+ * @returns GarmentEntry with real asset, or null if no match
+ */
+export function getGarmentForOwnedItem(
+  item: OwnedAttire,
+  bodyType: BodyType
+): GarmentEntry | null {
+  const itemType = item.auto_categorized_type.toLowerCase();
+  const itemColor = item.auto_categorized_color.toLowerCase();
+  
+  // Find garment entries that:
+  // 1. Have a real asset (not placeholder)
+  // 2. Support this body type
+  // 3. Match both type and color
+  for (const garment of garmentRegistry) {
+    // Must have real asset
+    if (garment.asset === null) continue;
+    
+    // Must support body type
+    if (!garment.bodyTypes.includes(bodyType)) continue;
+    
+    // RULE-BASED matching: type and color must both match
+    // Example: 'wig-white-cap-male' → type='wig', color='white'
+    const garmentId = garment.id.toLowerCase();
+    
+    // Check if garment ID contains both the item type and color
+    if (garmentId.includes(itemType) && garmentId.includes(itemColor)) {
+      return garment;
+    }
+  }
+  
+  // No matching garment found
+  return null;
+}
 
 // Garment slots for rendering (from docs/GARMENT_SPEC.md)
 export type GarmentSlot = 'head' | 'torso' | 'legs' | 'hands' | 'prop';
