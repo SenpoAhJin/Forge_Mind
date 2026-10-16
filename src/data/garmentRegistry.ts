@@ -9,6 +9,8 @@
  */
 
 import { getHeadTopY } from './bodyBounds';
+import WIG_WHITE_CAP_MALE from '../../assets/models/garments/Wig_White_Cap_Male.glb';
+import WIG_WHITE_CAP_FEMALE from '../../assets/models/garments/Wig_White_Cap_Female.glb';
 
 export type GarmentSlot = 'head' | 'torso' | 'legs' | 'hands' | 'prop';
 export type BodyType = 'male' | 'female';
@@ -33,7 +35,7 @@ export interface GarmentEntry {
   /** Which body types this garment supports */
   bodyTypes: BodyType[];
   /** GLB asset module (static import: import GLB from '../../assets/...') or null for placeholder */
-  asset: number | null;
+  asset: string | number | null;
   /** Placeholder shape definition (used when asset is null) */
   placeholder: PlaceholderShape | null;
   /** True if this is a placeholder (no real asset exists) */
@@ -66,6 +68,25 @@ export const garmentRegistry: GarmentEntry[] = [
       color: '#FF6B6B', // Visible red color
     },
     isPlaceholder: true,
+  },
+  // Real garments: White wig caps (generated GLB assets)
+  {
+    id: 'wig-white-cap-male',
+    label: 'White Wig Cap',
+    slot: 'head',
+    bodyTypes: ['male'],
+    asset: WIG_WHITE_CAP_MALE,
+    placeholder: null,
+    isPlaceholder: false,
+  },
+  {
+    id: 'wig-white-cap-female',
+    label: 'White Wig Cap',
+    slot: 'head',
+    bodyTypes: ['female'],
+    asset: WIG_WHITE_CAP_FEMALE,
+    placeholder: null,
+    isPlaceholder: false,
   },
 ];
 
