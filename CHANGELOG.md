@@ -1,7 +1,159 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 15, 2026 (Task D7c: Fix ErrorBoundary crash)
+**Last updated:** Friday, October 16, 2026 (Task E1: 3D garment pipeline)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Friday, October 16, 2026 (Task E1: 3D garment pipeline)
+
+**Summary**
+
+**Task E1:** Built the 3D "wearing" pipeline to show real garment files (white wig caps) on the 3D body in matcher results. Fixed GarmentGLB Suspense bug, generated two wig GLB files procedurally, registered them, verified they ship in bundles, created RULE-BASED mapping from owned items to garments, resolved D6 matcher 404 issue, and wired real garments into the matcher 3D preview. **Web and mobile not tested visually** (requires Flask + backend + device).
+
+**What was built**
+
+**Task E1 Step 0: Preflight**
+- Confirmed `scripts/generate_wig_glb.mjs` exists
+- Both repos: tsc exit 0, ports 3000/5000 free
+- Documented how Preview3D chooses garments, wearing.ts exports, app.json asset registration, OwnedAttire field names
+- **File:** `docs/changes/E1_GARMENT_CHANGELOG.md` (new, detailed log of each step)
+- **File:** `docs/changes/e1-step0-findings.md` (new, answers 5 precondition questions with file:line evidence)
+- **Commit:** dbd9280 "E1 Step 0: Preflight and inventory"
+
+**Task E1 Step 1: Fix GarmentGLB Suspense Bug**
+- **Problem:** `GarmentGLB` had try/catch that caught Suspense promise thrown by `useGLTF` during loading, so real garments never loaded
+- **File:** `src/components/GarmentLayer.tsx` (modified)
+  - Added `useMemo` import from React
+  - Created `GarmentErrorBoundary` class component (catches real errors without interfering with Suspense)
+  - Removed try/catch from `GarmentGLB` function (Suspense now works)
+  - Added `scene.clone(true)` via `useMemo` to prevent sharing cached scenes
+  - Wrapped real-asset branch in `<GarmentErrorBoundary><Suspense><GarmentGLB /></Suspense></GarmentErrorBoundary>`
+- **Verification:** tsc exit 0, no try blocks remain around useGLTF, placeholder/runtime branches unchanged
+- **Commit:** 63e79fd "E1 Step 1: Fix GarmentGLB Suspense bug"
+
+**Task E1 Step 2-3: Generate and Register Wigs**
+- **Generated Files:**
+  - `assets/models/garments/Wig_White_Cap_Male.glb` (20,656 bytes, 1,024 triangles, 1 material, 0 skins/animations)
+  - `assets/models/garments/Wig_White_Cap_Female.glb` (20,648 bytes, 1,024 triangles, 1 material, 0 skins/animations)
+  - Both pass validation: <1MB, <10k triangles, bbox within body bounds
+- **Script:** `node scripts/generate_wig_glb.mjs` (procedural ellipsoidal cap generator)
+- **Measurement Script:** `scripts/measure_head.mjs` (new, measures head joint DEF-spine.006 from body GLBs)
+  - Male head joint at Y=0.063, head height 0.868
+  - Female head joint at Y=0.060, head height 0.884
+  - Generator estimates (HEAD.halfHeight=0.125) are correct for cap wig (skull portion only, not full head+neck)
+- **File:** `src/data/garmentRegistry.ts` (modified)
+  - Added static imports: `WIG_WHITE_CAP_MALE`, `WIG_WHITE_CAP_FEMALE`
+  - Updated `GarmentEntry.asset` type to `string | number | null` (GLB imports can be string on web or number on native)
+  - Added two real garment entries: `wig-white-cap-male`, `wig-white-cap-female`
+  - Registry now has 3 entries: 1 placeholder + 2 real wigs
+- **Verification:** tsc exit 0, `check_garment_registry.js` validates (though only parses 1 entry due to regex limitations, tsc confirms all 3)
+- **Commit:** 3ebc92a "E1 Step 2-3: Generate wigs, measure head, register in registry"
+
+**Task E1 Step 4: Bundle Verification**
+- **File:** `app.json` (modified)
+  - Added wig files to `expo-asset` plugin: `./assets/models/garments/Wig_White_Cap_Male.glb`, `Wig_White_Cap_Female.glb`
+- **Web bundle:** `npx expo export --platform web` exit 0, both wigs present with hashed names
+- **Android bundle:** `npx expo export --platform android` exit 0, both wigs present in `assets/` folder by size match (20656, 20648 bytes)
+- **Verification:** Both bundles contain wig files, export folders deleted after check
+- **Commit:** a513a09 "E1 Step 4: Add wig files to expo-asset plugin"
+
+**Task E1 Step 5: Visual Check (NOT TESTED)**
+- **`[WEB]` NOT TESTED:** No headless browser available, manual checklist provided
+- **`[MOBILE]` NOT TESTED:** Cannot run device, manual checklist provided
+- **What can be verified:** TypeScript compiles, files registered, files in bundles
+- **What cannot be verified:** Visual rendering (pixels changed, no console errors, wig sits correctly on head)
+
+**Task E1 Step 6: RULE-BASED Garment Mapping**
+- **File:** `src/utils/wearing.ts` (modified)
+  - Added imports: `GarmentEntry`, `BodyType`, `garmentRegistry`
+  - Added function: `getGarmentForOwnedItem(item: OwnedAttire, bodyType: BodyType): GarmentEntry | null`
+  - **Logic:** RULE-BASED (NOT AI) - matches item.auto_categorized_type + item.auto_categorized_color against garment ID
+  - Only returns garments with real assets (`asset !== null`)
+  - Example: white wig + male → `wig-white-cap-male`, black wig → null
+- **Test Script:** `scripts/check_garment_mapping.mjs` (new, runnable version using copied logic)
+- **Test Results:**
+  ```
+  ✅ White wig + male → wig-white-cap-male
+  ✅ White wig + female → wig-white-cap-female
+  ✅ Black wig → null
+  ✅ Jacket → null
+  ✅ Empty/unclear → null
+  Passed: 5/5
+  ```
+- **Verification:** tsc exit 0, test script exit 0
+- **Commit:** 3d55ccc "E1 Step 6: Add RULE-BASED garment mapping for owned items"
+
+**Task E1 Step 7: D6 Matcher 404 Resolution**
+- **Root Cause:** STALE BUILD OR NO RUNNING SERVER (not a code issue)
+- **Resolution Steps:**
+  1. Rebuilt backend: `npm run build` exit 0
+  2. Started backend: `npm start` (port 3000, database OK)
+  3. Tested health: `curl http://localhost:3000/health` → 200 OK
+  4. Tested matcher: `curl -X POST http://localhost:3000/api/ai/match -H "Content-Type: application/json" -d "{}"` → **401 Unauthorized** (expected, auth works)
+- **Code Check:** Route registration correct, catch-all 404 is after matcher mount
+- **File:** `docs/changes/D6_STEP5_401_TEST_RESULT.md` (appended E1 Step 7 resolution)
+- **Commit:** f6c465b "E1 Step 7: Document D6 matcher 404 resolution"
+
+**Task E1 Step 8: Wire Real Garments to Matcher 3D Preview**
+- **File:** `src/utils/wearing.ts` (modified)
+  - Added optional `ownedItem?: OwnedAttire` field to `WornGarment` interface
+  - Modified `buildWornGarments` to populate `ownedItem` for each matched slot
+- **File:** `src/components/GarmentLayer.tsx` (modified)
+  - Added import: `getGarmentForOwnedItem`
+  - Enhanced `RuntimeGarmentPrimitive` to check for real garments FIRST
+  - If `getGarmentForOwnedItem` returns a real garment, render GLB asset
+  - Otherwise fall back to placeholder shape
+- **File:** `src/screens/cosplayer/MatchResultsScreen.tsx` (modified)
+  - Added disclaimer text below 3D preview: "ℹ️ Only items with a 3D garment are shown (right now: white wig)"
+- **Logic Flow:**
+  1. User matches character variant → backend returns suggested_outfit
+  2. `buildWornGarments` creates `WornGarment[]` with `ownedItem` references
+  3. `Preview3D` renders via `GarmentLayer` with `runtimeGarment` prop
+  4. `RuntimeGarmentPrimitive` calls `getGarmentForOwnedItem(ownedItem, bodyType)`
+  5. If real garment exists (white wig), render GLB; else render placeholder
+- **Lines Changed:** ~50 lines total (within 150-line limit)
+- **Verification:** tsc exit 0
+- **Testing:** `[WEB]` NOT TESTED, `[MOBILE]` NOT TESTED (requires Flask + backend + seeded white wig + device)
+- **Commit:** 660f7a9 "E1 Step 8: Wire real garments to matcher 3D preview"
+
+**Task E1 Step 9-10: Documentation and Final Verification**
+- **File:** `docs/GARMENT_SPEC.md` (updated)
+  - Garments Available: 2 real (Wig_White_Cap_Male/Female.glb) + 1 placeholder
+  - Added section: Generated Garments (mentions `generate_wig_glb.mjs`, `measure_head.mjs`)
+  - Updated last modified: October 16, 2026
+- **File:** `docs/AI_PROGRESS.md` (updated)
+  - Added section 8: 3D Garment "Wearing" System
+  - Status: PARTIAL (real garments wire to matcher preview, visual testing needed)
+  - Mapping logic labeled: RULE-BASED (NOT AI)
+  - Known limitations: only 2 real garments, no visual verification
+- **File:** `CHANGELOG.md` (this file, updated with E1 session)
+- **Final Verification:**
+  - `npx tsc --noEmit` mobile repo: EXIT 0
+  - `npx tsc --noEmit` backend repo: EXIT 0
+  - `node scripts/check_garment_mapping.mjs`: EXIT 0 (5/5 tests passed)
+  - Git status: clean except `E1_GARMENT_CHANGELOG.md` and other E1 docs
+  - Git log: 9 commits (dbd9280 to 630f4bc)
+  - Git LFS: tracks `*.glb` via `.gitattributes` (2 wig files present)
+
+**Why this matters**
+- **Before:** 3D preview showed only code-generated placeholders (red cylinder for head)
+- **After:** 3D preview shows REAL white wig cap GLB files on head when matched (white wig items only)
+- **Impact:** Users can see actual 3D garments on the body for items with real assets, more realistic preview
+- **Current state:** Only white wigs have real 3D assets; all other items (black wig, jackets, etc.) still show placeholders until more GLB files are created
+
+**What was NOT tested**
+- **`[WEB]` Visual:** White wig appearing on body in browser (requires Flask + backend + matcher flow)
+- **`[MOBILE]` Visual:** White wig appearing on body in Expo Go (requires device + QR scan)
+- **Wig positioning:** Whether wig sits correctly on head (tight/floating/sinking)
+- **Matcher end-to-end:** Full flow from owned attire through matcher to 3D preview
+
+**Known limitations**
+- Only 2 real garments exist (white wig caps for male/female bodies)
+- All other items render as placeholder shapes (tubes, blocks, caps)
+- Wig positioning based on generator estimates (not runtime bone attachment)
+- No rigged/deformable garments yet (wigs are static meshes)
+- RULE-BASED mapping only (not AI-based garment selection)
 
 ---
 

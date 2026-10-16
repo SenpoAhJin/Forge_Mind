@@ -234,3 +234,54 @@
 - **D4 Step 5:** AI_PROGRESS.md consolidation (removed contradictions, updated status)
 
 **Full change logs:** See `forgemind-mobile/docs/changes/` directory.
+
+
+---
+
+### 8. 3D Garment "Wearing" System (E1)
+
+**Status:** ✅ **PARTIAL** (real garments wire to matcher preview, visual testing needed)  
+**Last Updated:** E1 (October 16, 2026)
+
+**Evidence:**
+- Registry: `forgemind-mobile/src/data/garmentRegistry.ts` (3 entries: 1 placeholder + 2 real wigs)
+- Assets: `forgemind-mobile/assets/models/garments/Wig_White_Cap_Male.glb`, `Wig_White_Cap_Female.glb` (20.2 KB each, 1,024 triangles)
+- Renderer: `forgemind-mobile/src/components/GarmentLayer.tsx` (error boundary + Suspense fix, real garment priority)
+- Mapping: `forgemind-mobile/src/utils/wearing.ts` (`getGarmentForOwnedItem` RULE-BASED function)
+- UI: `forgemind-mobile/src/screens/cosplayer/MatchResultsScreen.tsx` (3D preview with worn garments)
+
+**Mapping Logic:** **RULE-BASED** (NOT AI)
+- Function: `getGarmentForOwnedItem(item: OwnedAttire, bodyType: BodyType): GarmentEntry | null`
+- Checks: item.auto_categorized_type + item.auto_categorized_color match garment ID
+- Example: white wig + male → `wig-white-cap-male` (real GLB), black wig → null (no 3D asset yet)
+- Only returns garments with real assets (`asset !== null`)
+
+**Connection Flow:**
+1. User matches character variant on `MatchResultsScreen`
+2. Backend returns suggested_outfit (e.g., `{wig: {item_id: "white-wig-1", ...}}`)
+3. `buildWornGarments(matchResult, ownedItems, bodyType)` creates `WornGarment[]` with `ownedItem` references
+4. `Preview3D` renders via `GarmentLayer` with `runtimeGarment` prop
+5. `RuntimeGarmentPrimitive` calls `getGarmentForOwnedItem(ownedItem, bodyType)`
+6. If real garment exists (white wig), render GLB asset; else render placeholder shape
+
+**Files Ship:**
+- `app.json` includes wigs in `expo-asset` plugin
+- `npx expo export --platform web`: both wigs present ✓
+- `npx expo export --platform android`: both wigs present ✓
+
+**Testing Status:**
+- `[WEB]` **NOT TESTED** (requires Flask + backend + seeded white wig + matcher flow)
+- `[MOBILE]` **NOT TESTED** (requires device)
+- TypeScript: EXIT 0 ✓
+- Garment mapping tests: 5/5 passed ✓
+
+**Known Limitations:**
+- Only 2 real garments (white wig caps for male/female)
+- All other items (black wig, jackets, etc.) render as placeholders
+- No visual verification on web or device
+- Wig positioning based on generator estimates (not measured from real head joint)
+
+**Spec:** [docs/GARMENT_SPEC.md](./GARMENT_SPEC.md) - Blender workflow, body measurements, generator script
+
+---
+

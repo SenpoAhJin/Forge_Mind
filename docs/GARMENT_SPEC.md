@@ -272,6 +272,32 @@ The app uses **world-space positioning** with no runtime animations:
 
 ---
 
-**Last Updated:** October 14, 2026  
+**Last Updated:** October 16, 2026  
 **Body Models Version:** Fixed-scale GLB (no runtime bone scaling)  
-**Garments Available:** 0 real, 1 placeholder (code-generated sphere)
+**Garments Available:** 2 real (Wig_White_Cap_Male.glb, Wig_White_Cap_Female.glb), 1 placeholder (code-generated red cylinder)
+
+---
+
+## Generated Garments (E1 Step 2)
+
+ForgeMind includes a procedural garment generator for rapid prototyping:
+
+**Script:** `scripts/generate_wig_glb.mjs`  
+**Purpose:** Generate simple cap-style wig GLB files without Blender  
+**Usage:** `node scripts/generate_wig_glb.mjs`
+
+**Generated Files:**
+- `assets/models/garments/Wig_White_Cap_Male.glb` (20.2 KB, 1,024 triangles)
+- `assets/models/garments/Wig_White_Cap_Female.glb` (20.2 KB, 1,024 triangles)
+
+**Technical Details:**
+- Ellipsoidal cap geometry (16 rings × 32 segments)
+- Positioned using body bounding box measurements (head Y max)
+- Single material (soft white, non-metallic)
+- No rigging (static garment)
+- Generated as valid glTF 2.0 binary files
+
+**Measurement Script:** `scripts/measure_head.mjs`  
+Measures real head joint positions from body GLBs (DEF-spine.006). Used to verify generator estimates.
+
+**Note:** Generator is for rapid prototyping only. For production garments with complex shapes, custom UVs, or rigging, use the Blender workflow above.

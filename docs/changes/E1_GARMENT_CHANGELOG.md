@@ -365,3 +365,79 @@ No code changes needed. The route registration is correct.
 ### Status: ✅ RESOLVED (backend route works correctly after rebuild)
 
 ---
+
+## Step 8 — Matcher result → 3D body (depends on Step 6 AND Step 7)
+**Completed:** 2026-10-16
+
+### Prerequisites:
+- Step 6: RULE-BASED garment mapping function exists ✓
+- Step 7: Backend matcher route works (401 auth) ✓
+
+### Implementation:
+Enhanced the 3D preview on `MatchResultsScreen` to show REAL garments (white wigs) instead of only placeholders.
+
+**Changes:**
+
+1. **`src/utils/wearing.ts`:**
+   - Added optional `ownedItem?: OwnedAttire` field to `WornGarment` interface
+   - Modified `buildWornGarments` to populate `ownedItem` for each matched slot
+   - This allows runtime garment renderer to access full item data for real garment lookup
+
+2. **`src/components/GarmentLayer.tsx`:**
+   - Added import: `import { getGarmentForOwnedItem } from '../utils/wearing';`
+   - Enhanced `RuntimeGarmentPrimitive` to check for real garments FIRST
+   - If `getGarmentForOwnedItem` returns a real garment, render the GLB asset
+   - Otherwise, fall back to placeholder shape
+   - Example: white wig → renders `Wig_White_Cap_Male.glb`, black wig → renders placeholder
+
+3. **`src/screens/cosplayer/MatchResultsScreen.tsx`:**
+   - Added disclaimer text below 3D preview:
+     `"ℹ️ Only items with a 3D garment are shown (right now: white wig)"`
+   - This honestly documents current state (only white wigs have real assets)
+
+### Logic Flow:
+1. User matches a character variant
+2. Backend returns suggested outfit (e.g., `{wig: {item_id: "white-wig-1", ...}}`)
+3. `buildWornGarments` creates `WornGarment` objects with `ownedItem` references
+4. `Preview3D` renders via `GarmentLayer` with `runtimeGarment` prop
+5. `RuntimeGarmentPrimitive` calls `getGarmentForOwnedItem(ownedItem, bodyType)`
+6. If real garment exists (white wig), render GLB asset
+7. If not (black wig, jacket, etc.), render placeholder shape
+
+### Lines Changed:
+- `GarmentLayer.tsx`: ~30 lines (import + RuntimeGarmentPrimitive enhancement)
+- `wearing.ts`: ~10 lines (interface + buildWornGarments)
+- `MatchResultsScreen.tsx`: ~10 lines (disclaimer text + style)
+- **Total: ~50 lines** (well within 150-line limit)
+
+### Verification:
+- `npx tsc --noEmit`: EXIT 0 ✓
+- No new screens created ✓
+- Existing UI extended (3D preview already existed on MatchResultsScreen)
+- RULE-BASED mapping integrated (not AI)
+
+### Testing:
+**`[WEB]` NOT TESTED** (requires running Flask + backend + seeded white wig item + matcher flow)
+
+**`[MOBILE]` NOT TESTED** (requires device)
+
+**What should be tested:**
+1. Start Flask AI service
+2. Start backend with seeded white wig in owned attire
+3. Navigate to matcher, select Gojo S2 uniform variant (has `var-gojo-s2-uniform` matcher slug)
+4. Match should suggest white wig
+5. 3D preview should show REAL white cap wig on head (not red placeholder cylinder)
+6. Disclaimer text should appear below preview
+
+### Files changed:
+- `src/utils/wearing.ts` (interface + buildWornGarments)
+- `src/components/GarmentLayer.tsx` (RuntimeGarmentPrimitive enhancement)
+- `src/screens/cosplayer/MatchResultsScreen.tsx` (disclaimer)
+
+### Commit:
+- Hash: `660f7a956008e791f490f3fde1eddae3ad59d719`
+- Message: "E1 Step 8: Wire real garments to matcher 3D preview"
+
+### Status: ✅ DONE (code complete) | ⚠️ [WEB: NOT TESTED][MOBILE: NOT TESTED]
+
+---
