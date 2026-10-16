@@ -149,6 +149,8 @@ export type PlaceholderShape =
 /**
  * Worn garment descriptor for renderer.
  * Renderer will create geometry from shape and color at runtime.
+ * 
+ * E1 Step 8: Added optional ownedItem reference for real garment lookup.
  */
 export interface WornGarment {
   slot: GarmentSlot;
@@ -156,6 +158,7 @@ export interface WornGarment {
   label: string; // e.g. "black wig" or "Missing"
   colorHex: string; // from colorNameToHex
   shape: PlaceholderShape; // PLACEHOLDER until real GLB exists
+  ownedItem?: OwnedAttire; // E1 Step 8: Reference to original owned item (for real garment lookup)
 }
 
 /**
@@ -177,7 +180,7 @@ export function buildWornGarments(
   const worn: WornGarment[] = [];
   
   // Build map of matcher slots to matched items
-  const matchedBySlot = new Map<GarmentSlot, { itemId: string; label: string; colorHex: string }>();
+  const matchedBySlot = new Map<GarmentSlot, { itemId: string; label: string; colorHex: string; ownedItem: OwnedAttire }>();
   
   for (const [matcherSlot, matchedItem] of Object.entries(matchResult.suggested_outfit)) {
     const garmentSlot = matcherSlotToGarmentSlot(matcherSlot);
@@ -190,7 +193,7 @@ export function buildWornGarments(
     const colorHex = colorNameToHex(ownedItem.auto_categorized_color);
     const label = `${ownedItem.auto_categorized_color} ${ownedItem.auto_categorized_type}`;
     
-    matchedBySlot.set(garmentSlot, { itemId: matchedItem.item_id, label, colorHex });
+    matchedBySlot.set(garmentSlot, { itemId: matchedItem.item_id, label, colorHex, ownedItem });
   }
   
   // Create worn garment for each slot (filled or empty)
@@ -230,6 +233,7 @@ export function buildWornGarments(
       label: matched?.label || 'Missing',
       colorHex: matched?.colorHex || '#808080', // Gray for missing
       shape,
+      ownedItem: matched?.ownedItem, // E1 Step 8: Store reference for real garment lookup
     });
   }
   

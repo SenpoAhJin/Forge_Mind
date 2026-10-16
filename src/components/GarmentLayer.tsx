@@ -18,6 +18,7 @@ import { Asset } from 'expo-asset';
 import { GarmentEntry, BodyType } from '../data/garmentRegistry';
 import type { WornGarment } from '../utils/wearing';
 import { getHeadTopY, getTorsoMidY } from '../data/bodyBounds';
+import { getGarmentForOwnedItem } from '../utils/wearing';
 
 interface GarmentLayerProps {
   /** Garment entry from registry (for static test mode) */
@@ -73,6 +74,8 @@ function GarmentGLB({ assetModule }: { assetModule: number | string }) {
  * Runtime Garment Renderer
  * Renders placeholder shapes for worn garments (no registry entry)
  * Returns null if the garment slot is empty (itemId === null)
+ * 
+ * E1 Step 8: Enhanced to check for real garments first (RULE-BASED mapping).
  */
 function RuntimeGarmentPrimitive({ garment, bodyType }: { garment: WornGarment; bodyType: BodyType }) {
   // Skip rendering for empty slots
@@ -80,6 +83,26 @@ function RuntimeGarmentPrimitive({ garment, bodyType }: { garment: WornGarment; 
     return null;
   }
   
+  // E1 Step 8: Check if a real garment exists for this worn garment
+  // This uses RULE-BASED matching (not AI): checks if the item's type and color
+  // match a garment that has a real 3D asset.
+  // 
+  // For example: white wig → wig-white-cap-male/female (real GLB)
+  //              black wig → null (no 3D asset yet, falls back to placeholder)
+  const realGarment = garment.ownedItem
+    ? getGarmentForOwnedItem(garment.ownedItem, bodyType)
+    : null;
+  
+  // If a real garment exists, render it instead of placeholder
+  if (realGarment && realGarment.asset !== null) {
+    return (
+      <Suspense fallback={null}>
+        <GarmentGLB assetModule={realGarment.asset} />
+      </Suspense>
+    );
+  }
+  
+  // Otherwise render placeholder shape
   const { shape, colorHex, slot } = garment;
   
   // PLACEHOLDER SHAPES positioned from bodyBounds (docs/GARMENT_SPEC.md)

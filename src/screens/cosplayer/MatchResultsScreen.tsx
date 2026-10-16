@@ -193,6 +193,10 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
                 wornGarments={wornGarments}
               />
               
+              <Text style={styles.previewNote}>
+                ℹ️ Only items with a 3D garment are shown (right now: white wig)
+              </Text>
+              
               {/* Slot indicators */}
               <View style={styles.slotIndicators}>
                 {wornGarments.map((garment) => (
@@ -430,6 +434,14 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     marginTop: spacing.md,
+  },
+  previewNote: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   slotIndicators: {
     marginTop: spacing.md,
