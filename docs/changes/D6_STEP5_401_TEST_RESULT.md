@@ -75,3 +75,81 @@ This requires modifying backend code (not authorized per D6 constraints: "mobile
 
 - `forgemind-mobile/scripts/test_401_auth.ts` (401 test script)
 - `forgemind-mobile/docs/changes/D6_STEP5_401_TEST_RESULT.md` (this file)
+
+
+---
+
+# E1 Step 7: Resolution (October 16, 2026)
+
+## Investigation Summary
+
+Followed systematic checklist from D6 Step 5 recommendations:
+
+### 1. Process & Build Check
+**Action:** Stopped all processes, rebuilt, restarted backend.
+
+```bash
+cd forgemind-backend
+npm run build  # Exit 0 - compiled successfully
+npm start      # Started on port 3000
+```
+
+**Result:** Server started successfully with logs:
+```
+[chat-filter] Base terms: 25 (19 EN, 6 TL), curated loaded: 0
+forgemind-backend listening on 0.0.0.0:3000 (development)
+database: OK
+```
+
+### 2. Endpoint Tests
+
+**Health check:**
+```bash
+curl http://localhost:3000/health
+```
+Response: `200 OK {"status":"ok","db":"ok"}` ✓
+
+**Matcher endpoint (no session):**
+```bash
+curl -i -X POST http://localhost:3000/api/ai/match -H "Content-Type: application/json" -d "{}"
+```
+Response: `401 Unauthorized {"error":"invalid_session","message":"Missing, unknown, or expired session"}` ✓
+
+### 3. Route Registration Verification
+
+Confirmed in source code:
+- `src/index.ts:148`: `app.use('/api/ai', matcherRouter);` ✓
+- `src/ai/matcherRouter.ts:230`: `matcherRouter.post('/match', async ...)` ✓
+- `src/ai/matcherRouter.ts:311`: `export default matcherRouter;` ✓
+- Catch-all 404 handler is AFTER matcher mount ✓
+
+## Root Cause
+
+**STALE BUILD OR NO RUNNING SERVER.**
+
+The original D6 Step 5 test encountered 404 because either:
+1. The backend server was not running, OR
+2. The `dist/` folder had stale compiled JS (not reflecting latest source)
+
+After `npm run build` + `npm start`, the route works correctly and returns **401** as expected.
+
+## Resolution
+
+✅ **RESOLVED**: Matcher route `/api/ai/match` now returns 401 Unauthorized when called without a session.
+
+The route registration is correct, the middleware order is correct, and the auth path works as designed. The D6 404 was an environmental issue (stale build/stopped server), not a code issue.
+
+## Updated Test Result
+
+**Script:** `curl -i -X POST http://localhost:3000/api/ai/match -H "Content-Type: application/json" -d "{}"`  
+**Expected:** 401 Unauthorized  
+**Actual:** 401 Unauthorized ✓  
+**Status:** ✅ **PASSED**
+
+## Commit
+
+- Repo: `forgemind-backend`
+- Branch: `feature/chat-curated-terms`
+- No code changes needed (issue was environmental, not code)
+- Resolution documented in this file
+
