@@ -30,8 +30,10 @@ Write-Host "══════════════════════�
 Write-Host ""
 
 # Paths
-$ROOT = Split-Path -Parent $PSScriptRoot
-$StartScript = Join-Path $ROOT "scripts\start-all.ps1"
+$SCRIPT_DIR = $PSScriptRoot
+$MOBILE = Split-Path -Parent $SCRIPT_DIR
+$ROOT = $MOBILE
+$StartScript = Join-Path $MOBILE "scripts\start-all.ps1"
 $LogDir = Join-Path $ROOT "logs"
 
 # Validate script exists

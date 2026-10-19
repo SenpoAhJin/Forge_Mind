@@ -22,10 +22,11 @@ function Write-Warn { Write-Host "[!] $args" -ForegroundColor Yellow }
 function Write-Fail { Write-Host "[X] $args" -ForegroundColor Red }
 
 # Project paths
-$ROOT = Split-Path -Parent $PSScriptRoot
+$SCRIPT_DIR = $PSScriptRoot
+$MOBILE = Split-Path -Parent $SCRIPT_DIR
+$ROOT = Split-Path -Parent $MOBILE
 $BACKEND = Join-Path $ROOT "forgemind-backend"
 $FLASK = Join-Path $ROOT "forgemind-ai"
-$MOBILE = Join-Path $ROOT "forgemind-mobile"
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
