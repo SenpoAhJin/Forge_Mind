@@ -56,10 +56,12 @@ This will open Expo DevTools in your browser and show a QR code.
 - Use Chrome DevTools (`F12` or `Ctrl+Shift+I`) for debugging
 - **This is what we've been working on today!**
 
-**Option B: Physical Device (Expo Go)**
+**Option B: Physical Device (Expo Go) - SAME WIFI**
 - Install "Expo Go" app from Play Store / App Store
+- Connect phone to **SAME WiFi as your PC**
 - Scan the QR code in the terminal
 - Note: Phone and web use **separate storage** (accounts don't sync)
+- **CELLULAR DATA:** See `CELLULAR_TESTING_GUIDE.md` for ngrok setup
 
 **Option C: Android Emulator**
 - Make sure Android Studio emulator is running
@@ -144,6 +146,7 @@ Before detailed testing, confirm auth still works:
 3. **Mock AI** — Photo categorization and voice transcription are mocked, not real (waiting for backend)
 4. **Marketplace placeholder** — Coming in FE-6
 5. **Organizer screens placeholders** — Coming in FE-7
+6. **Testing on Cellular Data** — If you're testing Expo Go outside your WiFi network (cellular data), the app can't reach your local backend. Use ngrok tunnel — see `CELLULAR_TESTING_GUIDE.md` for setup
 
 ---
 
