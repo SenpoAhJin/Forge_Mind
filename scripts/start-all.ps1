@@ -95,10 +95,10 @@ if (-not (Test-Path "$BACKEND\.env")) {
     exit 1
 }
 
-# Kill existing backend processes
-Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -like "*forgemind-backend*"
-} | Stop-Process -Force -ErrorAction SilentlyContinue
+# Kill existing node/python processes and jobs
+Get-Job | Where-Object { $_.State -eq "Running" } | Stop-Job ; Get-Job | Remove-Job -Force -ErrorAction SilentlyContinue
+Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "python","pythonw" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 Push-Location $BACKEND
 try {
@@ -153,11 +153,6 @@ if (-not (Test-Path "$FLASK\.venv\Scripts\python.exe")) {
     exit 1
 }
 
-# Kill existing Flask processes
-Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -like "*api.py*"
-} | Stop-Process -Force -ErrorAction SilentlyContinue
-
 Push-Location $FLASK
 try {
     $flaskJob = Start-Job -ScriptBlock {
@@ -200,11 +195,6 @@ if (-not $SkipHealthChecks) {
 # 5. Metro Bundler (Expo, bound to Tailscale IP)
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Step "Starting Metro on Tailscale IP..."
-
-# Kill existing Metro processes
-Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -like "*@expo/cli*" -or $_.CommandLine -like "*metro*"
-} | Stop-Process -Force -ErrorAction SilentlyContinue
 
 Push-Location $MOBILE
 try {
