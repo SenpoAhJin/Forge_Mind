@@ -104,12 +104,14 @@ Push-Location $BACKEND
 try {
     $backendOutLog = Join-Path $BACKEND "backend_out.log"
     $backendErrLog = Join-Path $BACKEND "backend_err.log"
-    $backendProc = Start-Process -FilePath "npm" -ArgumentList "start" `
-        -RedirectStandardOutput $backendOutLog `
-        -RedirectStandardError $backendErrLog `
-        -WindowStyle Hidden -PassThru
     
-    Write-Success "Backend started (PID: $($backendProc.Id), logs: backend_*.log)"
+    # Start backend as background job
+    $backendJob = Start-Job -ScriptBlock {
+        Set-Location $using:BACKEND
+        npm start 2>&1 | Tee-Object -FilePath (Join-Path $using:BACKEND "backend.log")
+    }
+    
+    Write-Success "Backend started (Job ID: $($backendJob.Id), log: backend.log)"
 } finally {
     Pop-Location
 }
@@ -158,12 +160,12 @@ Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {
 
 Push-Location $FLASK
 try {
-    $flaskProc = Start-Process -FilePath ".venv\Scripts\python.exe" -ArgumentList "src\api.py" `
-        -RedirectStandardOutput "api_out.log" `
-        -RedirectStandardError "api_err.log" `
-        -WindowStyle Hidden -PassThru
+    $flaskJob = Start-Job -ScriptBlock {
+        Set-Location $using:FLASK
+        & ".venv\Scripts\python.exe" "src\api.py" 2>&1 | Tee-Object -FilePath (Join-Path $using:FLASK "flask.log")
+    }
     
-    Write-Success "Flask started (PID: $($flaskProc.Id), logs: api_*.log)"
+    Write-Success "Flask started (Job ID: $($flaskJob.Id), log: flask.log)"
 } finally {
     Pop-Location
 }
@@ -207,16 +209,13 @@ Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
 Push-Location $MOBILE
 try {
     # Set Tailscale IP as Metro hostname so phone can reach it
-    $env:REACT_NATIVE_PACKAGER_HOSTNAME = $tailscaleIP
+    $metroJob = Start-Job -ScriptBlock {
+        Set-Location $using:MOBILE
+        $env:REACT_NATIVE_PACKAGER_HOSTNAME = $using:tailscaleIP
+        npx expo start --clear 2>&1 | Tee-Object -FilePath (Join-Path $using:MOBILE "metro.log")
+    }
     
-    $metroOutLog = Join-Path $MOBILE "metro_out.log"
-    $metroErrLog = Join-Path $MOBILE "metro_err.log"
-    $metroProc = Start-Process -FilePath "npx" -ArgumentList "expo", "start", "--clear" `
-        -RedirectStandardOutput $metroOutLog `
-        -RedirectStandardError $metroErrLog `
-        -WindowStyle Hidden -PassThru
-    
-    Write-Success "Metro started (PID: $($metroProc.Id), logs: metro_*.log)"
+    Write-Success "Metro started (Job ID: $($metroJob.Id), log: metro.log)"
     Write-Success "Metro bound to $tailscaleIP (via REACT_NATIVE_PACKAGER_HOSTNAME)"
 } finally {
     Pop-Location
