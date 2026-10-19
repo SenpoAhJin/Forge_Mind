@@ -133,7 +133,7 @@ const DEFAULT_COLOR_HEX = '#808080'; // Neutral grey for unclear/unknown
  * (white, black, red, blue, pink, brown, green, purple, yellow, unclear).
  */
 export function colorNameToHex(colorName: string): string {
-  const normalized = colorName.toLowerCase().trim();
+  const normalized = (colorName ?? '').toLowerCase().trim();
   return COLOR_NAME_TO_HEX[normalized] || DEFAULT_COLOR_HEX;
 }
 
