@@ -16,10 +16,10 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 # Colors for output
-function Write-Step { Write-Host "▶ $args" -ForegroundColor Cyan }
-function Write-Success { Write-Host "✓ $args" -ForegroundColor Green }
-function Write-Warn { Write-Host "⚠ $args" -ForegroundColor Yellow }
-function Write-Fail { Write-Host "✗ $args" -ForegroundColor Red }
+function Write-Step { Write-Host "[>] $args" -ForegroundColor Cyan }
+function Write-Success { Write-Host "[OK] $args" -ForegroundColor Green }
+function Write-Warn { Write-Host "[!] $args" -ForegroundColor Yellow }
+function Write-Fail { Write-Host "[X] $args" -ForegroundColor Red }
 
 # Project paths
 $ROOT = Split-Path -Parent $PSScriptRoot

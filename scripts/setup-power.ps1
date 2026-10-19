@@ -13,8 +13,8 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-function Write-Step { Write-Host "▶ $args" -ForegroundColor Cyan }
-function Write-Success { Write-Host "✓ $args" -ForegroundColor Green }
+function Write-Step { Write-Host "[>] $args" -ForegroundColor Cyan }
+function Write-Success { Write-Host "[OK] $args" -ForegroundColor Green }
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta

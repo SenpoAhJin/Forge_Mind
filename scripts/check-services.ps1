@@ -8,10 +8,10 @@
 
 $ErrorActionPreference = "Continue"
 
-function Write-Check { Write-Host "▶ $args" -ForegroundColor Cyan }
-function Write-Pass { Write-Host "  ✓ $args" -ForegroundColor Green }
-function Write-Fail { Write-Host "  ✗ $args" -ForegroundColor Red }
-function Write-Info { Write-Host "  ℹ $args" -ForegroundColor Yellow }
+function Write-Check { Write-Host "[>] $args" -ForegroundColor Cyan }
+function Write-Pass { Write-Host "  [OK] $args" -ForegroundColor Green }
+function Write-Fail { Write-Host "  [X] $args" -ForegroundColor Red }
+function Write-Info { Write-Host "  [i] $args" -ForegroundColor Yellow }
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
