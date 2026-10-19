@@ -102,13 +102,14 @@ Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
 
 Push-Location $BACKEND
 try {
-    $backendLog = Join-Path $BACKEND "backend.log"
+    $backendOutLog = Join-Path $BACKEND "backend_out.log"
+    $backendErrLog = Join-Path $BACKEND "backend_err.log"
     $backendProc = Start-Process -FilePath "npm" -ArgumentList "start" `
-        -RedirectStandardOutput $backendLog `
-        -RedirectStandardError $backendLog `
+        -RedirectStandardOutput $backendOutLog `
+        -RedirectStandardError $backendErrLog `
         -WindowStyle Hidden -PassThru
     
-    Write-Success "Backend started (PID: $($backendProc.Id), log: backend.log)"
+    Write-Success "Backend started (PID: $($backendProc.Id), logs: backend_*.log)"
 } finally {
     Pop-Location
 }
@@ -208,13 +209,14 @@ try {
     # Set Tailscale IP as Metro hostname so phone can reach it
     $env:REACT_NATIVE_PACKAGER_HOSTNAME = $tailscaleIP
     
-    $metroLog = Join-Path $MOBILE "metro.log"
+    $metroOutLog = Join-Path $MOBILE "metro_out.log"
+    $metroErrLog = Join-Path $MOBILE "metro_err.log"
     $metroProc = Start-Process -FilePath "npx" -ArgumentList "expo", "start", "--clear" `
-        -RedirectStandardOutput $metroLog `
-        -RedirectStandardError $metroLog `
+        -RedirectStandardOutput $metroOutLog `
+        -RedirectStandardError $metroErrLog `
         -WindowStyle Hidden -PassThru
     
-    Write-Success "Metro started (PID: $($metroProc.Id), log: metro.log)"
+    Write-Success "Metro started (PID: $($metroProc.Id), logs: metro_*.log)"
     Write-Success "Metro bound to $tailscaleIP (via REACT_NATIVE_PACKAGER_HOSTNAME)"
 } finally {
     Pop-Location
