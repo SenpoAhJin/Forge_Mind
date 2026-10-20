@@ -1,0 +1,19 @@
+﻿TASK E4 STEP 1: TRIM SAFETY ANALYSIS
+
+| File:Line | Expression | Can Be Undefined? | Why |
+|-----------|------------|-------------------|-----|
+| src/utils/wearing.ts:136 | colorName.toLowerCase().trim() | **YES** | Old owned_attire.auto_categorized_color might be undefined if saved before categorization feature |
+| src/utils/validation.ts:9 | email.trim() | **YES** | Function accepts string param but caller might pass undefined/null |
+| src/utils/validation.ts:42 | displayName.trim() | **YES** | Function accepts string param but caller might pass undefined/null |
+| src/utils/validation.ts:52 | value.trim() | **YES** | Function accepts string param but caller might pass undefined/null |
+| src/screens/cosplayer/ProjectDashboardScreen.tsx:155 | newTaskText.trim() | NO | State initialized to empty string |
+| src/screens/cosplayer/ProjectDashboardScreen.tsx:162 | newItemName.trim() | NO | State initialized to empty string |
+| src/screens/cosplayer/ProjectDashboardScreen.tsx:185 | newMilestoneLabel.trim() | NO | State initialized to empty string |
+| src/screens/cosplayer/CreateProjectScreen.tsx:59 | projectName.trim() | NO | State initialized to empty string |
+| src/screens/cosplayer/CreateProjectScreen.tsx:65 | statedBudget.trim() | NO | State initialized to empty string |
+
+PRIORITY FIX: src/utils/wearing.ts:136 
+- Called every render when matcher results shown
+- Old data lacks auto_categorized_color field
+- Causes hundreds of errors in render loop
+

@@ -68,9 +68,9 @@ $Action = New-ScheduledTaskAction -Execute "PowerShell.exe" `
     -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$StartScript`"" `
     -WorkingDirectory $ROOT
 
-# Trigger: At startup, with 2-minute delay to allow Tailscale to connect
-$Trigger = New-ScheduledTaskTrigger -AtStartup
-$Trigger.Delay = "PT2M"  # ISO 8601 duration: 2 minutes
+# Trigger: At logon with 60-second delay
+$Trigger = New-ScheduledTaskTrigger -AtLogon -User $Username
+$Trigger.Delay = "PT60S"  # ISO 8601 duration: 60 seconds
 
 # Settings
 $Settings = New-ScheduledTaskSettingsSet `
@@ -79,10 +79,11 @@ $Settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
     -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1) `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 0)  # No time limit
+    -ExecutionTimeLimit (New-TimeSpan -Hours 0) `
+    -Hidden  # Run hidden
 
 # Principal: Run as current user with highest privileges
-$Principal = New-ScheduledTaskPrincipal -UserId $Username -RunLevel Highest
+$Principal = New-ScheduledTaskPrincipal -UserId $Username -RunLevel Highest -LogonType Interactive
 
 # Register task
 Register-ScheduledTask -TaskName $TaskName `
@@ -104,8 +105,9 @@ Write-Host "══════════════════════�
 Write-Host ""
 Write-Host "Task Details:" -ForegroundColor Cyan
 Write-Host "  Name:     $TaskName" -ForegroundColor White
-Write-Host "  Trigger:  At startup (2-minute delay)" -ForegroundColor White
+Write-Host "  Trigger:  At logon (60-second delay)" -ForegroundColor White
 Write-Host "  User:     $Username" -ForegroundColor White
+Write-Host "  Hidden:   Yes" -ForegroundColor White
 Write-Host "  Script:   $StartScript" -ForegroundColor White
 Write-Host ""
 Write-Host "The ForgeMind stack will now start automatically after reboot." -ForegroundColor Green
