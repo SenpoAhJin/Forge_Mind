@@ -74,70 +74,70 @@ export const MarketplaceStackNavigator: React.FC = () => {
         contentStyle: { backgroundColor: themeColors.backgroundLight },
       }}
     >
-    <Stack.Screen
-      name="MarketplaceHome"
-      component={GuardedMarketplaceHome}
-      options={{ title: 'Marketplace' }}
-    />
-    <Stack.Screen
-      name="MarketplaceRegistration"
-      options={{ title: 'Register for Marketplace' }}
-    >
-      {({ navigation }) => (
-        <ErrorBoundary label="The marketplace registration form">
-          <MarketplaceRegistrationScreen
-            onSuccess={() => navigation.navigate('MarketplaceHome')}
-          />
-        </ErrorBoundary>
-      )}
-    </Stack.Screen>
-    <Stack.Screen
-      name="CreateListing"
-      options={{ title: 'Create Listing' }}
-    >
-      {({ navigation }) => (
-        <ErrorBoundary label="The create listing form">
-          <CreateListingScreen
-            onSuccess={() => navigation.navigate('MarketplaceHome')}
-          />
-        </ErrorBoundary>
-      )}
-    </Stack.Screen>
-    <Stack.Screen
-      name="ListingDetail"
-      component={GuardedListingDetail}
-      options={{ title: 'Listing Details' }}
-    />
-    <Stack.Screen
-      name="MakeOffer"
-      component={GuardedMakeOffer}
-      options={{ title: 'Make Offer' }}
-    />
-    <Stack.Screen
-      name="OfferLog"
-      component={GuardedOfferLog}
-      options={{ title: 'Offers' }}
-    />
-    <Stack.Screen
-      name="OfferDetail"
-      component={GuardedOfferDetail}
-      options={{ title: 'Offer Details' }}
-    />
-    <Stack.Screen
-      name="CommissionProgress"
-      component={GuardedCommissionProgress}
-      options={{ title: 'Commission Progress' }}
-    />
-    <Stack.Screen
-      name="ChatList"
-      component={GuardedChatList}
-      options={{ title: 'Messages' }}
-    />
-    <Stack.Screen
-      name="ChatThread"
-      component={GuardedChatThread}
-      options={{ title: 'Chat' }}
-    />
-  </Stack.Navigator>
+      <Stack.Screen
+        name="MarketplaceHome"
+        component={GuardedMarketplaceHome}
+        options={{ title: 'Marketplace' }}
+      />
+      <Stack.Screen
+        name="MarketplaceRegistration"
+        options={{ title: 'Register for Marketplace' }}
+      >
+        {({ navigation }) => (
+          <ErrorBoundary label="The marketplace registration form">
+            <MarketplaceRegistrationScreen
+              onSuccess={() => navigation.navigate('MarketplaceHome')}
+            />
+          </ErrorBoundary>
+        )}
+      </Stack.Screen>
+      <Stack.Screen
+        name="CreateListing"
+        options={{ title: 'Create Listing' }}
+      >
+        {({ navigation }) => (
+          <ErrorBoundary label="The create listing form">
+            <CreateListingScreen
+              onSuccess={() => navigation.navigate('MarketplaceHome')}
+            />
+          </ErrorBoundary>
+        )}
+      </Stack.Screen>
+      <Stack.Screen
+        name="ListingDetail"
+        component={GuardedListingDetail}
+        options={{ title: 'Listing Details' }}
+      />
+      <Stack.Screen
+        name="MakeOffer"
+        component={GuardedMakeOffer}
+        options={{ title: 'Make Offer' }}
+      />
+      <Stack.Screen
+        name="OfferLog"
+        component={GuardedOfferLog}
+        options={{ title: 'Offers' }}
+      />
+      <Stack.Screen
+        name="OfferDetail"
+        component={GuardedOfferDetail}
+        options={{ title: 'Offer Details' }}
+      />
+      <Stack.Screen
+        name="CommissionProgress"
+        component={GuardedCommissionProgress}
+        options={{ title: 'Commission Progress' }}
+      />
+      <Stack.Screen
+        name="ChatList"
+        component={GuardedChatList}
+        options={{ title: 'Messages' }}
+      />
+      <Stack.Screen
+        name="ChatThread"
+        component={GuardedChatThread}
+        options={{ title: 'Chat' }}
+      />
+    </Stack.Navigator>
   );
 };

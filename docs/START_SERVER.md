@@ -1,254 +1,265 @@
-FORGE AWAKE
+# arise
 
-# ForgeMind Server Startup Guide
+**SEARCH TAGS**: start server, arise, rest, tailscale, expo, backend, flask, metro, forgemind startup, remote testing
 
-**SEARCH TAGS**: start server, forge awake, tailscale, expo, backend, metro, flask, remote testing
+## Quick Commands
 
-## Magic Phrases
+**Start all services**: Type `arise` in PowerShell, or tell the AI agent "arise"
 
-- **Start servers**: `FORGE AWAKE` (case-insensitive)
-- **Stop servers**: `forge sleep` (case-insensitive)
+**Stop all services**: Type `rest` in PowerShell, or tell the AI agent "rest"
 
-When you say "FORGE AWAKE" to the AI assistant, it will automatically start all ForgeMind services and report their status.
+## What Each Phrase Does
 
-## What FORGE AWAKE Does
+### `arise` - Start All Services
 
-The phrase triggers the automated startup sequence:
+1. Frees ports 3000, 5000, 8081 by killing any existing processes
+2. Checks Tailscale connection (falls back to LAN IP if unavailable)
+3. Verifies PostgreSQL is running
+4. Starts backend (Express on port 3000)
+5. Starts Flask AI service (port 5000)
+6. Starts Metro bundler on Tailscale IP (port 8081)
+7. Waits 15 seconds for initialization
+8. Runs health checks on all three services
+9. Displays the Expo Go URL and backend health URL
 
-1. Checks Tailscale connection (laptop must be signed in)
-2. Verifies PostgreSQL is running
-3. Starts the backend server (Node/Express on port 3000)
-4. Starts Flask AI service (Python on port 5000, localhost only)
-5. Starts Metro bundler (Expo on port 8081, bound to Tailscale IP)
-6. Performs health checks on all services
-7. Reports the Expo Go URL and backend health endpoint
+All services start with hidden windows. Logs are written to `forgemind-mobile\logs\`:
+- `backend-out.log` / `backend-err.log`
+- `flask-out.log` / `flask-err.log`
+- `metro-out.log` / `metro-err.log`
+- `last-run.txt` (full transcript of the last startup/shutdown)
 
-All services run in hidden background windows with logs in `logs/` folder.
+### `rest` - Stop All Services
 
-## Manual Commands (if needed)
+1. Kills all processes listening on ports 3000, 5000, 8081
+2. Stops PowerShell background jobs
+3. Kills all Node.js processes (backend, Metro)
+4. Kills all Python processes (Flask)
+5. Verifies that ports 3000, 5000, 8081 are free
+6. Reports final status
 
-### Start All Services
+PostgreSQL is left running.
+
+## Manual Commands (If Shortcuts Don't Work)
+
+### Start services:
 ```powershell
-cd "c:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile"
-.\scripts\start-all.ps1
+# From workspace root
+powershell -ExecutionPolicy Bypass -File "forgemind-mobile\scripts\start-all.ps1"
 ```
 
-### Stop All Services
+### Stop services:
 ```powershell
-.\scripts\stop-all.ps1
+powershell -ExecutionPolicy Bypass -File "forgemind-mobile\scripts\stop-all.ps1"
 ```
 
-### Check Service Status
+### Check service status:
 ```powershell
-.\scripts\check-services.ps1
+powershell -ExecutionPolicy Bypass -File "forgemind-mobile\scripts\check-services.ps1"
 ```
 
-### Individual Service Commands
+### Individual service commands:
 
-**Backend**:
+**Backend (Express)**:
 ```powershell
-cd ..\forgemind-backend
+cd forgemind-backend
 npm start
-# Runs on http://0.0.0.0:3000
 ```
 
 **Flask AI**:
 ```powershell
-cd ..\forgemind-ai
-.\.venv\Scripts\python.exe src\api.py
-# Runs on http://127.0.0.1:5000
+cd forgemind-ai
+.venv\Scripts\python.exe src\api.py
 ```
 
-**Metro**:
+**Metro (with Tailscale IP)**:
 ```powershell
 cd forgemind-mobile
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = "100.82.197.108"  # Your Tailscale IP
+$env:REACT_NATIVE_PACKAGER_HOSTNAME = (tailscale ip -4).Trim()
 npx expo start --clear
-# Runs on http://100.82.197.108:8081
 ```
 
-## Important URLs
+## URLs
 
-### For Your Phone (Expo Go)
-```
-exp://100.82.197.108:8081
-```
-Type this URL in Expo Go after:
-1. Turning off Wi-Fi (cellular only)
-2. Connecting to Tailscale on your phone
-3. Opening Expo Go > "Enter URL manually"
+After running `arise`, you'll see:
 
-### For Testing (Phone Browser)
+**Expo Go URL** (for your phone):
 ```
-http://100.82.197.108:3000/health
+exp://<tailscale-ip>:8081
 ```
-Should return: `{"status":"ok","db":"ok"}`
 
-### Localhost Endpoints
+**Backend health check**:
+```
+http://<tailscale-ip>:3000/health
+```
+
+**Local health checks** (from laptop browser):
 - Backend: `http://localhost:3000/health`
 - Flask: `http://localhost:5000/health`
-- Metro: `http://localhost:8081`
+- Metro: `http://<tailscale-ip>:8081`
+
+## Network Compatibility Table
+
+| Phone situation                  | Works? | Link                         | Notes |
+|----------------------------------|--------|------------------------------|-------|
+| Same Wi-Fi, Tailscale on         | Yes    | exp://<tailscale-ip>:8081    | Recommended |
+| Different Wi-Fi, Tailscale on    | Yes    | exp://<tailscale-ip>:8081    | Laptop and phone must both be on Tailscale |
+| Cellular data, Tailscale on      | Yes    | exp://<tailscale-ip>:8081    | Slower, but works everywhere |
+| Any network, Tailscale off       | No     | None                         | Tailscale is required |
+| Same Wi-Fi, Tailscale off        | Unverified | exp://<lan-ip>:8081 (maybe) | Firewall rules are scoped to Tailscale range (100.64.0.0/10). LAN access is probably blocked. Test and record the real result. |
+
+## Prerequisites
+
+**Laptop must be**:
+- Powered on
+- Awake (not sleeping or hibernating)
+- Logged in to your user account
+- Running Tailscale (signed in with `tailscale up`)
+
+**Phone must have**:
+- Tailscale installed and signed in
+- Same Tailscale account as laptop
+- Expo Go app installed
+
+**Important**: `arise` only starts the laptop services. It does not depend on the phone's network state. The phone can be on any network (Wi-Fi, cellular, or offline) as long as Tailscale is running on both devices.
 
 ## Troubleshooting
 
-### Services won't start
+### Encoding parse errors in PowerShell
+**Symptom**: Script fails with strange character errors
 
-**Check Tailscale**:
+**Fix**: All scripts are now UTF-8 with BOM. If you see encoding issues:
 ```powershell
-tailscale status
-tailscale ip -4
+cd forgemind-mobile\scripts
+Get-ChildItem *.ps1 | ForEach-Object {
+    $content = Get-Content $_.FullName -Raw
+    [System.IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($true))
+}
 ```
-If not signed in: `tailscale up`
 
-**Check PostgreSQL**:
+### Port still busy after `rest`
+**Symptom**: `arise` reports "Could not kill PID" or port remains occupied
+
+**Fix**: Force-kill the process manually:
 ```powershell
-Get-Service postgresql*
-```
-If stopped: `Start-Service postgresql-x64-18`
+# Find the process
+Get-NetTCPConnection -LocalPort 3000 -State Listen
 
-**Check logs**:
+# Kill it
+Stop-Process -Id <PID> -Force
+```
+
+Or use Task Manager to end `node.exe` / `python.exe` processes.
+
+### Health check false negatives
+**Symptom**: `arise` reports "DOWN" but the service is actually running
+
+**Cause**: Service takes longer than 15 seconds to start
+
+**Fix**: Wait 10 more seconds and run:
 ```powershell
-Get-Content logs\backend-out.log -Tail 30
-Get-Content logs\flask-out.log -Tail 30
-Get-Content logs\metro-out.log -Tail 30
+.\scripts\check-services.ps1
 ```
 
-### Phone can't connect to Expo
-
-**1. Verify backend reachable from laptop**:
+If it's still DOWN, check the error log:
 ```powershell
-Invoke-WebRequest -Uri "http://100.82.197.108:3000/health"
+Get-Content forgemind-mobile\logs\backend-err.log -Tail 20
+Get-Content forgemind-mobile\logs\flask-err.log -Tail 20
+Get-Content forgemind-mobile\logs\metro-err.log -Tail 20
 ```
 
-**2. Verify Metro reachable**:
+### Agent only chats back (doesn't run commands)
+**Symptom**: When you type "arise", the agent acknowledges but doesn't execute scripts
+
+**Fix**: The steering file may not be loaded. Check:
 ```powershell
-Invoke-WebRequest -Uri "http://100.82.197.108:8081"
+# Verify steering file exists
+Test-Path ".kiro\steering\arise.md"
 ```
 
-**3. Ping phone from laptop**:
+If it exists, restart the Kiro session to reload steering files. The `inclusion: always` directive should auto-load it.
+
+### UAC prompt hangs on auto-start
+**Symptom**: After reboot, services don't start automatically and a UAC prompt is waiting
+
+**Cause**: Task Scheduler task is not configured with "Highest" privileges
+
+**Fix**: Run `setup-autostart.ps1` as Administrator:
 ```powershell
-tailscale ping 100.107.157.28  # Your phone's Tailscale IP
+# Must be run as Administrator
+.\scripts\setup-autostart.ps1
 ```
 
-**4. Check firewall rules**:
+This creates the `ForgeMind-AutoStart` scheduled task with:
+- Trigger: At logon with 60-second delay
+- Run level: Highest (no UAC prompt)
+- Hidden: Yes
+- User: Your Windows username
+
+To manually verify task settings:
 ```powershell
-Get-NetFirewallRule -DisplayName "ForgeMind-*"
+Get-ScheduledTask -TaskName "ForgeMind-AutoStart" | Format-List
 ```
-Should show rules for ports 3000 and 8081.
 
-### Services crash or stop
-
-**Kill everything and restart**:
+To manually trigger the task (for testing):
 ```powershell
-.\scripts\stop-all.ps1
-Start-Sleep -Seconds 5
-.\scripts\start-all.ps1
+Start-ScheduledTask -TaskName "ForgeMind-AutoStart"
 ```
 
-**Check for port conflicts**:
+### Tailscale not found
+**Symptom**: `arise` reports "Tailscale not installed or not in PATH"
+
+**Fix**: Install Tailscale:
 ```powershell
-Get-NetTCPConnection -LocalPort 3000,5000,8081 -State Listen
+winget install tailscale.tailscale
 ```
 
-### Metro bundle errors
-
-**Clear Metro cache**:
+Then sign in:
 ```powershell
-.\scripts\stop-all.ps1
-Remove-Item node_modules\.cache -Recurse -Force -ErrorAction SilentlyContinue
-.\scripts\start-all.ps1
+tailscale up
 ```
 
-### Backend can't reach Flask
+### Flask venv not found
+**Symptom**: `arise` reports "Flask venv not found"
 
-Flask runs on `127.0.0.1:5000` (localhost only). Verify:
+**Fix**: Create and activate the virtual environment:
 ```powershell
-Invoke-WebRequest -Uri "http://127.0.0.1:5000/health"
+cd forgemind-ai
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
 ```
 
-If Flask is bound to wrong address, check `forgemind-ai/src/api.py` line 313:
-```python
-app.run(debug=True, host='127.0.0.1', port=5000)
+### Backend .env missing
+**Symptom**: `arise` reports ".env not found"
+
+**Fix**: Create `forgemind-backend\.env` with required environment variables. Check the backend README or existing `.env.example` for the template.
+
+## Auto-Start on Boot
+
+To make services start automatically when you log in:
+
+1. Run as Administrator:
+```powershell
+.\scripts\setup-autostart.ps1
 ```
 
-### Auto-start after reboot doesn't work
-
-**Check scheduled task**:
+2. Verify the task:
 ```powershell
 Get-ScheduledTask -TaskName "ForgeMind-AutoStart"
 ```
 
-**Test task manually**:
+The task will start services 60 seconds after you log in, running hidden in the background.
+
+To disable auto-start:
 ```powershell
-Start-ScheduledTask -TaskName "ForgeMind-AutoStart"
-Start-Sleep -Seconds 30
-.\scripts\check-services.ps1
+Disable-ScheduledTask -TaskName "ForgeMind-AutoStart"
 ```
 
-**Rerun setup**:
+To re-enable:
 ```powershell
-# Administrator PowerShell required
-.\scripts\setup-autostart.ps1
+Enable-ScheduledTask -TaskName "ForgeMind-AutoStart"
 ```
 
-## Service Architecture
-
-```
-Phone (cellular + Tailscale)
-  ↓
-  ├─→ exp://100.82.197.108:8081 ──→ Metro (bound to Tailscale IP)
-  │                                    └─ React Native bundle
-  │
-  └─→ http://100.82.197.108:3000 ──→ Backend (binds 0.0.0.0, Tailscale-scoped firewall)
-       ├─→ http://127.0.0.1:5000 ──→ Flask AI (localhost only)
-       └─→ tcp://127.0.0.1:5432 ──→ PostgreSQL (localhost only)
-```
-
-## Security Notes
-
-- **No public exposure**: All access via Tailscale private network
-- **Firewall scoped**: Ports 3000 and 8081 only accept Tailscale range (100.64.0.0/10)
-- **Flask isolated**: Bound to 127.0.0.1, no external access
-- **PostgreSQL isolated**: Bound to 127.0.0.1, no network exposure
-
-## Quick Reference
-
+To remove completely:
 ```powershell
-# Start everything
-FORGE AWAKE (say to AI) or .\scripts\start-all.ps1
-
-# Stop everything
-forge sleep (say to AI) or .\scripts\stop-all.ps1
-
-# Check status
-.\scripts\check-services.ps1
-
-# View logs
-Get-Content logs\*.log -Tail 50
-
-# Tailscale IP
-tailscale ip -4
-
-# Test backend from laptop
-Invoke-WebRequest http://100.82.197.108:3000/health
-
-# Expo Go URL for phone
-exp://100.82.197.108:8081
+Unregister-ScheduledTask -TaskName "ForgeMind-AutoStart" -Confirm:$false
 ```
-
-## Common Error Messages
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| "Tailscale is not signed in" | Tailscale not connected | Run `tailscale up` |
-| "Backend health check timed out" | Backend not started or crashed | Check `logs\backend-err.log` |
-| "Flask health check timed out" | Flask not started | Check `logs\flask-err.log`, verify venv exists |
-| "Metro port already in use" | Previous Metro still running | Run `.\scripts\stop-all.ps1` first |
-| "Unable to resolve module" | Metro cache issue | Stop services, run `npx expo start --clear` |
-| Connection refused (phone) | Firewall or Tailscale issue | Run `.\scripts\setup-firewall.ps1` (admin) |
-
----
-
-**Last Updated**: 2026-10-19  
-**Tailscale Laptop IP**: 100.82.197.108  
-**Tailscale Phone IP**: 100.107.157.28

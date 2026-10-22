@@ -1,7 +1,84 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Friday, October 16, 2026 (Task E1: 3D garment pipeline)
+**Last updated:** Monday, October 21, 2026 (Marketplace fixes: Navigation, offers, listing creation)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Monday, October 21, 2026 (Marketplace fixes)
+
+**Summary**
+
+Fixed three critical marketplace issues: (1) React navigation text node error, (2) missing keys in offer list rendering, and (3) listing creation validation with dynamic category-to-transaction-type filtering. All fixes improve user experience and prevent invalid form submissions.
+
+**What was built**
+
+**Fix 1: MarketplaceStackNavigator Text Node Error**
+- **Problem:** `Unexpected text node: . A text node cannot be a child of a <View>` React error
+- **Root Cause:** Improper indentation created whitespace text nodes between `<Stack.Navigator>` and its children
+- **File:** `src/navigation/MarketplaceStackNavigator.tsx` (modified)
+  - Fixed indentation of all `<Stack.Screen>` elements
+  - Removed stray whitespace/text nodes that were direct children of `<Stack.Navigator>`
+- **Result:** Navigation renders without errors
+
+**Fix 2: OfferLogScreen List Rendering**
+- **Problem:** Missing React `key` prop when rendering list of offers
+- **File:** `src/screens/cosplayer/OfferLogScreen.tsx` (modified)
+  - Wrapped `renderOfferCard(offer)` calls in `<View key={offer.id}>` containers
+  - Changed from: `{filteredOffers.map(offer => renderOfferCard(offer))}`
+  - Changed to: `{filteredOffers.map(offer => (<View key={offer.id}>{renderOfferCard(offer)}</View>))}`
+- **Result:** React list rendering works correctly, no console warnings
+
+**Fix 3: Listing Creation Category-Transaction Type Validation**
+- **Problem:** Backend rejected listings with 400 error "Please check your information and try again"
+- **Root Cause:** Users could select incompatible category-transaction type combinations
+  - Example: "Commissions & Crafting Services" (services only) + "Buy" (selling items)
+  - Backend correctly validated but mobile app didn't guide users
+- **Investigation:**
+  - Created test scripts to debug: `test_offer_actions.mjs`, `test_accept_decline_api.mjs`, `test_create_listing_debug.mjs`
+  - Fixed test account passwords: `fix_momo_password.mjs`, `fix_ahruy_password.mjs`
+  - Verified backend validation rules work correctly
+- **Solution Implemented:**
+  1. **File:** `src/constants/marketplaceCategories.ts` (modified)
+     - Added `CATEGORY_POST_TYPE_RULES` mapping (which categories accept which transaction types)
+     - Added `getAllowedPostTypesForCategory(category)` function
+     - Added `isPostTypeAllowedForCategory(category, postType)` function
+     - **Rules:**
+       - Physical item categories (Wigs, Costumes, Props, Materials, Makeup): `['sell', 'trade']`
+       - Service categories (Photography, Commissions & Crafting): `['commission']`
+  2. **File:** `src/screens/cosplayer/CreateListingScreen.tsx` (modified)
+     - Imported new helper functions
+     - Added `allowedPostTypes` state derived from selected category
+     - Added `handleCategoryChange()` function that auto-adjusts transaction type if current selection becomes invalid
+     - Transaction type buttons now conditionally render based on allowed types
+     - Added helper text: "Available for {category}: Buy, Trade" or "Commission"
+     - When category changes, automatically selects first valid transaction type
+- **User Experience:**
+  - ✅ Select "Wigs" category → See "Buy" and "Trade" buttons only
+  - ✅ Select "Commissions & Crafting Services" → See only "Commission" button
+  - ✅ Change category → Transaction type auto-adjusts if needed
+  - ✅ Clear feedback about what's available for each category
+  - ✅ Invalid combinations prevented at UI level before submission
+- **Result:** Users can no longer create invalid listings, form guides them to correct inputs
+
+**Additional Investigation**
+- **Offer Accept/Decline:** Verified endpoints work correctly
+  - DECLINE endpoint: ✅ Fully functional (tested and verified)
+  - ACCEPT endpoint: ✅ Works correctly, returns proper 409 error when another offer already accepted
+  - "Errors" are actually correct business logic enforcement: "One item can only be sold/traded once"
+- **Documentation:** Created detailed reports
+  - `OFFER_ACCEPT_DECLINE_INVESTIGATION.md` (investigation findings)
+  - `MARKETPLACE_LISTING_CREATION_FIX.md` (root cause analysis)
+  - `MARKETPLACE_FIXES_COMPLETE.md` (comprehensive fix report)
+
+**Verification**
+- All TypeScript compiles without errors
+- Backend test scripts confirm validation rules work
+- Mobile app now matches backend validation exactly
+- Dynamic filtering prevents user errors before submission
+
+**Commits**
+- (Session work done but commits not tracked in this session)
 
 ---
 

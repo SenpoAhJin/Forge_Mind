@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Check ForgeMind services status
@@ -14,14 +14,14 @@ function Write-Fail { Write-Host "  [X] $args" -ForegroundColor Red }
 function Write-Info { Write-Host "  [i] $args" -ForegroundColor Yellow }
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host "  ForgeMind Services Self-Check" -ForegroundColor Magenta
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 1. Tailscale
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Check "Tailscale Status"
 try {
     $tailscaleIP = & tailscale ip -4 2>&1
@@ -38,9 +38,9 @@ try {
 }
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 2. Listening Ports
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Check "Listening Ports"
 
 $portsToCheck = @(
@@ -69,9 +69,9 @@ foreach ($portInfo in $portsToCheck) {
 }
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 3. Health Endpoints
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Check "Health Endpoints"
 
 # Backend
@@ -97,9 +97,9 @@ try {
 }
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 4. Firewall Rules
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Check "Firewall Rules (Tailscale scope)"
 
 $firewallRules = @("ForgeMind-Backend-3000", "ForgeMind-Metro-8081")
@@ -118,13 +118,13 @@ foreach ($ruleName in $firewallRules) {
 }
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 5. Expo Go Instructions
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 if ($tsIP) {
-    Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+    Write-Host "---------------------------------------------------" -ForegroundColor Magenta
     Write-Host "  Expo Go URL" -ForegroundColor Magenta
-    Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+    Write-Host "---------------------------------------------------" -ForegroundColor Magenta
     Write-Host ""
     Write-Host "  On your phone (Tailscale connected, Wi-Fi off):" -ForegroundColor Cyan
     Write-Host "  1. Open Expo Go" -ForegroundColor White

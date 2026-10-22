@@ -1,21 +1,51 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Start ForgeMind stack for remote testing via Tailscale
 .DESCRIPTION
-    Starts Postgres, backend, Flask AI, and Metro in order with health checks.
-    Binds Metro to Tailscale IP for phone access via Expo Go.
+    Starts Postgres, backend, Flask AI, and Metro in order.
+    All services are started first, then health checks run at the end.
     
-    Trigger phrase: FORGE AWAKE
+    Trigger phrase: "arise"
+    Stop phrase: "rest"
 #>
 
 param(
-    [switch]$SkipHealthChecks,
-    [int]$HealthCheckTimeout = 60
+    [switch]$SkipHealthChecks
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+# Detect if launched from profile shortcut
+$LaunchedFromShortcut = $MyInvocation.Line -match "arise|rest"
+
+# Check if running as Administrator, if not re-launch
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $isAdmin) {
+    Write-Host "Elevating to Administrator..." -ForegroundColor Yellow
+    $scriptPath = $MyInvocation.MyCommand.Path
+    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+    if ($SkipHealthChecks) {
+        $arguments += " -SkipHealthChecks"
+    }
+    
+    if ($LaunchedFromShortcut) {
+        # Launch elevated, wait for completion, then show results
+        $process = Start-Process powershell -Verb RunAs -ArgumentList $arguments -PassThru -Wait
+        
+        # Read and display the log
+        $logPath = Join-Path $PSScriptRoot "..\logs\last-run.txt"
+        if (Test-Path $logPath) {
+            Get-Content $logPath
+        }
+    } else {
+        Start-Process powershell -Verb RunAs -ArgumentList $arguments
+    }
+    exit
+}
 
 # Colors for output
 function Write-Step { Write-Host "[>] $args" -ForegroundColor Cyan }
@@ -36,14 +66,50 @@ if (-not (Test-Path $LOGS)) {
     New-Item -ItemType Directory -Path $LOGS -Force | Out-Null
 }
 
+# Start transcript for full run log
+$runLogPath = Join-Path $LOGS "last-run.txt"
+Start-Transcript -Path $runLogPath -Force | Out-Null
+
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Magenta
 Write-Host "  ForgeMind Stack Startup" -ForegroundColor Magenta
-Write-Host "  Trigger Phrase: FORGE AWAKE" -ForegroundColor Magenta
+Write-Host "  Trigger: 'arise'  |  Stop: 'rest'" -ForegroundColor Magenta
 Write-Host "===================================================" -ForegroundColor Magenta
 Write-Host ""
 
-# Kill existing services first
+# -------------------------------------------------------------------------
+# 0. Kill stale processes and free ports
+# -------------------------------------------------------------------------
+Write-Step "Freeing ports 3000, 5000, 8081..."
+
+$portsToFree = @(3000, 5000, 8081)
+$killedCount = 0
+
+foreach ($port in $portsToFree) {
+    $connections = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    foreach ($conn in $connections) {
+        $procId = $conn.OwningProcess
+        try {
+            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+            if ($proc) {
+                Write-Host "  Killing PID $procId ($($proc.Name)) on port $port" -ForegroundColor Gray
+                Stop-Process -Id $procId -Force -ErrorAction Stop
+                $killedCount++
+            }
+        } catch {
+            Write-Warn "Could not kill PID $procId on port $port (may already be dead)"
+        }
+    }
+}
+
+if ($killedCount -gt 0) {
+    Write-Success "Freed $killedCount port(s)"
+    Start-Sleep -Seconds 2
+} else {
+    Write-Host "  All ports already free" -ForegroundColor Gray
+}
+
+# Also kill any stray node/python processes
 Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-Process -Name "python","pythonw" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
@@ -52,25 +118,46 @@ Get-Process -Name "python","pythonw" -ErrorAction SilentlyContinue | Stop-Proces
 # -------------------------------------------------------------------------
 Write-Step "Checking Tailscale status..."
 
+$usingTailscale = $true
 try {
     $tailscaleStatus = & tailscale status 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Fail "Tailscale is not signed in."
-        Write-Host "  Please sign in with: tailscale up"
-        exit 1
+        Write-Warn "Tailscale is not signed in. Will fall back to LAN IP."
+        $usingTailscale = $false
     }
     
-    $tailscaleIP = & tailscale ip -4
-    if ([string]::IsNullOrWhiteSpace($tailscaleIP)) {
-        Write-Fail "Could not get Tailscale IPv4 address"
-        exit 1
+    if ($usingTailscale) {
+        $tailscaleIP = (& tailscale ip -4).Trim()
+        if ([string]::IsNullOrWhiteSpace($tailscaleIP)) {
+            Write-Warn "Could not get Tailscale IPv4 address"
+            $usingTailscale = $false
+        } else {
+            Write-Success "Tailscale connected: $tailscaleIP"
+        }
     }
-    
-    Write-Success "Tailscale connected: $tailscaleIP"
 } catch {
-    Write-Fail "Tailscale not installed or not in PATH"
-    Write-Host "  Install with: winget install tailscale.tailscale"
-    exit 1
+    Write-Warn "Tailscale not installed or not in PATH"
+    $usingTailscale = $false
+}
+
+if (-not $usingTailscale) {
+    # Fallback to LAN IP
+    Write-Step "Falling back to LAN IP..."
+    $lanIP = Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp,Manual -ErrorAction SilentlyContinue | 
+             Where-Object { $_.IPAddress -notlike "169.254.*" -and $_.IPAddress -ne "127.0.0.1" } | 
+             Select-Object -First 1 -ExpandProperty IPAddress
+    
+    if ($lanIP) {
+        $tailscaleIP = $lanIP
+        Write-Warn "Using LAN IP: $tailscaleIP (Tailscale unavailable)"
+    } else {
+        Write-Fail "Could not determine IP address"
+        Stop-Transcript | Out-Null
+        if (-not $LaunchedFromShortcut) {
+            Read-Host "Press Enter to exit"
+        }
+        exit 1
+    }
 }
 
 # -------------------------------------------------------------------------
@@ -81,6 +168,10 @@ Write-Step "Checking PostgreSQL service..."
 $pgService = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $pgService) {
     Write-Fail "PostgreSQL service not found"
+    Stop-Transcript | Out-Null
+    if (-not $LaunchedFromShortcut) {
+        Read-Host "Press Enter to exit"
+    }
     exit 1
 }
 
@@ -95,16 +186,26 @@ if ($pgService.Status -eq "Running") {
     Write-Success "PostgreSQL is running ($($pgService.Name))"
 } else {
     Write-Fail "Failed to start PostgreSQL"
+    Stop-Transcript | Out-Null
+    if (-not $LaunchedFromShortcut) {
+        Read-Host "Press Enter to exit"
+    }
     exit 1
 }
 
 # -------------------------------------------------------------------------
-# 3. Backend (Node/Express on port 3000)
+# 3. Start all services (no health checks yet)
 # -------------------------------------------------------------------------
+
+# Backend
 Write-Step "Starting forgemind-backend..."
 
 if (-not (Test-Path "$BACKEND\.env")) {
     Write-Fail "$BACKEND\.env not found"
+    Stop-Transcript | Out-Null
+    if (-not $LaunchedFromShortcut) {
+        Read-Host "Press Enter to exit"
+    }
     exit 1
 }
 
@@ -119,44 +220,18 @@ $backendProc = Start-Process -FilePath "powershell.exe" `
     -WindowStyle Hidden `
     -PassThru
 
-Write-Success "Backend started (PID: $($backendProc.Id), logs: logs\backend-*.log)"
+Write-Success "Backend started (PID: $($backendProc.Id)) -> logs\backend-*.log"
 
-# Health check
-if (-not $SkipHealthChecks) {
-    Write-Step "Waiting for backend health check..."
-    $elapsed = 0
-    $healthy = $false
-    while ($elapsed -lt $HealthCheckTimeout) {
-        try {
-            $response = Invoke-WebRequest -Uri "http://localhost:3000/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
-            if ($response.StatusCode -eq 200) {
-                $healthy = $true
-                break
-            }
-        } catch {
-            # Continue waiting
-        }
-        Start-Sleep -Seconds 2
-        $elapsed += 2
-    }
-    
-    if ($healthy) {
-        Write-Success "Backend is healthy (http://localhost:3000/health)"
-    } else {
-        Write-Fail "Backend health check timed out after $HealthCheckTimeout seconds"
-        Write-Host "  Check logs\backend-err.log for errors"
-        exit 1
-    }
-}
-
-# -------------------------------------------------------------------------
-# 4. Flask AI (port 5000, local only)
-# -------------------------------------------------------------------------
+# Flask
 Write-Step "Starting forgemind-ai (Flask)..."
 
 if (-not (Test-Path "$FLASK\.venv\Scripts\python.exe")) {
     Write-Fail "Flask venv not found at $FLASK\.venv"
     Write-Host "  Run: cd forgemind-ai ; python -m venv .venv ; .venv\Scripts\pip install -r requirements.txt"
+    Stop-Transcript | Out-Null
+    if (-not $LaunchedFromShortcut) {
+        Read-Host "Press Enter to exit"
+    }
     exit 1
 }
 
@@ -171,45 +246,14 @@ $flaskProc = Start-Process -FilePath "$FLASK\.venv\Scripts\python.exe" `
     -WindowStyle Hidden `
     -PassThru
 
-Write-Success "Flask started (PID: $($flaskProc.Id), logs: logs\flask-*.log)"
+Write-Success "Flask started (PID: $($flaskProc.Id)) -> logs\flask-*.log"
 
-# Health check
-if (-not $SkipHealthChecks) {
-    Write-Step "Waiting for Flask health check..."
-    $elapsed = 0
-    $healthy = $false
-    while ($elapsed -lt $HealthCheckTimeout) {
-        try {
-            $response = Invoke-WebRequest -Uri "http://localhost:5000/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
-            if ($response.StatusCode -eq 200) {
-                $healthy = $true
-                break
-            }
-        } catch {
-            # Continue waiting
-        }
-        Start-Sleep -Seconds 2
-        $elapsed += 2
-    }
-    
-    if ($healthy) {
-        Write-Success "Flask is healthy (http://localhost:5000/health)"
-    } else {
-        Write-Fail "Flask health check timed out after $HealthCheckTimeout seconds"
-        Write-Host "  Check logs\flask-err.log for errors"
-        exit 1
-    }
-}
-
-# -------------------------------------------------------------------------
-# 5. Metro Bundler (Expo, bound to Tailscale IP)
-# -------------------------------------------------------------------------
-Write-Step "Starting Metro on Tailscale IP..."
+# Metro
+Write-Step "Starting Metro on $tailscaleIP..."
 
 $metroOutLog = Join-Path $LOGS "metro-out.log"
 $metroErrLog = Join-Path $LOGS "metro-err.log"
 
-# Set Tailscale IP as Metro hostname so phone can reach it
 $metroProc = Start-Process -FilePath "powershell.exe" `
     -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "`$env:REACT_NATIVE_PACKAGER_HOSTNAME='$tailscaleIP'; Set-Location '$MOBILE'; npx expo start --clear" `
     -WorkingDirectory $MOBILE `
@@ -218,35 +262,79 @@ $metroProc = Start-Process -FilePath "powershell.exe" `
     -WindowStyle Hidden `
     -PassThru
 
-Write-Success "Metro started (PID: $($metroProc.Id), logs: logs\metro-*.log)"
-Write-Success "Metro bound to $tailscaleIP (via REACT_NATIVE_PACKAGER_HOSTNAME)"
+Write-Success "Metro started (PID: $($metroProc.Id)) -> logs\metro-*.log"
 
-# Wait for Metro to bind
+# -------------------------------------------------------------------------
+# 4. Health checks (after all services started)
+# -------------------------------------------------------------------------
+
 if (-not $SkipHealthChecks) {
-    Write-Step "Waiting for Metro to start..."
-    Start-Sleep -Seconds 10
+    Write-Host ""
+    Write-Step "Waiting for services to initialize (15 seconds)..."
+    Start-Sleep -Seconds 15
     
-    $elapsed = 0
-    $metroHealthy = $false
-    while ($elapsed -lt $HealthCheckTimeout) {
-        try {
-            $response = Invoke-WebRequest -Uri "http://$tailscaleIP:8081" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
-            if ($response.StatusCode -eq 200) {
-                $metroHealthy = $true
-                break
-            }
-        } catch {
-            # Continue waiting
+    Write-Host ""
+    Write-Step "Health checks:"
+    
+    $backendUp = $false
+    $flaskUp = $false
+    $metroUp = $false
+    
+    # Backend
+    try {
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:3000/health" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+            Write-Host "  Backend:  " -NoNewline -ForegroundColor White
+            Write-Host "UP" -ForegroundColor Green -NoNewline
+            Write-Host "  (logs\backend-*.log)" -ForegroundColor Gray
+            $backendUp = $true
+        } else {
+            Write-Host "  Backend:  " -NoNewline -ForegroundColor White
+            Write-Host "DOWN (HTTP $($response.StatusCode))" -ForegroundColor Red -NoNewline
+            Write-Host "  (logs\backend-err.log)" -ForegroundColor Gray
         }
-        Start-Sleep -Seconds 3
-        $elapsed += 3
+    } catch {
+        Write-Host "  Backend:  " -NoNewline -ForegroundColor White
+        Write-Host "DOWN (not responding)" -ForegroundColor Red -NoNewline
+        Write-Host "  (logs\backend-err.log)" -ForegroundColor Gray
     }
     
-    if ($metroHealthy) {
-        Write-Success "Metro is running (http://$tailscaleIP:8081)"
-    } else {
-        Write-Warn "Metro health check timed out (may still be starting)"
-        Write-Host "  Check logs\metro-err.log if bundle fails to load"
+    # Flask
+    try {
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+            Write-Host "  Flask:    " -NoNewline -ForegroundColor White
+            Write-Host "UP" -ForegroundColor Green -NoNewline
+            Write-Host "  (logs\flask-*.log)" -ForegroundColor Gray
+            $flaskUp = $true
+        } else {
+            Write-Host "  Flask:    " -NoNewline -ForegroundColor White
+            Write-Host "DOWN (HTTP $($response.StatusCode))" -ForegroundColor Red -NoNewline
+            Write-Host "  (logs\flask-err.log)" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Host "  Flask:    " -NoNewline -ForegroundColor White
+        Write-Host "DOWN (not responding)" -ForegroundColor Red -NoNewline
+        Write-Host "  (logs\flask-err.log)" -ForegroundColor Gray
+    }
+    
+    # Metro
+    try {
+        $response = Invoke-WebRequest -Uri "http://$tailscaleIP:8081" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+            Write-Host "  Metro:    " -NoNewline -ForegroundColor White
+            Write-Host "UP" -ForegroundColor Green -NoNewline
+            Write-Host "  (logs\metro-*.log)" -ForegroundColor Gray
+            $metroUp = $true
+        } else {
+            Write-Host "  Metro:    " -NoNewline -ForegroundColor White
+            Write-Host "DOWN (HTTP $($response.StatusCode))" -ForegroundColor Red -NoNewline
+            Write-Host "  (logs\metro-err.log)" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Host "  Metro:    " -NoNewline -ForegroundColor White
+        Write-Host "DOWN (still starting)" -ForegroundColor Yellow -NoNewline
+        Write-Host "  (logs\metro-err.log)" -ForegroundColor Gray
     }
 }
 
@@ -255,15 +343,17 @@ if (-not $SkipHealthChecks) {
 # -------------------------------------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Magenta
-Write-Host "  All services started successfully" -ForegroundColor Magenta
+Write-Host "  All services started" -ForegroundColor Magenta
 Write-Host "===================================================" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "Tailscale IP:       " -NoNewline; Write-Host $tailscaleIP -ForegroundColor Yellow
-Write-Host "Backend:            http://localhost:3000 (binds 0.0.0.0)" -ForegroundColor Gray
-Write-Host "Backend (Tailscale): http://$tailscaleIP:3000/health" -ForegroundColor Gray
-Write-Host "Flask AI:           http://localhost:5000 (binds 127.0.0.1)" -ForegroundColor Gray
-Write-Host "Metro:              http://$tailscaleIP:8081" -ForegroundColor Gray
-Write-Host ""
+
+if (-not $usingTailscale) {
+    Write-Host "WARNING: Using LAN IP instead of Tailscale" -ForegroundColor Yellow
+    Write-Host "  The firewall rules are scoped to Tailscale range." -ForegroundColor Yellow
+    Write-Host "  LAN access may be blocked." -ForegroundColor Yellow
+    Write-Host ""
+}
+
 Write-Host "Phone Instructions:" -ForegroundColor Cyan
 Write-Host "  1. Install Tailscale on your phone and sign in" -ForegroundColor White
 Write-Host "  2. Turn off Wi-Fi (cellular only)" -ForegroundColor White
@@ -271,6 +361,17 @@ Write-Host "  3. Open Expo Go > Enter URL manually" -ForegroundColor White
 Write-Host "  4. Type: " -NoNewline -ForegroundColor White
 Write-Host "exp://$tailscaleIP:8081" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Run self-check:     .\scripts\check-services.ps1" -ForegroundColor Cyan
-Write-Host "Stop all:           .\scripts\stop-all.ps1 or say 'forge sleep'" -ForegroundColor Cyan
+Write-Host "Test from phone browser:" -ForegroundColor Cyan
+Write-Host "  http://$tailscaleIP:3000/health" -ForegroundColor Yellow
 Write-Host ""
+Write-Host "Run check:  " -NoNewline -ForegroundColor Cyan
+Write-Host ".\scripts\check-services.ps1" -ForegroundColor White
+Write-Host "Stop:       " -NoNewline -ForegroundColor Cyan
+Write-Host ".\scripts\stop-all.ps1 or say 'rest'" -ForegroundColor White
+Write-Host ""
+
+Stop-Transcript | Out-Null
+
+if (-not $LaunchedFromShortcut) {
+    Read-Host "Press Enter to close"
+}

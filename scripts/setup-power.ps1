@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
@@ -17,9 +17,9 @@ function Write-Step { Write-Host "[>] $args" -ForegroundColor Cyan }
 function Write-Success { Write-Host "[OK] $args" -ForegroundColor Green }
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host "  ForgeMind Power Management Setup" -ForegroundColor Magenta
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host ""
 
 # Get current power scheme
@@ -43,9 +43,9 @@ Write-Success "Set processor throttling (AC) to 100%"
 
 Write-Host ""
 Write-Host "Power settings configured:" -ForegroundColor Green
-Write-Host "  • Sleep: Never (when plugged in)" -ForegroundColor White
-Write-Host "  • Hibernate: Never (when plugged in)" -ForegroundColor White
-Write-Host "  • Monitor: 15 minutes (when plugged in)" -ForegroundColor White
+Write-Host "  - Sleep: Never (when plugged in)" -ForegroundColor White
+Write-Host "  - Hibernate: Never (when plugged in)" -ForegroundColor White
+Write-Host "  - Monitor: 15 minutes (when plugged in)" -ForegroundColor White
 Write-Host ""
 Write-Host "Battery operation unchanged" -ForegroundColor Gray
 Write-Host ""

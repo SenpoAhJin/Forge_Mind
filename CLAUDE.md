@@ -2,19 +2,15 @@
 
 ## Magic Server Control Phrases
 
-When the user's message contains the trigger phrase **"FORGE AWAKE"** (case-insensitive):
+When the user's message is "arise" or contains the word "arise":
 
-1. Run `scripts\start-all.ps1` to start all ForgeMind services
-2. Run `scripts\check-services.ps1` to verify service status
-3. Report the real results from both scripts
-4. Include the Expo Go URL: `exp://<laptop-tailscale-ip>:8081`
-5. Include the backend health check URL: `http://<laptop-tailscale-ip>:3000/health`
+1. Run: `powershell -ExecutionPolicy Bypass -File "forgemind-mobile\scripts\start-all.ps1"`
+2. Then run: `powershell -ExecutionPolicy Bypass -File "forgemind-mobile\scripts\check-services.ps1"`
+3. Report the real UP or DOWN result for backend, Flask and Metro
+4. Print the exp:// link and the backend health link
 
-When the user's message contains the stop phrase **"forge sleep"** (case-insensitive):
+Never claim success without running the commands and showing their output.
 
-1. Run `scripts\stop-all.ps1` to stop all services
-2. Report the results
+When the user's message is "rest": run `forgemind-mobile\scripts\stop-all.ps1` and confirm ports 3000, 5000 and 8081 are free.
 
-**Important**: Always execute the scripts and report real output. Do not skip execution or fabricate results. If a health check fails, report the failure explicitly.
-
-**Context**: These phrases control the ForgeMind backend (Node/Express), Flask AI service, and Metro bundler for remote testing via Tailscale. See `docs/START_SERVER.md` for full documentation.
+**Context**: These phrases control the ForgeMind backend (Node/Express), Flask AI service, and Metro bundler for remote testing via Tailscale. All services start first, then health checks run at the end (a failed check does not abort the script). See `docs/START_SERVER.md` for full documentation.

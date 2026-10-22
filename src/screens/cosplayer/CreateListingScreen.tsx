@@ -20,7 +20,7 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
 import { TextInputField, TextAreaField, Button, ConfirmationModal, PhotoUploadSection } from '../../components';
-import { MARKETPLACE_CATEGORIES, CONDITION_LABELS } from '../../constants/marketplaceCategories';
+import { MARKETPLACE_CATEGORIES, CONDITION_LABELS, getAllowedPostTypesForCategory, isPostTypeAllowedForCategory } from '../../constants/marketplaceCategories';
 import { MarketplaceCondition, TransactionType } from '../../types/marketplace';
 import { checkListing } from '../../services/MarketplaceService';
 import { sanitizeDecimalInput } from '../../utils/numericInput';
@@ -64,6 +64,34 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
   useEffect(() => {
     uploadedPhotoIdsRef.current = photoIds;
   }, [photoIds]);
+
+  // Get allowed post types for current category
+  const allowedPostTypes = category ? getAllowedPostTypesForCategory(category) : ['sell', 'trade', 'commission'];
+  
+  // Check if current transaction type is allowed for category
+  const isCurrentTypeAllowed = transactionType && category 
+    ? isPostTypeAllowedForCategory(category, transactionType) 
+    : true;
+
+  // Handle category change with transaction type validation
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
+    setCategoryError('');
+
+    // Check if current transaction type is still valid
+    if (transactionType && !isPostTypeAllowedForCategory(newCategory, transactionType)) {
+      // Auto-select first allowed type
+      const allowed = getAllowedPostTypesForCategory(newCategory);
+      if (allowed.length > 0) {
+        // Map backend post types back to mobile transaction types
+        const newType = allowed[0] === 'sell' ? 'buy' : allowed[0] as TransactionType;
+        setTransactionType(newType);
+        setTransactionTypeError('');
+      } else {
+        setTransactionType('');
+      }
+    }
+  };
 
   // Cleanup unattached photos on unmount
   useEffect(() => {
@@ -334,10 +362,7 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
                     styles.chip,
                     category === cat && styles.chipSelected,
                   ]}
-                  onPress={() => {
-                    setCategory(cat);
-                    setCategoryError('');
-                  }}
+                  onPress={() => handleCategoryChange(cat)}
                   activeOpacity={0.7}
                 >
                   <Text style={[
@@ -355,54 +380,113 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
           {/* Transaction Type */}
           <View style={styles.field}>
             <Text style={styles.label}>Transaction Type *</Text>
-            <Text style={styles.helperText}>How do you want to receive payment?</Text>
+            {category && (
+              <Text style={styles.helperText}>
+                Available for {category}: {allowedPostTypes.map(t => t === 'sell' ? 'Buy' : t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}
+              </Text>
+            )}
+            {!category && <Text style={styles.helperText}>Select a category first</Text>}
             <View style={styles.transactionTypeContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.transactionTypeButton,
-                  transactionType === 'buy' && styles.transactionTypeButtonSelected,
-                ]}
-                onPress={() => {
-                  setTransactionType('buy');
-                  setTransactionTypeError('');
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name="cash-outline" 
-                  size={24} 
-                  color={transactionType === 'buy' ? colors.backgroundLight : colors.textSecondary} 
-                />
-                <Text style={[
-                  styles.transactionTypeText,
-                  transactionType === 'buy' && styles.transactionTypeTextSelected,
-                ]}>
-                  Buy
-                </Text>
-                <Text style={[
-                  styles.transactionTypeSubtext,
-                  transactionType === 'buy' && styles.transactionTypeSubtextSelected,
-                ]}>
-                  Monetary payment
-                </Text>
-              </TouchableOpacity>
+              {/* Buy/Sell button - only show if 'sell' is allowed */}
+              {allowedPostTypes.includes('sell') && (
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    transactionType === 'buy' && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setTransactionType('buy');
+                    setTransactionTypeError('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="cash-outline" 
+                    size={24} 
+                    color={transactionType === 'buy' ? colors.backgroundLight : colors.textSecondary} 
+                  />
+                  <Text style={[
+                    styles.transactionTypeText,
+                    transactionType === 'buy' && styles.transactionTypeTextSelected,
+                  ]}>
+                    Buy
+                  </Text>
+                  <Text style={[
+                    styles.transactionTypeSubtext,
+                    transactionType === 'buy' && styles.transactionTypeSubtextSelected,
+                  ]}>
+                    Monetary payment
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-              <TouchableOpacity
-                style={[
-                  styles.transactionTypeButton,
-                  transactionType === 'trade' && styles.transactionTypeButtonSelected,
-                ]}
-                onPress={() => {
-                  setTransactionType('trade');
-                  setTransactionTypeError('');
-                  setPrice(''); // Clear price for trade-only
-                  setPriceError('');
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name="swap-horizontal-outline" 
-                  size={24} 
+              {/* Trade button - only show if 'trade' is allowed */}
+              {allowedPostTypes.includes('trade') && (
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    transactionType === 'trade' && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setTransactionType('trade');
+                    setTransactionTypeError('');
+                    setPrice(''); // Clear price for trade-only
+                    setPriceError('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="swap-horizontal-outline" 
+                    size={24} 
+                    color={transactionType === 'trade' ? colors.backgroundLight : colors.textSecondary} 
+                  />
+                  <Text style={[
+                    styles.transactionTypeText,
+                    transactionType === 'trade' && styles.transactionTypeTextSelected,
+                  ]}>
+                    Trade
+                  </Text>
+                  <Text style={[
+                    styles.transactionTypeSubtext,
+                    transactionType === 'trade' && styles.transactionTypeSubtextSelected,
+                  ]}>
+                    Item for item
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Commission button - only show if 'commission' is allowed */}
+              {allowedPostTypes.includes('commission') && (
+                <TouchableOpacity
+                  style={[
+                    styles.transactionTypeButton,
+                    transactionType === 'commission' && styles.transactionTypeButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setTransactionType('commission');
+                    setTransactionTypeError('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="create-outline" 
+                    size={24} 
+                    color={transactionType === 'commission' ? colors.backgroundLight : colors.textSecondary} 
+                  />
+                  <Text style={[
+                    styles.transactionTypeText,
+                    transactionType === 'commission' && styles.transactionTypeTextSelected,
+                  ]}>
+                    Commission
+                  </Text>
+                  <Text style={[
+                    styles.transactionTypeSubtext,
+                    transactionType === 'commission' && styles.transactionTypeSubtextSelected,
+                  ]}>
+                    Custom service
+                  </Text>
+                </TouchableOpacity>
+              )}
                   color={transactionType === 'trade' ? colors.backgroundLight : colors.textSecondary} 
                 />
                 <Text style={[

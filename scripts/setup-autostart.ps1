@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
@@ -24,9 +24,9 @@ function Write-Warn { Write-Host "[!] $args" -ForegroundColor Yellow }
 function Write-Fail { Write-Host "[X] $args" -ForegroundColor Red }
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host "  ForgeMind Auto-Start Setup" -ForegroundColor Magenta
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host ""
 
 # Paths
@@ -48,9 +48,9 @@ if (-not (Test-Path $LogDir)) {
     Write-Success "Created logs directory: $LogDir"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Create Scheduled Task
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Step "Creating scheduled task..."
 
 $TaskName = "ForgeMind-AutoStart"
@@ -95,13 +95,13 @@ Register-ScheduledTask -TaskName $TaskName `
 
 Write-Success "Task '$TaskName' created"
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Summary
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host "  Auto-start configured" -ForegroundColor Magenta
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "---------------------------------------------------" -ForegroundColor Magenta
 Write-Host ""
 Write-Host "Task Details:" -ForegroundColor Cyan
 Write-Host "  Name:     $TaskName" -ForegroundColor White
