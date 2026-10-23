@@ -126,9 +126,9 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
     setPhotos(photos.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Photos are stored locally only, never sent to Flask matcher or backend API
-    const item = addItem({
+    const item = await addItem({
       entry_method: draft.entry_method,
       entry_language: draft.entry_language,
       original_input_text: draft.original_input_text,

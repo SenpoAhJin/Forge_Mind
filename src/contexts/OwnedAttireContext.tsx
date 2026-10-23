@@ -1,7 +1,10 @@
 /**
- * ForgeMind - OwnedAttire Context (FE-5)
- * Persisted local inventory on AsyncStorage (same pattern as the AuthService
- * accounts/session keys). Each dressed apparel item mirrors the v0.2.1 schema.
+ * ForgeMind - OwnedAttire Context (M1)
+ * 
+ * Local inventory with per-user AsyncStorage (fixes multi-account bug).
+ * - AsyncStorage keyed per user: `@forgemind:owned_attire:{email}`
+ * - Server API routes exist but not wired yet (POST /inventory/import for future)
+ * - Mobile remains local-only this sprint; API integration in future sprint
  */
 
 import React, {
@@ -22,14 +25,14 @@ import {
 } from '../types/owned-attire';
 import { ownedAttireSeed } from '../data/owned-attire-seed';
 
-const STORAGE_KEY = '@forgemind:owned_attire';
+const STORAGE_KEY_PREFIX = '@forgemind:owned_attire:';
 
 interface OwnedAttireContextValue {
   items: OwnedAttire[];
   isLoaded: boolean;
-  addItem: (input: NewOwnedAttireInput) => OwnedAttire;
-  updateItem: (attireId: string, input: UpdateOwnedAttireInput) => void;
-  deleteItem: (attireId: string) => void;
+  addItem: (input: NewOwnedAttireInput) => Promise<OwnedAttire>;
+  updateItem: (attireId: string, input: UpdateOwnedAttireInput) => Promise<void>;
+  deleteItem: (attireId: string) => Promise<void>;
   setCommitment: (attireId: string, projectId: string | null) => void;
   getItemById: (attireId: string) => OwnedAttire | undefined;
 }
@@ -40,8 +43,10 @@ const nowIso = () => new Date().toISOString();
 
 export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useUser();
-  const [items, setItems] = useState<OwnedAttire[]>(ownedAttireSeed);
+  const [items, setItems] = useState<OwnedAttire[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const storageKey = user?.email ? `${STORAGE_KEY_PREFIX}${user.email}` : null;
 
   const seedForUser = useCallback(
     () =>
@@ -56,27 +61,38 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     let cancelled = false;
 
     const load = async () => {
+      if (!storageKey) {
+        // Not logged in: use seed
+        if (!cancelled) {
+          setItems(seedForUser());
+          setIsLoaded(true);
+        }
+        return;
+      }
+
+      // Load from AsyncStorage (cache)
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const raw = await AsyncStorage.getItem(storageKey);
         if (raw) {
           const stored = JSON.parse(raw);
-          // Normalize old items missing array fields (photo_urls, condition_photo_history)
-          // from text/voice entry before D7a fix or items saved before these fields existed
           const normalized = stored.map((item: any) => ({
             ...item,
             photo_urls: Array.isArray(item.photo_urls) ? item.photo_urls : [],
             condition_photo_history: Array.isArray(item.condition_photo_history) 
               ? item.condition_photo_history 
               : [],
+            client_id: item.client_id || null,
+            original_project_ref: item.original_project_ref || null,
+            reserved_trade_id: item.reserved_trade_id || null,
+            version: item.version || 1,
           }));
           if (!cancelled) {
-            setItems(normalized);
-            setItems((prev) => (prev.length === 0 ? seedForUser() : prev));
+            setItems(normalized.length === 0 ? seedForUser() : normalized);
           }
         } else {
           if (!cancelled) {
             setItems(seedForUser());
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(seedForUser()));
+            await AsyncStorage.setItem(storageKey, JSON.stringify(seedForUser()));
           }
         }
       } catch (e) {
@@ -90,15 +106,15 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedForUser]);
+  }, [user?.email, storageKey, seedForUser]);
 
+  // Sync to cache after changes
   useEffect(() => {
-    if (!isLoaded) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items)).catch(() => {
-      // local storage best-effort; failures are non-fatal in mock mode
+    if (!isLoaded || !storageKey) return;
+    AsyncStorage.setItem(storageKey, JSON.stringify(items)).catch(() => {
+      // local storage best-effort; failures are non-fatal
     });
-  }, [items, isLoaded]);
+  }, [items, isLoaded, storageKey]);
 
   /**
    * Normalize input to ensure photo_urls is always an array.
@@ -108,12 +124,14 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     return Array.isArray(photoUrls) ? photoUrls : [];
   };
 
-  const addItem = (input: NewOwnedAttireInput): OwnedAttire => {
+  const addItem = async (input: NewOwnedAttireInput): Promise<OwnedAttire> => {
+    // Local-only mode for now (API integration in future sprint)
     const now = nowIso();
     const photo_urls = normalizePhotoUrls(input.photo_urls);
     const item: OwnedAttire = {
       attire_id: `attr-${Date.now()}`,
       user_id: user?.email ?? 'demo-user-1',
+      client_id: null,
       entry_method: input.entry_method,
       entry_language: input.entry_language,
       original_input_text: input.original_input_text,
@@ -132,9 +150,12 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
       ],
       availability_status: 'free',
       committed_to_project_id: null,
+      original_project_ref: null,
+      reserved_trade_id: null,
       acquired_date: input.acquired_date,
       acquisition_cost: input.acquisition_cost,
       notes: input.notes ?? '',
+      version: 1,
       created_at: now,
       updated_at: now,
     };
@@ -142,11 +163,12 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     return item;
   };
 
-  const updateItem = (attireId: string, input: UpdateOwnedAttireInput) => {
+  const updateItem = async (attireId: string, input: UpdateOwnedAttireInput): Promise<void> => {
+    // Local-only mode for now (API integration in future sprint)
     setItems((prev) =>
       prev.map((item) => {
         if (item.attire_id !== attireId) return item;
-        const next = { ...item, ...input, updated_at: nowIso() };
+        const next = { ...item, ...input, updated_at: nowIso(), version: item.version + 1 };
         if (input.condition_rating && input.condition_rating !== item.condition_rating) {
           const photo_urls = normalizePhotoUrls(item.photo_urls);
           next.condition_photo_history = [
@@ -163,7 +185,8 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     );
   };
 
-  const deleteItem = (attireId: string) => {
+  const deleteItem = async (attireId: string): Promise<void> => {
+    // Local-only mode for now (API integration in future sprint)
     setItems((prev) => prev.filter((item) => item.attire_id !== attireId));
   };
 

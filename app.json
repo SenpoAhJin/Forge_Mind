@@ -38,7 +38,8 @@
             "./assets/models/garments/Wig_White_Cap_Female.glb"
           ]
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }
