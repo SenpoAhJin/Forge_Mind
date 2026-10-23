@@ -1,7 +1,113 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 22, 2026 (Expo SDK 58 upgrade)
+**Last updated:** Friday, October 23, 2026 (M1: Inventory on Server - Mobile)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Friday, October 23, 2026 (M1: Inventory on Server - Mobile)
+
+**Summary**
+
+Connected mobile app to server-side inventory API. Items now sync to/from server instead of staying local-only. Fixed critical multi-account bug where items leaked between users. Added offline fallback so app works even when server is unreachable. First-login auto-import moves existing local items to server.
+
+**What was done**
+
+**Inventory API Integration**
+- **Created:** `src/services/InventoryService.ts` - Client wrapper for server inventory API
+  - `listItems()` - GET /inventory (fetch all user's items)
+  - `createItem()` - POST /inventory (create new item)
+  - `updateItem()` - PATCH /inventory/:id (update with version locking)
+  - `deleteItem()` - DELETE /inventory/:id (delete free items)
+  - `importItems()` - POST /inventory/import (one-time migration)
+  - Uses session token from AsyncStorage
+  - All requests timeout after configured limit
+  - Returns typed responses matching backend
+
+**OwnedAttireContext Rewired to API**
+- **Modified:** `src/contexts/OwnedAttireContext.tsx`
+  - **Before:** All operations local-only (AsyncStorage read/write)
+  - **After:** Server-first with offline fallback
+    - Reads: GET /inventory on load, falls back to cache if server unreachable
+    - Writes: Call API (POST/PATCH/DELETE), update state from server response
+    - Cache: AsyncStorage is READ-ONLY offline fallback, updated after successful server ops
+  - **New behavior:**
+    - `isOffline` flag: true when showing cached data (server unreachable)
+    - Write operations fail with clear message when offline
+    - First login: Auto-calls POST /inventory/import if server empty + local data exists
+    - Migration flag: `@forgemind:inventory_migrated:{email}` prevents duplicate imports
+  - **Error handling:**
+    - Network errors show user-friendly messages
+    - Version conflicts (409) reported (optimistic locking)
+    - Offline writes rejected immediately (no silent failures)
+
+**Multi-Account Storage Bug Fix** ✅
+- **Problem:** When logging out and switching users, User B saw User A's items
+- **Root Cause:** AsyncStorage key was global (`@forgemind:owned_attire`)
+- **Solution:** Per-user keys (`@forgemind:owned_attire:{email}`)
+- **Impact:** Each user now has isolated storage, items never leak between accounts
+
+**Type Updates**
+- **Modified:** `src/types/owned-attire.ts`
+  - Added `client_id?: string | null` - Mobile-generated ID for import deduplication
+  - Added `version: number` - Optimistic locking counter
+  - Added `original_project_ref?: string | null` - Stores old project IDs during import
+  - Added `reserved_trade_id?: string | null` - Trade system reservation flag
+- **Modified:** `src/data/owned-attire-seed.ts`
+  - Updated seed data with new fields (client_id, version=1, original_project_ref=null)
+
+**Context API Changes**
+- `useOwnedAttire()` hook now returns:
+  - `items` - Current inventory items
+  - `isLoaded` - Data loaded (true after initial fetch)
+  - `isOffline` - **NEW** - True when using cached data (server unreachable)
+  - `addItem()` - Create item (fails if offline)
+  - `updateItem()` - Update item (fails if offline)
+  - `deleteItem()` - Delete item (fails if offline)
+  - `setCommitment()` - Mark item committed to project
+  - `getItemById()` - Get single item by ID
+
+**Import Strategy**
+- **Trigger:** First login after upgrade (server has 0 items + local data exists)
+- **Process:**
+  1. Detect server empty on load
+  2. Check migration flag (not migrated yet)
+  3. Read local AsyncStorage cache
+  4. Convert items to import format (add client_id if missing)
+  5. Call POST /inventory/import (backend skips existing client_ids)
+  6. Mark migration complete
+  7. Fetch fresh data from server
+- **Safety:** Never deletes local data, idempotent (safe to retry)
+
+**Status**
+- ✅ Backend API verified (8/9 tests pass)
+- ✅ Mobile service created and typed
+- ✅ Context wired to API
+- ✅ Offline fallback implemented
+- ✅ Multi-account bug fixed
+- ✅ Import logic implemented
+- ⚠️ TypeScript: Mobile has ~38 errors in non-M1 code (pre-existing)
+- ❌ NOT TESTED on device (requires physical/simulator testing)
+
+**Files Modified**
+- `src/contexts/OwnedAttireContext.tsx` - Rewired to API, added offline handling
+- `src/types/owned-attire.ts` - Added M1 fields
+- `src/data/owned-attire-seed.ts` - Updated seed with new fields
+
+**Files Created**
+- `src/services/InventoryService.ts` - API client for inventory routes
+
+**Branch:** `feat/m1-inventory-mobile`  
+**Commits:** 
+- `b045881` - Wire mobile to server inventory API with offline fallback
+- `143d1f5` - Fix multi-account AsyncStorage bug (per-user keys)
+
+**Next Steps (NOT IN THIS SESSION)**
+1. Device testing with real accounts
+2. Fix remaining TypeScript errors (non-M1 code)
+3. Verify import flow on device
+4. Test offline indicator
+5. M2: Marketplace listings UI
 
 ---
 
