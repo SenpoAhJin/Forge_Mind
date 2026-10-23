@@ -1,16 +1,12 @@
 /**
- * ForgeMind Two-Tone Design System - STRICT PALETTE
+ * ForgeMind Two-Tone Design System
+ * BLACK + PINK + WHITE ONLY
  * 
- * BLACK: #000000 - primary color for everything except highlight (works in both light and dark mode)
- * PINK: #FF8FB1 - accent/highlight color (ONE per screen)
- * WHITE: #FFFFFF - background
- * 
- * Opacity variants made via withAlpha() helper only.
- * No grays, no third hue.
+ * No indigo, no gray, no teal, no orange, no fourth color.
  */
 
 // ============================================================================
-// CORE COLORS
+// BASE COLORS
 // ============================================================================
 
 const BLACK = '#000000';
@@ -21,10 +17,6 @@ const WHITE = '#FFFFFF';
 // OPACITY HELPER
 // ============================================================================
 
-/**
- * Apply alpha opacity to a color.
- * Converts hex to rgba with specified alpha (0-1).
- */
 export function withAlpha(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -33,127 +25,218 @@ export function withAlpha(hex: string, alpha: number): string {
 }
 
 // ============================================================================
-// LIGHT MODE PALETTE
-// ============================================================================
-
-export const lightColors = {
-  // PRIMARY (BLACK #000000)
-  primary: BLACK,                            // Main black - buttons, headers, links, text
-  primaryTint: withAlpha(BLACK, 0.06),       // Card backgrounds on white
-  primaryLight: withAlpha(BLACK, 0.20),      // Borders and dividers
-  primaryDark: BLACK,                        // Same as primary (no separate dark)
-  
-  // ACCENT (PINK #FF8FB1) - ONE highlight per screen
-  accent: PINK,                              // PINK fill for attention
-  accentTint: withAlpha(PINK, 0.15),         // Soft PINK highlight backgrounds
-  accentLight: PINK,                         // Same as accent
-  accentDark: PINK,                          // Same as accent
-  
-  // BACKGROUNDS
-  background: WHITE,                         // Screen background
-  surface: withAlpha(BLACK, 0.06),           // Cards on white
-  surfaceDark: withAlpha(BLACK, 0.08),       // Elevated surfaces
-  border: withAlpha(BLACK, 0.20),            // Borders and dividers
-  borderLight: withAlpha(BLACK, 0.12),       // Lighter borders
-  
-  // TEXT
-  textPrimary: BLACK,                        // Primary text (BLACK on WHITE)
-  textSecondary: withAlpha(BLACK, 0.75),     // Secondary text (BLACK 75%)
-  textDisabled: withAlpha(BLACK, 0.40),      // Disabled text (contrast exempt)
-  textOnPrimary: WHITE,                      // WHITE text on BLACK
-  textOnAccent: BLACK,                       // BLACK text on PINK
-  
-  // STATES
-  disabled: withAlpha(BLACK, 0.40),          // Disabled (contrast exempt)
-  hover: withAlpha(BLACK, 0.90),             // Hover state
-  pressed: BLACK,                            // Pressed state
-  selected: withAlpha(BLACK, 0.10),          // Selected background
-  focus: BLACK,                              // Focus border
-  
-  // SEMANTIC (using two-tone only)
-  success: BLACK,                            // Positive states use BLACK
-  successTint: withAlpha(BLACK, 0.10),       // Success background
-  warning: PINK,                             // Attention uses PINK fill
-  warningTint: withAlpha(PINK, 0.15),        // Warning background
-  info: BLACK,                               // Info uses BLACK
-  infoTint: withAlpha(BLACK, 0.10),          // Info background
-  
-  // OVERLAYS
-  backdrop: withAlpha(BLACK, 0.60),          // Modal backdrop
-  shadow: withAlpha(BLACK, 0.10),            // Shadow color
-  
-  // LEGACY ALIASES - remove after migration
-  backgroundLight: WHITE as string,          // LEGACY ALIAS, remove after migration
-  backgroundDark: BLACK as string,           // LEGACY ALIAS, remove after migration
-  secondary: PINK as string,                 // LEGACY ALIAS, remove after migration (was third color, now PINK)
-  tertiary: PINK as string,                  // LEGACY ALIAS, remove after migration (was third color, now PINK)
-  error: PINK as string,                     // LEGACY ALIAS, remove after migration (ERROR NOT IMPLEMENTED - use PINK temporarily)
-} as const;
-
-// ============================================================================
-// DARK MODE PALETTE
+// DARK MODE (default)
 // ============================================================================
 
 export const darkColors = {
-  // PRIMARY (BLACK becomes WHITE in dark mode for visibility)
-  primary: BLACK,                            // Main BLACK
-  primaryTint: withAlpha(WHITE, 0.08),       // Cards on BLACK background
-  primaryLight: withAlpha(WHITE, 0.20),      // Borders in dark mode
-  primaryDark: BLACK,                        // Same as primary
+  // Base
+  background: BLACK,
+  text: WHITE,
+  textSecondary: withAlpha(WHITE, 0.75),
   
-  // ACCENT (PINK)
-  accent: PINK,                              // PINK highlight
-  accentTint: withAlpha(PINK, 0.15),         // Soft PINK background
-  accentLight: PINK,                         // Same as accent
-  accentDark: PINK,                          // Same as accent
+  // Surfaces
+  card: withAlpha(WHITE, 0.08),
+  border: withAlpha(WHITE, 0.20),
+  borderStrong: withAlpha(WHITE, 0.30),
   
-  // BACKGROUNDS
-  background: BLACK,                         // Screen background (BLACK in dark mode)
-  surface: withAlpha(WHITE, 0.08),           // Cards on BLACK
-  surfaceDark: withAlpha(WHITE, 0.12),       // Elevated surfaces
-  border: withAlpha(WHITE, 0.20),            // Borders
-  borderLight: withAlpha(WHITE, 0.12),       // Lighter borders
+  // States
+  disabled: withAlpha(WHITE, 0.40),
+  hover: withAlpha(WHITE, 0.90),
+  pressed: WHITE,
+  selected: withAlpha(WHITE, 0.10),
   
-  // TEXT
-  textPrimary: WHITE,                        // Main text (WHITE on BLACK)
-  textSecondary: withAlpha(WHITE, 0.75),     // Secondary text
-  textDisabled: withAlpha(WHITE, 0.40),      // Disabled text
-  textOnPrimary: WHITE,                      // WHITE on BLACK
-  textOnAccent: BLACK,                       // BLACK on PINK
+  // Buttons
+  buttonPrimary: WHITE,              // bg
+  buttonPrimaryText: BLACK,          // text
+  buttonHighlight: PINK,             // bg
+  buttonHighlightText: BLACK,        // text
   
-  // STATES
-  disabled: withAlpha(WHITE, 0.40),          // Disabled
-  hover: withAlpha(WHITE, 0.90),             // Hover
-  pressed: WHITE,                            // Pressed
-  selected: withAlpha(WHITE, 0.10),          // Selected
-  focus: WHITE,                              // Focus
+  // Highlight
+  highlightSoft: withAlpha(PINK, 0.15),
+  accent: PINK,
+  accentText: BLACK,
   
-  // SEMANTIC
-  success: WHITE,                            // Success uses WHITE in dark mode
-  successTint: withAlpha(WHITE, 0.10),       // Success background
-  warning: PINK,                             // Warning uses PINK
-  warningTint: withAlpha(PINK, 0.15),        // Warning background
-  info: WHITE,                               // Info uses WHITE
-  infoTint: withAlpha(WHITE, 0.10),          // Info background
+  // Toggle
+  toggleTrackOff: withAlpha(WHITE, 0.40),
+  toggleTrackOn: PINK,
+  toggleKnobOff: WHITE,
+  toggleKnobOn: BLACK,
   
-  // OVERLAYS
-  backdrop: withAlpha(BLACK, 0.80),          // Darker backdrop in dark mode
-  shadow: withAlpha(BLACK, 0.40),            // Darker shadow in dark mode
+  // Tab Bar
+  tabBarBg: BLACK,
+  tabBarBorder: withAlpha(WHITE, 0.20),
+  tabBarInactive: withAlpha(WHITE, 0.75),
+  tabBarActivePill: PINK,
+  tabBarActiveIcon: BLACK,
+  tabBarActiveLabel: WHITE,
   
-  // LEGACY ALIASES - remove after migration
-  backgroundLight: WHITE as string,          // LEGACY ALIAS, remove after migration
-  backgroundDark: BLACK as string,           // LEGACY ALIAS, remove after migration
-  secondary: PINK as string,                 // LEGACY ALIAS, remove after migration
-  tertiary: PINK as string,                  // LEGACY ALIAS, remove after migration
-  error: PINK as string,                     // LEGACY ALIAS, remove after migration
+  // Overlay
+  overlay: withAlpha(BLACK, 0.70),
+  popupCard: BLACK,
+  popupBorder: withAlpha(WHITE, 0.30),
+  shadow: 'transparent',  // No shadow in dark mode, use border
+  
+  // Text on colors
+  textOnPrimary: WHITE,
+  textOnAccent: BLACK,
+  
+  // Legacy aliases - remove after migration
+  primary: BLACK as string,
+  primaryTint: withAlpha(WHITE, 0.08),
+  primaryLight: withAlpha(WHITE, 0.20),
+  primaryDark: BLACK as string,
+  surface: withAlpha(WHITE, 0.08),
+  surfaceDark: withAlpha(WHITE, 0.12),
+  borderLight: withAlpha(WHITE, 0.12),
+  textPrimary: WHITE as string,
+  textDisabled: withAlpha(WHITE, 0.40),
+  focus: WHITE as string,
+  success: WHITE as string,
+  successTint: withAlpha(WHITE, 0.10),
+  warning: PINK as string,
+  warningTint: withAlpha(PINK, 0.15),
+  info: WHITE as string,
+  infoTint: withAlpha(WHITE, 0.10),
+  backdrop: withAlpha(BLACK, 0.70),
+  backgroundLight: WHITE as string,
+  backgroundDark: BLACK as string,
+  secondary: PINK as string,
+  tertiary: PINK as string,
+  error: PINK as string,
+} as const;
+
+// ============================================================================
+// LIGHT MODE
+// ============================================================================
+
+export const lightColors = {
+  // Base
+  background: WHITE,
+  text: BLACK,
+  textSecondary: withAlpha(BLACK, 0.75),
+  
+  // Surfaces
+  card: withAlpha(BLACK, 0.06),
+  border: withAlpha(BLACK, 0.20),
+  borderStrong: withAlpha(BLACK, 0.20),
+  
+  // States
+  disabled: withAlpha(BLACK, 0.40),
+  hover: withAlpha(BLACK, 0.90),
+  pressed: BLACK,
+  selected: withAlpha(BLACK, 0.10),
+  
+  // Buttons
+  buttonPrimary: BLACK,              // bg
+  buttonPrimaryText: WHITE,          // text
+  buttonHighlight: PINK,             // bg
+  buttonHighlightText: BLACK,        // text
+  
+  // Highlight
+  highlightSoft: withAlpha(PINK, 0.15),
+  accent: PINK,
+  accentText: BLACK,
+  
+  // Toggle
+  toggleTrackOff: withAlpha(BLACK, 0.40),
+  toggleTrackOn: PINK,
+  toggleKnobOff: WHITE,
+  toggleKnobOn: BLACK,
+  
+  // Tab Bar
+  tabBarBg: WHITE,
+  tabBarBorder: withAlpha(BLACK, 0.20),
+  tabBarInactive: withAlpha(BLACK, 0.75),
+  tabBarActivePill: PINK,
+  tabBarActiveIcon: BLACK,
+  tabBarActiveLabel: BLACK,
+  
+  // Overlay
+  overlay: withAlpha(BLACK, 0.60),
+  popupCard: WHITE,
+  popupBorder: withAlpha(BLACK, 0.20),
+  shadow: withAlpha(BLACK, 0.12),
+  
+  // Text on colors
+  textOnPrimary: WHITE,
+  textOnAccent: BLACK,
+  
+  // Legacy aliases - remove after migration
+  primary: BLACK as string,
+  primaryTint: withAlpha(BLACK, 0.06),
+  primaryLight: withAlpha(BLACK, 0.20),
+  primaryDark: BLACK as string,
+  surface: withAlpha(BLACK, 0.06),
+  surfaceDark: withAlpha(BLACK, 0.08),
+  borderLight: withAlpha(BLACK, 0.12),
+  textPrimary: BLACK as string,
+  textDisabled: withAlpha(BLACK, 0.40),
+  focus: BLACK as string,
+  success: BLACK as string,
+  successTint: withAlpha(BLACK, 0.10),
+  warning: PINK as string,
+  warningTint: withAlpha(PINK, 0.15),
+  info: BLACK as string,
+  infoTint: withAlpha(BLACK, 0.10),
+  backdrop: withAlpha(BLACK, 0.60),
+  backgroundLight: WHITE as string,
+  backgroundDark: BLACK as string,
+  secondary: PINK as string,
+  tertiary: PINK as string,
+  error: PINK as string,
+} as const;
+
+// ============================================================================
+// LAYOUT TOKENS
+// ============================================================================
+
+export const layout = {
+  // Spacing: 4, 8, 12, 16, 24, 32 only
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+    xxl: 32,
+  },
+  
+  // Screen
+  screenPadding: 16,
+  headerHeight: 56,
+  
+  // Rows
+  rowMinHeight: 48,
+  tapTargetMin: 44,
+  
+  // Sizes
+  iconSize: 24,
+  radiusCard: 12,
+  radiusPill: 999,
+  radiusToggle: 999,
+  
+  // Tab Bar
+  tabBarHeight: 64,  // + safe area
+  tabLabelSize: 12,
+  
+  // Typography
+  textTitle: 24,
+  textSection: 18,
+  textBody: 16,
+  textSmall: 12,
+  
+  // Gaps
+  sectionGap: 24,
+  itemGap: 12,
+  labelValueGap: 4,
 } as const;
 
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
-export type ThemeColors = typeof lightColors;
+export type ThemeColors = typeof darkColors;
 export type ColorName = keyof ThemeColors;
 
-// Default export for compatibility
+// Default export
 export const colors = lightColors;
