@@ -42,7 +42,7 @@ export const AppearanceHubScreen: React.FC = () => {
               {isDark ? 'Dark Mode' : 'Light Mode'}
             </Text>
             <Text style={[styles.optionDescription, { color: colors.textSecondary }]}>
-              {isDark ? 'INDIGO background with WHITE text' : 'WHITE background with INDIGO text'}
+              {isDark ? 'BLACK background with WHITE text' : 'WHITE background with BLACK text'}
             </Text>
           </View>
           <Switch
@@ -59,9 +59,9 @@ export const AppearanceHubScreen: React.FC = () => {
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Two-Tone Palette</Text>
         <View style={styles.paletteRow}>
           <View style={styles.colorSwatch}>
-            <View style={[styles.swatchBox, { backgroundColor: '#3730A3' }]} />
-            <Text style={[styles.colorName, { color: colors.textPrimary }]}>INDIGO</Text>
-            <Text style={[styles.colorHex, { color: colors.textSecondary }]}>#3730A3</Text>
+            <View style={[styles.swatchBox, { backgroundColor: '#000000', borderWidth: 1, borderColor: colors.border }]} />
+            <Text style={[styles.colorName, { color: colors.textPrimary }]}>BLACK</Text>
+            <Text style={[styles.colorHex, { color: colors.textSecondary }]}>#000000</Text>
           </View>
           <View style={styles.colorSwatch}>
             <View style={[styles.swatchBox, { backgroundColor: '#FF8FB1' }]} />
@@ -82,7 +82,7 @@ export const AppearanceHubScreen: React.FC = () => {
         <View style={styles.guidelineRow}>
           <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
           <Text style={[styles.guidelineText, { color: colors.textSecondary }]}>
-            INDIGO for primary UI elements
+            BLACK for primary UI elements
           </Text>
         </View>
         <View style={styles.guidelineRow}>
