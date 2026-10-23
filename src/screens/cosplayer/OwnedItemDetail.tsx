@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider, DropdownField, ConfirmationModal } from '../../components';
@@ -80,6 +80,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
     item?.committed_to_project_id ?? null
   );
   const [showCommitPicker, setShowCommitPicker] = useState(false);
+  const [isCommitting, setIsCommitting] = useState(false);
 
   if (!item) {
     return (
@@ -121,10 +122,21 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
     onBack();
   };
 
-  const handleCommit = (projectId: string | null) => {
-    setCommitment(item.attire_id, projectId);
-    setCommitTarget(projectId);
-    setShowCommitPicker(false);
+  const handleCommit = async (projectId: string | null) => {
+    setIsCommitting(true);
+    try {
+      await setCommitment(item.attire_id, projectId);
+      setCommitTarget(projectId);
+      setShowCommitPicker(false);
+    } catch (error: any) {
+      Alert.alert(
+        'Commitment Failed',
+        error.message || 'Unable to change item status',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsCommitting(false);
+    }
   };
 
   return (
@@ -280,47 +292,56 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
               <Text style={styles.commitHint}>
                 Committing marks this item as used for a project so matching can reuse it.
               </Text>
-              <DropdownField
-                label="Project"
-                value={commitTarget ? projects.find((p) => p.project_id === commitTarget)?.project_name ?? '' : ''}
-                placeholder="Select a project"
-                onPress={() => {
-                  if (projects.length === 0) {
-                    setShowNoProjectsModal(true);
-                    return;
-                  }
-                  setShowCommitPicker(true);
-                }}
-              />
-              {showCommitPicker && (
-                <View style={styles.commitList}>
-                  {projects.map((p) => (
-                    <TouchableOpacity
-                      key={p.project_id}
-                      style={[styles.commitOption, commitTarget === p.project_id && styles.commitOptionActive]}
-                      onPress={() => handleCommit(p.project_id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[styles.commitOptionText, commitTarget === p.project_id && styles.commitOptionTextActive]}
-                        numberOfLines={1}
-                      >
-                        {p.project_name}
-                      </Text>
-                      {commitTarget === p.project_id && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
-                    </TouchableOpacity>
-                  ))}
+              {isCommitting ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.loadingText}>Updating...</Text>
                 </View>
-              )}
-              {commitTarget && (
+              ) : (
                 <>
-                  <View style={styles.spacerSm} />
-                  <Button
-                    title="Release from Project (make free)"
-                    variant="tertiary"
-                    fullWidth
-                    onPress={() => handleCommit(null)}
+                  <DropdownField
+                    label="Project"
+                    value={commitTarget ? projects.find((p) => p.project_id === commitTarget)?.project_name ?? '' : ''}
+                    placeholder="Select a project"
+                    onPress={() => {
+                      if (projects.length === 0) {
+                        setShowNoProjectsModal(true);
+                        return;
+                      }
+                      setShowCommitPicker(true);
+                    }}
                   />
+                  {showCommitPicker && (
+                    <View style={styles.commitList}>
+                      {projects.map((p) => (
+                        <TouchableOpacity
+                          key={p.project_id}
+                          style={[styles.commitOption, commitTarget === p.project_id && styles.commitOptionActive]}
+                          onPress={() => handleCommit(p.project_id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[styles.commitOptionText, commitTarget === p.project_id && styles.commitOptionTextActive]}
+                            numberOfLines={1}
+                          >
+                            {p.project_name}
+                          </Text>
+                          {commitTarget === p.project_id && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  {commitTarget && (
+                    <>
+                      <View style={styles.spacerSm} />
+                      <Button
+                        title="Release from Project (make free)"
+                        variant="tertiary"
+                        fullWidth
+                        onPress={() => handleCommit(null)}
+                      />
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -631,6 +652,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     flex: 1,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   centerBox: {
     flex: 1,

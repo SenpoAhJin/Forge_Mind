@@ -38,7 +38,7 @@ interface OwnedAttireContextValue {
   addItem: (input: NewOwnedAttireInput) => Promise<OwnedAttire>;
   updateItem: (attireId: string, input: UpdateOwnedAttireInput) => Promise<void>;
   deleteItem: (attireId: string) => Promise<void>;
-  setCommitment: (attireId: string, projectId: string | null) => void;
+  setCommitment: (attireId: string, projectId: string | null) => Promise<void>;
   getItemById: (attireId: string) => OwnedAttire | undefined;
 }
 
@@ -270,19 +270,89 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   };
 
-  const setCommitment = (attireId: string, projectId: string | null) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.attire_id === attireId
-          ? {
-              ...item,
-              availability_status: (projectId ? 'committed' : 'free') as AvailabilityStatus,
-              committed_to_project_id: projectId,
-              updated_at: nowIso(),
-            }
-          : item
-      )
-    );
+  const setCommitment = async (attireId: string, projectId: string | null): Promise<void> => {
+    // Find item
+    const item = items.find((i) => i.attire_id === attireId);
+    if (!item) {
+      throw new Error(`Item ${attireId} not found`);
+    }
+
+    // Check if item exists on server (has attire_id that's not local-only)
+    // Local-only items start with 'attr-' prefix and haven't been synced
+    const isLocalOnly = item.attire_id.startsWith('attr-');
+    if (isLocalOnly) {
+      throw new Error('Cannot change commitment status offline. Item must be synced to server first.');
+    }
+
+    // Prepare payload
+    const payload = projectId
+      ? {
+          version: item.version,
+          availability_status: 'committed' as const,
+          original_project_ref: projectId, // Store local project ID
+        }
+      : {
+          version: item.version,
+          availability_status: 'free' as const,
+          // Server clears original_project_ref on release
+        };
+
+    try {
+      // Call server
+      const updated = await InventoryService.updateItem(attireId, payload);
+
+      // Update local state with SERVER response (version, status, refs from server)
+      setItems((prev) =>
+        prev.map((i) =>
+          i.attire_id === attireId
+            ? {
+                ...i,
+                availability_status: updated.availability_status,
+                committed_to_project_id: updated.committed_to_project_id,
+                original_project_ref: updated.original_project_ref,
+                version: updated.version,
+                updated_at: updated.updated_at,
+              }
+            : i
+        )
+      );
+
+      // Update AsyncStorage cache
+      try {
+        if (storageKey) {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+        }
+      } catch (storageError) {
+        console.warn('Failed to update AsyncStorage cache:', storageError);
+        // Non-critical - state is updated
+      }
+    } catch (error: any) {
+      // Parse error for specific cases
+      if (error.message?.includes('No session token') || error.message?.includes('network')) {
+        throw new Error("Can't change commitment offline. Please check your connection.");
+      }
+
+      // 409 version conflict or cannot-commit
+      if (error.message?.includes('409') || error.message?.includes('version') || error.message?.includes('conflict')) {
+        // Refetch item from server
+        try {
+          const items = await InventoryService.listItems();
+          setItems(items);
+          
+          // Update AsyncStorage
+          if (storageKey) {
+            await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+          }
+        } catch (refetchError) {
+          console.error('Failed to refetch after conflict:', refetchError);
+        }
+
+        throw new Error('Item changed elsewhere. Refreshed from server. Please try again.');
+      }
+
+      // 400/401/other - pass through server message
+      throw error;
+    }
   };
 
   const getItemById = (attireId: string) => items.find((i) => i.attire_id === attireId);
