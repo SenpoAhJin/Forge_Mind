@@ -19,7 +19,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
     backgroundColor: themeColors.error,
   },
   text: {
-    color: themeColors.backgroundLight,
+    color: themeColors.background,
   },
 });
 

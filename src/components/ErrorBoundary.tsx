@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: spacing.lg,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   debugBox: {
     maxHeight: 120,
     width: '100%',
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.sm,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     ...typography.body,
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '600',
   },
 });

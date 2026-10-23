@@ -25,8 +25,8 @@ export const LogisticsStackNavigator: React.FC = () => {
       screenOptions={{
         headerShown: true,
         headerStyle: { backgroundColor: themeColors.secondary },
-        headerTintColor: themeColors.backgroundLight,
-        headerTitleStyle: { fontWeight: '600', color: themeColors.backgroundLight },
+        headerTintColor: themeColors.background,
+        headerTitleStyle: { fontWeight: '600', color: themeColors.background },
       }}
     >
       <Stack.Screen

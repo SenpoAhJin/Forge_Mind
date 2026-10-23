@@ -71,7 +71,7 @@ export const RoleSelectionScreen: React.FC<RoleSelectionScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     justifyContent: 'space-between',
   },
   content: {
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   roleCard: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: borderRadius.lg,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   checkmark: {
-    color: colors.backgroundLight,
+    color: colors.background,
     fontSize: 18,
     fontWeight: 'bold',
   },

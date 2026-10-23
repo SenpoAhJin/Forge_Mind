@@ -1,0 +1,76 @@
+﻿{
+    "character_tested":  "gojo-satoru_season-2-uniform",
+    "result":  {
+                   "character_variant_id":  "gojo-satoru_season-2-uniform",
+                   "error":  "Character variant not found"
+               },
+    "test_data":  [
+                      {
+                          "category":  "wig",
+                          "color":  "#C0C0C0",
+                          "id":  "item001",
+                          "name":  "Silver Spiky Wig",
+                          "subcategory":  "wig",
+                          "tags":  [
+                                       "silver",
+                                       "white",
+                                       "spiky",
+                                       "short",
+                                       "anime"
+                                   ]
+                      },
+                      {
+                          "category":  "top",
+                          "color":  "#000000",
+                          "id":  "item002",
+                          "name":  "Black Sleeveless Vest",
+                          "subcategory":  "vest",
+                          "tags":  [
+                                       "black",
+                                       "sleeveless",
+                                       "vest",
+                                       "tunic",
+                                       "gray trim"
+                                   ]
+                      },
+                      {
+                          "category":  "bottom",
+                          "color":  "#000000",
+                          "id":  "item003",
+                          "name":  "Black Combat Pants",
+                          "subcategory":  "pants",
+                          "tags":  [
+                                       "black",
+                                       "pants",
+                                       "fitted",
+                                       "combat"
+                                   ]
+                      },
+                      {
+                          "category":  "footwear",
+                          "color":  "#000000",
+                          "id":  "item004",
+                          "name":  "Black Knee-High Boots",
+                          "subcategory":  "boots",
+                          "tags":  [
+                                       "black",
+                                       "boots",
+                                       "knee-high",
+                                       "combat"
+                                   ]
+                      },
+                      {
+                          "category":  "accessory",
+                          "color":  "#000000",
+                          "id":  "item005",
+                          "name":  "Black Bulls Belt",
+                          "subcategory":  "belt",
+                          "tags":  [
+                                       "black",
+                                       "belt",
+                                       "buckle",
+                                       "pouch"
+                                   ]
+                      }
+                  ]
+}

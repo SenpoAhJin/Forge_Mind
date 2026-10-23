@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   banner: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     padding: spacing.xl,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: {
     ...typography.body,
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '700',
   },
   disclaimer: {

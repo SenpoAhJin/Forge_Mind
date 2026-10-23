@@ -31,10 +31,10 @@ export const CharacterStackNavigator: React.FC = () => {
     <Stack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: themeColors.primary },
-        headerTintColor: themeColors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
+        headerTintColor: themeColors.background,
+        headerTitleStyle: { ...typography.h3, color: themeColors.background },
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: themeColors.backgroundLight },
+        contentStyle: { backgroundColor: themeColors.background },
       }}
     >
       <Stack.Screen name="BrowseCharacters" options={{ title: 'Characters' }}>

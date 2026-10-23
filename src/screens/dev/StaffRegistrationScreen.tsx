@@ -350,7 +350,7 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingTop: spacing.md,
     gap: spacing.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

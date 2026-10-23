@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginRight: spacing.sm,
     borderRadius: 20,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     minWidth: 80,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   garmentButtonTextActive: {
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '600',
   },
 });

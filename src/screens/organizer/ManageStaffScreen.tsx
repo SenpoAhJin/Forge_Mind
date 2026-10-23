@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   },
   chipBar: {
     height: 56,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     overflow: 'hidden',
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   chipTextActive: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   scrollContent: {
     padding: spacing.lg,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   staffCard: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     marginBottom: spacing.md,
     overflow: 'hidden',

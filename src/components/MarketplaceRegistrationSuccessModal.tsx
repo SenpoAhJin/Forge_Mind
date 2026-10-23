@@ -29,7 +29,7 @@ interface MarketplaceRegistrationSuccessModalProps {
 }
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
-  modal: { backgroundColor: themeColors.backgroundLight },
+  modal: { backgroundColor: themeColors.background },
   title: { color: themeColors.accent },
   subtitle: { color: themeColors.textSecondary },
   recapSection: { backgroundColor: themeColors.surface },
@@ -38,7 +38,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   recapLabel: { color: themeColors.textSecondary },
   recapValue: { color: themeColors.textPrimary },
   primaryButton: { backgroundColor: themeColors.accent },
-  primaryButtonText: { color: themeColors.backgroundLight },
+  primaryButtonText: { color: themeColors.background },
   secondaryButton: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
   secondaryButtonText: { color: themeColors.textSecondary },
 });

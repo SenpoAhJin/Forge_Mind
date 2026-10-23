@@ -27,7 +27,7 @@ interface StatusNotificationModalProps {
 }
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
-  container: { backgroundColor: themeColors.backgroundLight },
+  container: { backgroundColor: themeColors.background },
   iconCircleSuccess: { backgroundColor: themeColors.success + '15' },
   iconCircleError: { backgroundColor: themeColors.error + '15' },
   title: { color: themeColors.textPrimary },
@@ -37,9 +37,9 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   reasonText: { color: themeColors.textPrimary },
   appealHint: { color: themeColors.textSecondary },
   appealButton: { backgroundColor: themeColors.secondary },
-  appealButtonText: { color: themeColors.backgroundLight },
+  appealButtonText: { color: themeColors.background },
   closeButton: { backgroundColor: themeColors.primary },
-  closeButtonText: { color: themeColors.backgroundLight },
+  closeButtonText: { color: themeColors.background },
 });
 
 export const StatusNotificationModal: React.FC<StatusNotificationModalProps> = ({

@@ -29,7 +29,7 @@ interface RejectionReasonModalProps {
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
   modal: {
-    backgroundColor: themeColors.backgroundLight,
+    backgroundColor: themeColors.background,
   },
   title: {
     color: themeColors.error,
@@ -65,7 +65,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
     backgroundColor: themeColors.error,
   },
   submitButtonText: {
-    color: themeColors.backgroundLight,
+    color: themeColors.background,
   },
 });
 
@@ -189,7 +189,7 @@ export const RejectionReasonModal: React.FC<RejectionReasonModalProps> = ({
                 disabled={isReasonEmpty || isSubmitting}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color={themeColors.backgroundLight} />
+                  <ActivityIndicator size="small" color={themeColors.background} />
                 ) : (
                   <Text
                     style={[styles.buttonText, dynamicStyles.submitButtonText]}

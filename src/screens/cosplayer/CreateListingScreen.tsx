@@ -487,21 +487,6 @@ export const CreateListingScreen: React.FC<CreateListingScreenProps> = ({ onSucc
                   </Text>
                 </TouchableOpacity>
               )}
-                  color={transactionType === 'trade' ? colors.backgroundLight : colors.textSecondary} 
-                />
-                <Text style={[
-                  styles.transactionTypeText,
-                  transactionType === 'trade' && styles.transactionTypeTextSelected,
-                ]}>
-                  Trade
-                </Text>
-                <Text style={[
-                  styles.transactionTypeSubtext,
-                  transactionType === 'trade' && styles.transactionTypeSubtextSelected,
-                ]}>
-                  Item exchange
-                </Text>
-              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[

@@ -309,7 +309,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             disabled={isLoading}
           >
             <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked]}>
-              {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
+              {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.background} />}
             </View>
           </TouchableOpacity>
           <Text style={styles.termsText}>
@@ -376,7 +376,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   roleCard: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: borderRadius.lg,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   checkmark: {
-    color: colors.backgroundLight,
+    color: colors.background,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingTop: spacing.md,
     gap: spacing.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   loadingText: {
     ...typography.body,
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   switcherSafe: {
     backgroundColor: colors.surface,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   pillContainer: {
     flexDirection: 'row',
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.full,
     padding: 3,
     borderWidth: 1,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   pillTextActive: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   navigator: {
     flex: 1,

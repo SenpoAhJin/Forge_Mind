@@ -136,7 +136,7 @@ export const ComponentShowcaseScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,

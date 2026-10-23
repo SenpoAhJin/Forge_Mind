@@ -34,7 +34,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);  // Default to dark mode
   const [isLoading, setIsLoading] = useState(true);
 
   // Load dark mode preference on mount
@@ -49,6 +49,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const parsed = JSON.parse(stored);
         setIsDark(parsed.dark === true);
       }
+      // If no stored preference, keep default (dark mode)
     } catch (error) {
       console.error('[ThemeContext] Failed to load theme:', error);
     } finally {

@@ -86,7 +86,7 @@ export const DateInput: React.FC<DateInputProps> = ({
           max={maxDate || undefined}
           style={{
             fontSize: typography.body.fontSize,
-            backgroundColor: colors.backgroundLight,
+            backgroundColor: colors.background,
             borderWidth: 1,
             borderStyle: 'solid',
             borderColor: error ? colors.error : colors.border,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,

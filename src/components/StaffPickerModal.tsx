@@ -32,7 +32,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   header: { borderBottomColor: themeColors.border },
   title: { color: themeColors.textPrimary },
   row: { borderBottomColor: themeColors.border },
-  rowSelected: { backgroundColor: themeColors.backgroundLight },
+  rowSelected: { backgroundColor: themeColors.background },
   staffName: { color: themeColors.textPrimary },
   staffEmail: { color: themeColors.textSecondary },
   staffDepartment: { color: themeColors.textSecondary },

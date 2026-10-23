@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,

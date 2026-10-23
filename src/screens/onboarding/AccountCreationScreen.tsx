@@ -188,7 +188,7 @@ export const AccountCreationScreen: React.FC<AccountCreationScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
     gap: spacing.sm,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.md,

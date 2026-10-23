@@ -63,7 +63,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'destructive' ? themeColors.backgroundLight : themeColors.primary}
+          color={variant === 'primary' || variant === 'destructive' ? themeColors.background : themeColors.primary}
         />
       ) : (
         <Text style={textStyle}>{variant === 'primary' ? title.toUpperCase() : title}</Text>
@@ -78,7 +78,7 @@ const getDynamicStyles = (colors: ThemeColors) => ({
     backgroundColor: colors.primary,
   },
   primaryText: {
-    color: colors.backgroundLight,
+    color: colors.background,
     ...typography.buttonText,
   },
   // Secondary: Outlined with primary color, primary text, rounded 8px
@@ -104,7 +104,7 @@ const getDynamicStyles = (colors: ThemeColors) => ({
     backgroundColor: colors.error,
   },
   destructiveText: {
-    color: colors.backgroundLight,
+    color: colors.background,
     ...typography.buttonText,
   },
   disabledText: {

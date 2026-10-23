@@ -25,7 +25,7 @@ export const OnboardingNavigator: React.FC = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.backgroundLight },
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="Welcome">

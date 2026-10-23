@@ -70,6 +70,6 @@ export const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onAuthSuccess }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
 });
