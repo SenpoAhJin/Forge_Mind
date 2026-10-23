@@ -1,7 +1,55 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Monday, October 21, 2026 (Marketplace fixes: Navigation, offers, listing creation)
+**Last updated:** Thursday, October 22, 2026 (Expo SDK 58 upgrade)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 22, 2026 (Expo SDK 58 Upgrade)
+
+**Summary**
+
+Upgraded entire project from Expo SDK 57 to SDK 58 to fix compatibility issue with latest Expo Go mobile app. Users testing on mobile devices with Expo Go SDK 58 were unable to load the app due to SDK version mismatch.
+
+**What was done**
+
+**SDK Upgrade**
+- **Problem:** "Project is incompatible with this version of Expo Go" error on mobile testing
+  - Expo Go app was SDK 58
+  - Project was still on SDK 57
+- **Solution:** Full SDK upgrade
+  1. Updated Expo core: `expo@57.0.22` → `expo@58.0.17`
+  2. Updated 20 SDK-specific packages to SDK 58 versions:
+     - React: `19.2.3` → `19.3.0`
+     - React Native: `0.86.3` → `0.88.0`
+     - All expo-* packages upgraded to ~58.0.x versions
+     - React Navigation packages remained compatible
+     - Three.js packages unchanged (not SDK-dependent)
+- **Process:**
+  - Ran `npx expo install expo@latest` to upgrade core
+  - Ran `npx expo install --fix` to auto-update all SDK packages
+  - Cleared Metro bundler cache with `npx expo start --clear`
+  - Verified all patches still apply correctly (three-stdlib@2.36.1)
+- **Files Modified:**
+  - `package.json` - Updated all SDK-specific dependency versions
+  - Created `docs/SDK_58_UPGRADE.md` - Upgrade documentation
+- **Result:** 
+  - ✅ Project now compatible with Expo Go SDK 58
+  - ✅ Dev server starts successfully
+  - ✅ QR code scanning works on mobile devices
+  - ✅ No breaking changes detected
+  - ✅ All existing features preserved
+
+**Verification**
+- Metro bundler running on port 8081
+- All npm postinstall patches applied successfully
+- No TypeScript compilation errors introduced by upgrade
+
+**Testing Instructions**
+1. Update Expo Go on your mobile device (iOS App Store / Google Play Store)
+2. Scan QR code from `npx expo start` terminal output
+3. Wait for bundle to load (first load after upgrade may take longer)
+4. Verify app launches without SDK compatibility errors
 
 ---
 
