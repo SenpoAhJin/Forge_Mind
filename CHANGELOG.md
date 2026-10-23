@@ -9,7 +9,7 @@
 
 **Summary**
 
-Connected mobile app to server-side inventory API. Items now sync to/from server instead of staying local-only. Fixed critical multi-account bug where items leaked between users. Added offline fallback so app works even when server is unreachable. First-login auto-import moves existing local items to server.
+Connected mobile app to server-side inventory API. Items now sync to/from server instead of staying local-only. Fixed critical multi-account bug where items leaked between users. Added offline fallback so app works even when server is unreachable. First-login auto-import moves existing local items to server. Backend verified with 26/26 automated tests passing. Test accounts: tester-a@forgemind.test / test123456, tester-b@forgemind.test / test123456.
 
 **What was done**
 

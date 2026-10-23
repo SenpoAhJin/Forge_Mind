@@ -1,0 +1,72 @@
+[inventory] Create error: error: new row for relation "owned_attire" violates check constraint "owned_attire_auto_categorized_type_check"
+    at C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async query (C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\db.js:26:20)
+    at async createInventoryItem (C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\inventory\inventoryService.js:116:18)
+    at async C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\inventory\inventoryRouter.js:82:22 {
+  length: 575,
+  severity: 'ERROR',
+  code: '23514',
+  detail: 'Failing row contains (ebc6c66f-31dc-4933-a70e-6ba882c03894, bfd9e29a-595c-4cf2-bc29-ddb2b1f84fb1, text, null, null, [], costume, null, null, as-is-only, 5, [{"photo_url": null, "timestamp": "2026-10-23T12:05:35.371Z", "c..., free, null, null, null, null, 2026-10-23 20:05:35.37226+08, 2026-10-23 20:05:35.37226+08, null, null, null, 1, null).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'owned_attire',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'owned_attire_auto_categorized_type_check',
+  file: 'execMain.c',
+  line: '2081',
+  routine: 'ExecConstraints'
+}
+[inventory] Create error: error: new row for relation "owned_attire" violates check constraint "owned_attire_auto_categorized_type_check"
+    at C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async query (C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\db.js:26:20)
+    at async createInventoryItem (C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\inventory\inventoryService.js:116:18)
+    at async C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\inventory\inventoryRouter.js:82:22 {
+  length: 577,
+  severity: 'ERROR',
+  code: '23514',
+  detail: 'Failing row contains (17da2310-3fbd-4d5a-9a9f-1975bcf38332, bfd9e29a-595c-4cf2-bc29-ddb2b1f84fb1, text, null, null, [], costume, null, null, as-is-only, 5, [{"photo_url": null, "timestamp": "2026-10-23T12:06:47.472Z", "c..., free, null, null, null, null, 2026-10-23 20:06:47.473397+08, 2026-10-23 20:06:47.473397+08, null, null, null, 1, null).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'owned_attire',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'owned_attire_auto_categorized_type_check',
+  file: 'execMain.c',
+  line: '2081',
+  routine: 'ExecConstraints'
+}
+[inventory] Create error: error: new row for relation "owned_attire" violates check constraint "owned_attire_auto_categorized_type_check"
+    at C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async query (C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\db.js:26:20)
+    at async createInventoryItem (C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\inventory\inventoryService.js:116:18)
+    at async C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-backend\dist\inventory\inventoryRouter.js:82:22 {
+  length: 577,
+  severity: 'ERROR',
+  code: '23514',
+  detail: 'Failing row contains (030ebf40-cfe6-4a2a-8431-ebffca24f491, bfd9e29a-595c-4cf2-bc29-ddb2b1f84fb1, text, null, null, [], costume, null, null, as-is-only, 5, [{"photo_url": null, "timestamp": "2026-10-23T12:08:02.955Z", "c..., free, null, null, null, null, 2026-10-23 20:08:02.956545+08, 2026-10-23 20:08:02.956545+08, null, null, null, 1, null).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'owned_attire',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'owned_attire_auto_categorized_type_check',
+  file: 'execMain.c',
+  line: '2081',
+  routine: 'ExecConstraints'
+}

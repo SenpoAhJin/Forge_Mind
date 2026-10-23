@@ -1,12 +1,12 @@
 ﻿**********************
 Windows PowerShell transcript start
-Start time: 20261023141946
+Start time: 20261023202154
 Username: LAPTOP-6M69GMJP\Alord
 RunAs User: LAPTOP-6M69GMJP\Alord
 Configuration Name: 
 Machine: LAPTOP-6M69GMJP (Microsoft Windows NT 10.0.26200.0)
 Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\scripts\stop-all.ps1
-Process ID: 26708
+Process ID: 11168
 PSVersion: 5.1.26100.9711
 PSEdition: Desktop
 PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
@@ -23,14 +23,14 @@ SerializationVersion: 1.1.0.1
 ===================================================
 
 [>] Freeing ports 3000, 5000, 8081...
-  Killing PID 2440 (node) on port 3000
-  Killing PID 2408 (python) on port 5000
-  Killing PID 17324 (node) on port 8081
+  Killing PID 29564 (node) on port 3000
+  Killing PID 30428 (python) on port 5000
+  Killing PID 22584 (node) on port 8081
 [OK] Freed 3 port(s)
 [>] Stopping PowerShell jobs...
   No running jobs found
 [>] Stopping Node processes...
-  No Node processes found
+[OK] Stopped 1 Node process(es)
 [>] Stopping Python processes...
 [OK] Stopped 2 Python process(es)
 
@@ -44,5 +44,5 @@ Ports 3000, 5000, 8081 confirmed free
 
 **********************
 Windows PowerShell transcript end
-End time: 20261023141950
+End time: 20261023202158
 **********************
