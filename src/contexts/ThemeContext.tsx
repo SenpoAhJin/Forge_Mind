@@ -1,23 +1,27 @@
 /**
  * Theme Context - Two-Tone Design System
- * Light/Dark mode toggle using Indigo + Amber palette
+ * Light/Dark mode toggle using INDIGO + PINK palette
  * Persisted to AsyncStorage
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { lightColors, darkColors, type ThemeColors } from '../theme/colors';
+import { lightColors, darkColors, type ThemeColors as BaseThemeColors } from '../theme/colors';
 
 const STORAGE_KEY = '@forgemind:dark_mode';
 
 export type ThemeMode = 'light' | 'dark';
 
+// Re-export ThemeColors for components
+export type ThemeColors = BaseThemeColors;
+
 // Compatibility type for legacy code using backgroundLight/backgroundDark
-export interface LegacyThemeColors extends ThemeColors {
+export interface LegacyThemeColors extends BaseThemeColors {
   backgroundLight: string;  // Maps to background
   backgroundDark: string;   // Maps to surface or textPrimary depending on context
-  secondary: string;        // Maps to accent (no longer a third color)
-  error: string;            // NOT IMPLEMENTED - see report
+  secondary: string;        // Maps to accent (PINK, was third color)
+  tertiary: string;         // Maps to accent (PINK, was third color)
+  error: string;            // NOT IMPLEMENTED - maps to PINK temporarily
 }
 
 interface ThemeContextType {
@@ -64,14 +68,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const baseColors = isDark ? darkColors : lightColors;
   
-  // Add legacy compatibility fields
-  const themeColors: LegacyThemeColors = {
+  // Add legacy compatibility fields - cast to satisfy type checker
+  const themeColors = {
     ...baseColors,
-    backgroundLight: baseColors.background,  // Legacy field maps to background
-    backgroundDark: baseColors.surface,      // Legacy field maps to surface
-    secondary: baseColors.accent,            // Legacy secondary is now accent (amber)
-    error: baseColors.warning,               // ERROR NOT IMPLEMENTED - maps to warning temporarily
-  };
+    backgroundLight: baseColors.background,  // LEGACY ALIAS, remove after migration
+    backgroundDark: baseColors.surface,      // LEGACY ALIAS, remove after migration
+    secondary: baseColors.accent,            // LEGACY ALIAS, remove after migration (was third color, now PINK)
+    tertiary: baseColors.accent,             // LEGACY ALIAS, remove after migration (was third color, now PINK)
+    error: baseColors.warning,               // LEGACY ALIAS, remove after migration (ERROR NOT IMPLEMENTED)
+  } as LegacyThemeColors;
 
   return (
     <ThemeContext.Provider value={{ isDark, themeColors, toggleTheme, isLoading }}>
