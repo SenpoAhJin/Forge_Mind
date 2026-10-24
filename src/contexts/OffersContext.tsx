@@ -36,6 +36,7 @@ interface OffersContextType {
   acceptOffer: (offerId: string, sellerEmail: string) => Promise<OfferResult>;
   declineOffer: (offerId: string, sellerEmail: string) => Promise<OfferResult>;
   withdrawOffer: (offerId: string, proposerEmail: string) => Promise<OfferResult>;
+  confirmOffer: (offerId: string) => Promise<OfferResult>;
   refreshOffers: () => Promise<void>;
 }
 
@@ -177,6 +178,18 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return { success: false, error: result.error };
   };
 
+  const confirmOffer = async (offerId: string): Promise<OfferResult> => {
+    const result = await OffersApi.confirmOffer(offerId);
+    
+    if (result.success) {
+      // Refresh offers to get updated confirmation status
+      await refreshOffers();
+      return { success: true };
+    }
+    
+    return { success: false, error: result.error };
+  };
+
   return (
     <OffersContext.Provider
       value={{
@@ -191,6 +204,7 @@ export const OffersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         acceptOffer,
         declineOffer,
         withdrawOffer,
+        confirmOffer,
         refreshOffers,
       }}
     >

@@ -13,7 +13,7 @@ import { MarketplaceCondition } from './marketplace';
 
 export type OfferType = 'purchase' | 'trade' | 'commission';
 
-export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn';
+export type OfferStatus = 'pending' | 'accepted' | 'awaiting_confirmation' | 'completed' | 'declined' | 'withdrawn';
 
 export interface Offer {
   id: string;                          // Mock UUID-style (e.g. "offer-2m9df8k4")
@@ -44,6 +44,9 @@ export interface Offer {
   // commission fields
   commission_description?: string;
   timeline_days?: number;              // Integer, 1-365
+  // Two-party confirmation fields (M2)
+  proposer_confirmed_at?: string | null; // ISO timestamp when buyer confirms
+  recipient_confirmed_at?: string | null; // ISO timestamp when seller confirms
   created_at: string;                  // ISO timestamp
   responded_at?: string;               // ISO timestamp, set when status leaves 'pending'
 }
