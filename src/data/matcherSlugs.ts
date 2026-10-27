@@ -9,12 +9,25 @@
  */
 
 export const MATCHER_SLUG_MAP: Record<string, string> = {
-  // Gojo Satoru - Jujutsu Kaisen
+  // Gojo Satoru - Jujutsu Kaisen (4 variants)
   'var-gojo-s2-uniform': 'gojo-satoru_season-2-uniform',
+  'var-gojo-vol0-outfit': 'gojo-satoru_vol0-outfit',
+  'var-gojo-casual-streetwear': 'gojo-satoru_casual-streetwear',
+  'var-gojo-unsealed-past': 'gojo-satoru_unsealed-past',
   
-  // Note: Other mobile variants (Makima, Zelda, Veira) have no Flask data files yet.
-  // Flask files exist for: asta, luck-voltia, oc_cyberpunk-street, raiden, spiderman
-  // but mobile catalog does not include these characters.
+  // Makima - Chainsaw Man (3 variants)
+  'var-makima-suit': 'makima_public-safety-suit',
+  'var-makima-casual-business': 'makima_casual-business',
+  'var-makima-halloween': 'makima_halloween',
+  
+  // Zelda - Breath of the Wild / TotK (3 variants)
+  'var-zelda-traveling-dress': 'zelda_traveling-dress',
+  'var-zelda-totk-gown': 'zelda_totk-gown',
+  'var-zelda-royal-gown': 'zelda_royal-gown',
+  
+  // Veira - Original Character (2 variants)
+  'var-veira-emerald-armor': 'veira_emerald-armor',
+  'var-veira-scholar-robes': 'veira_scholar-robes',
 };
 
 /**
