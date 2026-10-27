@@ -154,8 +154,10 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
 
       {uploadError && (
         <View style={styles.errorCard}>
-          <Ionicons name="warning-outline" size={20} color={colors.error} />
-          <Text style={styles.errorText}>{uploadError}</Text>
+          <View style={styles.errorRow}>
+            <Ionicons name="warning-outline" size={20} color={colors.error} />
+            <Text style={styles.errorText}>{uploadError}</Text>
+          </View>
           <Text style={styles.errorHint}>Photo saved locally for this session</Text>
         </View>
       )}
@@ -317,11 +319,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginTop: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.error,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   errorText: {
     ...typography.body,
@@ -331,6 +337,6 @@ const styles = StyleSheet.create({
   errorHint: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginLeft: spacing.lg + 20,
+    paddingLeft: spacing.lg + 20,
   },
 });
