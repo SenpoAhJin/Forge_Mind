@@ -141,26 +141,44 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
     }
   };
 
+  const [photoStatus, setPhotoStatus] = useState<string>('');
+
   const handleAddPhoto = async () => {
     // Request permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'We need camera roll permission to pick a photo.');
+      setPhotoStatus('Permission denied');
+      console.log('[ADD_PHOTO] Permission denied');
       return;
     }
 
+    console.log('[ADD_PHOTO] Starting photo picker...');
+    setPhotoStatus('Choosing photo...');
+
     // Pick image
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: [ImagePicker.MediaType.Images],
       allowsEditing: true,
       quality: 0.8,
       aspect: [4, 3],
     });
 
-    if (result.canceled) return;
+    if (result.canceled) {
+      console.log('[ADD_PHOTO] User canceled');
+      setPhotoStatus('');
+      return;
+    }
 
     const asset = result.assets[0];
+    console.log('[ADD_PHOTO] Image picked:', {
+      uri: asset.uri.substring(0, 80),
+      fileName: asset.fileName,
+      mimeType: asset.mimeType,
+      fileSize: asset.fileSize,
+    });
+
     setUploadingPhoto(true);
+    setPhotoStatus('Uploading...');
 
     try {
       const uploadResult = await OwnedItemPhotoService.uploadPhoto(
@@ -169,20 +187,38 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
         asset.mimeType
       );
 
+      console.log('[ADD_PHOTO] Upload result:', uploadResult);
+
       if (!uploadResult.success) {
-        Alert.alert('Upload Failed', uploadResult.error || 'Could not upload photo.');
+        const errorMsg = `Failed: ${uploadResult.error || 'Unknown error'}`;
+        setPhotoStatus(errorMsg);
+        console.error('[ADD_PHOTO] Upload failed:', uploadResult);
         return;
       }
 
-      // Update item with new photo URL (server path)
+      // Update item with SERVER PATH (not full URL)
+      // Extract /uploads/... from full URL
+      const fullUrl = uploadResult.url!;
+      const serverPath = fullUrl.includes('/uploads/') 
+        ? fullUrl.substring(fullUrl.indexOf('/uploads/'))
+        : fullUrl;
+
+      console.log('[ADD_PHOTO] Updating item with path:', serverPath);
+
       await updateItem(item.attire_id, {
-        photo_urls: uploadResult.url ? [uploadResult.url] : [],
+        photo_urls: [serverPath],
       });
 
+      setPhotoStatus('Saved!');
+      console.log('[ADD_PHOTO] Item updated successfully');
       onEdited();
-      Alert.alert('Success', 'Photo added successfully!');
+      
+      // Clear status after 2 seconds
+      setTimeout(() => setPhotoStatus(''), 2000);
     } catch (error: any) {
-      Alert.alert('Upload Failed', error.message || 'Could not upload photo.');
+      const errorMsg = `Failed: ${error.message || 'Unknown error'}`;
+      setPhotoStatus(errorMsg);
+      console.error('[ADD_PHOTO] Error:', error);
     } finally {
       setUploadingPhoto(false);
     }
@@ -257,7 +293,11 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
           <View style={styles.noPhotoBox}>
             <Ionicons name="image-outline" size={40} color={colors.textDisabled} />
             <Text style={styles.noPhotoText}>No photo available</Text>
-            {uploadingPhoto ? (
+            {photoStatus ? (
+              <Text style={[styles.photoStatusText, photoStatus.includes('Failed') && styles.photoStatusError]}>
+                {photoStatus}
+              </Text>
+            ) : uploadingPhoto ? (
               <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.sm }} />
             ) : (
               <TouchableOpacity onPress={handleAddPhoto} style={styles.addPhotoButton}>
@@ -822,6 +862,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primary,
     fontWeight: '600',
+  },
+  photoStatusText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: spacing.sm,
+  },
+  photoStatusError: {
+    color: colors.error,
   },
   photoModal: {
     flex: 1,

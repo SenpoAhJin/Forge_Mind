@@ -27,6 +27,7 @@ import {
 import { ownedAttireSeed } from '../data/owned-attire-seed';
 import { InventoryService } from '../services/InventoryService';
 import { isNetworkError } from '../services/http';
+import { hasUsablePhoto } from '../utils/photoUtils';
 
 const STORAGE_KEY_PREFIX = '@forgemind:owned_attire:';
 const MIGRATION_FLAG_PREFIX = '@forgemind:inventory_migrated:';
@@ -85,6 +86,40 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
       // Try to fetch from server
       try {
         const serverItems = await InventoryService.listItems();
+        console.log(`[OwnedAttire] Fetched ${serverItems.length} items from server`);
+        
+        // Log photo_urls for debugging (count only USABLE photos)
+        const itemsWithUsablePhotos = serverItems.filter(item => hasUsablePhoto(item.photo_urls));
+        console.log(`[OwnedAttire] Items with usable photos: ${itemsWithUsablePhotos.length}/${serverItems.length}`);
+        
+        // Check for blob URLs (invalid after refresh)
+        const itemsWithBlobUrls = serverItems.filter(item => 
+          item.photo_urls?.some(url => url && url.startsWith('blob:'))
+        );
+        if (itemsWithBlobUrls.length > 0) {
+          console.warn(`[OwnedAttire] ⚠️ Found ${itemsWithBlobUrls.length} items with blob: URLs (will fail on refresh)`);
+          console.warn(`[OwnedAttire] Items with blob URLs:`, itemsWithBlobUrls.map(i => i.attire_id));
+        }
+        
+        // Check for file:// URLs (dead local paths)
+        const itemsWithFileUrls = serverItems.filter(item =>
+          item.photo_urls?.some(url => url && url.startsWith('file:'))
+        );
+        if (itemsWithFileUrls.length > 0) {
+          console.warn(`[OwnedAttire] ⚠️ Found ${itemsWithFileUrls.length} items with file: URLs (dead local paths)`);
+        }
+        
+        if (itemsWithUsablePhotos.length > 0) {
+          const firstWithPhoto = itemsWithUsablePhotos[0];
+          console.log(`[OwnedAttire] Sample usable photo:`, {
+            attire_id: firstWithPhoto.attire_id,
+            photo_count: firstWithPhoto.photo_urls.length,
+            first_photo_preview: firstWithPhoto.photo_urls[0]?.substring(0, 100) + '...',
+            is_data_uri: firstWithPhoto.photo_urls[0]?.startsWith('data:'),
+            is_http: firstWithPhoto.photo_urls[0]?.startsWith('http'),
+            is_server_path: firstWithPhoto.photo_urls[0]?.startsWith('/uploads/'),
+          });
+        }
         
         if (!cancelled) {
           // Server returned empty AND we have local data: auto-import
@@ -148,10 +183,12 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
             }
           } else {
             // Server has data OR already migrated: use server data
+            console.log(`[OwnedAttire] Using server data: ${serverItems.length} items`);
             setItems(serverItems);
           }
           
           // Update cache
+          console.log(`[OwnedAttire] Saving ${serverItems.length} items to cache`);
           await AsyncStorage.setItem(storageKey, JSON.stringify(serverItems));
           setIsOffline(false);
           setIsLoaded(true);
