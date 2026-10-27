@@ -1,11 +1,16 @@
 /**
  * Photo Categorization Service
- * Calls Flask /api/ai/categorize-photo endpoint
+ * Calls backend proxy /api/ai/categorize-photo endpoint (which proxies to Flask)
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import { API_BASE_URL } from '../config/api';
 import { AttireCategory } from '../types/owned-attire';
 
-const FLASK_URL = 'http://localhost:5000'; // Flask AI service
+const STORAGE_KEYS = {
+  SESSION_TOKEN: '@forgemind:session_token',
+} as const;
 
 export interface PhotoCategorizationResult {
   category: AttireCategory;
@@ -20,26 +25,37 @@ export async function categorizePhoto(
   photoUri: string
 ): Promise<PhotoCategorizationResult | null> {
   try {
-    // Convert data URI to blob if needed (web)
-    let blob: Blob;
-    
-    if (photoUri.startsWith('data:')) {
-      // Data URI - convert to blob
-      const response = await fetch(photoUri);
-      blob = await response.blob();
-    } else {
-      // File URI (native) - use fetch to get blob
-      const response = await fetch(photoUri);
-      blob = await response.blob();
+    const sessionToken = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
+    if (!sessionToken) {
+      console.error('[PhotoCategorization] No session token');
+      return null;
     }
-    
+
     // Create form data
     const formData = new FormData();
-    formData.append('photo', blob, 'photo.jpg');
+
+    if (Platform.OS === 'web') {
+      // Web: fetch the URI as a Blob
+      const response = await fetch(photoUri);
+      const blob = await response.blob();
+      const file = new File([blob], 'photo.jpg', { type: blob.type });
+      formData.append('photo', file);
+    } else {
+      // Native: append { uri, name, type }
+      formData.append('photo', {
+        uri: photoUri,
+        name: 'photo.jpg',
+        type: 'image/jpeg',
+      } as any);
+    }
     
-    // Call Flask endpoint
-    const response = await fetch(`${FLASK_URL}/api/ai/categorize-photo`, {
+    // Call backend proxy endpoint (which forwards to Flask with session token)
+    const response = await fetch(`${API_BASE_URL}/api/ai/categorize-photo`, {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+        // No Content-Type - FormData sets it automatically with boundary
+      },
       body: formData,
     });
     

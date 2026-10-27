@@ -12,6 +12,7 @@ import { Button, ConditionSlider } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { AttireCategory, EntryLanguage } from '../../types/owned-attire';
 import { categorizePhoto } from '../../services/photoCategorization';
+import OwnedItemPhotoService from '../../services/OwnedItemPhotoService';
 
 interface PhotoEntryScreenProps {
   onContinue: (input: {
@@ -28,7 +29,10 @@ interface PhotoEntryScreenProps {
 
 export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }) => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [serverPhotoUrl, setServerPhotoUrl] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [categorization, setCategorization] = useState<{
     type: AttireCategory;
     color: string;
@@ -56,6 +60,9 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
 
   const handlePhotoUri = async (uri: string | null) => {
     setPhotoUrl(uri);
+    setServerPhotoUrl(null);
+    setUploadError(null);
+    
     if (uri) {
       setAnalyzing(true);
       setCategorization(null);
@@ -76,6 +83,21 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
           style: style,
           source: result.source,
         });
+        
+        // After categorization succeeds, upload photo to server
+        setAnalyzing(false);
+        setUploading(true);
+        
+        const uploadResult = await OwnedItemPhotoService.uploadPhoto(uri);
+        
+        if (uploadResult.success && uploadResult.url) {
+          setServerPhotoUrl(uploadResult.url);
+        } else {
+          // Upload failed - keep local URI as fallback, show error
+          setUploadError(uploadResult.error || 'Upload failed');
+        }
+        
+        setUploading(false);
       } else {
         // Fallback on error
         setCategorization({
@@ -84,13 +106,12 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
           style: 'categorization-failed',
           source: 'error',
         });
+        setAnalyzing(false);
       }
-      
-      setAnalyzing(false);
     }
   };
 
-  const canContinue = photoUrl && categorization && !analyzing;
+  const canContinue = photoUrl && categorization && !analyzing && !uploading;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -121,6 +142,21 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
         <View style={styles.analyzingRow}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={styles.analyzingText}>Categorizing photo…</Text>
+        </View>
+      )}
+
+      {uploading && (
+        <View style={styles.analyzingRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.analyzingText}>Uploading photo…</Text>
+        </View>
+      )}
+
+      {uploadError && (
+        <View style={styles.errorCard}>
+          <Ionicons name="warning-outline" size={20} color={colors.error} />
+          <Text style={styles.errorText}>{uploadError}</Text>
+          <Text style={styles.errorHint}>Photo saved locally for this session</Text>
         </View>
       )}
 
@@ -165,7 +201,7 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
                 entry_method: 'photo',
                 entry_language: 'english',
                 original_input_text: '',
-                photo_urls: [photoUrl],
+                photo_urls: [serverPhotoUrl || photoUrl],
                 auto_categorized_type: categorization.type,
                 auto_categorized_color: categorization.color,
                 auto_categorized_style: categorization.style,
@@ -275,5 +311,26 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primary,
     marginTop: spacing.md,
+  },
+  errorCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.error,
+    flex: 1,
+  },
+  errorHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.lg + 20,
   },
 });

@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider } from '../../components';
@@ -14,6 +14,7 @@ import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { getTodayLocal } from '../../utils/dateHelpers';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
+import OwnedItemPhotoService from '../../services/OwnedItemPhotoService';
 import {
   AttireCategory,
   EntryLanguage,
@@ -40,12 +41,10 @@ interface ItemConfirmationScreenProps {
 
 const TYPES: AttireCategory[] = [
   'wig',
-  'clothing',
+  'top',
+  'bottom',
   'footwear',
   'accessory',
-  'armor',
-  'weapon',
-  'prop',
   'fabric',
   'material',
   'other',
@@ -75,6 +74,7 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   const [acquisitionCost, setAcquisitionCost] = useState('');
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<string[]>((draft.photo_urls ?? []).filter((u): u is string => u !== null));
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const pickPhoto = async (source: 'gallery' | 'camera') => {
     if (photos.length >= 5) return; // Increased from 3 to 5 photos
@@ -87,38 +87,25 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
 
     const result = source === 'camera'
       ? await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false }) // Increased quality
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, allowsEditing: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, allowsEditing: false, mediaTypes: ['images'] });
 
     if (!result.canceled && result.assets[0]) {
-      let uri = result.assets[0].uri;
+      const localUri = result.assets[0].uri;
       
-      // Web: convert to data URI for persistence (blob: URLs die on reload)
-      if (Platform.OS === 'web') {
-        try {
-          const response = await fetch(uri);
-          const blob = await response.blob();
-          const sizeMB = blob.size / (1024 * 1024);
-          
-          if (sizeMB > 2.0) { // Increased from 0.7 MB to 2 MB per photo
-            // Too large for local storage
-            alert(`Photo is too large (${sizeMB.toFixed(1)} MB). Please choose a smaller image (max 2 MB).`);
-            return;
-          }
-          
-          uri = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        } catch (err) {
-          alert('Failed to process photo');
-          return;
-        }
+      // Upload photo to server
+      setUploadingPhoto(true);
+      const uploadResult = await OwnedItemPhotoService.uploadPhoto(localUri);
+      setUploadingPhoto(false);
+      
+      if (uploadResult.success && uploadResult.url) {
+        console.log(`[ItemConfirmation] Photo uploaded successfully:`, uploadResult.url);
+        setPhotos([...photos, uploadResult.url]);
+      } else {
+        // Upload failed - keep local URI as fallback for current session
+        console.error('[ItemConfirmation] Photo upload failed:', uploadResult.error);
+        alert(uploadResult.error || 'Failed to upload photo. Using local copy for this session.');
+        setPhotos([...photos, localUri]);
       }
-      // Native: expo-file-system would copy to document directory here,
-      // but keeping picker URI for now (persistent on device)
-      
-      setPhotos([...photos, uri]);
     }
   };
 
@@ -127,6 +114,15 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   };
 
   const handleSave = async () => {
+    console.log(`[ItemConfirmation] Saving item with ${photos.length} photos`);
+    if (photos.length > 0) {
+      console.log(`[ItemConfirmation] Photo URLs being saved:`, photos.map(p => ({
+        length: p.length,
+        type: p.startsWith('data:') ? 'data URI' : p.startsWith('blob:') ? 'blob URL' : 'other',
+        preview: p.substring(0, 50)
+      })));
+    }
+    
     // Photos are stored locally only, never sent to Flask matcher or backend API
     const item = await addItem({
       entry_method: draft.entry_method,
@@ -191,15 +187,21 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
             style={styles.photoButton} 
             onPress={() => pickPhoto('gallery')} 
             activeOpacity={0.7}
+            disabled={uploadingPhoto}
           >
-            <Ionicons name="images-outline" size={24} color={colors.primary} />
-            <Text style={styles.photoButtonText}>Gallery</Text>
+            {uploadingPhoto ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="images-outline" size={24} color={colors.primary} />
+            )}
+            <Text style={styles.photoButtonText}>{uploadingPhoto ? 'Uploading…' : 'Gallery'}</Text>
           </TouchableOpacity>
           {Platform.OS !== 'web' ? (
             <TouchableOpacity 
               style={styles.photoButton} 
               onPress={() => pickPhoto('camera')} 
               activeOpacity={0.7}
+              disabled={uploadingPhoto}
             >
               <Ionicons name="camera-outline" size={24} color={colors.primary} />
               <Text style={styles.photoButtonText}>Camera</Text>
@@ -208,7 +210,7 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
         </View>
       ) : null}
       <Text style={styles.photoNotice}>
-        {photos.length}/5 photos • Max 2 MB each • Stored locally only
+        {photos.length}/5 photos • Uploaded to server for cross-device sync
       </Text>
 
       <Text style={styles.sectionTitle}>Auto-categorized (editable)</Text>
