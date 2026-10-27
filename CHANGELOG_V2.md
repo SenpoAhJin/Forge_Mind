@@ -1987,3 +1987,41 @@ device. The user is testing.**
   `'male'` / `'female'` stored values, or the .glb files
 - No `package.json` changes
 - No garment layering
+
+## 2026-10-27 19:33 Tuesday — Owned Item Photo Display Fix (eb60da2)
+
+**Problem**: My 3 owned items (Black Wig, Purple Accessory, White Clothing) showed T-shirt placeholder in My Items list, and empty gray box in Item Details. Items were stored with dead `file://` URIs from Expo Go cache.
+
+**Root Cause (C2 + C4)**:
+- Database held `file:///data/user/0/host.exp.exponent/...` URIs (dead after restart)
+- `uploads/owned-items/` folder on server was empty (0 files)
+- OwnedItemDetail used raw `<Image>` with no fallback (showed empty gray box)
+- OwnedItemDashboard correctly used CrossPlatformImage with fallback
+- No UI existed to re-attach photos
+
+**Fixed**:
+1. **photoUtils.ts**: Helper to convert photo_urls[0] to usable URI
+   - `/uploads/*` → full URL from API_BASE_URL (built at runtime, never store localhost)
+   - `data:` or `http(s):` → use as-is
+   - `blob:`, `file:`, null, empty → return null (no photo)
+2. **Consistent placeholder**: Shirt icon + "No photo available" text in both screens
+3. **Add/Change Photo**: Button in Item Details screen
+   - Picker → OwnedItemPhotoService.uploadPhoto → `/inventory/photos`
+   - Updates item.photo_urls with server path
+4. **Both screens** now use CrossPlatformImage with fallback
+5. **UpdateOwnedAttireInput**: Added photo_urls field
+
+**Files Changed**:
+- src/utils/photoUtils.ts (new, 58 lines)
+- src/screens/cosplayer/OwnedItemDashboard.tsx (+28 lines)
+- src/screens/cosplayer/OwnedItemDetail.tsx (+124 lines)
+- src/types/owned-attire.ts (+1 field)
+
+**Status**: BUILT, NOT TESTED (no automated tests; requires manual photo picker test)
+
+**Manual Test Required**:
+1. Web (localhost:8081): Open My Items → see placeholders for 3 items
+2. Item Details (White Clothing): "No photo available" + "Add Photo" button shown
+3. Click "Add Photo" → pick image → uploads → shows in list & details
+4. Reload page → photo persists
+5. Phone (Expo Go): Same tests + verify photo syncs across devices
