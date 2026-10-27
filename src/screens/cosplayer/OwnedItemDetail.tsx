@@ -157,10 +157,9 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
 
     // Pick image
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Use MediaTypeOptions for backwards compatibility
       allowsEditing: true,
       quality: 0.8,
-      aspect: [4, 3],
     });
 
     if (result.canceled) {
