@@ -168,6 +168,11 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
           <Text style={styles.sectionSubtitle}>
             Overall: {matchResult.match_quality.quality_label} ({Math.round(matchResult.match_quality.overall_score * 100)}%)
           </Text>
+          <Text style={styles.matcherModeLabel}>
+            {(matchResult as any).matcher_mode === 'model' 
+              ? '🤖 Learned model v1' 
+              : '📏 Rule baseline'}
+          </Text>
         </View>
 
         {/* 3D Preview Toggle */}
@@ -465,5 +470,11 @@ const styles = StyleSheet.create({
   slotMissing: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  matcherModeLabel: {
+    ...typography.caption,
+    color: colors.primary,
+    marginTop: spacing.xs,
+    fontWeight: '600',
   },
 });
