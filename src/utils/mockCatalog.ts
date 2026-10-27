@@ -10,11 +10,12 @@ const TYPE_KEYWORDS: { keywords: string[]; type: AttireCategory }[] = [
   { keywords: ['wig', 'hair', 'spiky', 'hairpiece'], type: 'wig' },
   { keywords: ['boot', 'shoe', 'sneaker', 'sandal', 'footwear'], type: 'footwear' },
   { keywords: ['fabric', 'cloth', 'meter', 'roll'], type: 'fabric' },
-  { keywords: ['armor', 'plate', 'pauldron', 'chestpiece'], type: 'armor' },
-  { keywords: ['sword', 'weapon', 'knife', 'katana', 'blade'], type: 'weapon' },
-  { keywords: ['prop', 'shield', 'staff', 'wand'], type: 'prop' },
-  { keywords: ['accessory', 'necklace', 'ring', 'glove', 'belt', 'bag'], type: 'accessory' },
-  { keywords: ['dress', 'jacket', 'shirt', 'coat', 'blazer', 'uniform', 'suit', 'skirt', 'pants', 'costume'], type: 'clothing' },
+  // Tops - jackets, shirts, coats, upper body wear
+  { keywords: ['jacket', 'shirt', 'coat', 'blazer', 'uniform', 'suit', 'hoodie', 'sweater', 'vest', 'blouse', 'top', 'dress'], type: 'top' },
+  // Bottoms - pants, skirts, shorts, lower body wear
+  { keywords: ['skirt', 'pants', 'shorts', 'trousers', 'jeans', 'leggings', 'bottom'], type: 'bottom' },
+  // Accessories - includes props, armor pieces, small wearables
+  { keywords: ['accessory', 'necklace', 'ring', 'glove', 'belt', 'bag', 'armor', 'plate', 'pauldron', 'chestpiece', 'prop', 'shield', 'staff', 'wand', 'sword', 'weapon', 'knife', 'katana', 'blade', 'headband', 'hat', 'scarf', 'mask'], type: 'accessory' },
   { keywords: ['foam', 'eva', 'plastic', 'glue', 'resin'], type: 'material' },
 ];
 
@@ -66,12 +67,10 @@ export const mockCategorizationFromText = (text: string): MockCategorization => 
 
 export const MOCK_RANDOM_TYPES: AttireCategory[] = [
   'wig',
-  'clothing',
+  'top',
+  'bottom',
   'footwear',
   'accessory',
-  'armor',
-  'weapon',
-  'prop',
   'fabric',
   'material',
   'other',

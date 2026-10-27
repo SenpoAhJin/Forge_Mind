@@ -26,3 +26,4 @@ export * from './ThreeDPreview';
 export * from './BodyTypeSelector';
 export * from './AppNoticeHost';
 export * from './PhotoUploadSection';
+export * from './CrossPlatformImage';

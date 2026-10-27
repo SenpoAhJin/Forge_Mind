@@ -1,0 +1,80 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261027204642
+Username: LAPTOP-6M69GMJP\Alord
+RunAs User: LAPTOP-6M69GMJP\Alord
+Configuration Name: 
+Machine: LAPTOP-6M69GMJP (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\scripts\start-all.ps1
+Process ID: 29980
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+===================================================
+  ForgeMind Stack Startup
+  Trigger: 'arise'  |  Stop: 'rest'
+===================================================
+
+[>] Freeing ports 3000, 5000, 8081...
+  All ports already free
+[>] Checking Tailscale status...
+[!] Tailscale is not signed in. Will fall back to LAN IP.
+[>] Falling back to LAN IP...
+[!] Using LAN IP: 192.168.254.168 (Tailscale unavailable)
+[>] Checking PostgreSQL service...
+[OK] PostgreSQL is running (postgresql-x64-18)
+[>] Starting forgemind-backend...
+[OK] Backend started (PID: 23008) -> logs\backend-*.log
+[>] Starting forgemind-ai (Flask)...
+[OK] Flask started (PID: 24272) -> logs\flask-*.log
+[>] Starting Metro on 192.168.254.168...
+[OK] Metro started (PID: 5276) -> logs\metro-*.log
+
+[>] Waiting for services to initialize (15 seconds)...
+
+[>] Health checks:
+  Backend:
+UP
+  (logs\backend-*.log)
+  Flask:
+UP
+  (logs\flask-*.log)
+PS>TerminatingError(Invoke-WebRequest): "Cannot bind parameter 'Uri'. Cannot convert value "http://" to type "System.Uri". Error: "Invalid URI: The hostname could not be parsed.""
+  Metro:
+DOWN (still starting)
+  (logs\metro-err.log)
+
+===================================================
+  All services started
+===================================================
+
+WARNING: Using LAN IP instead of Tailscale
+  The firewall rules are scoped to Tailscale range.
+  LAN access may be blocked.
+
+Phone Instructions:
+  1. Install Tailscale on your phone and sign in
+  2. Turn off Wi-Fi (cellular only)
+  3. Open Expo Go > Enter URL manually
+  4. Type:
+exp://
+
+Test from phone browser:
+  http:///health
+
+Run check:
+.\scripts\check-services.ps1
+Stop:
+.\scripts\stop-all.ps1 or say 'rest'
+
+**********************
+Windows PowerShell transcript end
+End time: 20261027204701
+**********************

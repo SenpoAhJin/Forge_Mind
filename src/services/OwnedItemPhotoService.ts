@@ -30,8 +30,16 @@ class OwnedItemPhotoService {
   /**
    * Upload a single photo to the owned items photos endpoint.
    * Returns photo_id and full URL on success.
+   * 
+   * On web, pass the asset.file directly (webFile parameter).
+   * On native, pass the uri string.
    */
-  static async uploadPhoto(uri: string, filename?: string, mimeType?: string): Promise<OwnedItemPhotoUploadResult> {
+  static async uploadPhoto(
+    uri: string,
+    filename?: string,
+    mimeType?: string,
+    webFile?: File
+  ): Promise<OwnedItemPhotoUploadResult> {
     try {
       const sessionToken = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
       if (!sessionToken) {
@@ -46,23 +54,16 @@ class OwnedItemPhotoService {
       const formData = new FormData();
 
       if (Platform.OS === 'web') {
-        // Web: fetch the blob URI and convert to File
-        try {
-          console.log('[OwnedItemPhotoService] Fetching blob for web upload:', uri.substring(0, 80));
-          const response = await fetch(uri);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch blob: ${response.status}`);
-          }
-          const blob = await response.blob();
-          console.log('[OwnedItemPhotoService] Blob fetched, size:', blob.size, 'type:', blob.type);
-          const file = new File([blob], filename || 'photo.jpg', { type: mimeType || blob.type });
-          formData.append('photo', file);
-        } catch (error) {
-          console.error('[OwnedItemPhotoService] Failed to read blob:', error);
+        // Web: use the File object from ImagePicker asset.file property
+        if (webFile) {
+          console.log('[OwnedItemPhotoService] Using web File object:', webFile.name, webFile.size, webFile.type);
+          formData.append('photo', webFile);
+        } else {
+          console.error('[OwnedItemPhotoService] No File object provided for web upload');
           return {
             success: false,
-            error: 'Failed to read photo file. Please try again.',
-            errorCode: 'network',
+            error: 'No photo file available. Please try again.',
+            errorCode: 'no_file',
           };
         }
       } else {

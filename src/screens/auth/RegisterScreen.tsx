@@ -8,7 +8,7 @@
  * Auto-login on success, continue to body slider if needed
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,8 +21,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, TextInputField, RegistrationSuccessModal, TermsModal } from '../../components';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius, withAlpha } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ThemeModeControl } from '../../components/ThemeModeControl';
 
 interface RegisterScreenProps {
   onSuccess: () => void;
@@ -56,6 +58,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { register } = useUser();
+  const { themeColors: colors, isDark } = useTheme();
+
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   // Validation functions
   const validateEmail = (email: string): boolean => {
@@ -181,10 +186,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
+      <ThemeModeControl />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -203,16 +210,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           </Text>
 
           {/* Cosplayer Role - Auto-selected, non-interactive */}
-          <View style={[styles.roleCard, styles.roleCardSelected]}>
+          <View style={styles.roleCardSelected}>
             <View style={styles.roleHeader}>
-              <Text style={[styles.roleTitle, styles.roleTextSelected]}>
+              <Text style={styles.roleTextSelected}>
                 Cosplayer
               </Text>
-              <View style={[styles.checkbox, styles.checkboxSelected]}>
+              <View style={styles.checkboxSelected}>
                 <Text style={styles.checkmark}>✓</Text>
               </View>
             </View>
-            <Text style={[styles.roleDescription, styles.roleDescriptionSelected]}>
+            <Text style={styles.roleDescriptionSelected}>
               Build projects, track items, shop marketplace
             </Text>
           </View>
@@ -262,15 +269,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               placeholder="Minimum 8 characters"
               secureTextEntry={!showPassword}
               error={passwordError}
-            /><TouchableOpacity
+            />
+            <TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            ><Ionicons
+            >
+              <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
                 color={colors.textSecondary}
-              /></TouchableOpacity>
+              />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.passwordContainer}>
@@ -284,15 +294,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               placeholder="Re-enter your password"
               secureTextEntry={!showConfirmPassword}
               error={confirmPasswordError}
-            /><TouchableOpacity
+            />
+            <TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            ><Ionicons
+            >
+              <Ionicons
                 name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
                 color={colors.textSecondary}
-              /></TouchableOpacity>
+              />
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.note}>
@@ -309,7 +322,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             disabled={isLoading}
           >
             <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked]}>
-              {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.background} />}
+              {agreedToTerms && <Ionicons name="checkmark" size={16} color={colors.textOnPrimary} />}
             </View>
           </TouchableOpacity>
           <Text style={styles.termsText}>
@@ -373,177 +386,162 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xl,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    lineHeight: 22,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    ...typography.h2,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  sectionSubtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  roleCard: {
-    backgroundColor: colors.background,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  roleCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
-  },
-  roleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  roleTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  roleTextSelected: {
-    color: colors.primary,
-  },
-  roleDescription: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  roleDescriptionSelected: {
-    color: colors.primary,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.sm,
-    borderWidth: 2,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.background,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  note: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-    marginTop: spacing.sm,
-  },
-  errorText: {
-    ...typography.caption,
-    color: colors.error,
-    marginTop: spacing.sm,
-  },
-  globalError: {
-    ...typography.body,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.error + '15',
-    borderRadius: borderRadius.md,
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
-    paddingTop: spacing.md,
-    gap: spacing.md,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  loader: {
-    position: 'absolute',
-    top: spacing.md + 10,
-    alignSelf: 'center',
-  },
-  switchText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  switchLink: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: spacing.md,
-    top: 38, // Position below label, aligned with input
-  },
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xs,
-  },
-  termsCheckboxContainer: {
-    padding: spacing.xs,
-  },
-  termsCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: borderRadius.sm,
-    borderWidth: 2,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  termsCheckboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  termsText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    flex: 1,
-    lineHeight: 20,
-    marginTop: spacing.xs,
-  },
-  termsLink: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ReturnType<typeof useTheme>['themeColors'], isDark: boolean) => {
+  const tint = isDark ? 0.20 : 0.10;
+  
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xxxl * 2,
+      paddingBottom: spacing.xl,
+    },
+    title: {
+      ...typography.h1,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      lineHeight: 22,
+    },
+    section: {
+      marginBottom: spacing.xl,
+    },
+    sectionTitle: {
+      ...typography.h2,
+      color: colors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    sectionSubtitle: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    roleCardSelected: {
+      backgroundColor: withAlpha(colors.primary, tint),
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    roleHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.xs,
+    },
+    roleTextSelected: {
+      ...typography.h3,
+      color: colors.primary,
+    },
+    roleDescriptionSelected: {
+      ...typography.caption,
+      color: colors.primary,
+      lineHeight: 18,
+    },
+    checkboxSelected: {
+      width: 24,
+      height: 24,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.primary,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkmark: {
+      color: colors.textOnPrimary,
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    note: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      marginTop: spacing.sm,
+    },
+    globalError: {
+      ...typography.body,
+      color: colors.error,
+      textAlign: 'center',
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: withAlpha(colors.error, tint),
+      borderRadius: borderRadius.md,
+    },
+    footer: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxl,
+      paddingTop: spacing.md,
+      gap: spacing.md,
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    loader: {
+      position: 'absolute',
+      top: spacing.md + 10,
+      alignSelf: 'center',
+    },
+    switchText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    switchLink: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    passwordContainer: {
+      position: 'relative',
+    },
+    eyeIcon: {
+      position: 'absolute',
+      right: spacing.md,
+      top: 38, // Position below label, aligned with input
+    },
+    termsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginTop: spacing.lg,
+      paddingHorizontal: spacing.xs,
+    },
+    termsCheckboxContainer: {
+      padding: spacing.xs,
+    },
+    termsCheckbox: {
+      width: 20,
+      height: 20,
+      borderRadius: borderRadius.sm,
+      borderWidth: 2,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    termsCheckboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    termsText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      flex: 1,
+      lineHeight: 20,
+      marginTop: spacing.xs,
+    },
+    termsLink: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  });
+};

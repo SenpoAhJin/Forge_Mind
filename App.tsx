@@ -14,6 +14,7 @@ import { ProjectsProvider } from './src/contexts/ProjectsContext';
 import { MeetupsProvider } from './src/contexts/MeetupsContext';
 import { InviteMeetupsProvider } from './src/contexts/InviteMeetupsContext';
 import { OwnedAttireProvider } from './src/contexts/OwnedAttireContext';
+import { UserCharactersProvider } from './src/contexts/UserCharactersContext';
 import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { OffersProvider } from './src/contexts/OffersContext';
 import { ChatProvider } from './src/contexts/ChatContext';
@@ -84,28 +85,30 @@ export default function App() {
                     <MeetupsProvider>
                       <InviteMeetupsProvider>
                         <OwnedAttireProvider>
-                        <MarketplaceProvider>
-                          <OffersProvider>
-                            <CommissionMilestonesProvider>
-                              <ChatProvider>
-                                <ContestProvider>
-                                  <LogisticsProvider>
-                                    <CalendarProvider>
-                                      <ErrorBoundary label="The app">
-                                        <ServerStatusBanner />
-                                        <RootNavigator />
-                                        <ConsentBanner />
-                                        <AppNoticeHost />
-                                        <StatusBar style="auto" />
-                                      </ErrorBoundary>
-                                    </CalendarProvider>
-                                  </LogisticsProvider>
-                                </ContestProvider>
-                              </ChatProvider>
-                            </CommissionMilestonesProvider>
-                          </OffersProvider>
-                        </MarketplaceProvider>
-                      </OwnedAttireProvider>
+                          <UserCharactersProvider>
+                            <MarketplaceProvider>
+                              <OffersProvider>
+                                <CommissionMilestonesProvider>
+                                  <ChatProvider>
+                                    <ContestProvider>
+                                      <LogisticsProvider>
+                                        <CalendarProvider>
+                                          <ErrorBoundary label="The app">
+                                            <ServerStatusBanner />
+                                            <RootNavigator />
+                                            <ConsentBanner />
+                                            <AppNoticeHost />
+                                            <StatusBar style="auto" />
+                                          </ErrorBoundary>
+                                        </CalendarProvider>
+                                      </LogisticsProvider>
+                                    </ContestProvider>
+                                  </ChatProvider>
+                                </CommissionMilestonesProvider>
+                              </OffersProvider>
+                            </MarketplaceProvider>
+                          </UserCharactersProvider>
+                        </OwnedAttireProvider>
                     </InviteMeetupsProvider>
                   </MeetupsProvider>
                   </ProjectsProvider>

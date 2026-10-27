@@ -1,17 +1,11 @@
 /**
- * ForgeMind Two-Tone Design System
- * BLACK + PINK + WHITE ONLY
- * 
- * No indigo, no gray, no teal, no orange, no fourth color.
+ * ForgeMind Forge Indigo Design System
+ * Light "Forge Indigo" + Dark "Forge Indigo Night"
+ *
+ * TWO-TONE: Indigo (primary) + Pink (accent), plus neutrals.
+ * Red / amber / green / blue are STATUS colors only (always with icon or label).
+ * Organizer and cosplayer share the same two tones: secondary = primary.
  */
-
-// ============================================================================
-// BASE COLORS
-// ============================================================================
-
-const BLACK = '#000000';
-const PINK = '#FF8FB1';
-const WHITE = '#FFFFFF';
 
 // ============================================================================
 // OPACITY HELPER
@@ -25,165 +19,167 @@ export function withAlpha(hex: string, alpha: number): string {
 }
 
 // ============================================================================
-// DARK MODE (default)
+// DARK MODE - "Forge Indigo Night"
 // ============================================================================
 
 export const darkColors = {
   // Base
-  background: BLACK,
-  text: WHITE,
-  textSecondary: withAlpha(WHITE, 0.75),
-  
+  background: '#14122B',
+  text: '#FFFFFF',
+  textSecondary: '#B4B0D2',
+
   // Surfaces
-  card: withAlpha(WHITE, 0.08),
-  border: withAlpha(WHITE, 0.20),
-  borderStrong: withAlpha(WHITE, 0.30),
-  
+  card: '#1F1C3D',
+  border: '#3D3868',
+  borderStrong: '#4A4580',
+  raised: '#2A2650',
+
   // States
-  disabled: withAlpha(WHITE, 0.40),
-  hover: withAlpha(WHITE, 0.90),
-  pressed: WHITE,
-  selected: withAlpha(WHITE, 0.10),
-  
+  disabled: '#6F6B8E',
+  hover: withAlpha('#FFFFFF', 0.90),
+  pressed: '#FFFFFF',
+  selected: withAlpha('#7258EA', 0.10),
+
   // Buttons
-  buttonPrimary: WHITE,              // bg
-  buttonPrimaryText: BLACK,          // text
-  buttonHighlight: PINK,             // bg
-  buttonHighlightText: BLACK,        // text
-  
+  buttonPrimary: '#7258EA',
+  buttonPrimaryText: '#FFFFFF',
+  buttonHighlight: '#E0489A',
+  buttonHighlightText: '#14122B',
+
   // Highlight
-  highlightSoft: withAlpha(PINK, 0.15),
-  accent: PINK,
-  accentText: BLACK,
-  
+  highlightSoft: withAlpha('#E0489A', 0.15),
+  accent: '#E0489A',
+  accentText: '#14122B',
+
   // Toggle
-  toggleTrackOff: withAlpha(WHITE, 0.40),
-  toggleTrackOn: PINK,
-  toggleKnobOff: WHITE,
-  toggleKnobOn: BLACK,
-  
+  toggleTrackOff: '#6F6B8E',
+  toggleTrackOn: '#E0489A',
+  toggleKnobOff: '#FFFFFF',
+  toggleKnobOn: '#14122B',
+
   // Tab Bar
-  tabBarBg: BLACK,
-  tabBarBorder: withAlpha(WHITE, 0.20),
-  tabBarInactive: withAlpha(WHITE, 0.75),
-  tabBarActivePill: PINK,
-  tabBarActiveIcon: BLACK,
-  tabBarActiveLabel: WHITE,
-  
+  tabBarBg: '#1F1C3D',
+  tabBarBorder: '#3D3868',
+  tabBarInactive: '#B4B0D2',
+  tabBarActivePill: '#7258EA',
+  tabBarActiveIcon: '#FFFFFF',
+  tabBarActiveLabel: '#FFFFFF',
+
   // Overlay
-  overlay: withAlpha(BLACK, 0.70),
-  popupCard: BLACK,
-  popupBorder: withAlpha(WHITE, 0.30),
-  shadow: 'transparent',  // No shadow in dark mode, use border
-  
+  overlay: withAlpha('#14122B', 0.70),
+  popupCard: '#2A2650',
+  popupBorder: '#3D3868',
+  shadow: 'transparent',
+
   // Text on colors
-  textOnPrimary: WHITE,
-  textOnAccent: BLACK,
-  
+  textOnPrimary: '#FFFFFF',
+  textOnAccent: '#14122B',
+
   // Legacy aliases - remove after migration
-  primary: BLACK as string,
-  primaryTint: withAlpha(WHITE, 0.08),
-  primaryLight: withAlpha(WHITE, 0.20),
-  primaryDark: BLACK as string,
-  surface: withAlpha(WHITE, 0.08),
-  surfaceDark: withAlpha(WHITE, 0.12),
-  borderLight: withAlpha(WHITE, 0.12),
-  textPrimary: WHITE as string,
-  textDisabled: withAlpha(WHITE, 0.40),
-  focus: WHITE as string,
-  success: WHITE as string,
-  successTint: withAlpha(WHITE, 0.10),
-  warning: PINK as string,
-  warningTint: withAlpha(PINK, 0.15),
-  info: WHITE as string,
-  infoTint: withAlpha(WHITE, 0.10),
-  backdrop: withAlpha(BLACK, 0.70),
-  backgroundLight: WHITE as string,
-  backgroundDark: BLACK as string,
-  secondary: PINK as string,
-  tertiary: PINK as string,
-  error: PINK as string,
+  primary: '#7258EA',
+  primaryTint: withAlpha('#7258EA', 0.10),
+  primaryLight: withAlpha('#7258EA', 0.20),
+  primaryDark: '#5B3FD9',
+  surface: '#1F1C3D',
+  surfaceDark: '#2A2650',
+  borderLight: '#3D3868',
+  textPrimary: '#FFFFFF',
+  textDisabled: '#6F6B8E',
+  focus: '#7258EA',
+  success: '#3DD68C',
+  successTint: withAlpha('#3DD68C', 0.20),
+  warning: '#F2A93B',
+  warningTint: withAlpha('#F2A93B', 0.20),
+  info: '#5AB0F5',
+  infoTint: withAlpha('#5AB0F5', 0.20),
+  backdrop: withAlpha('#14122B', 0.70),
+  backgroundLight: '#14122B',
+  backgroundDark: '#0E0C20',
+  secondary: '#7258EA',
+  tertiary: '#E0489A',
+  error: '#FF6B7A',
 } as const;
 
 // ============================================================================
-// LIGHT MODE
+// LIGHT MODE - "Forge Indigo"
 // ============================================================================
 
 export const lightColors = {
   // Base
-  background: WHITE,
-  text: BLACK,
-  textSecondary: withAlpha(BLACK, 0.75),
-  
+  background: '#FBFAFF',
+  text: '#1B1836',
+  textSecondary: '#5A5675',
+
   // Surfaces
-  card: withAlpha(BLACK, 0.06),
-  border: withAlpha(BLACK, 0.20),
-  borderStrong: withAlpha(BLACK, 0.20),
-  
+  card: '#F1EFFA',
+  border: '#DCD8EE',
+  borderStrong: '#C5BFDC',
+  raised: '#FFFFFF',
+
   // States
-  disabled: withAlpha(BLACK, 0.40),
-  hover: withAlpha(BLACK, 0.90),
-  pressed: BLACK,
-  selected: withAlpha(BLACK, 0.10),
-  
+  disabled: '#9A97B0',
+  hover: withAlpha('#1B1836', 0.90),
+  pressed: '#1B1836',
+  selected: withAlpha('#5B3FD9', 0.10),
+
   // Buttons
-  buttonPrimary: BLACK,              // bg
-  buttonPrimaryText: WHITE,          // text
-  buttonHighlight: PINK,             // bg
-  buttonHighlightText: BLACK,        // text
-  
+  buttonPrimary: '#5B3FD9',
+  buttonPrimaryText: '#FFFFFF',
+  buttonHighlight: '#D12C86',
+  buttonHighlightText: '#FFFFFF',
+
   // Highlight
-  highlightSoft: withAlpha(PINK, 0.15),
-  accent: PINK,
-  accentText: BLACK,
-  
+  highlightSoft: withAlpha('#D12C86', 0.15),
+  accent: '#D12C86',
+  accentText: '#FFFFFF',
+
   // Toggle
-  toggleTrackOff: withAlpha(BLACK, 0.40),
-  toggleTrackOn: PINK,
-  toggleKnobOff: WHITE,
-  toggleKnobOn: BLACK,
-  
+  toggleTrackOff: '#9A97B0',
+  toggleTrackOn: '#D12C86',
+  toggleKnobOff: '#FFFFFF',
+  toggleKnobOn: '#14122B',
+
   // Tab Bar
-  tabBarBg: WHITE,
-  tabBarBorder: withAlpha(BLACK, 0.20),
-  tabBarInactive: withAlpha(BLACK, 0.75),
-  tabBarActivePill: PINK,
-  tabBarActiveIcon: BLACK,
-  tabBarActiveLabel: BLACK,
-  
+  tabBarBg: '#F1EFFA',
+  tabBarBorder: '#DCD8EE',
+  tabBarInactive: '#5A5675',
+  tabBarActivePill: '#5B3FD9',
+  tabBarActiveIcon: '#FFFFFF',
+  tabBarActiveLabel: '#1B1836',
+
   // Overlay
-  overlay: withAlpha(BLACK, 0.60),
-  popupCard: WHITE,
-  popupBorder: withAlpha(BLACK, 0.20),
-  shadow: withAlpha(BLACK, 0.12),
-  
+  overlay: withAlpha('#14122B', 0.60),
+  popupCard: '#FFFFFF',
+  popupBorder: '#DCD8EE',
+  shadow: withAlpha('#14122B', 0.12),
+
   // Text on colors
-  textOnPrimary: WHITE,
-  textOnAccent: BLACK,
-  
+  textOnPrimary: '#FFFFFF',
+  textOnAccent: '#FFFFFF',
+
   // Legacy aliases - remove after migration
-  primary: BLACK as string,
-  primaryTint: withAlpha(BLACK, 0.06),
-  primaryLight: withAlpha(BLACK, 0.20),
-  primaryDark: BLACK as string,
-  surface: withAlpha(BLACK, 0.06),
-  surfaceDark: withAlpha(BLACK, 0.08),
-  borderLight: withAlpha(BLACK, 0.12),
-  textPrimary: BLACK as string,
-  textDisabled: withAlpha(BLACK, 0.40),
-  focus: BLACK as string,
-  success: BLACK as string,
-  successTint: withAlpha(BLACK, 0.10),
-  warning: PINK as string,
-  warningTint: withAlpha(PINK, 0.15),
-  info: BLACK as string,
-  infoTint: withAlpha(BLACK, 0.10),
-  backdrop: withAlpha(BLACK, 0.60),
-  backgroundLight: WHITE as string,
-  backgroundDark: BLACK as string,
-  secondary: PINK as string,
-  tertiary: PINK as string,
-  error: PINK as string,
+  primary: '#5B3FD9',
+  primaryTint: withAlpha('#5B3FD9', 0.10),
+  primaryLight: withAlpha('#5B3FD9', 0.20),
+  primaryDark: '#4A2FB5',
+  surface: '#F1EFFA',
+  surfaceDark: '#E7E3F6',
+  borderLight: '#DCD8EE',
+  textPrimary: '#1B1836',
+  textDisabled: '#9A97B0',
+  focus: '#5B3FD9',
+  success: '#17794C',
+  successTint: withAlpha('#17794C', 0.10),
+  warning: '#A85F00',
+  warningTint: withAlpha('#A85F00', 0.10),
+  info: '#1F6FB5',
+  infoTint: withAlpha('#1F6FB5', 0.10),
+  backdrop: withAlpha('#14122B', 0.60),
+  backgroundLight: '#FBFAFF',
+  backgroundDark: '#14122B',
+  secondary: '#5B3FD9',
+  tertiary: '#D12C86',
+  error: '#C62839',
 } as const;
 
 // ============================================================================
@@ -200,31 +196,31 @@ export const layout = {
     xl: 24,
     xxl: 32,
   },
-  
+
   // Screen
   screenPadding: 16,
   headerHeight: 56,
-  
+
   // Rows
   rowMinHeight: 48,
   tapTargetMin: 44,
-  
+
   // Sizes
   iconSize: 24,
   radiusCard: 12,
   radiusPill: 999,
   radiusToggle: 999,
-  
+
   // Tab Bar
   tabBarHeight: 64,  // + safe area
   tabLabelSize: 12,
-  
+
   // Typography
   textTitle: 24,
   textSection: 18,
   textBody: 16,
   textSmall: 12,
-  
+
   // Gaps
   sectionGap: 24,
   itemGap: 12,
@@ -238,5 +234,47 @@ export const layout = {
 export type ThemeColors = typeof darkColors;
 export type ColorName = keyof ThemeColors;
 
-// Default export
-export const colors = lightColors;
+// ============================================================================
+// DYNAMIC DEFAULT EXPORT
+// ============================================================================
+
+// DEPRECATED: Use useTheme() hook instead for dynamic theme support
+// This static export is kept for backward compatibility during migration
+// It will be removed in a future version
+let _runtimeColors: ThemeColors = lightColors;
+
+export function _setRuntimeColors(newColors: ThemeColors) {
+  _runtimeColors = newColors;
+  // Trigger re-render by mutating the proxy
+  Object.assign(colors, newColors);
+}
+
+// Create a proxy that always returns the current runtime colors
+export const colors = new Proxy<ThemeColors>({} as ThemeColors, {
+  get(_target, prop: string | symbol) {
+    if (typeof prop === 'string' && prop in _runtimeColors) {
+      return _runtimeColors[prop as keyof ThemeColors];
+    }
+    return undefined;
+  },
+  set(_target, prop: string | symbol, value: any) {
+    if (typeof prop === 'string' && prop in _runtimeColors) {
+      (_runtimeColors as any)[prop] = value;
+      return true;
+    }
+    return false;
+  },
+  ownKeys(_target) {
+    return Object.keys(_runtimeColors);
+  },
+  getOwnPropertyDescriptor(_target, prop) {
+    if (typeof prop === 'string' && prop in _runtimeColors) {
+      return {
+        enumerable: true,
+        configurable: true,
+        value: _runtimeColors[prop as keyof ThemeColors],
+      };
+    }
+    return undefined;
+  },
+});

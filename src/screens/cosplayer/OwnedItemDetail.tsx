@@ -174,6 +174,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
       fileName: asset.fileName,
       mimeType: asset.mimeType,
       fileSize: asset.fileSize,
+      hasFile: !!(asset as any).file, // Web only
     });
 
     setUploadingPhoto(true);
@@ -183,7 +184,8 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
       const uploadResult = await OwnedItemPhotoService.uploadPhoto(
         asset.uri,
         asset.fileName,
-        asset.mimeType
+        asset.mimeType,
+        (asset as any).file // Web-only File object
       );
 
       console.log('[ADD_PHOTO] Upload result:', uploadResult);

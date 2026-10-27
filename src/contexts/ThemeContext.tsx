@@ -1,32 +1,34 @@
 /**
- * Theme Context - Two-Tone Design System
- * Light/Dark mode toggle using INDIGO + PINK palette
+ * Theme Context - Forge Indigo Design System
+ * System / Light / Dark mode support
  * Persisted to AsyncStorage
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { lightColors, darkColors, type ThemeColors as BaseThemeColors } from '../theme/colors';
+import { lightColors, darkColors, _setRuntimeColors, type ThemeColors as BaseThemeColors } from '../theme/colors';
 
-const STORAGE_KEY = '@forgemind:dark_mode';
+const STORAGE_KEY_MODE = '@forgemind:theme_mode';
+const STORAGE_KEY_DARK_LEGACY = '@forgemind:dark_mode';
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type ResolvedTheme = 'light' | 'dark';
 
 // Re-export ThemeColors for components
 export type ThemeColors = BaseThemeColors;
 
 // Compatibility type for legacy code using backgroundLight/backgroundDark
 export interface LegacyThemeColors extends BaseThemeColors {
-  backgroundLight: string;  // Maps to background
-  backgroundDark: string;   // Maps to surface or textPrimary depending on context
-  secondary: string;        // Maps to accent (PINK, was third color)
-  tertiary: string;         // Maps to accent (PINK, was third color)
-  error: string;            // NOT IMPLEMENTED - maps to PINK temporarily
+  // All fields are already in BaseThemeColors (including raised, secondary, tertiary, error, backgroundLight, backgroundDark)
+  // This interface now just serves as a marker type
 }
 
 interface ThemeContextType {
+  mode: ThemeMode;
   isDark: boolean;
   themeColors: LegacyThemeColors;
+  setMode: (mode: ThemeMode) => Promise<void>;
   toggleTheme: () => Promise<void>;
   isLoading: boolean;
 }
@@ -34,22 +36,44 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState(true);  // Default to dark mode
+  const [mode, setModeState] = useState<ThemeMode>('system');
   const [isLoading, setIsLoading] = useState(true);
+  const systemColorScheme = useColorScheme();
 
-  // Load dark mode preference on mount
+  // Resolve mode to actual theme
+  const resolvedTheme: ResolvedTheme = 
+    mode === 'system' 
+      ? (systemColorScheme === 'dark' ? 'dark' : systemColorScheme === 'light' ? 'light' : 'dark')
+      : mode;
+
+  const isDark = resolvedTheme === 'dark';
+
+  // Load theme mode on mount
   useEffect(() => {
     loadTheme();
   }, []);
 
   const loadTheme = async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setIsDark(parsed.dark === true);
+      // Try new key first
+      const storedMode = await AsyncStorage.getItem(STORAGE_KEY_MODE);
+      if (storedMode) {
+        const parsed = JSON.parse(storedMode);
+        if (parsed.mode === 'system' || parsed.mode === 'light' || parsed.mode === 'dark') {
+          setModeState(parsed.mode);
+        }
+      } else {
+        // Migrate from old key
+        const storedDark = await AsyncStorage.getItem(STORAGE_KEY_DARK_LEGACY);
+        if (storedDark) {
+          const parsed = JSON.parse(storedDark);
+          const migratedMode: ThemeMode = parsed.dark === true ? 'dark' : 'light';
+          setModeState(migratedMode);
+          // Save to new key but keep old key for compatibility
+          await AsyncStorage.setItem(STORAGE_KEY_MODE, JSON.stringify({ mode: migratedMode }));
+        }
+        // else: no stored preference, keep default 'system'
       }
-      // If no stored preference, keep default (dark mode)
     } catch (error) {
       console.error('[ThemeContext] Failed to load theme:', error);
     } finally {
@@ -57,30 +81,44 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
+  const setMode = async (newMode: ThemeMode) => {
+    try {
+      setModeState(newMode);
+      await AsyncStorage.setItem(STORAGE_KEY_MODE, JSON.stringify({ mode: newMode }));
+    } catch (error) {
+      console.error('[ThemeContext] Failed to save theme mode:', error);
+    }
+  };
+
   const toggleTheme = async () => {
     try {
-      const newDark = !isDark;
-      setIsDark(newDark);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ dark: newDark }));
+      const newMode: ThemeMode = isDark ? 'light' : 'dark';
+      setModeState(newMode);
+      await AsyncStorage.setItem(STORAGE_KEY_MODE, JSON.stringify({ mode: newMode }));
     } catch (error) {
-      console.error('[ThemeContext] Failed to save theme:', error);
+      console.error('[ThemeContext] Failed to toggle theme:', error);
     }
   };
 
   const baseColors = isDark ? darkColors : lightColors;
   
+  // Update runtime colors for static imports (backward compatibility)
+  useEffect(() => {
+    _setRuntimeColors(baseColors);
+  }, [isDark]);
+  
   // Add legacy compatibility fields - cast to satisfy type checker
   const themeColors = {
     ...baseColors,
-    backgroundLight: baseColors.background,  // LEGACY ALIAS, remove after migration
-    backgroundDark: baseColors.surface,      // LEGACY ALIAS, remove after migration
-    secondary: baseColors.accent,            // LEGACY ALIAS, remove after migration (was third color, now PINK)
-    tertiary: baseColors.accent,             // LEGACY ALIAS, remove after migration (was third color, now PINK)
-    error: baseColors.warning,               // LEGACY ALIAS, remove after migration (ERROR NOT IMPLEMENTED)
+    backgroundLight: baseColors.backgroundLight,  // LEGACY ALIAS, remove after migration
+    backgroundDark: baseColors.backgroundDark,    // LEGACY ALIAS, remove after migration
+    secondary: baseColors.secondary,              // LEGACY ALIAS, remove after migration
+    tertiary: baseColors.tertiary,                // LEGACY ALIAS, remove after migration
+    error: baseColors.error,                      // LEGACY ALIAS, remove after migration
   } as LegacyThemeColors;
 
   return (
-    <ThemeContext.Provider value={{ isDark, themeColors, toggleTheme, isLoading }}>
+    <ThemeContext.Provider value={{ mode, isDark, themeColors, setMode, toggleTheme, isLoading }}>
       {children}
     </ThemeContext.Provider>
   );

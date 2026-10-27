@@ -54,7 +54,7 @@ const textEntryItem = {
   entry_language: 'english',
   original_input_text: 'red jacket leather style',
   photo_urls: [], // Explicitly empty array from entry form
-  auto_categorized_type: 'clothing',
+  auto_categorized_type: 'top',
   auto_categorized_color: 'red',
   auto_categorized_style: 'leather',
   flexibility_tag: 'restyle-willing',
@@ -188,10 +188,10 @@ try {
   
   // Type filter
   const wigItems = items.filter((i) => i.auto_categorized_type === 'wig');
-  const clothingItems = items.filter((i) => i.auto_categorized_type === 'clothing');
+  const topItems = items.filter((i) => i.auto_categorized_type === 'top');
   
   console.log(`  Wig items: ${wigItems.length}`);
-  console.log(`  Clothing items: ${clothingItems.length}`);
+  console.log(`  Top items: ${topItems.length}`);
   console.log('  ✓ PASS: Dashboard filters work\n');
   passCount++;
 } catch (err: any) {

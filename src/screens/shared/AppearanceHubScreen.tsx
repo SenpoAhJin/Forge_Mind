@@ -1,18 +1,19 @@
 /**
  * Appearance Hub Screen
- * BLACK + PINK + WHITE only
+ * Forge Indigo Design System
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StandardCard } from '../../components';
 import { typography } from '../../theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { layout } from '../../theme/colors';
+import type { ThemeMode } from '../../contexts/ThemeContext';
 
 export const AppearanceHubScreen: React.FC = () => {
-  const { isDark, themeColors, toggleTheme } = useTheme();
+  const { mode, setMode, isDark, themeColors } = useTheme();
   const colors = themeColors;
 
   return (
@@ -30,32 +31,119 @@ export const AppearanceHubScreen: React.FC = () => {
         </Text>
       </View>
 
-      {/* Dark Mode Toggle */}
+      {/* Theme Mode Selector */}
       <StandardCard style={styles.cardWithSpacing}>
-        <View style={[styles.row, { minHeight: layout.rowMinHeight }]}>
-          <View style={[styles.iconContainer, { marginRight: layout.spacing.lg }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: layout.textSection, marginBottom: layout.spacing.md }]}>
+          Theme Mode
+        </Text>
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[
+              styles.modeOption,
+              {
+                backgroundColor: mode === 'system' ? colors.primary : colors.card,
+                borderColor: colors.border,
+              }
+            ]}
+            onPress={() => setMode('system')}
+            activeOpacity={0.7}
+          >
             <Ionicons
-              name={isDark ? 'moon' : 'sunny'}
-              size={layout.iconSize}
-              color={colors.text}
+              name="phone-portrait-outline"
+              size={20}
+              color={mode === 'system' ? colors.textOnPrimary : colors.text}
             />
-          </View>
-          <View style={styles.textContainer}>
-            <Text style={[styles.optionTitle, { color: colors.text, fontSize: layout.textSection, marginBottom: layout.spacing.xs }]}>
-              {isDark ? 'Dark Mode' : 'Light Mode'}
+            <Text
+              style={[
+                styles.modeText,
+                {
+                  color: mode === 'system' ? colors.textOnPrimary : colors.text,
+                  fontSize: layout.textBody,
+                  marginTop: layout.spacing.xs,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              System
             </Text>
-            <Text style={[styles.optionDescription, { color: colors.textSecondary, fontSize: layout.textSmall }]}>
-              {isDark ? 'BLACK background with WHITE text' : 'WHITE background with BLACK text'}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeOption,
+              {
+                backgroundColor: mode === 'light' ? colors.primary : colors.card,
+                borderColor: colors.border,
+              }
+            ]}
+            onPress={() => setMode('light')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="sunny"
+              size={20}
+              color={mode === 'light' ? colors.textOnPrimary : colors.text}
+            />
+            <Text
+              style={[
+                styles.modeText,
+                {
+                  color: mode === 'light' ? colors.textOnPrimary : colors.text,
+                  fontSize: layout.textBody,
+                  marginTop: layout.spacing.xs,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              Light
             </Text>
-          </View>
-          <Switch
-            value={isDark}
-            onValueChange={toggleTheme}
-            trackColor={{ false: colors.toggleTrackOff, true: colors.toggleTrackOn }}
-            thumbColor={isDark ? colors.toggleKnobOn : colors.toggleKnobOff}
-            ios_backgroundColor={colors.toggleTrackOff}
-          />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeOption,
+              {
+                backgroundColor: mode === 'dark' ? colors.primary : colors.card,
+                borderColor: colors.border,
+              }
+            ]}
+            onPress={() => setMode('dark')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="moon"
+              size={20}
+              color={mode === 'dark' ? colors.textOnPrimary : colors.text}
+            />
+            <Text
+              style={[
+                styles.modeText,
+                {
+                  color: mode === 'dark' ? colors.textOnPrimary : colors.text,
+                  fontSize: layout.textBody,
+                  marginTop: layout.spacing.xs,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              Dark
+            </Text>
+          </TouchableOpacity>
         </View>
+        
+        {mode === 'system' ? (
+          <Text style={[styles.helperText, { color: colors.textSecondary, fontSize: layout.textSmall, marginTop: layout.spacing.md }]}>
+            Follows your phone's setting.
+          </Text>
+        ) : mode === 'light' ? (
+          <Text style={[styles.helperText, { color: colors.textSecondary, fontSize: layout.textSmall, marginTop: layout.spacing.md }]}>
+            Always light.
+          </Text>
+        ) : (
+          <Text style={[styles.helperText, { color: colors.textSecondary, fontSize: layout.textSmall, marginTop: layout.spacing.md }]}>
+            Always dark.
+          </Text>
+        )}
       </StandardCard>
 
       {/* Color Palette Info */}
@@ -179,22 +267,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 16,
   },
-  row: {
+  modeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     width: '100%',
+    gap: 8,
   },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textContainer: {
+  modeOption: {
     flex: 1,
+    minHeight: 44,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: layout.radiusCard,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  optionTitle: {
-    ...typography.h3,
+  modeText: {
+    ...typography.buttonText,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  optionDescription: {
+  helperText: {
     ...typography.caption,
   },
   sectionTitle: {
