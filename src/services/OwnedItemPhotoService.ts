@@ -46,13 +46,19 @@ class OwnedItemPhotoService {
       const formData = new FormData();
 
       if (Platform.OS === 'web') {
-        // Web: fetch the URI as a Blob
+        // Web: fetch the blob URI and convert to File
         try {
+          console.log('[OwnedItemPhotoService] Fetching blob for web upload:', uri.substring(0, 80));
           const response = await fetch(uri);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch blob: ${response.status}`);
+          }
           const blob = await response.blob();
+          console.log('[OwnedItemPhotoService] Blob fetched, size:', blob.size, 'type:', blob.type);
           const file = new File([blob], filename || 'photo.jpg', { type: mimeType || blob.type });
           formData.append('photo', file);
         } catch (error) {
+          console.error('[OwnedItemPhotoService] Failed to read blob:', error);
           return {
             success: false,
             error: 'Failed to read photo file. Please try again.',
@@ -69,6 +75,7 @@ class OwnedItemPhotoService {
       }
 
       // DO NOT set Content-Type header - let fetch/XMLHttpRequest set it with boundary
+      console.log('[OwnedItemPhotoService] Uploading to:', `${API_BASE_URL}/inventory/photos`);
       const response = await fetchWithTimeout(
         `${API_BASE_URL}/inventory/photos`,
         {
@@ -82,12 +89,16 @@ class OwnedItemPhotoService {
         REQUEST_TIMEOUT_MS,
       );
 
+      console.log('[OwnedItemPhotoService] Upload response status:', response.status);
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
+        console.error('[OwnedItemPhotoService] Upload failed:', response.status, data);
         return this.handleUploadError(response.status, data);
       }
 
       const data = await response.json();
+      console.log('[OwnedItemPhotoService] Upload success:', data);
       if (!data.photo_id || !data.url) {
         return {
           success: false,
