@@ -5,12 +5,14 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
+import { CrossPlatformImage } from '../../components/CrossPlatformImage';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import { OwnedAttire, AttireCategory, AvailabilityStatus } from '../../types/owned-attire';
+import { getOwnedItemPhotoUri, hasUsablePhoto } from '../../utils/photoUtils';
 
 interface OwnedItemDashboardProps {
   onAddItem: () => void;
@@ -35,6 +37,28 @@ const entryLabel = (method: OwnedAttire['entry_method']): string =>
 export const OwnedItemDashboard: React.FC<OwnedItemDashboardProps> = ({ onAddItem, onOpenItem }) => {
   const { items, isLoaded } = useOwnedAttire();
 
+  console.log(`[OwnedItemDashboard] Render - isLoaded: ${isLoaded}, items.length: ${items.length}`);
+  
+  // Log photo data for debugging
+  React.useEffect(() => {
+    if (isLoaded && items.length > 0) {
+      const itemsWithPhotos = items.filter(item => item.photo_urls && item.photo_urls.length > 0);
+      console.log(`[OwnedItemDashboard] Items with photos: ${itemsWithPhotos.length}/${items.length}`);
+      
+      if (itemsWithPhotos.length > 0) {
+        const sample = itemsWithPhotos[0];
+        console.log(`[OwnedItemDashboard] Sample item photo:`, {
+          attire_id: sample.attire_id,
+          original_text: sample.original_input_text,
+          photo_urls_length: sample.photo_urls.length,
+          first_photo_type: typeof sample.photo_urls[0],
+          first_photo_is_null: sample.photo_urls[0] === null,
+          first_photo_preview: sample.photo_urls[0]?.substring(0, 100),
+        });
+      }
+    }
+  }, [isLoaded, items]);
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | AttireCategory>('all');
   const [colorFilter, setColorFilter] = useState<ColorFilter>('all');
@@ -48,7 +72,7 @@ export const OwnedItemDashboard: React.FC<OwnedItemDashboardProps> = ({ onAddIte
   const availableColors = useMemo(() => {
     const set = new Set<string>();
     items.forEach((i) => {
-      const c = i.auto_categorized_color.trim().toLowerCase();
+      const c = (i.auto_categorized_color || '').trim().toLowerCase();
       if (c && c !== 'unclear') set.add(c);
     });
     return Array.from(set).sort();
@@ -61,7 +85,7 @@ export const OwnedItemDashboard: React.FC<OwnedItemDashboardProps> = ({ onAddIte
         if (typeFilter !== 'all' && item.auto_categorized_type !== typeFilter) return false;
         if (
           colorFilter !== 'all' &&
-          item.auto_categorized_color.trim().toLowerCase() !== colorFilter
+          (item.auto_categorized_color || '').trim().toLowerCase() !== colorFilter
         ) {
           return false;
         }
@@ -82,20 +106,22 @@ export const OwnedItemDashboard: React.FC<OwnedItemDashboardProps> = ({ onAddIte
     statusFilter !== 'all' || typeFilter !== 'all' || colorFilter !== 'all';
 
   const renderItem = ({ item }: { item: OwnedAttire }) => {
-    const firstPhoto = item.photo_urls?.[0];
+    const photoUri = getOwnedItemPhotoUri(item.photo_urls?.[0]);
+    
     return (
       <TouchableOpacity style={styles.itemCard} activeOpacity={0.7} onPress={() => onOpenItem(item.attire_id)}>
         <View style={styles.thumbWrap}>
-          {firstPhoto ? (
-            <Image source={{ uri: firstPhoto }} style={styles.thumbImage} />
-          ) : (
-            <Ionicons name="shirt-outline" size={28} color={colors.primary} />
-          )}
+          <CrossPlatformImage
+            uri={photoUri}
+            style={styles.thumbImage}
+            resizeMode="cover"
+            fallbackIcon={<Ionicons name="shirt-outline" size={28} color={colors.primary} />}
+          />
         </View>
         <View style={styles.itemBody}>
           <View style={styles.itemTopRow}>
             <Text style={styles.itemTitle} numberOfLines={1}>
-              {item.auto_categorized_color} {item.auto_categorized_type}
+              {item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`}
             </Text>
             <View
               style={[

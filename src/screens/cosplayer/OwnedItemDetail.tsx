@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Ale
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider, DropdownField, ConfirmationModal } from '../../components';
+import { CrossPlatformImage } from '../../components/CrossPlatformImage';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { getTodayLocal } from '../../utils/dateHelpers';
@@ -19,6 +20,8 @@ import {
   FlexibilityTag,
   OwnedAttire,
 } from '../../types/owned-attire';
+import { getOwnedItemPhotoUri, hasUsablePhoto } from '../../utils/photoUtils';
+import OwnedItemPhotoService from '../../services/OwnedItemPhotoService';
 
 interface OwnedItemDetailProps {
   attireId: string;
@@ -28,12 +31,10 @@ interface OwnedItemDetailProps {
 
 const TYPES: AttireCategory[] = [
   'wig',
-  'clothing',
+  'top',
+  'bottom',
   'footwear',
   'accessory',
-  'armor',
-  'weapon',
-  'prop',
   'fabric',
   'material',
   'other',
@@ -67,6 +68,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNoProjectsModal, setShowNoProjectsModal] = useState(false);
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [type, setType] = useState<AttireCategory>(item?.auto_categorized_type ?? 'other');
   const [color, setColor] = useState(item?.auto_categorized_color ?? '');
@@ -139,6 +141,53 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
     }
   };
 
+  const handleAddPhoto = async () => {
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'We need camera roll permission to pick a photo.');
+      return;
+    }
+
+    // Pick image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      aspect: [4, 3],
+    });
+
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    setUploadingPhoto(true);
+
+    try {
+      const uploadResult = await OwnedItemPhotoService.uploadPhoto(
+        asset.uri,
+        asset.fileName,
+        asset.mimeType
+      );
+
+      if (!uploadResult.success) {
+        Alert.alert('Upload Failed', uploadResult.error || 'Could not upload photo.');
+        return;
+      }
+
+      // Update item with new photo URL (server path)
+      await updateItem(item.attire_id, {
+        photo_urls: uploadResult.url ? [uploadResult.url] : [],
+      });
+
+      onEdited();
+      Alert.alert('Success', 'Photo added successfully!');
+    } catch (error: any) {
+      Alert.alert('Upload Failed', error.message || 'Could not upload photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
@@ -169,6 +218,55 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
             {editing ? 'Cancel' : 'Edit'}
           </Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.photosSection}>
+        {hasUsablePhoto(item.photo_urls) ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photosScroll}
+          >
+            {item.photo_urls
+              ?.map((url, index) => ({ url, index }))
+              .filter(({ url }) => getOwnedItemPhotoUri(url) !== null)
+              .map(({ url, index }) => {
+                const photoUri = getOwnedItemPhotoUri(url);
+                if (!photoUri) return null;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setEnlargedPhoto(photoUri)}
+                    activeOpacity={0.8}
+                  >
+                    <CrossPlatformImage
+                      uri={photoUri}
+                      style={styles.photoItem}
+                      resizeMode="cover"
+                      fallbackIcon={
+                        <View style={[styles.photoItem, styles.photoPlaceholder]}>
+                          <Ionicons name="shirt-outline" size={48} color={colors.textDisabled} />
+                        </View>
+                      }
+                    />
+                  </TouchableOpacity>
+                );
+              }).filter(Boolean)}
+          </ScrollView>
+        ) : (
+          <View style={styles.noPhotoBox}>
+            <Ionicons name="image-outline" size={40} color={colors.textDisabled} />
+            <Text style={styles.noPhotoText}>No photo available</Text>
+            {uploadingPhoto ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.sm }} />
+            ) : (
+              <TouchableOpacity onPress={handleAddPhoto} style={styles.addPhotoButton}>
+                <Ionicons name="camera-outline" size={16} color={colors.primary} />
+                <Text style={styles.addPhotoText}>Add Photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       {item.original_input_text ? (
@@ -677,6 +775,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   photosSection: {
+    marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
   photosScroll: {
@@ -688,6 +787,41 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     marginRight: spacing.sm,
     backgroundColor: colors.surface,
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noPhotoBox: {
+    height: 160,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  noPhotoText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  addPhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addPhotoText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
   photoModal: {
     flex: 1,

@@ -12,12 +12,10 @@ export type EntryLanguage = 'english' | 'taglish';
 
 export type AttireCategory =
   | 'wig'
-  | 'clothing'
+  | 'top'
+  | 'bottom'
   | 'footwear'
   | 'accessory'
-  | 'armor'
-  | 'weapon'
-  | 'prop'
   | 'fabric'
   | 'material'
   | 'other';
@@ -82,4 +80,5 @@ export interface UpdateOwnedAttireInput {
   acquired_date?: string;
   acquisition_cost?: number;
   notes?: string;
+  photo_urls?: (string | null)[]; // Allow updating photos
 }
