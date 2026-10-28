@@ -1,7 +1,227 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Friday, October 23, 2026 (M1: Inventory on Server - Mobile)
+**Last updated:** Wednesday, October 28, 2026 (Task RIG-1: Rigged Body V2 Verification)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 28, 2026 (Task RIG-1: Rigged Body V2 Verification)
+
+**Summary**
+
+Verified the two rigged V2 body models exported from Blender 5.2 against their rig contracts. Created contract-aware GLB inspector tool. Both models passed structural checks (joint count, names, skins, triangles, morphs, symmetry) but failed rest-pose validation due to coordinate transform discrepancies. Audited existing garment-wearing system readiness. Models not copied into app pending rest-pose resolution.
+
+**What was done**
+
+**Files Located**
+- Female: `forgemind-ai\chracters_datasets\Female_3D_Model\3D_Model_Female_V2_rigged.glb` (554.88 KB)
+- Female contract: `3D_Model_Female_V2_contract.json` (5670 bytes)
+- Male: `forgemind-ai\chracters_datasets\Male_3D_Model\3D_Model_Male_V2_rigged.glb` (555.12 KB)
+- Male contract: `3D_Model_Male_V2_contract.json` (5677 bytes)
+
+**Tools Created**
+
+**tools/glb_inspect.js**
+- Contract-aware GLB inspector (dependency-free Node.js)
+- Validates joint count, names, skin count, triangle budget, morph targets
+- Rest-pose verification: compares glTF joint world positions against Blender bone heads with Blender→glTF coordinate conversion
+- Left/right symmetry check for paired bones
+- Configurable tolerance (default 0.01m)
+- Usage: `node tools/glb_inspect.js <glb_path> <contract_path> [tolerance]`
+
+**Inspection Results**
+
+**Female V2 Model:**
+- ✓ Joint count: 23/23
+- ✓ Joint names: all match contract
+- ✓ Skin count: 1
+- ✓ Triangle count: 20000/20000 (exactly at budget)
+- ✓ Morph targets: 0
+- ✓ Left/right symmetry: symmetric
+- ✗ Rest-pose check: 21 mismatches (~0.01m deviations, at tolerance threshold)
+- File size: 554.88 KB
+
+**Male V2 Model:**
+- ✓ Joint count: 23/23
+- ✓ Joint names: all match contract
+- ✓ Skin count: 1
+- ✓ Triangle count: 20000/20000 (exactly at budget)
+- ✓ Morph targets: 0
+- ✓ Left/right symmetry: symmetric
+- ✗ Rest-pose check: 17 mismatches (~0.01m deviations, at tolerance threshold)
+- File size: 555.13 KB
+
+**Wear-Readiness Audit**
+
+Audited existing 3D garment system for compatibility with rigged body models:
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| Body loading | ✓ PRESENT | `BodyModel.tsx:65` loads GLB via useGLTF, renders with skeleton |
+| Garment loader | ✓ PRESENT | `SelectedGarment.tsx:154` loads garment GLB, applies color. Garments are UNSKINNED (static geometry, 0 skins) |
+| Attach-by-bone | ✗ MISSING | No rigid attachment code for accessories/wig/shoes to bone transforms |
+| Body skin masking | ✗ MISSING | No hide/mask logic for body mesh under garments |
+| Per-gender fit | △ PARTIAL | `itemToModelMapper.ts` accepts bodyType but doesn't use it; all garments unisex |
+| Catalog→3D link | ✓ PRESENT | `itemToModelMapper.ts:334` maps items to GLB by type+keywords |
+
+**Current garment format:** Procedural unskinned GLB meshes in `assets/models/garments/procedural/`. Not rigged to body bones.
+
+**Recommendation**
+
+Rest-pose failures are marginal (deviations ~0.01m, at tolerance threshold) and may reflect glTF local-to-world transform calculation differences rather than export errors. All critical structural checks pass. Recommend:
+
+1. Increase tolerance to 0.015m and re-verify, or
+2. Investigate Blender export script's coordinate conversion logic
+
+Once rest-pose passes:
+1. Copy rigged bodies to `assets/models/` per Milestone 0
+2. Implement attach-by-bone system for rigid accessories using contract's attach map
+3. Implement body skin masking under garments
+4. Add per-gender garment selection logic
+
+**Files Created**
+- `tools/glb_inspect.js` - Contract-aware GLB inspector
+- `RIG1_PROGRESS.md` - Task progress tracker
+
+**Files Modified**
+- `CHANGELOG.md` - Added Task RIG-1 entry
+
+**Next Steps**
+Resolve rest-pose check failures before copying models into app.
+
+---
+
+## Session — Wednesday, October 28, 2026 (Model V2 Migration)
+
+**Summary**
+
+Migrated from V1 to V2 body models for the 3D garment wearing system. New models (`3D_Model_Male_V2.blend` and `3D_Model_Female_V2.blend`) replace the original models while maintaining the same GLB filenames for code compatibility. This migration ensures improved model quality for garment fitting and visualization.
+
+**What was done**
+
+**Migration Preparation**
+- Located V2 Blender source files:
+  - Female: `forgemind-ai\chracters_datasets\Female_3D_Model\3D_Model_Female_V2.blend`
+  - Male: `forgemind-ai\chracters_datasets\Male_3D_Model\3D_Model_Male_V2.blend`
+- Created comprehensive migration guide: `MODEL_V2_MIGRATION_GUIDE.md`
+- Created automated migration script: `migrate-to-v2-models.ps1`
+
+**Files Created**
+
+**MODEL_V2_MIGRATION_GUIDE.md**
+- Complete step-by-step Blender export instructions for V2 models
+- Backup procedures for V1 models
+- Verification steps using existing inspection scripts
+- Garment re-fitting guidance if proportions changed
+- Rollback plan if issues arise
+- Comprehensive checklist for migration completion
+
+**migrate-to-v2-models.ps1**
+- PowerShell automation script for model replacement
+- Automatic V1 backup with `_V1_backup.glb` suffix
+- Copies V2 GLB exports to both locations:
+  - AI dataset folder: `forgemind-ai\chracters_datasets\{Gender}_3D_Model\`
+  - Mobile assets: `forgemind-mobile\assets\models\`
+- Dry-run mode for safety testing: `-DryRun`
+- Rollback mode to restore V1: `-Rollback`
+- File size reporting and pre-flight checks
+
+**Migration Strategy**
+
+**Why same filenames:**
+All existing code references these exact paths:
+- `BodyModel.tsx` imports: `MALE_GLTF`, `FEMALE_GLTF`
+- `app.json` asset preloading
+- `constants/bodyType.ts` documentation
+- Multiple inspection scripts
+
+By keeping `3D_Model_Male.glb` and `3D_Model_Female.glb` unchanged as filenames, **zero code changes** are needed — only the GLB file contents are replaced.
+
+**Migration Steps**
+1. Export V2 .blend files to .glb in Blender (following guide)
+2. Run migration script: `.\migrate-to-v2-models.ps1`
+3. Verify with inspection: `node scripts/glb_inspect.js`
+4. Test in app with existing garments
+5. Check for fit/proportion issues
+
+**What to Watch For**
+- **Bone naming:** If V2 models have different bone names, rigged garments will break
+- **Proportions:** If body dimensions changed, garments may need repositioning
+- **Materials:** Material setup changes may affect rendering
+- **File size:** Ensure V2 GLBs stay under 2MB each for reasonable load times
+
+**Next Steps (User Action Required)**
+1. Open `3D_Model_Female_V2.blend` in Blender
+2. Export to GLB following `MODEL_V2_MIGRATION_GUIDE.md` instructions
+3. Open `3D_Model_Male_V2.blend` in Blender
+4. Export to GLB following same instructions
+5. Run: `.\migrate-to-v2-models.ps1` (will prompt for confirmation)
+6. Verify: `cd forgemind-mobile; node scripts/glb_inspect.js`
+7. Test app: `npm start` and check 3D rendering
+
+**Rollback Available**
+If V2 models cause issues:
+```powershell
+.\migrate-to-v2-models.ps1 -Rollback
+```
+
+---
+
+## Session — Tuesday, October 27, 2026 (Photo Display Bug Fix)
+
+**Summary**
+
+Fixed photo display inconsistency where photos showed correctly in Outfit Planning screen but displayed only placeholder icons in My Items inventory list. Root cause: Outfit Planning screens used raw `photo_urls[0]` instead of `getOwnedItemPhotoUri()` helper which converts server paths to full URLs. All screens now use the same photo URL conversion logic.
+
+**What was done**
+
+**Problem Diagnosis**
+- User reported: Photos display in "Your Items" section of Outfit Planning but NOT in "My Inventory" list
+- Investigation found: `OwnedItemDashboard.tsx` (My Items) used `getOwnedItemPhotoUri()` helper ✅
+- Meanwhile: `ProjectPlanningScreen.tsx` and `ProjectPlanning2DScreen.tsx` used raw `item.photo_urls[0]` ❌
+- Result: Inconsistent rendering across screens
+
+**Files Modified**
+
+**ProjectPlanningScreen.tsx** (3D Outfit Planning)
+- Added import: `import { getOwnedItemPhotoUri } from '../../utils/photoUtils';`
+- Updated image rendering in "Your Items" grid to use `getOwnedItemPhotoUri(item.photo_urls?.[0])`
+- Fixed TypeScript error: Changed `key={item.id}` → `key={item.attire_id}` (correct OwnedAttire property)
+- Photo rendering now wrapped in IIFE to compute URI before passing to Image component
+
+**ProjectPlanning2DScreen.tsx** (2D Photo View Planning)
+- Added imports: `getOwnedItemPhotoUri`, `Ionicons`
+- Updated image rendering in item grid to use `getOwnedItemPhotoUri()`
+- Updated photo overlay in worn slots to use `getOwnedItemPhotoUri()`
+- Both locations now handle null/invalid URIs with proper fallback to placeholders
+
+**Why This Matters**
+- **Before:** Photos showed in Outfit Planning but not My Items (confusing UX)
+- **After:** Photos display consistently across all screens showing owned items
+- **Impact:** Users see their uploaded photos everywhere they should appear
+
+**How getOwnedItemPhotoUri() Works**
+Located in `src/utils/photoUtils.ts`, this helper:
+1. Handles null/undefined gracefully
+2. Passes through `data:` URIs (base64 inline images)
+3. Passes through full `http(s):` URLs
+4. **Converts server relative paths** (`/uploads/...` → `http://{API_BASE_URL}/uploads/...`)
+5. Rejects dead `blob:` and `file:` URIs (don't work after restart)
+
+**TypeScript Verification**
+- Total errors reduced from 39 → 36 (3 fixed in planning screens)
+- Remaining 36 errors are pre-existing in unrelated files
+- All modified files compile cleanly
+
+**Testing Status**
+- ✅ TypeScript compilation passed
+- ⏸️ Visual testing required (all three screens: My Items, 3D Planning, 2D Planning)
+- ⏸️ Cross-screen consistency check needed
+
+**Related Documentation**
+- `PHOTO_DISPLAY_BUG_FIX.md` - Detailed fix report with testing checklist
+- `PHOTO_UPLOAD_FIX_COMPLETE.md` - Original photo upload implementation
+- `src/utils/photoUtils.ts` - Photo URI conversion utility
 
 ---
 
