@@ -1,7 +1,73 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 28, 2026 (Task GARMENT-1: Bind-pose verification and attach-by-bone foundation)
+**Last updated:** Wednesday, October 28, 2026 (Task GARMENT-2: Standalone attach-by-bone module and integration audit)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Wednesday, October 28, 2026 (Task GARMENT-2: Standalone Attach-by-Bone Module)
+
+**Summary**
+
+Built standalone, unit-tested attach-by-bone module for rigid accessories (wigs, shoes) on V2 rigged bodies. Created attachToBone.ts module with resolveBone/getAttachBones/attachAccessory API, attachment offsets JSON data (male/female, zero initial values), and comprehensive test suite (60 tests with real THREE.js + GLB parsing). Audited all 3D integration points identifying 5 critical issues. No app behavior changes - module tested standalone, ready for integration in next task.
+
+**What was done**
+
+**Step 0: Git Baseline**
+- Merged task/garment1-attach-by-bone to master (commit 7620b59)
+- Pushed to origin/master
+- Created branch: task/garment2-attach-module
+
+**Step 1: Integration Audit**
+- Created docs/changes/garment2-integration-audit.md (60 lines)
+- **Finding 1 - V1 Asset Loading**: BodyModel.tsx imports V1 GLBs; app.json expo-asset plugin lists V1 only; NO V2 references in src/
+- **Finding 2 - Centered Coordinate Frame**: bodyBounds.ts, Preview3D camera (Y=0.2), placeholders all assume V1 centered frame (feet Y≈-0.95, head Y≈0.93); V2 has floor origin (feet Y=0, head Y=1.9)
+- **Finding 3 - White Wig Cap**: Static procedural GLBs with baked V1 head position; rendered as `<primitive object={scene} />` with no bone attachment
+- **Finding 4 - Bone Names**: NO DEF-* usage in src/; V2 contracts use dot-suffix names (foot.L) requiring PropertyBinding handling
+- **Finding 5 - Failing Scripts**: verify-glb-models.mjs expects body_size_bone_scale.json (cancelled feature); generate_wig_glb.mjs uses V1 headTopY
+
+**Step 2: attachToBone Module**
+- Created src/utils/attachToBone.ts (286 lines)
+- **resolveBone(bodyScene, boneName)**: Resolves bone with exact + sanitized fallback (handles V2 dots like "foot.L")
+- **getAttachBones(contract, slot, filter?)**: Filters bones by slot/side/part
+- **attachAccessory({bodyScene, boneName, accessory, offset})**: Returns {detach}
+- **AttachmentOffset interface**: position [x,y,z] metres, rotation_deg [x,y,z] Euler XYZ, scale [x,y,z]
+- Offset frame: model-space axes at bind pose, relative to bone head position
+- Detach is idempotent, no clones/listeners/leaks
+
+**Step 3: Attachment Offsets Data**
+- Created src/data/attachmentOffsets.json: male/female offsets for wig (head) and shoes (foot.L/R, toe.L/R), all zero initial values
+- Created src/utils/loadAttachmentOffsets.ts: loader with validation (position ±1m, scale 0.1-10, rotation ±360deg)
+
+**Step 4: Module Tests**
+- Created tools/test_attach_module.mjs (285 lines)
+- 7 assertions per bone: resolve, attach, parent check, matrixAutoUpdate=false, detach, idempotent, re-attach
+- Inline resolveBone/attachAccessory (avoids TypeScript compilation)
+- Real THREE.js with GLB binary parser (no GLTFLoader browser deps)
+- Tests both V2 bodies, all attach points from contracts
+- Exit code 1 on any failure
+
+**Step 5: Test Execution**
+- ✅ `npx tsc --noEmit`: No new errors from GARMENT-2 files
+- ✅ `node tools/test_attach_module.mjs`: 60/60 tests PASSED (both bodies, all attach points)
+- ✅ `node tools/test_attach_follow.js`: 10/10 attach-follow tests PASSED
+- ✅ `node tools/glb_inspect.js`: Both V2 GLBs PASS bind-pose verification
+- **Key fix**: resolveBone() now tries exact match first (V2 bones have dots), then sanitized fallback for loader compatibility
+
+**Files Created**
+- `src/utils/attachToBone.ts` (286 lines): Bone resolution, attach API, offset implementation
+- `src/data/attachmentOffsets.json` (58 lines): male/female offsets for wig + shoes, zero initial values
+- `src/utils/loadAttachmentOffsets.ts` (166 lines): Loader with validation
+- `tools/test_attach_module.mjs` (285 lines): 60 tests with real THREE.js + GLB parsing
+- `docs/changes/garment2-integration-audit.md` (60 lines): 5 findings + evidence table
+- `GARMENT2_PROGRESS.md`: Task progress tracking
+
+**Technical Details**
+- Offset implementation: desired world = bone world head + offset, then accessory local = inverse(bone.matrixWorld) * desired
+- Module sets accessory.matrixAutoUpdate = false, parents to bone
+- resolveBone handles both exact names ("foot.L") and sanitized names ("footL") for loader compatibility
+- No hard-coded bone/slot names in code (from contract JSON)
+- Offsets are data (JSON), not constants
 
 ---
 

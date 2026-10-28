@@ -1,0 +1,64 @@
+{
+  "male": {
+    "wig": {
+      "head": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      }
+    },
+    "shoes": {
+      "foot.L": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "foot.R": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "toe.L": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "toe.R": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      }
+    }
+  },
+  "female": {
+    "wig": {
+      "head": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      }
+    },
+    "shoes": {
+      "foot.L": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "foot.R": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "toe.L": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "toe.R": {
+        "position": [0, 0, 0],
+        "rotation_deg": [0, 0, 0],
+        "scale": [1, 1, 1]
+      }
+    }
+  }
+}
