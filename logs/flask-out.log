@@ -1,0 +1,23 @@
+Using datasets path: C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-ai\chracters_datasets
+Matcher mode: rule
+============================================================
+ForgeMind AI API Starting...
+============================================================
+Endpoints:
+  GET  /health                   - Health check
+  POST /api/match                - Match attire to character
+  GET  /api/characters           - List available characters
+  POST /api/screen-listing       - Screen marketplace listing
+  POST /api/ai/categorize-photo  - Categorize photo (vision/baseline)
+  POST /api/ai/transcribe        - Transcribe audio (Whisper API)
+  GET  /api/test                 - Test with mock data
+============================================================
+Matcher mode: rule
+Screener mode: words_only
+Photo categorization: openai (gpt-4-vision-preview)
+============================================================
+Server running on http://localhost:5000
+Press Ctrl+C to stop
+============================================================
+ * Serving Flask app 'api'
+ * Debug mode: on

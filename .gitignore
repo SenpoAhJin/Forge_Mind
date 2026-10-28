@@ -51,3 +51,6 @@ src/utils/*.js
 # generated native folders
 /ios
 /android
+
+# development server logs
+logs/
