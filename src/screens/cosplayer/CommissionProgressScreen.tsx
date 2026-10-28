@@ -27,7 +27,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   container: { backgroundColor: themeColors.surface },
   title: { color: themeColors.textPrimary },
   subtitle: { color: themeColors.textSecondary },
-  summaryCard: { backgroundColor: themeColors.backgroundLight, borderColor: themeColors.border },
+  summaryCard: { backgroundColor: themeColors.background, borderColor: themeColors.border },
   summaryLabel: { color: themeColors.textSecondary },
   summaryValue: { color: themeColors.textPrimary },
   progressBar: { backgroundColor: themeColors.border },

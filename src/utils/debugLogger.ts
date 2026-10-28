@@ -109,19 +109,34 @@ export class DebugLogger {
 
   /**
    * Clear all storage (for clean testing)
+   * Removes ALL keys from AsyncStorage including auth tokens, theme prefs, etc.
    */
   static async clearAllStorage() {
     try {
-      await AsyncStorage.multiRemove([
-        STORAGE_KEYS.ACCOUNTS,
-        STORAGE_KEYS.ACTIVE_SESSION,
-        STORAGE_KEYS.ORGANIZER_REQUESTS,
-      ]);
+      // Get all keys first for logging
+      const allKeys = await AsyncStorage.getAllKeys();
       console.log('═══════════════════════════════════════');
-      console.log('ALL STORAGE CLEARED');
+      console.log('CLEARING ALL STORAGE');
+      console.log('═══════════════════════════════════════');
+      console.log(`Found ${allKeys.length} keys:`);
+      allKeys.forEach(key => console.log(`  - ${key}`));
+      
+      // Clear everything
+      await AsyncStorage.clear();
+      
+      console.log('');
+      console.log('✅ ALL STORAGE CLEARED');
+      console.log('');
+      console.log('App reset to fresh state:');
+      console.log('  ✓ Auth tokens removed');
+      console.log('  ✓ User session cleared');
+      console.log('  ✓ Theme preferences reset');
+      console.log('  ✓ All cached data removed');
+      console.log('');
+      console.log('Next: Refresh the page or restart the app');
       console.log('═══════════════════════════════════════');
     } catch (error) {
-      console.error('Error clearing storage:', error);
+      console.error('❌ Error clearing storage:', error);
     }
   }
 }

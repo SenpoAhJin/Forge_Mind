@@ -64,6 +64,8 @@ export const formatDepartmentVerificationStatus = (
 const OFFER_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   accepted: 'Accepted',
+  awaiting_confirmation: 'Awaiting Confirmation',
+  completed: 'Completed',
   declined: 'Declined',
   withdrawn: 'Withdrawn',
 };

@@ -252,7 +252,7 @@ export const PhotoUploadSection: React.FC<PhotoUploadSectionProps> = ({
               {/* Status Overlay */}
               {photo.status === 'uploading' && (
                 <View style={styles.overlay}>
-                  <ActivityIndicator size="small" color={colors.backgroundLight} />
+                  <ActivityIndicator size="small" color={colors.background} />
                   <Text style={styles.overlayText}>Uploading...</Text>
                 </View>
               )}
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   settingsButtonText: {
     ...typography.caption,
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '600',
   },
   photosScroll: {
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   },
   coverBadgeText: {
     ...typography.caption,
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '600',
     fontSize: 10,
   },
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing.xs,
     right: spacing.xs,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: 12,
     zIndex: 2,
   },
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     ...typography.caption,
-    color: colors.backgroundLight,
+    color: colors.background,
     textAlign: 'center',
   },
   retryButton: {
@@ -449,14 +449,14 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     ...typography.caption,
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '600',
   },
   removeButton: {
     position: 'absolute',
     top: spacing.xs,
     right: spacing.xs,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: 12,
     zIndex: 2,
   },

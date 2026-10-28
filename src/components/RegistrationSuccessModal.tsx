@@ -41,7 +41,7 @@ interface RegistrationSuccessModalProps {
 const { width } = Dimensions.get('window');
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
-  modal: { backgroundColor: themeColors.backgroundLight },
+  modal: { backgroundColor: themeColors.background },
   checkmarkCircle: { backgroundColor: themeColors.success, shadowColor: themeColors.success },
   title: { color: themeColors.textPrimary },
   subtitle: { color: themeColors.textSecondary },
@@ -51,7 +51,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   infoBox: { backgroundColor: themeColors.info + '10', borderLeftColor: themeColors.info },
   infoText: { color: themeColors.textPrimary },
   continueButton: { backgroundColor: themeColors.primary, shadowColor: themeColors.primary },
-  continueButtonText: { color: themeColors.backgroundLight },
+  continueButtonText: { color: themeColors.background },
 });
 
 export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
@@ -156,7 +156,7 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
             ]}
           >
             <View style={[styles.checkmarkCircle, dynamicStyles.checkmarkCircle]}>
-              <Ionicons name="checkmark" size={48} color={themeColors.backgroundLight} />
+              <Ionicons name="checkmark" size={48} color={themeColors.background} />
             </View>
           </Animated.View>
 
@@ -210,7 +210,7 @@ export const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> =
             activeOpacity={0.8}
           >
             <Text style={[styles.continueButtonText, dynamicStyles.continueButtonText]}>{primaryButtonLabel ?? 'Continue to Login'}</Text>
-            <Ionicons name="arrow-forward" size={20} color={themeColors.backgroundLight} />
+            <Ionicons name="arrow-forward" size={20} color={themeColors.background} />
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

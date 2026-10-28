@@ -6,7 +6,7 @@
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const validateEmail = (email: string): { valid: boolean; error: string } => {
-  if (!email || !email.trim()) {
+  if (!email || !(email ?? '').trim()) {
     return { valid: false, error: 'Email is required' };
   }
   if (!EMAIL_REGEX.test(email)) {
@@ -39,7 +39,7 @@ export const validateConfirmPassword = (
 };
 
 export const validateDisplayName = (displayName: string): { valid: boolean; error: string } => {
-  if (!displayName || !displayName.trim()) {
+  if (!displayName || !(displayName ?? '').trim()) {
     return { valid: false, error: 'Display name is required' };
   }
   if (displayName.length > 100) {
@@ -49,7 +49,7 @@ export const validateDisplayName = (displayName: string): { valid: boolean; erro
 };
 
 export const validateRequired = (value: string, fieldName: string): { valid: boolean; error: string } => {
-  if (!value || !value.trim()) {
+  if (!value || !(value ?? '').trim()) {
     return { valid: false, error: `${fieldName} is required` };
   }
   return { valid: true, error: '' };

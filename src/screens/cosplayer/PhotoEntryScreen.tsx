@@ -1,7 +1,7 @@
 /**
  * ForgeMind - Photo Entry (FE-5)
  * Camera/gallery access via expo-image-picker. AI categorization (type/color/style)
- * is MOCKED for this phase — real image classification is a backend feature (BE-1).
+ * calls the Flask /api/ai/categorize-photo endpoint.
  */
 
 import React, { useState } from 'react';
@@ -11,6 +11,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Button, ConditionSlider } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { AttireCategory, EntryLanguage } from '../../types/owned-attire';
+import { categorizePhoto } from '../../services/photoCategorization';
+import OwnedItemPhotoService from '../../services/OwnedItemPhotoService';
 
 interface PhotoEntryScreenProps {
   onContinue: (input: {
@@ -25,37 +27,17 @@ interface PhotoEntryScreenProps {
   }) => void;
 }
 
-const MOCK_TYPES: AttireCategory[] = [
-  'wig',
-  'clothing',
-  'footwear',
-  'accessory',
-  'armor',
-  'weapon',
-  'prop',
-  'fabric',
-  'material',
-  'other',
-];
-
-const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-
-const MOCK_COLORS = ['black', 'white', 'red', 'blue', 'pink', 'brown', 'green', 'purple'];
-const MOCK_STYLES = [
-  'anime-inspired costume piece',
-  'casual everyday wear',
-  'formal dress piece',
-  'streetwear accessory',
-  'handcrafted prop-like item',
-];
-
 export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }) => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [serverPhotoUrl, setServerPhotoUrl] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [categorization, setCategorization] = useState<{
     type: AttireCategory;
     color: string;
     style: string;
+    source: 'openai_vision' | 'baseline' | 'error';
   } | null>(null);
   const [conditionRating, setConditionRating] = useState(3);
 
@@ -76,29 +58,66 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
     }
   };
 
-  const handlePhotoUri = (uri: string | null) => {
+  const handlePhotoUri = async (uri: string | null) => {
     setPhotoUrl(uri);
+    setServerPhotoUrl(null);
+    setUploadError(null);
+    
     if (uri) {
       setAnalyzing(true);
       setCategorization(null);
-      setTimeout(() => {
+      
+      // Call real categorization API
+      const result = await categorizePhoto(uri);
+      
+      if (result) {
+        // Get primary color name from hex
+        const primaryColor = result.dominant_colors[0] || '#808080';
+        
+        // Generate style from style_tags
+        const style = result.style_tags.join(', ') || 'unknown style';
+        
         setCategorization({
-          type: pickRandom(MOCK_TYPES),
-          color: pickRandom(MOCK_COLORS),
-          style: pickRandom(MOCK_STYLES),
+          type: result.category,
+          color: primaryColor,
+          style: style,
+          source: result.source,
+        });
+        
+        // After categorization succeeds, upload photo to server
+        setAnalyzing(false);
+        setUploading(true);
+        
+        const uploadResult = await OwnedItemPhotoService.uploadPhoto(uri);
+        
+        if (uploadResult.success && uploadResult.url) {
+          setServerPhotoUrl(uploadResult.url);
+        } else {
+          // Upload failed - keep local URI as fallback, show error
+          setUploadError(uploadResult.error || 'Upload failed');
+        }
+        
+        setUploading(false);
+      } else {
+        // Fallback on error
+        setCategorization({
+          type: 'other',
+          color: '#808080',
+          style: 'categorization-failed',
+          source: 'error',
         });
         setAnalyzing(false);
-      }, 1200);
+      }
     }
   };
 
-  const canContinue = photoUrl && categorization && !analyzing;
+  const canContinue = photoUrl && categorization && !analyzing && !uploading;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Photo Entry</Text>
       <Text style={styles.subtitle}>
-        Pick a photo of the item. Categorization runs as a mock for now.
+        Pick a photo of the item. Categorization powered by Flask AI service.
       </Text>
 
       <TouchableOpacity style={styles.photoBox} activeOpacity={0.8} onPress={requestPermissionAndPick}>
@@ -126,9 +145,30 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
         </View>
       )}
 
+      {uploading && (
+        <View style={styles.analyzingRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.analyzingText}>Uploading photo…</Text>
+        </View>
+      )}
+
+      {uploadError && (
+        <View style={styles.errorCard}>
+          <View style={styles.errorRow}>
+            <Ionicons name="warning-outline" size={20} color={colors.error} />
+            <Text style={styles.errorText}>{uploadError}</Text>
+          </View>
+          <Text style={styles.errorHint}>Photo saved locally for this session</Text>
+        </View>
+      )}
+
       {categorization && !analyzing && (
         <View style={styles.resultCard}>
-          <Text style={styles.resultTitle}>Mock categorization result</Text>
+          <Text style={styles.resultTitle}>
+            {categorization.source === 'baseline' ? 'Color-based categorization' : 
+             categorization.source === 'openai_vision' ? 'AI categorization' : 
+             'Categorization failed'}
+          </Text>
           <View style={styles.resultRow}>
             <Text style={styles.resultLabel}>Type</Text>
             <Text style={styles.resultValue}>{categorization.type}</Text>
@@ -140,6 +180,10 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
           <View style={styles.resultRow}>
             <Text style={styles.resultLabel}>Style</Text>
             <Text style={styles.resultValue}>{categorization.style}</Text>
+          </View>
+          <View style={styles.resultRow}>
+            <Text style={styles.resultLabel}>Source</Text>
+            <Text style={styles.resultValue}>{categorization.source}</Text>
           </View>
           <Text style={styles.resultHint}>
             All fields are editable on the confirmation screen.
@@ -159,7 +203,7 @@ export const PhotoEntryScreen: React.FC<PhotoEntryScreenProps> = ({ onContinue }
                 entry_method: 'photo',
                 entry_language: 'english',
                 original_input_text: '',
-                photo_urls: [photoUrl],
+                photo_urls: [serverPhotoUrl || photoUrl],
                 auto_categorized_type: categorization.type,
                 auto_categorized_color: categorization.color,
                 auto_categorized_style: categorization.style,
@@ -269,5 +313,30 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primary,
     marginTop: spacing.md,
+  },
+  errorCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
+    flexDirection: 'column',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.error,
+    flex: 1,
+  },
+  errorHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    paddingLeft: spacing.lg + 20,
   },
 });

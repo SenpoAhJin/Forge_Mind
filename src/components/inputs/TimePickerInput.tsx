@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   inputError: {
     borderColor: colors.error,
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: 500,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     ...Platform.select({

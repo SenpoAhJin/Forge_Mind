@@ -1,7 +1,9 @@
 /**
  * ForgeMind Navigation - Onboarding Flow
- * Handles the four onboarding screens with local/mock state
+ * Handles the three onboarding screens with local/mock state
  * Transitions to appropriate dashboard based on role after completion
+ * 
+ * NOTE: Body slider screen removed (October 14, 2026) - feature cancelled.
  */
 
 import React, { useState } from 'react';
@@ -10,7 +12,6 @@ import {
   WelcomeScreen,
   RoleSelectionScreen,
   AccountCreationScreen,
-  BodySliderOnboardingScreen,
 } from '../screens/onboarding';
 import { useUser } from '../contexts/UserContext';
 import { colors } from '../theme';
@@ -18,13 +19,13 @@ import { colors } from '../theme';
 const Stack = createNativeStackNavigator();
 
 export const OnboardingNavigator: React.FC = () => {
-  const { setUserRoles, setUserAccount, setUserBody } = useUser();
+  const { setUserRoles, setUserAccount } = useUser();
 
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.backgroundLight },
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="Welcome">
@@ -52,20 +53,8 @@ export const OnboardingNavigator: React.FC = () => {
           <AccountCreationScreen
             onContinue={(email, password, displayName) => {
               setUserAccount(email, password, displayName);
-              navigation.navigate('BodySliderOnboarding' as never);
-            }}
-            onBack={() => navigation.goBack()}
-          />
-        )}
-      </Stack.Screen>
-
-      <Stack.Screen name="BodySliderOnboarding">
-        {({ navigation }) => (
-          <BodySliderOnboardingScreen
-            onComplete={(baseBody, bodySize) => {
-              setUserBody(baseBody, bodySize);
-              // Onboarding complete - RootNavigator will now show main app
-              // No explicit navigation needed here
+              // Onboarding complete - body slider screen removed
+              // RootNavigator will now show main app based on roles
             }}
             onBack={() => navigation.goBack()}
           />

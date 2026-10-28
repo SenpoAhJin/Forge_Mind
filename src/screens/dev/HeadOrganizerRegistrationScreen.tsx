@@ -136,7 +136,6 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)
-        0.5,    // bodySize (placeholder - not used for organizers)
         {
           organizer_role: 'head',
           head_organizer_department: department,
@@ -372,7 +371,7 @@ export const HeadOrganizerRegistrationScreen: React.FC<HeadOrganizerRegistration
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -448,7 +447,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   departmentButtonSelected: {
     borderColor: colors.secondary,
@@ -490,7 +489,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingTop: spacing.md,
     gap: spacing.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

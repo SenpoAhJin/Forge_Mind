@@ -2,16 +2,19 @@
  * ForgeMind - Item Confirmation (FE-5)
  * Editable categorization + extras shown after any entry method.
  * Save persists to the local inventory via OwnedAttireContext (AsyncStorage).
+ * D7a: Added photo picker (up to 3 photos, local-only, never sent to Flask/backend).
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { getTodayLocal } from '../../utils/dateHelpers';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
+import OwnedItemPhotoService from '../../services/OwnedItemPhotoService';
 import {
   AttireCategory,
   EntryLanguage,
@@ -38,12 +41,10 @@ interface ItemConfirmationScreenProps {
 
 const TYPES: AttireCategory[] = [
   'wig',
-  'clothing',
+  'top',
+  'bottom',
   'footwear',
   'accessory',
-  'armor',
-  'weapon',
-  'prop',
   'fabric',
   'material',
   'other',
@@ -72,13 +73,62 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
   const [acquiredDate, setAcquiredDate] = useState(getTodayLocal());
   const [acquisitionCost, setAcquisitionCost] = useState('');
   const [notes, setNotes] = useState('');
+  const [photos, setPhotos] = useState<string[]>((draft.photo_urls ?? []).filter((u): u is string => u !== null));
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  const handleSave = () => {
-    const item = addItem({
+  const pickPhoto = async (source: 'gallery' | 'camera') => {
+    if (photos.length >= 5) return; // Increased from 3 to 5 photos
+    
+    const permission = source === 'camera' 
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permission.granted) return;
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false }) // Increased quality
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, allowsEditing: false, mediaTypes: ['images'] });
+
+    if (!result.canceled && result.assets[0]) {
+      const localUri = result.assets[0].uri;
+      
+      // Upload photo to server
+      setUploadingPhoto(true);
+      const uploadResult = await OwnedItemPhotoService.uploadPhoto(localUri);
+      setUploadingPhoto(false);
+      
+      if (uploadResult.success && uploadResult.url) {
+        console.log(`[ItemConfirmation] Photo uploaded successfully:`, uploadResult.url);
+        setPhotos([...photos, uploadResult.url]);
+      } else {
+        // Upload failed - keep local URI as fallback for current session
+        console.error('[ItemConfirmation] Photo upload failed:', uploadResult.error);
+        alert(uploadResult.error || 'Failed to upload photo. Using local copy for this session.');
+        setPhotos([...photos, localUri]);
+      }
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    console.log(`[ItemConfirmation] Saving item with ${photos.length} photos`);
+    if (photos.length > 0) {
+      console.log(`[ItemConfirmation] Photo URLs being saved:`, photos.map(p => ({
+        length: p.length,
+        type: p.startsWith('data:') ? 'data URI' : p.startsWith('blob:') ? 'blob URL' : 'other',
+        preview: p.substring(0, 50)
+      })));
+    }
+    
+    // Photos are stored locally only, never sent to Flask matcher or backend API
+    const item = await addItem({
       entry_method: draft.entry_method,
       entry_language: draft.entry_language,
       original_input_text: draft.original_input_text,
-      photo_urls: draft.photo_urls,
+      photo_urls: photos,
       auto_categorized_type: type,
       auto_categorized_color: color.trim() || 'unclear',
       auto_categorized_style: style.trim() || 'unclear',
@@ -113,6 +163,55 @@ export const ItemConfirmationScreen: React.FC<ItemConfirmationScreenProps> = ({
           <Text style={styles.sourceText}>“{draft.original_input_text}”</Text>
         </View>
       ) : null}
+
+      <Text style={styles.sectionTitle}>Photos (optional)</Text>
+      {photos.length > 0 ? (
+        <View style={styles.photoGrid}>
+          {photos.map((uri, i) => (
+            <View key={i} style={styles.photoThumb}>
+              <Image source={{ uri }} style={styles.photoImage} />
+              <TouchableOpacity 
+                style={styles.photoRemove} 
+                onPress={() => removePhoto(i)} 
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={24} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {photos.length < 5 ? (
+        <View style={styles.photoActions}>
+          <TouchableOpacity 
+            style={styles.photoButton} 
+            onPress={() => pickPhoto('gallery')} 
+            activeOpacity={0.7}
+            disabled={uploadingPhoto}
+          >
+            {uploadingPhoto ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="images-outline" size={24} color={colors.primary} />
+            )}
+            <Text style={styles.photoButtonText}>{uploadingPhoto ? 'Uploading…' : 'Gallery'}</Text>
+          </TouchableOpacity>
+          {Platform.OS !== 'web' ? (
+            <TouchableOpacity 
+              style={styles.photoButton} 
+              onPress={() => pickPhoto('camera')} 
+              activeOpacity={0.7}
+              disabled={uploadingPhoto}
+            >
+              <Ionicons name="camera-outline" size={24} color={colors.primary} />
+              <Text style={styles.photoButtonText}>Camera</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+      <Text style={styles.photoNotice}>
+        {photos.length}/5 photos • Uploaded to server for cross-device sync
+      </Text>
 
       <Text style={styles.sectionTitle}>Auto-categorized (editable)</Text>
 
@@ -299,5 +398,65 @@ const styles = StyleSheet.create({
   },
   cancelRow: {
     marginTop: spacing.sm,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
+  },
+  photoThumb: {
+    width: 120,
+    height: 120,
+    position: 'relative',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: colors.backgroundLight,
+    borderRadius: 16,
+    shadowColor: colors.textPrimary,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.backgroundLight,
+  },
+  photoButtonText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  photoNotice: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
   },
 });

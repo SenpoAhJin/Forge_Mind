@@ -1,12 +1,22 @@
 # FE-3D Milestone 2 — Implementation Summary
 
 **Date:** Wednesday, September 16, 2026  
-**Status:** ✅ **IMPLEMENTATION COMPLETE** — Awaiting Device Testing  
-**Milestone:** Body Type Relabeling + Zoom/Lighting Fixes + Body-Size Slider Wiring
+**Status:** ❌ **CANCELLED** — Feature Discontinued October 14, 2026  
+**Milestone:** Body Type Relabeling + Zoom/Lighting Fixes + ~~Body-Size Slider Wiring~~ [CANCELLED]
 
 ---
 
-## What Was Built
+## Cancellation Notice
+
+**Body-size slider feature permanently cancelled as of October 14, 2026.**
+
+**Reason:** Decision to use fixed male/female GLB bodies only. No runtime scaling, no slider UI, no body_size field.
+
+Parts 1 & 2 (relabeling and zoom/lighting) remain in the codebase. Part 3 (slider wiring) has been removed.
+
+---
+
+## What Was Built (Historical Record)
 
 Successfully implemented all three parts of FE-3D Milestone 2 in exact order as specified:
 
@@ -23,13 +33,15 @@ Successfully implemented all three parts of FE-3D Milestone 2 in exact order as 
 - Added error boundary for graceful failure handling
 - Improved touch controls configuration
 
-### ✅ Part 3: Body-Size Slider Wiring
-- Created bone scaling utility (`src/utils/boneScaling.ts`)
-- Implemented bone name translation (Blender → Three.js format)
-- Wired slider to apply linear interpolation bone scaling
-- Updated BodyModel to accept morphFactor prop (0.0 = slim, 1.0 = plus)
-- Added useEffect hook to apply bone scaling on slider change
-- Updated UI text to indicate slider is now active
+### ~~✅ Part 3: Body-Size Slider Wiring~~ [CANCELLED October 14, 2026]
+- ~~Created bone scaling utility (`src/utils/boneScaling.ts`)~~ [REMOVED]
+- ~~Implemented bone name translation (Blender → Three.js format)~~ [REMOVED]
+- ~~Wired slider to apply linear interpolation bone scaling~~ [REMOVED]
+- ~~Updated BodyModel to accept morphFactor prop (0.0 = slim, 1.0 = plus)~~ [REMOVED]
+- ~~Added useEffect hook to apply bone scaling on slider change~~ [REMOVED]
+- ~~Updated UI text to indicate slider is now active~~ [REMOVED]
+
+**Note:** All slider code removed October 14, 2026. App now uses fixed-scale bodies only.
 
 ---
 

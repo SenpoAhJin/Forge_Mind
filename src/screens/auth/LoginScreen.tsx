@@ -7,7 +7,7 @@
  * On failure: plain inline error
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,8 +19,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, TextInputField } from '../../components';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius, withAlpha } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ThemeModeControl } from '../../components/ThemeModeControl';
 
 interface LoginScreenProps {
   onSuccess: () => void;
@@ -44,6 +46,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useUser();
+  const { themeColors: colors, isDark } = useTheme();
+
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const validateEmail = (email: string): boolean => {
     if (!email) {
@@ -126,10 +131,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
+      <ThemeModeControl />
+
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back</Text>
@@ -165,15 +172,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               placeholder="Enter your password"
               secureTextEntry={!showPassword}
               error={passwordError}
-            /><TouchableOpacity
+            />
+            <TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            ><Ionicons
+            >
+              <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
                 color={colors.textSecondary}
-              /></TouchableOpacity>
+              />
+            </TouchableOpacity>
           </View>
 
           {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
@@ -210,71 +220,74 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundLight,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxxl * 2,
-    paddingBottom: spacing.xxl,
-    justifyContent: 'center',
-  },
-  header: {
-    marginBottom: spacing.xl * 2,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  form: {
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  errorText: {
-    ...typography.body,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.error + '15',
-    borderRadius: borderRadius.md,
-  },
-  actions: {
-    marginBottom: spacing.lg,
-  },
-  loader: {
-    position: 'absolute',
-    top: 10,
-    alignSelf: 'center',
-  },
-  switchContainer: {
-    alignItems: 'center',
-  },
-  switchText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  switchLink: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: spacing.md,
-    top: 38, // Position below label, aligned with input
-  },
-});
+const createStyles = (colors: ReturnType<typeof useTheme>['themeColors'], isDark: boolean) => {
+  const tint = isDark ? 0.20 : 0.10;
+  
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xxxl * 2,
+      paddingBottom: spacing.xxl,
+      justifyContent: 'center',
+    },
+    header: {
+      marginBottom: spacing.xl * 2,
+    },
+    title: {
+      ...typography.h1,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      lineHeight: 22,
+    },
+    form: {
+      gap: spacing.sm,
+      marginBottom: spacing.xl,
+    },
+    passwordContainer: {
+      position: 'relative',
+    },
+    errorText: {
+      ...typography.body,
+      color: colors.error,
+      textAlign: 'center',
+      marginTop: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: withAlpha(colors.error, tint),
+      borderRadius: borderRadius.md,
+    },
+    actions: {
+      marginBottom: spacing.lg,
+    },
+    loader: {
+      position: 'absolute',
+      top: 10,
+      alignSelf: 'center',
+    },
+    switchContainer: {
+      alignItems: 'center',
+    },
+    switchText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    switchLink: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    eyeIcon: {
+      position: 'absolute',
+      right: spacing.md,
+      top: 38, // Position below label, aligned with input
+    },
+  });
+};

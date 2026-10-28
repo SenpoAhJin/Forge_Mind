@@ -1,60 +1,65 @@
 /**
- * ForgeMind - Chat Context (FE-6 Step 4)
+ * ForgeMind - Chat Context (Server Integration)
  *
- * Chat content is transaction-scoped and is never screened, classified, scored,
- * or used as input to any AI/rule computation (see spec).
+ * Server screens messages at send-time with rule-based word filter (no AI).
+ * Chat content is not stored for analysis.
  *
- * Manages transaction-scoped chat threads (mock data, persisted with AsyncStorage).
- * NO seed threads: threads only exist once created through getOrCreateThread.
+ * Manages marketplace chat threads and messages from forgemind-backend server.
+ * Only buyers can start threads. Threads appear after first message sent.
+ * 
+ * Context guards mirror server rules:
+ *  - Start thread: verified buyer on active listing, not seller's own listing
+ *  - Send message: participant only, thread must be open, listing must be active
+ *  - Close thread: participant only, open threads only
  *
- * Context guards:
- *  - getOrCreateThread: listing must exist and be 'active'; buyer must not be the
- *    listing's seller; returns existing thread for that pair if one exists
- *    (even if closed — closed threads are not reopened or duplicated).
- *  - sendMessage: sender must be one of the two participants; thread must be
- *    effectively open; body trimmed must be non-empty and <= 1000 chars.
- *  - closeThread: participants only, open threads only; records
- *    closed_reason 'closed_by_participant', closed_at, closed_by_email.
- *  - Effective status is DERIVED at read time: a stored-open thread whose listing
- *    is no longer 'active' is treated as closed with reason 'listing_unavailable'.
- *  - Accepting an offer does NOT close a thread (no "complete" state exists until
- *    milestone tracking is built).
- *  - getThreadsForUser returns only threads with at least one message.
+ * Polling: Active thread (ChatThreadScreen focused) refetches every ~5s. Updates
+ * only when message count or last message changes. Pauses when app backgrounded.
+ * Unread count refreshes on focus + every ~20s while active.
+ *
+ * Identity: user_id (not email). Server never returns emails.
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  ChatThread,
-  ChatMessage,
-  ThreadStatus,
-  ThreadClosedReason,
-} from '../types/chat';
-import { useMarketplace } from './MarketplaceContext';
-import { getListingSellerName } from '../utils/marketplaceMapping';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import * as ChatApi from '../services/ChatApi';
+import { useUser } from './UserContext';
 
-const STORAGE_KEY = '@forgemind:marketplace_chat';
-
-interface ChatData {
-  threads: ChatThread[];
-  messages: ChatMessage[];
-}
-
-type ThreadResult = { success: boolean; error?: string; thread?: ChatThread };
-type MessageResult = { success: boolean; error?: string; message?: ChatMessage };
+// Re-export server types for convenience
+export type { ServerThread, ServerMessage } from '../services/ChatApi';
 
 interface ChatContextType {
-  threads: ChatThread[];
+  threads: ChatApi.ServerThread[];
   isLoading: boolean;
-  getOrCreateThread: (listingId: string, buyerEmail: string) => Promise<ThreadResult>;
-  getThreadById: (threadId: string) => ChatThread | undefined;
-  getThreadsForUser: (email: string) => ChatThread[];
-  getMessages: (threadId: string) => ChatMessage[];
-  sendMessage: (threadId: string, senderEmail: string, body: string) => Promise<MessageResult>;
-  closeThread: (threadId: string, closerEmail: string) => Promise<ThreadResult>;
-  markThreadRead: (threadId: string, readerEmail: string) => Promise<void>;
-  getUnreadCount: (email: string) => number;
-  getEffectiveStatus: (thread: ChatThread) => { status: ThreadStatus; reason?: ThreadClosedReason };
+  needsRelogin: boolean;
+  unreadCount: number;
+  
+  // Thread management
+  startThread: (listing_id: string) => Promise<
+    { success: true; thread: ChatApi.ServerThread } | { success: false; error: string }
+  >;
+  getThreadById: (thread_id: string) => ChatApi.ServerThread | undefined;
+  getThreadForListing: (listing_id: string, buyer_user_id: string) => ChatApi.ServerThread | undefined;
+  refreshThreads: () => Promise<void>;
+  closeThread: (thread_id: string) => Promise<{ success: true } | { success: false; error: string }>;
+  
+  // Messages (for active thread polling)
+  activeThread: { thread: ChatApi.ServerThread; messages: ChatApi.ServerMessage[] } | null;
+  loadThread: (thread_id: string) => Promise<
+    { success: true; thread: ChatApi.ServerThread; messages: ChatApi.ServerMessage[] } | { success: false; error: string }
+  >;
+  sendMessage: (thread_id: string, body: string) => Promise<
+    | { success: true; message: ChatApi.ServerMessage }
+    | { success: false; error: string; blocked?: boolean; blockMessage?: string }
+  >;
+  markThreadRead: (thread_id: string) => Promise<void>;
+  
+  // Polling control (for ChatThreadScreen)
+  startPolling: (thread_id: string) => void;
+  stopPolling: () => void;
+  
+  // Unread
+  refreshUnreadCount: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -67,296 +72,293 @@ export const useChat = (): ChatContextType => {
   return context;
 };
 
-// A buyer's own display name is the handle in their email, because the
-// signed-in user record has no server id to read a display name from. Safe on a
-// missing email: it returns an empty handle instead of throwing.
-const displayNameFromEmail = (email: string | null | undefined): string => {
-  if (typeof email !== 'string') return '';
-  const handle = email.split('@')[0];
-  return handle || 'Member';
-};
-
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { getListingById } = useMarketplace();
-  const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { user } = useUser();
+  const [threads, setThreads] = useState<ChatApi.ServerThread[]>([]);
+  const [activeThread, setActiveThread] = useState<{
+    thread: ChatApi.ServerThread;
+    messages: ChatApi.ServerMessage[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const unreadIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingThreadIdRef = useRef<string | null>(null);
+  const isPollingRef = useRef(false);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
+  // Check if user session lacks user_id (old cached session)
+  const needsRelogin = user !== null && !user.user_id;
+
+  // Clear all chat state and stop polling on logout/account switch
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data: ChatData = JSON.parse(stored);
-        setThreads(data.threads || []);
-        setMessages(data.messages || []);
-      } else {
-        setThreads([]);
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error('[ChatContext] Failed to load chat data:', error);
+    if (!user?.user_id) {
+      // User logged out or switched accounts - clear everything
       setThreads([]);
-      setMessages([]);
-    } finally {
+      setActiveThread(null);
+      setUnreadCount(0);
       setIsLoading(false);
+      stopPolling();
+      stopUnreadPolling();
     }
-  };
+  }, [user?.user_id]);
 
-  const saveData = async (updatedThreads: ChatThread[], updatedMessages: ChatMessage[]) => {
-    try {
-      const data: ChatData = {
-        threads: updatedThreads,
-        messages: updatedMessages,
-      };
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      setThreads(updatedThreads);
-      setMessages(updatedMessages);
-    } catch (error) {
-      console.error('[ChatContext] Failed to save chat data:', error);
+  // Refresh threads on mount if user logged in
+  useEffect(() => {
+    if (user?.user_id) {
+      refreshThreads();
+      refreshUnreadCount();
     }
-  };
+  }, [user?.user_id]);
 
-  // Effective status: derived at read time
-  const getEffectiveStatus = (thread: ChatThread): { status: ThreadStatus; reason?: ThreadClosedReason } => {
-    if (thread.status === 'closed') {
-      return { status: 'closed', reason: thread.closed_reason };
-    }
+  // Unread count polling (every ~20s while app active)
+  useEffect(() => {
+    if (!user?.user_id) return;
 
-    // Check if listing is still active
-    const listing = getListingById(thread.listing_id);
-    if (!listing || listing.status !== 'active') {
-      return { status: 'closed', reason: 'listing_unavailable' };
-    }
-
-    return { status: 'open' };
-  };
-
-  const getOrCreateThread = async (listingId: string, buyerEmail: string): Promise<ThreadResult> => {
-    const listing = getListingById(listingId);
-    if (!listing) {
-      return { success: false, error: 'That listing no longer exists.' };
-    }
-    if (listing.status !== 'active') {
-      return { success: false, error: 'That listing is no longer accepting messages.' };
-    }
-    if (listing.is_owner) {
-      return { success: false, error: 'You cannot start a chat on your own listing.' };
-    }
-
-    // Check for existing thread (even if closed)
-    const existing = threads.find(
-      (t) => t.listing_id === listingId && t.buyer_email === buyerEmail
-    );
-    if (existing) {
-      return { success: true, thread: existing };
-    }
-
-    // Create new thread
-    const timestamp = Date.now();
-    const rand = Math.floor(Math.random() * 1000);
-    const newThread: ChatThread = {
-      id: `thread-${timestamp}-${rand}`,
-      listing_id: listingId,
-      listing_title: listing.title,
-      // No seller email: the server never returns one (privacy rule B1). The
-      // identity is seller_user_id and the name is the seller's chosen name.
-      seller_email: '',
-      seller_user_id: listing.seller_user_id,
-      seller_display_name: getListingSellerName(listing),
-      buyer_email: buyerEmail,
-      buyer_display_name: displayNameFromEmail(buyerEmail),
-      status: 'open',
-      created_at: new Date().toISOString(),
+    const startUnreadPolling = () => {
+      stopUnreadPolling();
+      unreadIntervalRef.current = setInterval(() => {
+        if (appStateRef.current === 'active' && user?.user_id) {
+          refreshUnreadCount();
+        }
+      }, 20000);
     };
 
-    const updatedThreads = [...threads, newThread];
-    await saveData(updatedThreads, messages);
-    return { success: true, thread: newThread };
-  };
+    startUnreadPolling();
+    return () => stopUnreadPolling();
+  }, [user?.user_id]);
 
-  const getThreadById = (threadId: string): ChatThread | undefined => {
-    return threads.find((t) => t.id === threadId);
-  };
-
-  const getThreadsForUser = (email: string): ChatThread[] => {
-    // Only return threads with at least one message
-    const threadsForUser = threads.filter(
-      (t) => t.seller_email === email || t.buyer_email === email
-    );
-    return threadsForUser.filter((t) => {
-      const threadMessages = messages.filter((m) => m.thread_id === t.id);
-      return threadMessages.length > 0;
+  // AppState listener - pause polling when backgrounded
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      appStateRef.current = nextAppState;
+      
+      // Stop polling when app goes to background
+      if (nextAppState !== 'active' && pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        isPollingRef.current = false;
+      }
+      
+      // Resume polling when app comes back to foreground
+      if (nextAppState === 'active' && pollingThreadIdRef.current) {
+        startPollingInterval(pollingThreadIdRef.current);
+      }
     });
+
+    return () => subscription.remove();
+  }, []);
+
+  // Cleanup all intervals on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      stopUnreadPolling();
+    };
+  }, []);
+
+  const stopUnreadPolling = () => {
+    if (unreadIntervalRef.current) {
+      clearInterval(unreadIntervalRef.current);
+      unreadIntervalRef.current = null;
+    }
   };
 
-  const getMessages = (threadId: string): ChatMessage[] => {
-    return messages
-      .filter((m) => m.thread_id === threadId)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const refreshThreads = useCallback(async () => {
+    if (!user?.user_id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await ChatApi.getThreads();
+    setIsLoading(false);
+
+    if (result.success) {
+      setThreads(result.threads);
+    }
+  }, [user?.user_id]);
+
+  const refreshUnreadCount = useCallback(async () => {
+    if (!user?.user_id) return;
+
+    const result = await ChatApi.getUnreadCount();
+    if (result.success) {
+      setUnreadCount(result.unread_count);
+    }
+  }, [user?.user_id]);
+
+  const startThread = async (
+    listing_id: string
+  ): Promise<{ success: true; thread: ChatApi.ServerThread } | { success: false; error: string }> => {
+    if (!user?.user_id) {
+      return { success: false, error: 'Please log in again to start a conversation.' };
+    }
+
+    const result = await ChatApi.createThread(listing_id);
+    if (result.success) {
+      // Refresh threads to show the new one
+      await refreshThreads();
+    }
+    return result;
+  };
+
+  const loadThread = async (
+    thread_id: string
+  ): Promise<
+    { success: true; thread: ChatApi.ServerThread; messages: ChatApi.ServerMessage[] } | { success: false; error: string }
+  > => {
+    if (!user?.user_id) {
+      return { success: false, error: 'Please log in again to view conversations.' };
+    }
+
+    const result = await ChatApi.getThread(thread_id);
+    if (result.success) {
+      setActiveThread({ thread: result.thread, messages: result.messages });
+    }
+    return result;
   };
 
   const sendMessage = async (
-    threadId: string,
-    senderEmail: string,
+    thread_id: string,
     body: string
-  ): Promise<MessageResult> => {
-    const thread = getThreadById(threadId);
-    if (!thread) {
-      return { success: false, error: 'Thread not found.' };
+  ): Promise<
+    | { success: true; message: ChatApi.ServerMessage }
+    | { success: false; error: string; blocked?: boolean; blockMessage?: string }
+  > => {
+    if (!user?.user_id) {
+      return { success: false, error: 'Please log in again to send messages.' };
     }
 
-    // Check participant
-    if (thread.seller_email !== senderEmail && thread.buyer_email !== senderEmail) {
-      return { success: false, error: 'You are not a participant in this conversation.' };
+    const result = await ChatApi.sendMessage(thread_id, body);
+    if (result.success) {
+      // Refresh active thread to show new message
+      await loadThread(thread_id);
+      // Refresh threads list to update preview
+      await refreshThreads();
+    }
+    return result;
+  };
+
+  const closeThread = async (
+    thread_id: string
+  ): Promise<{ success: true } | { success: false; error: string }> => {
+    if (!user?.user_id) {
+      return { success: false, error: 'Please log in again.' };
     }
 
-    // Check effective status
-    const effectiveStatus = getEffectiveStatus(thread);
-    if (effectiveStatus.status === 'closed') {
-      const reason = effectiveStatus.reason === 'listing_unavailable'
-        ? 'This listing is no longer available.'
-        : 'This conversation is closed.';
-      return { success: false, error: reason };
+    const result = await ChatApi.closeThread(thread_id);
+    if (result.success) {
+      // Refresh to show updated status
+      await refreshThreads();
+      if (activeThread?.thread.thread_id === thread_id) {
+        await loadThread(thread_id);
+      }
     }
+    return result;
+  };
 
-    // Validate body
-    const trimmedBody = body.trim();
-    if (trimmedBody.length === 0) {
-      return { success: false, error: 'Message cannot be empty.' };
+  const markThreadRead = async (thread_id: string): Promise<void> => {
+    if (!user?.user_id) return;
+
+    const result = await ChatApi.markThreadRead(thread_id);
+    if (result.success) {
+      // Refresh unread count
+      await refreshUnreadCount();
+      // Refresh threads list to update has_unread
+      await refreshThreads();
     }
-    if (trimmedBody.length > 1000) {
-      return { success: false, error: 'Message is too long (max 1000 characters).' };
-    }
+  };
 
-    // Create message
-    const timestamp = Date.now();
-    const rand = Math.floor(Math.random() * 1000);
-    const newMessage: ChatMessage = {
-      id: `msg-${timestamp}-${rand}`,
-      thread_id: threadId,
-      sender_email: senderEmail,
-      body: trimmedBody,
-      created_at: new Date().toISOString(),
-    };
+  const getThreadById = (thread_id: string): ChatApi.ServerThread | undefined => {
+    return threads.find((t) => t.thread_id === thread_id);
+  };
 
-    // Update thread with last message info
-    const preview = trimmedBody.slice(0, 60);
-    const updatedThreads = threads.map((t) =>
-      t.id === threadId
-        ? {
-            ...t,
-            last_message_at: newMessage.created_at,
-            last_message_preview: preview,
-          }
-        : t
+  const getThreadForListing = (
+    listing_id: string,
+    buyer_user_id: string
+  ): ChatApi.ServerThread | undefined => {
+    return threads.find(
+      (t) => t.listing_id === listing_id && t.buyer_user_id === buyer_user_id
     );
-
-    const updatedMessages = [...messages, newMessage];
-    await saveData(updatedThreads, updatedMessages);
-    return { success: true, message: newMessage };
   };
 
-  const closeThread = async (threadId: string, closerEmail: string): Promise<ThreadResult> => {
-    const thread = getThreadById(threadId);
-    if (!thread) {
-      return { success: false, error: 'Thread not found.' };
+  // Polling for active thread (ChatThreadScreen)
+  const startPollingInterval = (thread_id: string) => {
+    // Clear any existing interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
     }
 
-    // Check participant
-    if (thread.seller_email !== closerEmail && thread.buyer_email !== closerEmail) {
-      return { success: false, error: 'You are not a participant in this conversation.' };
-    }
+    // Only start if app is active
+    if (appStateRef.current !== 'active') return;
 
-    // Check if already closed
-    if (thread.status === 'closed') {
-      return { success: false, error: 'This conversation is already closed.' };
-    }
+    pollingIntervalRef.current = setInterval(async () => {
+      // Skip this tick if previous request still in flight
+      if (isPollingRef.current) return;
 
-    // Check effective status (listing might be unavailable)
-    const effectiveStatus = getEffectiveStatus(thread);
-    if (effectiveStatus.status === 'closed' && effectiveStatus.reason === 'listing_unavailable') {
-      return { success: false, error: 'This conversation is already effectively closed (listing unavailable).' };
-    }
+      // Skip if thread is closed
+      const thread = getThreadById(thread_id);
+      if (thread?.status === 'closed') {
+        stopPolling();
+        return;
+      }
 
-    // Close thread
-    const updatedThreads = threads.map((t) =>
-      t.id === threadId
-        ? {
-            ...t,
-            status: 'closed' as ThreadStatus,
-            closed_reason: 'closed_by_participant' as ThreadClosedReason,
-            closed_at: new Date().toISOString(),
-            closed_by_email: closerEmail,
+      isPollingRef.current = true;
+      const result = await ChatApi.getThread(thread_id);
+      isPollingRef.current = false;
+
+      if (result.success) {
+        // Only update state if messages changed (avoid unnecessary re-renders)
+        if (activeThread?.thread.thread_id === thread_id) {
+          const messageCountChanged = result.messages.length !== activeThread.messages.length;
+          const lastMessageChanged =
+            result.messages.length > 0 &&
+            activeThread.messages.length > 0 &&
+            result.messages[result.messages.length - 1].message_id !==
+              activeThread.messages[activeThread.messages.length - 1].message_id;
+
+          if (messageCountChanged || lastMessageChanged) {
+            setActiveThread({ thread: result.thread, messages: result.messages });
           }
-        : t
-    );
-
-    await saveData(updatedThreads, messages);
-    const updatedThread = updatedThreads.find((t) => t.id === threadId);
-    return { success: true, thread: updatedThread };
+        }
+      }
+    }, 5000);
   };
 
-  const markThreadRead = async (threadId: string, readerEmail: string): Promise<void> => {
-    const thread = getThreadById(threadId);
-    if (!thread) return;
-
-    const now = new Date().toISOString();
-    const updatedThreads = threads.map((t) => {
-      if (t.id !== threadId) return t;
-      if (t.buyer_email === readerEmail) {
-        return { ...t, buyer_last_read_at: now };
-      }
-      if (t.seller_email === readerEmail) {
-        return { ...t, seller_last_read_at: now };
-      }
-      return t;
-    });
-
-    await saveData(updatedThreads, messages);
+  const startPolling = (thread_id: string) => {
+    pollingThreadIdRef.current = thread_id;
+    startPollingInterval(thread_id);
   };
 
-  const getUnreadCount = (email: string): number => {
-    let count = 0;
-    threads.forEach((thread) => {
-      if (thread.seller_email !== email && thread.buyer_email !== email) return;
-      if (!thread.last_message_at) return;
-
-      const threadMessages = messages.filter((m) => m.thread_id === thread.id);
-      if (threadMessages.length === 0) return;
-
-      // Find last message from counterpart
-      const lastCounterpartMessage = threadMessages
-        .filter((m) => m.sender_email !== email)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-
-      if (!lastCounterpartMessage) return;
-
-      const lastReadAt =
-        thread.buyer_email === email ? thread.buyer_last_read_at : thread.seller_last_read_at;
-
-      if (!lastReadAt || new Date(lastCounterpartMessage.created_at) > new Date(lastReadAt)) {
-        count++;
-      }
-    });
-    return count;
+  const stopPolling = () => {
+    pollingThreadIdRef.current = null;
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    isPollingRef.current = false;
   };
 
   const value: ChatContextType = {
     threads,
     isLoading,
-    getOrCreateThread,
+    needsRelogin,
+    unreadCount,
+    startThread,
     getThreadById,
-    getThreadsForUser,
-    getMessages,
-    sendMessage,
+    getThreadForListing,
+    refreshThreads,
     closeThread,
+    activeThread,
+    loadThread,
+    sendMessage,
     markThreadRead,
-    getUnreadCount,
-    getEffectiveStatus,
+    startPolling,
+    stopPolling,
+    refreshUnreadCount,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

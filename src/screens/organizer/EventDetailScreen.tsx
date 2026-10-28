@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   section: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.lg,

@@ -1,13 +1,14 @@
 # FE-3D Milestone 2 Verification Guide
 
-> **⚠️ SUPERSEDED — September 28, 2026**  
-> **Body-size scaling cancelled:** Runtime bone scaling / body-size morphing is no longer a feature. The `bodySizeValue` / `morphFactor` props were removed. See CHANGELOG_V2.md Sept 28 entry.  
-> **Touch constants corrected:** The documented ONE:2/TWO:1 touch assignments were incorrect — OrbitControls' defaults are ONE=ROTATE, TWO=DOLLY_PAN (not the reverse). This document's test steps reflect the incorrect understanding.  
+> **❌ CANCELLED — October 14, 2026**  
+> **Body-size slider feature permanently discontinued.** All slider UI, state, and scaling code removed. App now uses fixed male/female GLB bodies only. No runtime scaling.  
+> **Previous supersession (September 28, 2026):** Runtime bone scaling / body-size morphing props removed.  
+> **Touch constants note:** The documented ONE:2/TWO:1 touch assignments were incorrect — OrbitControls' defaults are ONE=ROTATE, TWO=DOLLY_PAN.  
 > **Preserved for historical reference only.**
 
-**Status:** Implementation Complete — Awaiting Device Testing  
+**Status:** ❌ CANCELLED (Part 3 removed October 14, 2026)  
 **Date:** 2026-09-16  
-**Milestone:** Body Type Relabeling + Zoom/Clipping Fixes + Body-Size Slider Wiring
+**Milestone:** Body Type Relabeling + Zoom/Clipping Fixes + ~~Body-Size Slider Wiring~~ [CANCELLED]
 
 ---
 

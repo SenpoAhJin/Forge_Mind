@@ -96,7 +96,6 @@ export interface StoredAccount {
   is_cosplayer: boolean;                // User.is_cosplayer (Boolean, required)
   is_organizer: boolean;                // User.is_organizer (Boolean, required)
   base_body_selection: 'male' | 'female'; // User.base_body_selection (Enum, required)
-  body_size_slider: number;             // User.body_size_slider (Float, required) - 0.0-1.0
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
   verification_status: 'pending' | 'verified' | 'rejected' | 'revoked' | 'not_submitted'; // User.verification_status (Enum)
   organizer_role: 'head' | 'staff' | null; // User.organizer_role (FE-5.5 - Enum, nullable)
@@ -295,13 +294,12 @@ export class AuthService {
    * Projects the API's flat `user` row onto the local StoredAccount shape.
    *
    * `password_hash` is always '' — the server never sends a hash, and the local
-   * User type in UserContext requires the key to exist. Local-only fields
-   * (body_size_slider, portfolio_photos) are carried over from `existing`.
+   * User type in UserContext requires the key to exist.
+   * Old stored accounts may still have body_size_slider; it is ignored during load.
    */
   private static toStoredAccount(
     user: ApiUser,
-    existing: StoredAccount | null,
-    bodySizeSlider?: number,
+    existing: StoredAccount | null
   ): StoredAccount {
     const account: StoredAccount = {
       user_id: user.user_id,
@@ -311,7 +309,6 @@ export class AuthService {
       is_cosplayer: user.is_cosplayer,
       is_organizer: user.is_organizer,
       base_body_selection: user.base_body_selection,
-      body_size_slider: existing?.body_size_slider ?? bodySizeSlider ?? 0.5,
       is_holder_verified: user.is_holder_verified,
       verification_status: user.verification_status,
       organizer_role: user.organizer_role,
@@ -375,7 +372,7 @@ export class AuthService {
    * preserved.
    */
   static accountFromServerUser(user: ApiUser, existing: StoredAccount | null): StoredAccount {
-    return AuthService.toStoredAccount(user, existing, existing?.body_size_slider);
+    return AuthService.toStoredAccount(user, existing);
   }
 
   /** Inserts or updates the account in the local cache array. */
@@ -408,7 +405,6 @@ export class AuthService {
     isCosplayer: boolean,
     isOrganizer: boolean,
     baseBody: 'male' | 'female',
-    bodySize: number,
     organizer?: OrganizerRegistration
   ): Promise<{ success: boolean; error?: string; account?: StoredAccount; fieldErrors?: Record<string, string> }> {
     try {
@@ -440,7 +436,7 @@ export class AuthService {
       // Keep a local cache so the untouched local-only features (organizer
       // roles, marketplace, portfolio, body slider) behave exactly as before.
       // The password is not part of this record.
-      const account = AuthService.toStoredAccount(data.user, null, bodySize);
+      const account = AuthService.toStoredAccount(data.user, null);
       await AuthService.upsertLocalAccount(account);
 
       return { success: true, account };
@@ -483,9 +479,8 @@ export class AuthService {
       const accounts = await this.getAccounts();
       const existing =
         accounts.find((acc) => acc.email.toLowerCase() === data.user.email.toLowerCase()) ?? null;
-      // body_size_slider and portfolio_photos have no server column, so they are
-      // carried over from the local record rather than reset.
-      const account = AuthService.toStoredAccount(data.user, existing, existing?.body_size_slider);
+      // Old stored accounts may have body_size_slider; it is ignored during load.
+      const account = AuthService.toStoredAccount(data.user, existing);
       await AuthService.upsertLocalAccount(account, accounts);
 
       return { success: true, account };

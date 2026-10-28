@@ -1,8 +1,8 @@
 /**
  * ForgeMind - Chat List Screen (FE-6 Step 4)
  * 
- * Chat content is transaction-scoped and is never screened, classified, scored,
- * or used as input to any AI/rule computation (see spec).
+ * Server screens messages at send-time with rule-based word filter (no AI).
+ * Chat content is not stored for analysis.
  * 
  * Shows all conversations for the current verified marketplace user.
  * Fixed-height chip bar: Open / Closed tabs.
@@ -34,7 +34,7 @@ type TabType = 'open' | 'closed';
 
 export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useUser();
-  const { getThreadsForUser, getEffectiveStatus, getMessages } = useChat();
+  const { threads, needsRelogin } = useChat();
 
   const [selectedTab, setSelectedTab] = useState<TabType>('open');
 
@@ -59,18 +59,37 @@ export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
-  const allThreads = getThreadsForUser(user.email);
+  // Relogin guard
+  if (needsRelogin) {
+    return (
+      <View style={styles.blockedContainer}>
+        <Ionicons name="log-in-outline" size={64} color={colors.textDisabled} />
+        <Text style={styles.blockedTitle}>Session Required</Text>
+        <Text style={styles.blockedText}>
+          Please log in again to view conversations.
+        </Text>
+        <Button
+          title="Go Back"
+          onPress={() => navigation.goBack()}
+          variant="secondary"
+          style={styles.blockedButton}
+        />
+      </View>
+    );
+  }
 
   const { openThreads, closedThreads } = useMemo(() => {
     const open: ChatThread[] = [];
     const closed: ChatThread[] = [];
 
-    allThreads.forEach((thread) => {
-      const effective = getEffectiveStatus(thread);
-      if (effective.status === 'open') {
-        open.push(thread);
-      } else {
+    threads.forEach((thread) => {
+      // Closed: has closed_reason or status is 'closed'
+      const isClosed = thread.closed_reason === 'listing_unavailable' || thread.status === 'closed';
+      
+      if (isClosed) {
         closed.push(thread);
+      } else {
+        open.push(thread);
       }
     });
 
@@ -85,29 +104,24 @@ export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
       openThreads: open.sort(sortFn),
       closedThreads: closed.sort(sortFn),
     };
-  }, [allThreads]);
+  }, [threads]);
 
   const displayedThreads = selectedTab === 'open' ? openThreads : closedThreads;
 
   const renderThreadCard = ({ item }: { item: ChatThread }) => {
+    // Counterpart: the other user's display_name
     const counterpartName =
-      item.seller_email === user.email ? item.buyer_display_name : item.seller_display_name;
+      item.seller_user_id === user.user_id ? item.buyer_display_name : item.seller_display_name;
 
-    const effectiveStatus = getEffectiveStatus(item);
-    const statusLabel = formatThreadStatus(effectiveStatus.status, effectiveStatus.reason);
+    // Status label
+    const isClosed = item.closed_reason === 'listing_unavailable' || item.status === 'closed';
+    const statusLabel = formatThreadStatus(
+      isClosed ? 'closed' : 'open',
+      item.closed_reason
+    );
 
-    // Unread dot: last message from counterpart is newer than my last_read_at
-    const messages = getMessages(item.id);
-    const lastCounterpartMessage = messages
-      .filter((m) => m.sender_email !== user.email)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-
-    const myLastReadAt =
-      item.buyer_email === user.email ? item.buyer_last_read_at : item.seller_last_read_at;
-
-    const hasUnread =
-      lastCounterpartMessage &&
-      (!myLastReadAt || new Date(lastCounterpartMessage.created_at) > new Date(myLastReadAt));
+    // Unread: server provides has_unread
+    const hasUnread = item.has_unread;
 
     // Format date
     const dateStr = item.last_message_at || item.created_at;
@@ -134,7 +148,7 @@ export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <TouchableOpacity
         style={styles.threadCard}
-        onPress={() => navigation.navigate('ChatThread', { threadId: item.id })}
+        onPress={() => navigation.navigate('ChatThread', { threadId: item.thread_id })}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
@@ -240,7 +254,7 @@ export const ChatListScreen: React.FC<Props> = ({ navigation }) => {
       <FlatList
         data={displayedThreads}
         renderItem={renderThreadCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.thread_id}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmptyState}
       />

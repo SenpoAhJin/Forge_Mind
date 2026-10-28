@@ -34,7 +34,6 @@ interface User {
   
   // Body representation fields
   base_body_selection: 'male' | 'female'; // User.base_body_selection (Enum, required)
-  body_size_slider: number;             // User.body_size_slider (Float, required) - 0.0-1.0
   
   // Status fields (set to defaults for mock)
   is_holder_verified: boolean;          // User.is_holder_verified (Boolean, default false)
@@ -82,8 +81,7 @@ interface UserContextType {
     displayName: string,
     isCosplayer: boolean,
     isOrganizer: boolean,
-    baseBody: 'male' | 'female',
-    bodySize: number
+    baseBody: 'male' | 'female'
   ) => Promise<{ success: boolean; error?: string; fieldErrors?: Record<string, string> }>;
   
   // Refresh user data from backend
@@ -92,7 +90,7 @@ interface UserContextType {
   // Onboarding helpers (for existing flow - kept for backward compat)
   setUserRoles: (isCosplayer: boolean, isOrganizer: boolean) => void;
   setUserAccount: (email: string, password: string, displayName: string) => void;
-  setUserBody: (baseBody: 'male' | 'female', bodySize: number) => void;
+  setUserBody: (baseBody: 'male' | 'female') => void;
 
   // FE-3D Milestone 1c: persist the 3D preview body type (persists across
   // logout/login and applies to every character/variant preview thereafter).
@@ -373,8 +371,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     displayName: string,
     isCosplayer: boolean,
     isOrganizer: boolean,
-    baseBody: 'male' | 'female',
-    bodySize: number
+    baseBody: 'male' | 'female'
   ): Promise<{ success: boolean; error?: string }> => {
     const result = await AuthService.register(
       email,
@@ -382,8 +379,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       displayName,
       isCosplayer,
       isOrganizer,
-      baseBody,
-      bodySize
+      baseBody
     );
     
     // FE-5.5+: No auto-login on registration - user must log in manually
@@ -426,7 +422,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         is_cosplayer: false,
         is_organizer: false,
         base_body_selection: 'male',
-        body_size_slider: 0.5,
         is_holder_verified: false,
         verification_status: 'pending',
         organizer_role: null,
@@ -437,11 +432,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
-  const setUserBody = (baseBody: 'male' | 'female', bodySize: number) => {
+  const setUserBody = (baseBody: 'male' | 'female') => {
     setUser((prev) => ({
       ...prev!,
       base_body_selection: baseBody,
-      body_size_slider: bodySize,
     }));
   };
 

@@ -37,7 +37,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modal: {
-    backgroundColor: themeColors.backgroundLight,
+    backgroundColor: themeColors.background,
   },
   iconColor: themeColors.primary,
   iconDestructiveColor: themeColors.error,
@@ -58,13 +58,13 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
     backgroundColor: themeColors.primary,
   },
   confirmButtonText: {
-    color: themeColors.backgroundLight,
+    color: themeColors.background,
   },
   destructiveButton: {
     backgroundColor: themeColors.error,
   },
   destructiveButtonText: {
-    color: themeColors.backgroundLight,
+    color: themeColors.background,
   },
 });
 

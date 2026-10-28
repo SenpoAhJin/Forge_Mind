@@ -33,10 +33,14 @@
         {
           "assets": [
             "./assets/models/3D_Model_Male.glb",
-            "./assets/models/3D_Model_Female.glb"
+            "./assets/models/3D_Model_Female.glb",
+            "./assets/models/garments/Wig_White_Cap_Male.glb",
+            "./assets/models/garments/Wig_White_Cap_Female.glb"
           ]
         }
-      ]
+      ],
+      "expo-status-bar",
+      "expo-audio"
     ]
   }
 }

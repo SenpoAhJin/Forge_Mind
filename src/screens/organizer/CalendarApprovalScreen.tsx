@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   modal: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     shadowColor: '#000',
@@ -300,6 +300,6 @@ const styles = StyleSheet.create({
   rejectButtonText: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.backgroundLight,
+    color: colors.background,
   },
 });

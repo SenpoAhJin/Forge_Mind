@@ -117,10 +117,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({
 
 const getDynamicStyles = (colors: ThemeColors) => ({
   standardCard: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.card,
   },
   itemCard: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.card,
   },
   itemImage: {
     backgroundColor: colors.surface,
@@ -132,7 +132,7 @@ const getDynamicStyles = (colors: ThemeColors) => ({
     color: colors.primary,
   },
   matchCard: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.card,
   },
   matchThumbnail: {
     backgroundColor: colors.surface,

@@ -26,7 +26,7 @@ interface ListingBlockedModalProps {
 }
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
-  modal: { backgroundColor: themeColors.backgroundLight },
+  modal: { backgroundColor: themeColors.background },
   title: { color: themeColors.textPrimary },
   message: { color: themeColors.textSecondary },
   reasonBox: { backgroundColor: themeColors.warning + '10', borderColor: themeColors.warning + '30' },
@@ -35,7 +35,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   editButton: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
   editButtonText: { color: themeColors.textSecondary },
   appealButton: { backgroundColor: themeColors.accent },
-  appealButtonText: { color: themeColors.backgroundLight },
+  appealButtonText: { color: themeColors.background },
 });
 
 export const ListingBlockedModal: React.FC<ListingBlockedModalProps> = ({
@@ -90,7 +90,7 @@ export const ListingBlockedModal: React.FC<ListingBlockedModalProps> = ({
                 onPress={onAppeal}
                 activeOpacity={0.7}
               >
-                <Ionicons name="megaphone-outline" size={18} color={themeColors.backgroundLight} />
+                <Ionicons name="megaphone-outline" size={18} color={themeColors.background} />
                 <Text style={[styles.appealButtonText, dynamicStyles.appealButtonText]}>Appeal this Decision</Text>
               </TouchableOpacity>
             </View>

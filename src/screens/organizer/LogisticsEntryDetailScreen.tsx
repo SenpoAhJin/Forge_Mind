@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   chipTextSelected: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   editActions: {
     flexDirection: 'row',

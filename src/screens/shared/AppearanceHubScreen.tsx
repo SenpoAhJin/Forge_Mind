@@ -1,164 +1,241 @@
 /**
  * Appearance Hub Screen
- * Customize app theme, colors, and visual preferences
- * Changes apply to current user's interface only
+ * Forge Indigo Design System
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StandardCard, Button } from '../../components';
-import { typography, spacing, borderRadius } from '../../theme';
-import { useTheme, ThemePreset } from '../../contexts/ThemeContext';
-
-const themeInfo: Record<ThemePreset, { name: string; description: string; icon: string }> = {
-  purple: {
-    name: 'Purple Dream',
-    description: 'Default vibrant purple with pink accents',
-    icon: 'color-palette',
-  },
-  blue: {
-    name: 'Ocean Blue',
-    description: 'Cool blue tones with cyan highlights',
-    icon: 'water',
-  },
-  pink: {
-    name: 'Sakura Pink',
-    description: 'Soft pink with warm yellow accents',
-    icon: 'flower',
-  },
-  green: {
-    name: 'Forest Green',
-    description: 'Natural green with teal undertones',
-    icon: 'leaf',
-  },
-  orange: {
-    name: 'Sunset Orange',
-    description: 'Warm orange with red and yellow',
-    icon: 'sunny',
-  },
-};
+import { StandardCard } from '../../components';
+import { typography } from '../../theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { layout } from '../../theme/colors';
+import type { ThemeMode } from '../../contexts/ThemeContext';
 
 export const AppearanceHubScreen: React.FC = () => {
-  const { currentTheme, themeColors, setTheme } = useTheme();
-  const [selectedTheme, setSelectedTheme] = useState<ThemePreset>(currentTheme);
-
-  const handleApplyTheme = async () => {
-    await setTheme(selectedTheme);
-  };
-
-  const hasChanges = selectedTheme !== currentTheme;
-
-  // Use theme colors from context
+  const { mode, setMode, isDark, themeColors } = useTheme();
   const colors = themeColors;
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: '#F5F5F7' }]} contentContainerStyle={styles.content}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={[styles.content, { paddingHorizontal: layout.screenPadding }]}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Appearance Hub</Text>
-        <Text style={styles.subtitle}>
-          Customize your app's visual theme. Changes apply only to your interface.
+      <View style={[styles.header, { marginBottom: layout.spacing.xl }]}>
+        <Text style={[styles.title, { color: colors.text, fontSize: layout.textTitle }]}>
+          Appearance
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: layout.textBody, marginTop: layout.spacing.xs }]}>
+          Switch between light and dark mode
         </Text>
       </View>
 
-      {/* Current Theme Preview */}
-      <StandardCard style={styles.previewCard}>
-        <Text style={styles.sectionTitle}>Current Theme</Text>
-        <View style={styles.currentTheme}>
-          <Ionicons
-            name={themeInfo[currentTheme].icon as any}
-            size={32}
-            color={themeColors.primary}
-          />
-          <View style={styles.currentThemeInfo}>
-            <Text style={styles.currentThemeName}>{themeInfo[currentTheme].name}</Text>
-            <Text style={styles.currentThemeDesc}>
-              {themeInfo[currentTheme].description}
+      {/* Theme Mode Selector */}
+      <StandardCard style={styles.cardWithSpacing}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: layout.textSection, marginBottom: layout.spacing.md }]}>
+          Theme Mode
+        </Text>
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[
+              styles.modeOption,
+              {
+                backgroundColor: mode === 'system' ? colors.primary : colors.card,
+                borderColor: colors.border,
+              }
+            ]}
+            onPress={() => setMode('system')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="phone-portrait-outline"
+              size={20}
+              color={mode === 'system' ? colors.textOnPrimary : colors.text}
+            />
+            <Text
+              style={[
+                styles.modeText,
+                {
+                  color: mode === 'system' ? colors.textOnPrimary : colors.text,
+                  fontSize: layout.textBody,
+                  marginTop: layout.spacing.xs,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              System
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeOption,
+              {
+                backgroundColor: mode === 'light' ? colors.primary : colors.card,
+                borderColor: colors.border,
+              }
+            ]}
+            onPress={() => setMode('light')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="sunny"
+              size={20}
+              color={mode === 'light' ? colors.textOnPrimary : colors.text}
+            />
+            <Text
+              style={[
+                styles.modeText,
+                {
+                  color: mode === 'light' ? colors.textOnPrimary : colors.text,
+                  fontSize: layout.textBody,
+                  marginTop: layout.spacing.xs,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              Light
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeOption,
+              {
+                backgroundColor: mode === 'dark' ? colors.primary : colors.card,
+                borderColor: colors.border,
+              }
+            ]}
+            onPress={() => setMode('dark')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="moon"
+              size={20}
+              color={mode === 'dark' ? colors.textOnPrimary : colors.text}
+            />
+            <Text
+              style={[
+                styles.modeText,
+                {
+                  color: mode === 'dark' ? colors.textOnPrimary : colors.text,
+                  fontSize: layout.textBody,
+                  marginTop: layout.spacing.xs,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              Dark
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        {mode === 'system' ? (
+          <Text style={[styles.helperText, { color: colors.textSecondary, fontSize: layout.textSmall, marginTop: layout.spacing.md }]}>
+            Follows your phone's setting.
+          </Text>
+        ) : mode === 'light' ? (
+          <Text style={[styles.helperText, { color: colors.textSecondary, fontSize: layout.textSmall, marginTop: layout.spacing.md }]}>
+            Always light.
+          </Text>
+        ) : (
+          <Text style={[styles.helperText, { color: colors.textSecondary, fontSize: layout.textSmall, marginTop: layout.spacing.md }]}>
+            Always dark.
+          </Text>
+        )}
+      </StandardCard>
+
+      {/* Color Palette Info */}
+      <StandardCard style={styles.cardWithSpacing}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: layout.textSection, marginBottom: layout.spacing.md }]}>
+          Two-Tone Palette
+        </Text>
+        <View style={styles.paletteRow}>
+          <View style={styles.colorSwatch}>
+            <View 
+              style={[
+                styles.swatchBox, 
+                { 
+                  backgroundColor: '#000000', 
+                  borderWidth: 2, 
+                  borderColor: isDark ? colors.border : colors.borderStrong,
+                  borderRadius: layout.radiusCard,
+                }
+              ]} 
+            />
+            <Text style={[styles.colorName, { color: colors.text, fontSize: layout.textBody, marginTop: layout.spacing.sm, marginBottom: layout.spacing.xs }]}>
+              BLACK
+            </Text>
+            <Text style={[styles.colorHex, { color: colors.textSecondary, fontSize: layout.textSmall }]}>
+              #000000
             </Text>
           </View>
-        </View>
-
-        {/* Color Swatches */}
-        <View style={styles.colorSwatches}>
-          <View style={styles.swatch}>
-            <View style={[styles.swatchColor, { backgroundColor: themeColors.primary }]} />
-            <Text style={styles.swatchLabel}>Primary</Text>
+          <View style={styles.colorSwatch}>
+            <View 
+              style={[
+                styles.swatchBox, 
+                { 
+                  backgroundColor: '#FF8FB1',
+                  borderWidth: 2,
+                  borderColor: isDark ? colors.border : colors.borderStrong,
+                  borderRadius: layout.radiusCard,
+                }
+              ]} 
+            />
+            <Text style={[styles.colorName, { color: colors.text, fontSize: layout.textBody, marginTop: layout.spacing.sm, marginBottom: layout.spacing.xs }]}>
+              PINK
+            </Text>
+            <Text style={[styles.colorHex, { color: colors.textSecondary, fontSize: layout.textSmall }]}>
+              #FF8FB1
+            </Text>
           </View>
-          <View style={styles.swatch}>
-            <View style={[styles.swatchColor, { backgroundColor: themeColors.secondary }]} />
-            <Text style={styles.swatchLabel}>Secondary</Text>
-          </View>
-          <View style={styles.swatch}>
-            <View style={[styles.swatchColor, { backgroundColor: themeColors.accent }]} />
-            <Text style={styles.swatchLabel}>Accent</Text>
+          <View style={styles.colorSwatch}>
+            <View 
+              style={[
+                styles.swatchBox, 
+                { 
+                  backgroundColor: '#FFFFFF', 
+                  borderWidth: 2, 
+                  borderColor: isDark ? colors.border : colors.borderStrong,
+                  borderRadius: layout.radiusCard,
+                }
+              ]} 
+            />
+            <Text style={[styles.colorName, { color: colors.text, fontSize: layout.textBody, marginTop: layout.spacing.sm, marginBottom: layout.spacing.xs }]}>
+              WHITE
+            </Text>
+            <Text style={[styles.colorHex, { color: colors.textSecondary, fontSize: layout.textSmall }]}>
+              #FFFFFF
+            </Text>
           </View>
         </View>
       </StandardCard>
 
-      {/* Theme Selection */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Choose Theme</Text>
-        <View style={styles.themeGrid}>
-          {(Object.keys(themeInfo) as ThemePreset[]).map((theme) => {
-            const info = themeInfo[theme];
-            const isSelected = selectedTheme === theme;
-            const isCurrent = currentTheme === theme;
-
-            return (
-              <TouchableOpacity
-                key={theme}
-                style={[styles.themeCard, isSelected && styles.themeCardSelected]}
-                onPress={() => setSelectedTheme(theme)}
-                activeOpacity={0.7}
-              >
-                {isCurrent && (
-                  <View style={styles.currentBadge}>
-                    <Text style={styles.currentBadgeText}>Current</Text>
-                  </View>
-                )}
-                <Ionicons
-                  name={info.icon as any}
-                  size={40}
-                  color={isSelected ? colors.primary : '#6B6B6B'}
-                />
-                <Text style={[styles.themeName, isSelected && styles.themeNameSelected]}>
-                  {info.name}
-                </Text>
-                <Text style={styles.themeDesc}>{info.description}</Text>
-                {isSelected && (
-                  <View style={styles.selectedIndicator}>
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Apply Button */}
-      {hasChanges && (
-        <View style={styles.applySection}>
-          <Button
-            title="Apply Theme"
-            variant="primary"
-            onPress={handleApplyTheme}
-            fullWidth
-          />
-          <Text style={styles.applyNote}>
-            Theme changes apply to color swatches in this screen only. Full app theming requires rewiring 50+ component files.
+      {/* Design Guidelines */}
+      <StandardCard style={styles.cardWithSpacing}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: layout.textSection, marginBottom: layout.spacing.md }]}>
+          Design Guidelines
+        </Text>
+        <View style={[styles.guidelineRow, { marginBottom: layout.spacing.md }]}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.text} />
+          <Text style={[styles.guidelineText, { color: colors.textSecondary, fontSize: layout.textBody, marginLeft: layout.spacing.md }]}>
+            BLACK for primary UI elements
           </Text>
         </View>
-      )}
-
-      {/* Info Notice */}
-      <View style={styles.infoNotice}>
-        <Ionicons name="information-circle-outline" size={20} color={'#6B6B6B'} />
-        <Text style={styles.infoText}>
-          Your theme preference is personal and won't affect other users' experience. More customization options coming soon!
-        </Text>
-      </View>
+        <View style={[styles.guidelineRow, { marginBottom: layout.spacing.md }]}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.text} />
+          <Text style={[styles.guidelineText, { color: colors.textSecondary, fontSize: layout.textBody, marginLeft: layout.spacing.md }]}>
+            PINK for ONE highlight per screen
+          </Text>
+        </View>
+        <View style={styles.guidelineRow}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.text} />
+          <Text style={[styles.guidelineText, { color: colors.textSecondary, fontSize: layout.textBody, marginLeft: layout.spacing.md }]}>
+            Opacity variants for depth
+          </Text>
+        </View>
+      </StandardCard>
     </ScrollView>
   );
 };
@@ -166,153 +243,83 @@ export const AppearanceHubScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
   },
   content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingTop: layout.spacing.lg,
+    paddingBottom: layout.spacing.xxl,
+    width: '100%',
   },
   header: {
-    marginBottom: spacing.xl,
+    width: '100%',
   },
   title: {
     ...typography.h1,
-    color: '#2C2C2C',
   },
   subtitle: {
     ...typography.body,
-    color: '#6B6B6B',
-    marginTop: spacing.xs,
   },
-  previewCard: {
-    marginBottom: spacing.xl,
-    padding: spacing.lg,
+  card: {
+    width: '100%',
+  },
+  cardWithSpacing: {
+    width: '100%',
+    marginBottom: 12,
+    padding: 16,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 8,
+  },
+  modeOption: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: layout.radiusCard,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeText: {
+    ...typography.buttonText,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  helperText: {
+    ...typography.caption,
   },
   sectionTitle: {
     ...typography.h3,
-    color: '#2C2C2C',
-    marginBottom: spacing.md,
   },
-  currentTheme: {
+  paletteRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  currentThemeInfo: {
+  colorSwatch: {
+    alignItems: 'center',
     flex: 1,
   },
-  currentThemeName: {
-    ...typography.h3,
-    color: '#2C2C2C',
+  swatchBox: {
+    width: 64,
+    height: 64,
   },
-  currentThemeDesc: {
-    ...typography.caption,
-    color: '#6B6B6B',
-    marginTop: spacing.xs / 2,
-  },
-  colorSwatches: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  swatch: {
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  swatchColor: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  swatchLabel: {
-    ...typography.caption,
-    color: '#6B6B6B',
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  themeGrid: {
-    gap: spacing.md,
-  },
-  themeCard: {
-    padding: spacing.lg,
-    backgroundColor: '#FFFFFF',
-    borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  themeCardSelected: {
-    borderColor: '#6B4CE6',
-    backgroundColor: '#6B4CE610',
-  },
-  currentBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-    borderRadius: borderRadius.full,
-  },
-  currentBadgeText: {
-    ...typography.caption,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 10,
-  },
-  themeName: {
-    ...typography.body,
-    color: '#2C2C2C',
+  colorName: {
+    ...typography.buttonText,
     fontWeight: '600',
-    marginTop: spacing.sm,
   },
-  themeNameSelected: {
-    color: '#6B4CE6',
-  },
-  themeDesc: {
+  colorHex: {
     ...typography.caption,
-    color: '#6B6B6B',
-    textAlign: 'center',
-    marginTop: spacing.xs / 2,
   },
-  selectedIndicator: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-  },
-  applySection: {
-    marginBottom: spacing.xl,
-  },
-  applyNote: {
-    ...typography.caption,
-    color: '#6B6B6B',
-    textAlign: 'center',
-    marginTop: spacing.md,
-    fontStyle: 'italic',
-  },
-  infoNotice: {
+  guidelineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: '#FFFFFF',
-    borderRadius: borderRadius.md,
-    borderLeftWidth: 3,
-    borderLeftColor: '#6B4CE6',
+    width: '100%',
   },
-  infoText: {
-    ...typography.caption,
-    color: '#6B6B6B',
+  guidelineText: {
+    ...typography.body,
     flex: 1,
-    lineHeight: 18,
   },
 });

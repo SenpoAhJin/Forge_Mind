@@ -208,7 +208,7 @@ const getDynamicStyles = (colors: ThemeColors) => ({
   textInput: {
     color: colors.textPrimary,
     borderColor: colors.border,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   textInputFocused: {
     borderColor: colors.primary,
@@ -220,11 +220,11 @@ const getDynamicStyles = (colors: ThemeColors) => ({
   textArea: {
     color: colors.textPrimary,
     borderColor: colors.border,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   dropdown: {
     borderColor: colors.border,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   dropdownText: {
     color: colors.textPrimary,

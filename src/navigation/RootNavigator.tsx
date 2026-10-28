@@ -7,20 +7,22 @@ import { OrganizerTabNavigator } from './OrganizerTabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { useUser } from '../contexts/UserContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { shouldShowOrganizerTabs } from '../utils/organizerAccess';
 import { GlobalNotificationHandler } from '../components';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
 
 export const RootNavigator: React.FC = () => {
-  const { user, isOnboardingComplete, isLoading } = useUser();
+  const { user, isOnboardingComplete, isLoading: userIsLoading } = useUser();
+  const { themeColors: colors, isLoading: themeIsLoading } = useTheme();
   const [activeRole, setActiveRole] = useState<'cosplayer' | 'organizer'>('cosplayer');
 
-  // Show loading spinner while checking for active session
-  if (isLoading) {
+  // Show loading spinner while checking for active session or loading theme
+  if (userIsLoading || themeIsLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading...</Text>
       </View>
     );
   }
@@ -35,7 +37,6 @@ export const RootNavigator: React.FC = () => {
   }
 
   // Active session but onboarding not complete - show onboarding
-  // (This handles body slider setup for newly registered accounts)
   if (!isOnboardingComplete) {
     return (
       <NavigationContainer>
@@ -56,27 +57,27 @@ export const RootNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <GlobalNotificationHandler />
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         {showRoleSwitcher && (
-          <SafeAreaView edges={['top']} style={styles.switcherSafe}>
-            <View style={styles.roleSwitcher}>
-              <Text style={styles.switcherLabel}>Viewing as:</Text>
-              <View style={styles.pillContainer}>
+          <SafeAreaView edges={['top']} style={[styles.switcherSafe, { backgroundColor: colors.surface }]}>
+            <View style={[styles.roleSwitcher, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+              <Text style={[styles.switcherLabel, { color: colors.textSecondary }]}>Viewing as:</Text>
+              <View style={[styles.pillContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
                 <TouchableOpacity
-                  style={[styles.pill, activeRole === 'cosplayer' && styles.pillActivePrimary]}
+                  style={[styles.pill, activeRole === 'cosplayer' && { backgroundColor: colors.primary }]}
                   onPress={() => setActiveRole('cosplayer')}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.pillText, activeRole === 'cosplayer' && styles.pillTextActive]}>
+                  <Text style={[styles.pillText, { color: colors.textSecondary }, activeRole === 'cosplayer' && { color: colors.textOnPrimary }]}>
                     Cosplayer
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.pill, activeRole === 'organizer' && styles.pillActiveSecondary]}
+                  style={[styles.pill, activeRole === 'organizer' && { backgroundColor: colors.secondary }]}
                   onPress={() => setActiveRole('organizer')}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.pillText, activeRole === 'organizer' && styles.pillTextActive]}>
+                  <Text style={[styles.pillText, { color: colors.textSecondary }, activeRole === 'organizer' && { color: colors.textOnPrimary }]}>
                     Organizer
                   </Text>
                 </TouchableOpacity>
@@ -103,19 +104,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.backgroundLight,
   },
   loadingText: {
     ...typography.body,
-    color: colors.textSecondary,
     marginTop: spacing.md,
   },
   root: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
   },
   switcherSafe: {
-    backgroundColor: colors.surface,
+    // backgroundColor dynamic
   },
   roleSwitcher: {
     flexDirection: 'row',
@@ -123,22 +121,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   switcherLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
     marginRight: spacing.sm,
   },
   pillContainer: {
     flexDirection: 'row',
     flex: 1,
-    backgroundColor: colors.backgroundLight,
     borderRadius: borderRadius.full,
     padding: 3,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   pill: {
     flex: 1,
@@ -146,19 +139,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs + 2,
     borderRadius: borderRadius.full,
   },
-  pillActivePrimary: {
-    backgroundColor: colors.primary,
-  },
-  pillActiveSecondary: {
-    backgroundColor: colors.secondary,
-  },
   pillText: {
     ...typography.caption,
     fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  pillTextActive: {
-    color: colors.backgroundLight,
   },
   navigator: {
     flex: 1,

@@ -48,7 +48,7 @@ const getDynamicStyles = (colors: ThemeColors) => ({
     backgroundColor: colors.primary,
   },
   senderText: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   receiverBubble: {
     backgroundColor: colors.surface,

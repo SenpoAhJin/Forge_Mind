@@ -10,6 +10,9 @@ import {
   VariantListScreen,
   MatchResultsScreen,
 } from '../screens/cosplayer';
+import ProjectPlanningScreen from '../screens/cosplayer/ProjectPlanningScreen'; // 3D view (future)
+import ProjectPlanning2DScreen from '../screens/cosplayer/ProjectPlanning2DScreen'; // 2D view (current)
+import CreateCharacterScreen from '../screens/cosplayer/CreateCharacterScreen'; // New: Add character
 import { useSelection } from '../contexts/SelectionContext';
 import { getCharacterById } from '../data';
 import { typography } from '../theme';
@@ -17,8 +20,10 @@ import { useTheme } from '../contexts/ThemeContext';
 
 export type CharacterStackParamList = {
   BrowseCharacters: undefined;
+  CreateCharacter: undefined; // New: Add character form
   VariantList: { characterId: string };
   MatchResults: undefined;
+  ProjectPlanning: { characterId?: string }; // Updated: optional character context
 };
 
 const Stack = createNativeStackNavigator<CharacterStackParamList>();
@@ -31,19 +36,32 @@ export const CharacterStackNavigator: React.FC = () => {
     <Stack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: themeColors.primary },
-        headerTintColor: themeColors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
+        headerTintColor: themeColors.background,
+        headerTitleStyle: { ...typography.h3, color: themeColors.background },
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: themeColors.backgroundLight },
+        contentStyle: { backgroundColor: themeColors.background },
       }}
     >
       <Stack.Screen name="BrowseCharacters" options={{ title: 'Characters' }}>
         {({ navigation }) => (
           <CharacterBrowseScreen
             onSelectCharacter={(characterId) =>
-              navigation.navigate('VariantList', { characterId })
+              navigation.navigate('ProjectPlanning', { characterId })
             }
+            navigation={navigation}
           />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="CreateCharacter" options={{ title: 'Add Character' }}>
+        {({ navigation }) => (
+          <CreateCharacterScreen navigation={navigation} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="ProjectPlanning" options={{ title: 'Outfit Planning' }}>
+        {({ navigation, route }) => (
+          <ProjectPlanningScreen navigation={navigation} route={route} />
         )}
       </Stack.Screen>
 
@@ -72,6 +90,13 @@ export const CharacterStackNavigator: React.FC = () => {
           />
         )}
       </Stack.Screen>
+
+      {/* Future: 3D View as separate route or toggle */}
+      {/* <Stack.Screen name="ProjectPlanning3D" options={{ title: '3D Preview' }}>
+        {({ navigation }) => (
+          <ProjectPlanningScreen navigation={navigation} />
+        )}
+      </Stack.Screen> */}
     </Stack.Navigator>
   );
 };

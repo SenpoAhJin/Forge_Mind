@@ -360,3 +360,41 @@ export async function withdrawOffer(
     return { success: false, error: mapErrorMessage(0, error) };
   }
 }
+
+/**
+ * POST /marketplace/offers/:id/confirm
+ * Confirm readiness for item transfer (buyer or seller).
+ * When both parties confirm, item ownership transfers automatically.
+ */
+export async function confirmOffer(
+  offerId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const token = await getAuthToken();
+  if (!token) {
+    return { success: false, error: 'You must be logged in to confirm an offer.' };
+  }
+
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/marketplace/offers/${offerId}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      return { success: false, error: mapErrorMessage(response.status, error) };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: mapErrorMessage(0, error) };
+  }
+}

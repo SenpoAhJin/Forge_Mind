@@ -223,7 +223,11 @@ export const OfferLogScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filteredOffers.map(offer => renderOfferCard(offer))}
+        {filteredOffers.map(offer => (
+          <View key={offer.id}>
+            {renderOfferCard(offer)}
+          </View>
+        ))}
       </ScrollView>
     );
   };

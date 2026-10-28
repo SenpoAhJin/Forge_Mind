@@ -29,7 +29,7 @@ interface AppealModalProps {
 }
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
-  modal: { backgroundColor: themeColors.backgroundLight },
+  modal: { backgroundColor: themeColors.background },
   title: { color: themeColors.textPrimary },
   subtitle: { color: themeColors.textSecondary },
   label: { color: themeColors.textPrimary },
@@ -40,7 +40,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   cancelButton: { backgroundColor: themeColors.surface, borderColor: themeColors.border },
   cancelButtonText: { color: themeColors.textSecondary },
   submitButton: { backgroundColor: themeColors.accent },
-  submitButtonText: { color: themeColors.backgroundLight },
+  submitButtonText: { color: themeColors.background },
 });
 
 export const AppealModal: React.FC<AppealModalProps> = ({

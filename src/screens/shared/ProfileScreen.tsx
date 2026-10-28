@@ -135,11 +135,6 @@ export const ProfileScreen: React.FC = () => {
               {bodyTypeLabel(user?.base_body_selection)}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="resize-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.detailLabel}>Size</Text>
-            <Text style={styles.detailValue}>{user?.body_size_slider?.toFixed(2) ?? '0.50'}</Text>
-          </View>
         </View>
       )}
 

@@ -177,7 +177,7 @@ const MarketplaceBrowse: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useUser();
   const { getActiveListings, isLoading, isOffline, lastUpdatedAt, refreshListings } = useMarketplace();
-  const { getUnreadCount } = useChat();
+  const { unreadCount } = useChat();
   const insets = useSafeAreaInsets();
   
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -192,9 +192,6 @@ const MarketplaceBrowse: React.FC = () => {
   // Check if user can create listings (seller or both role)
   const canCreateListing = user?.marketplace_registration?.marketplace_role === 'seller' ||
                            user?.marketplace_registration?.marketplace_role === 'both';
-
-  // Unread message count
-  const unreadCount = user?.email ? getUnreadCount(user.email) : 0;
 
   // Filter listings by category
   const filteredListings = useMemo(() => {

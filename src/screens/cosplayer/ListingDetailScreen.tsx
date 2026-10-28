@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useMarketplace } from '../../contexts/MarketplaceContext';
+import { useChat } from '../../contexts/ChatContext';
 import { CONDITION_LABELS } from '../../constants/marketplaceCategories';
 import { Button } from '../../components';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
@@ -34,6 +35,7 @@ export const ListingDetailScreen: React.FC = () => {
   const route = useRoute<ListingDetailRouteProp>();
   const { user } = useUser();
   const { getListingById, removeListing, deleteListingPermanently, refreshListings } = useMarketplace();
+  const { startThread } = useChat();
 
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -45,6 +47,7 @@ export const ListingDetailScreen: React.FC = () => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [galleryWidth, setGalleryWidth] = useState(0);
   const photoScrollRef = useRef<FlatList>(null);
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
 
   const listing = getListingById(route.params.listingId);
 
@@ -108,6 +111,36 @@ export const ListingDetailScreen: React.FC = () => {
   // cannot yet be tied to a seller without an email, which the server does not
   // hand out. Chat entry point shows a note instead of starting a broken flow.
   // Offers now work via the server.
+
+  const handleContactSeller = async () => {
+    if (!listing) return;
+    
+    setIsCreatingThread(true);
+    const result = await startThread(listing.id);
+    setIsCreatingThread(false);
+
+    if (result.success) {
+      navigation.navigate('ChatThread', { threadId: result.thread.thread_id });
+    } else {
+      // Map server errors to user-friendly text
+      let userMessage = 'Unable to start conversation.';
+      
+      if (result.error === 'unverified_user') {
+        userMessage = 'You must be verified to message sellers.';
+      } else if (result.error === 'invalid_listing_id' || result.error === 'listing_not_found') {
+        userMessage = 'This listing is no longer available.';
+      } else if (result.error === 'cannot_message_own_listing') {
+        userMessage = 'You cannot message your own listing.';
+      } else if (result.error === 'listing_not_active') {
+        userMessage = 'This listing is not accepting messages.';
+      } else if (result.error === 'network_error') {
+        userMessage = 'Network error. Please check your connection.';
+      }
+
+      setErrorMessage(userMessage);
+      setErrorVisible(true);
+    }
+  };
 
   const handleMessageUnavailable = () => {
     setServerSoonNote('Chat will use the server in an upcoming update.');
@@ -350,10 +383,11 @@ export const ListingDetailScreen: React.FC = () => {
       {/* Messaging (FE-6 Step 4) */}
       {canMessageSeller ? (
         <Button
-          title="Message Seller"
-          onPress={handleMessageUnavailable}
+          title={isCreatingThread ? "Starting chat..." : "Contact Seller"}
+          onPress={handleContactSeller}
           variant="secondary"
           fullWidth
+          disabled={isCreatingThread}
         />
       ) : isSeller ? (
         <Button

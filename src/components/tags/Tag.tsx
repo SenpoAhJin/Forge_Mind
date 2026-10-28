@@ -78,13 +78,13 @@ export const Tag: React.FC<TagProps> = ({ type, label, rating, style }) => {
 
 const getDynamicStyles = (colors: ThemeColors) => ({
   matchTagText: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   statusTag: {
     backgroundColor: colors.info,
   },
   statusTagText: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   categoryTag: {
     backgroundColor: colors.surface,

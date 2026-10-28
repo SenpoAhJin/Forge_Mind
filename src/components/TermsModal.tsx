@@ -24,7 +24,7 @@ interface TermsModalProps {
 }
 
 const getDynamicStyles = (themeColors: ThemeColors) => ({
-  container: { backgroundColor: themeColors.backgroundLight },
+  container: { backgroundColor: themeColors.background },
   header: { borderBottomColor: themeColors.border },
   title: { color: themeColors.textPrimary },
   placeholderBanner: { backgroundColor: themeColors.warning + '15', borderLeftColor: themeColors.warning },
@@ -34,7 +34,7 @@ const getDynamicStyles = (themeColors: ThemeColors) => ({
   lastUpdated: { color: themeColors.textDisabled },
   footer: { borderTopColor: themeColors.border },
   closeFooterButton: { backgroundColor: themeColors.primary },
-  closeFooterButtonText: { color: themeColors.backgroundLight },
+  closeFooterButtonText: { color: themeColors.background },
 });
 
 export const TermsModal: React.FC<TermsModalProps> = ({

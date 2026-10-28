@@ -54,7 +54,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     justifyContent: 'space-between',
   },
   content: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   logoShadow: {
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     shadowColor: colors.textPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,

@@ -5,9 +5,11 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Button, TextInputField, TextAreaField, ConditionSlider, DropdownField, ConfirmationModal } from '../../components';
+import { CrossPlatformImage } from '../../components/CrossPlatformImage';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { getTodayLocal } from '../../utils/dateHelpers';
@@ -18,6 +20,8 @@ import {
   FlexibilityTag,
   OwnedAttire,
 } from '../../types/owned-attire';
+import { getOwnedItemPhotoUri, hasUsablePhoto } from '../../utils/photoUtils';
+import OwnedItemPhotoService from '../../services/OwnedItemPhotoService';
 
 interface OwnedItemDetailProps {
   attireId: string;
@@ -27,12 +31,10 @@ interface OwnedItemDetailProps {
 
 const TYPES: AttireCategory[] = [
   'wig',
-  'clothing',
+  'top',
+  'bottom',
   'footwear',
   'accessory',
-  'armor',
-  'weapon',
-  'prop',
   'fabric',
   'material',
   'other',
@@ -65,6 +67,8 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
   const [editing, setEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNoProjectsModal, setShowNoProjectsModal] = useState(false);
+  const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [type, setType] = useState<AttireCategory>(item?.auto_categorized_type ?? 'other');
   const [color, setColor] = useState(item?.auto_categorized_color ?? '');
@@ -78,6 +82,7 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
     item?.committed_to_project_id ?? null
   );
   const [showCommitPicker, setShowCommitPicker] = useState(false);
+  const [isCommitting, setIsCommitting] = useState(false);
 
   if (!item) {
     return (
@@ -119,10 +124,105 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
     onBack();
   };
 
-  const handleCommit = (projectId: string | null) => {
-    setCommitment(item.attire_id, projectId);
-    setCommitTarget(projectId);
-    setShowCommitPicker(false);
+  const handleCommit = async (projectId: string | null) => {
+    setIsCommitting(true);
+    try {
+      await setCommitment(item.attire_id, projectId);
+      setCommitTarget(projectId);
+      setShowCommitPicker(false);
+    } catch (error: any) {
+      Alert.alert(
+        'Commitment Failed',
+        error.message || 'Unable to change item status',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsCommitting(false);
+    }
+  };
+
+  const [photoStatus, setPhotoStatus] = useState<string>('');
+
+  const handleAddPhoto = async () => {
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      setPhotoStatus('Permission denied');
+      console.log('[ADD_PHOTO] Permission denied');
+      return;
+    }
+
+    console.log('[ADD_PHOTO] Starting photo picker...');
+    setPhotoStatus('Choosing photo...');
+
+    // Pick image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Use MediaTypeOptions for backwards compatibility
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled) {
+      console.log('[ADD_PHOTO] User canceled');
+      setPhotoStatus('');
+      return;
+    }
+
+    const asset = result.assets[0];
+    console.log('[ADD_PHOTO] Image picked:', {
+      uri: asset.uri.substring(0, 80),
+      fileName: asset.fileName,
+      mimeType: asset.mimeType,
+      fileSize: asset.fileSize,
+      hasFile: !!(asset as any).file, // Web only
+    });
+
+    setUploadingPhoto(true);
+    setPhotoStatus('Uploading...');
+
+    try {
+      const uploadResult = await OwnedItemPhotoService.uploadPhoto(
+        asset.uri,
+        asset.fileName,
+        asset.mimeType,
+        (asset as any).file // Web-only File object
+      );
+
+      console.log('[ADD_PHOTO] Upload result:', uploadResult);
+
+      if (!uploadResult.success) {
+        const errorMsg = `Failed: ${uploadResult.error || 'Unknown error'}`;
+        setPhotoStatus(errorMsg);
+        console.error('[ADD_PHOTO] Upload failed:', uploadResult);
+        return;
+      }
+
+      // Update item with SERVER PATH (not full URL)
+      // Extract /uploads/... from full URL
+      const fullUrl = uploadResult.url!;
+      const serverPath = fullUrl.includes('/uploads/') 
+        ? fullUrl.substring(fullUrl.indexOf('/uploads/'))
+        : fullUrl;
+
+      console.log('[ADD_PHOTO] Updating item with path:', serverPath);
+
+      await updateItem(item.attire_id, {
+        photo_urls: [serverPath],
+      });
+
+      setPhotoStatus('Saved!');
+      console.log('[ADD_PHOTO] Item updated successfully');
+      onEdited();
+      
+      // Clear status after 2 seconds
+      setTimeout(() => setPhotoStatus(''), 2000);
+    } catch (error: any) {
+      const errorMsg = `Failed: ${error.message || 'Unknown error'}`;
+      setPhotoStatus(errorMsg);
+      console.error('[ADD_PHOTO] Error:', error);
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   return (
@@ -155,6 +255,59 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
             {editing ? 'Cancel' : 'Edit'}
           </Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.photosSection}>
+        {hasUsablePhoto(item.photo_urls) ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photosScroll}
+          >
+            {item.photo_urls
+              ?.map((url, index) => ({ url, index }))
+              .filter(({ url }) => getOwnedItemPhotoUri(url) !== null)
+              .map(({ url, index }) => {
+                const photoUri = getOwnedItemPhotoUri(url);
+                if (!photoUri) return null;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setEnlargedPhoto(photoUri)}
+                    activeOpacity={0.8}
+                  >
+                    <CrossPlatformImage
+                      uri={photoUri}
+                      style={styles.photoItem}
+                      resizeMode="cover"
+                      fallbackIcon={
+                        <View style={[styles.photoItem, styles.photoPlaceholder]}>
+                          <Ionicons name="shirt-outline" size={48} color={colors.textDisabled} />
+                        </View>
+                      }
+                    />
+                  </TouchableOpacity>
+                );
+              }).filter(Boolean)}
+          </ScrollView>
+        ) : (
+          <View style={styles.noPhotoBox}>
+            <Ionicons name="image-outline" size={40} color={colors.textDisabled} />
+            <Text style={styles.noPhotoText}>No photo available</Text>
+            {photoStatus ? (
+              <Text style={[styles.photoStatusText, photoStatus.includes('Failed') && styles.photoStatusError]}>
+                {photoStatus}
+              </Text>
+            ) : uploadingPhoto ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.sm }} />
+            ) : (
+              <TouchableOpacity onPress={handleAddPhoto} style={styles.addPhotoButton}>
+                <Ionicons name="camera-outline" size={16} color={colors.primary} />
+                <Text style={styles.addPhotoText}>Add Photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       {item.original_input_text ? (
@@ -278,47 +431,56 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
               <Text style={styles.commitHint}>
                 Committing marks this item as used for a project so matching can reuse it.
               </Text>
-              <DropdownField
-                label="Project"
-                value={commitTarget ? projects.find((p) => p.project_id === commitTarget)?.project_name ?? '' : ''}
-                placeholder="Select a project"
-                onPress={() => {
-                  if (projects.length === 0) {
-                    setShowNoProjectsModal(true);
-                    return;
-                  }
-                  setShowCommitPicker(true);
-                }}
-              />
-              {showCommitPicker && (
-                <View style={styles.commitList}>
-                  {projects.map((p) => (
-                    <TouchableOpacity
-                      key={p.project_id}
-                      style={[styles.commitOption, commitTarget === p.project_id && styles.commitOptionActive]}
-                      onPress={() => handleCommit(p.project_id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[styles.commitOptionText, commitTarget === p.project_id && styles.commitOptionTextActive]}
-                        numberOfLines={1}
-                      >
-                        {p.project_name}
-                      </Text>
-                      {commitTarget === p.project_id && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
-                    </TouchableOpacity>
-                  ))}
+              {isCommitting ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.loadingText}>Updating...</Text>
                 </View>
-              )}
-              {commitTarget && (
+              ) : (
                 <>
-                  <View style={styles.spacerSm} />
-                  <Button
-                    title="Release from Project (make free)"
-                    variant="tertiary"
-                    fullWidth
-                    onPress={() => handleCommit(null)}
+                  <DropdownField
+                    label="Project"
+                    value={commitTarget ? projects.find((p) => p.project_id === commitTarget)?.project_name ?? '' : ''}
+                    placeholder="Select a project"
+                    onPress={() => {
+                      if (projects.length === 0) {
+                        setShowNoProjectsModal(true);
+                        return;
+                      }
+                      setShowCommitPicker(true);
+                    }}
                   />
+                  {showCommitPicker && (
+                    <View style={styles.commitList}>
+                      {projects.map((p) => (
+                        <TouchableOpacity
+                          key={p.project_id}
+                          style={[styles.commitOption, commitTarget === p.project_id && styles.commitOptionActive]}
+                          onPress={() => handleCommit(p.project_id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[styles.commitOptionText, commitTarget === p.project_id && styles.commitOptionTextActive]}
+                            numberOfLines={1}
+                          >
+                            {p.project_name}
+                          </Text>
+                          {commitTarget === p.project_id && <Ionicons name="checkmark" size={16} color={colors.backgroundLight} />}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  {commitTarget && (
+                    <>
+                      <View style={styles.spacerSm} />
+                      <Button
+                        title="Release from Project (make free)"
+                        variant="tertiary"
+                        fullWidth
+                        onPress={() => handleCommit(null)}
+                      />
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -350,6 +512,15 @@ export const OwnedItemDetail: React.FC<OwnedItemDetailProps> = ({
         onConfirm={() => setShowNoProjectsModal(false)}
         onCancel={() => setShowNoProjectsModal(false)}
       />
+
+      <Modal visible={enlargedPhoto !== null} transparent onRequestClose={() => setEnlargedPhoto(null)}>
+        <TouchableOpacity style={styles.photoModal} activeOpacity={1} onPress={() => setEnlargedPhoto(null)}>
+          {enlargedPhoto ? <Image source={{ uri: enlargedPhoto }} style={styles.photoModalImage} /> : null}
+          <TouchableOpacity style={styles.photoModalClose} onPress={() => setEnlargedPhoto(null)}>
+            <Ionicons name="close-circle" size={40} color={colors.backgroundLight} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 };
@@ -621,6 +792,17 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
   centerBox: {
     flex: 1,
     alignItems: 'center',
@@ -633,4 +815,80 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
+  photosSection: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  photosScroll: {
+    flexGrow: 0,
+  },
+  photoItem: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noPhotoBox: {
+    height: 160,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  noPhotoText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  addPhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addPhotoText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  photoStatusText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: spacing.sm,
+  },
+  photoStatusError: {
+    color: colors.error,
+  },
+  photoModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoModalImage: {
+    width: '90%',
+    height: '70%',
+    resizeMode: 'contain',
+  },
+  photoModalClose: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    padding: spacing.sm,
+  },
 });
+

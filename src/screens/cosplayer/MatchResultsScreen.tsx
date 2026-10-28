@@ -1,48 +1,73 @@
 /**
  * ForgeMind - Match Results Screen (FE-3)
- * Placeholder "match against owned items" preview.
- * Static/mock only — real AI matching arrives with the FE-4 backend.
+ * Real AI matching against owned attire via Flask AI service.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Button, StandardCard, Tag } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useSelection } from '../../contexts/SelectionContext';
+import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
+import { useUser } from '../../contexts/UserContext';
+import { matchAttire, type MatchResult, type MatchedItem } from '../../services/AiMatcherService';
+import { getMatcherSlug } from '../../data/matcherSlugs';
+import { buildWornGarments } from '../../utils/wearing';
+import Preview3D from '../../components/Preview3D';
 
 interface MatchResultsScreenProps {
   onBackToBrowse: () => void;
   onStartProject: () => void;
 }
 
-type MatchRating = 'exact' | 'close' | 'loose';
-
-interface MockMatchResult {
-  component_label: string;
-  match_rating: MatchRating;
-  note: string;
-}
-
-const MOCK_MATCH_RESULTS: MockMatchResult[] = [
-  {
-    component_label: 'Wig — white/silver',
-    match_rating: 'exact',
-    note: 'Defining hair feature identified in variant reference.',
-  },
-  {
-    component_label: 'Blindfold / eye cover — black',
-    match_rating: 'close',
-    note: 'Color matches; material or prop detailing may need adjusting.',
-  },
-  {
-    component_label: 'Shoes — black',
-    match_rating: 'loose',
-    note: 'Generic coverage only; no exact reference in your catalog yet.',
-  },
-];
-
 export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackToBrowse, onStartProject }) => {
   const { selection } = useSelection();
+  const { items: ownedAttire, isLoaded: attireLoaded } = useOwnedAttire();
+  const { user } = useUser();
+  
+  const [loading, setLoading] = useState(false);
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [show3DPreview, setShow3DPreview] = useState(false);
+
+  // Trigger match when screen loads with valid selection
+  useEffect(() => {
+    if (selection && attireLoaded && !loading && !matchResult && !error) {
+      performMatch();
+    }
+  }, [selection, attireLoaded]);
+
+  const performMatch = async () => {
+    if (!selection) return;
+
+    // Check if this variant has Flask matcher data
+    const flaskSlug = getMatcherSlug(selection.variant.variant_id);
+    if (!flaskSlug) {
+      setError('no_data');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await matchAttire({
+        character_variant_id: flaskSlug,
+        owned_attire: ownedAttire,
+      });
+
+      if (response.success && response.data) {
+        setMatchResult(response.data);
+      } else {
+        setError(response.message || 'Failed to match attire');
+      }
+    } catch (err) {
+      setError('Unexpected error occurred');
+      console.error('[MatchResultsScreen] match error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!selection) {
     return (
@@ -58,51 +83,199 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
 
   const { character, variant } = selection;
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <StandardCard style={styles.selectionCard}>
-        <Text style={styles.selectionLabel}>SELECTED VARIANT</Text>
-        <Text style={styles.characterName}>{character.character_name}</Text>
-        <Text style={styles.variantName}>{variant.variant_name}</Text>
-        <View style={styles.tagsRow}>
-          <Tag type="category" label={variant.origin_tag} />
-          {variant.build_difficulty_rating !== undefined && (
-            <Text style={styles.difficultyText}>
-              Difficulty: {variant.build_difficulty_rating}/5
-            </Text>
-          )}
+  // Helper to map Flask confidence to Tag rating
+  const confidenceToRating = (confidence: string): 'exact' | 'close' | 'loose' => {
+    if (confidence === 'excellent' || confidence === 'good') return 'exact';
+    if (confidence === 'fair') return 'close';
+    return 'loose';
+  };
+
+  // Render loading state
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Matching your attire...</Text>
         </View>
-      </StandardCard>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Match against your owned items</Text>
-        <Text style={styles.sectionSubtitle}>Preview — real AI matching is a later phase.</Text>
       </View>
+    );
+  }
 
-      {MOCK_MATCH_RESULTS.map((result) => (
-        <StandardCard key={result.component_label} style={styles.resultCard}>
-          <View style={styles.resultRow}>
-            <Text style={styles.componentLabel} numberOfLines={1}>
-              {result.component_label}
-            </Text>
-            <Tag type="match" rating={result.match_rating} />
-          </View>
-          <Text style={styles.noteText}>{result.note}</Text>
+  // Render error state
+  if (error) {
+    const isNoData = error === 'no_data';
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <StandardCard style={styles.selectionCard}>
+          <Text style={styles.selectionLabel}>SELECTED VARIANT</Text>
+          <Text style={styles.characterName}>{character.character_name}</Text>
+          <Text style={styles.variantName}>{variant.variant_name}</Text>
         </StandardCard>
-      ))}
 
-      <View style={styles.previewBanner}>
-        <Text style={styles.previewBannerText}>
-          MOCK DATA — PREVIEW ONLY. Once the AI/ML matching backend (FE-4) exists, this screen
-          will run a real match against your owned items and the 3D dress-up viewer (Phase 2).
-        </Text>
-      </View>
+        {isNoData ? (
+          <StandardCard style={styles.neutralCard}>
+            <Text style={styles.neutralTitle}>No match data for this character yet</Text>
+            <Text style={styles.neutralText}>
+              AI matching data is not available for this variant. You can still create a project and track your progress.
+            </Text>
+          </StandardCard>
+        ) : (
+          <StandardCard style={styles.errorCard}>
+            <Text style={styles.errorTitle}>Match Failed</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </StandardCard>
+        )}
 
-      <View style={styles.footer}>
-        <Button title="Start Project with This Variant" onPress={onStartProject} fullWidth />
-        <Button title="Back to Variants" variant="secondary" onPress={onBackToBrowse} fullWidth />
+        <View style={styles.footer}>
+          {!isNoData && <Button title="Try Again" onPress={performMatch} fullWidth />}
+          <Button title="Start Project with This Variant" onPress={onStartProject} fullWidth />
+          <Button title="Back to Variants" variant="secondary" onPress={onBackToBrowse} fullWidth />
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // Render match results
+  if (matchResult) {
+    const suggestedItems = Object.entries(matchResult.suggested_outfit);
+    const hasMissingItems = matchResult.missing_items.length > 0;
+    
+    // Build worn garments for 3D preview
+    const bodyType = user?.base_body_selection || 'male';
+    const wornGarments = buildWornGarments(matchResult, ownedAttire, bodyType);
+    const filledSlots = wornGarments.filter(g => g.itemId !== null).length;
+    const totalSlots = wornGarments.length;
+
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <StandardCard style={styles.selectionCard}>
+          <Text style={styles.selectionLabel}>SELECTED VARIANT</Text>
+          <Text style={styles.characterName}>{character.character_name}</Text>
+          <Text style={styles.variantName}>{variant.variant_name}</Text>
+          <View style={styles.tagsRow}>
+            <Tag type="category" label={variant.origin_tag} />
+            {variant.build_difficulty_rating !== undefined && (
+              <Text style={styles.difficultyText}>
+                Difficulty: {variant.build_difficulty_rating}/5
+              </Text>
+            )}
+          </View>
+        </StandardCard>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Match Results</Text>
+          <Text style={styles.sectionSubtitle}>
+            Overall: {matchResult.match_quality.quality_label} ({Math.round(matchResult.match_quality.overall_score * 100)}%)
+          </Text>
+          <Text style={styles.matcherModeLabel}>
+            {(matchResult as any).matcher_mode === 'model' 
+              ? '🤖 Learned model v1' 
+              : '📏 Rule baseline'}
+          </Text>
+        </View>
+
+        {/* 3D Preview Toggle */}
+        <StandardCard style={styles.previewCard}>
+          <View style={styles.previewHeader}>
+            <View>
+              <Text style={styles.previewTitle}>3D Body Preview</Text>
+              <Text style={styles.previewSubtitle}>
+                {filledSlots}/{totalSlots} slots filled
+              </Text>
+            </View>
+            <Button
+              title={show3DPreview ? "Hide Preview" : "View on Body"}
+              onPress={() => setShow3DPreview(!show3DPreview)}
+              variant="secondary"
+            />
+          </View>
+          
+          {show3DPreview && (
+            <View style={styles.previewContainer}>
+              <Preview3D
+                bodyType={bodyType}
+                wornGarments={wornGarments}
+              />
+              
+              <Text style={styles.previewNote}>
+                ℹ️ Only items with a 3D garment are shown (right now: white wig)
+              </Text>
+              
+              {/* Slot indicators */}
+              <View style={styles.slotIndicators}>
+                {wornGarments.map((garment) => (
+                  <View key={garment.slot} style={styles.slotRow}>
+                    <Text style={styles.slotLabel}>
+                      {garment.slot.charAt(0).toUpperCase() + garment.slot.slice(1)}:
+                    </Text>
+                    {garment.itemId ? (
+                      <Text style={styles.slotFilled}>✓ Matched</Text>
+                    ) : (
+                      <Text style={styles.slotMissing}>○ Missing</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </StandardCard>
+
+        {suggestedItems.length > 0 ? (
+          suggestedItems.map(([category, item]) => (
+            <StandardCard key={category} style={styles.resultCard}>
+              <View style={styles.resultRow}>
+                <Text style={styles.componentLabel} numberOfLines={1}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}: {item.name}
+                </Text>
+                <Tag type="match" rating={confidenceToRating(item.confidence)} />
+              </View>
+              <Text style={styles.noteText}>
+                Score: {Math.round(item.score * 100)}% (color: {Math.round(item.breakdown.color * 100)}%, 
+                keywords: {Math.round(item.breakdown.keywords * 100)}%, 
+                category: {Math.round(item.breakdown.category * 100)}%)
+              </Text>
+            </StandardCard>
+          ))
+        ) : (
+          <StandardCard style={styles.resultCard}>
+            <Text style={styles.noteText}>No matching items found in your collection.</Text>
+          </StandardCard>
+        )}
+
+        {hasMissingItems && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Missing Items</Text>
+              <Text style={styles.sectionSubtitle}>Items needed to complete this cosplay</Text>
+            </View>
+
+            {matchResult.missing_items.map((missing, idx) => (
+              <StandardCard key={idx} style={styles.missingCard}>
+                <Text style={styles.missingCategory}>{missing.category}</Text>
+                <Text style={styles.missingKeywords}>
+                  Needed: {missing.keywords.join(', ')}
+                </Text>
+              </StandardCard>
+            ))}
+          </>
+        )}
+
+        <View style={styles.footer}>
+          <Button title="Start Project with This Variant" onPress={onStartProject} fullWidth />
+          <Button title="Back to Variants" variant="secondary" onPress={onBackToBrowse} fullWidth />
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // Fallback: waiting for data
+  return (
+    <View style={styles.container}>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Preparing match...</Text>
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
@@ -114,6 +287,17 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   selectionCard: {
     marginBottom: spacing.lg,
@@ -176,22 +360,53 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
   },
-  previewBanner: {
-    backgroundColor: colors.surface,
+  missingCard: {
+    marginBottom: spacing.md,
     borderLeftWidth: 3,
     borderLeftColor: colors.warning,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.sm,
+  },
+  missingCategory: {
+    ...typography.bodyLarge,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  missingKeywords: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  errorCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.error,
     marginBottom: spacing.lg,
   },
-  previewBannerText: {
-    ...typography.caption,
+  errorTitle: {
+    ...typography.h3,
+    color: colors.error,
+    marginBottom: spacing.sm,
+  },
+  errorText: {
+    ...typography.body,
     color: colors.textSecondary,
-    lineHeight: 18,
+  },
+  neutralCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  neutralTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  neutralText: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   footer: {
     gap: spacing.sm,
+    marginTop: spacing.lg,
     marginBottom: spacing.lg,
   },
   emptyTitle: {
@@ -203,5 +418,63 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  previewCard: {
+    marginBottom: spacing.lg,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  previewTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  previewSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  previewContainer: {
+    marginTop: spacing.md,
+  },
+  previewNote: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  slotIndicators: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  slotLabel: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  slotFilled: {
+    ...typography.body,
+    color: colors.success,
+  },
+  slotMissing: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  matcherModeLabel: {
+    ...typography.caption,
+    color: colors.primary,
+    marginTop: spacing.xs,
+    fontWeight: '600',
   },
 });

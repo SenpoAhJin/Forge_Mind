@@ -30,7 +30,7 @@ export const OrganizerTabNavigator: React.FC = () => {
         tabBarActiveTintColor: themeColors.secondary,
         tabBarInactiveTintColor: themeColors.textDisabled,
         tabBarStyle: {
-          backgroundColor: themeColors.backgroundLight,
+          backgroundColor: themeColors.background,
           borderTopColor: themeColors.border,
           paddingBottom: 6,
           paddingTop: 4,
@@ -42,8 +42,8 @@ export const OrganizerTabNavigator: React.FC = () => {
           fontSize: 11,
         },
         headerStyle: { backgroundColor: themeColors.secondary },
-        headerTintColor: themeColors.backgroundLight,
-        headerTitleStyle: { ...typography.h3, color: themeColors.backgroundLight },
+        headerTintColor: themeColors.background,
+        headerTitleStyle: { ...typography.h3, color: themeColors.background },
         tabBarIcon: ({ focused, color }) => {
           const names = iconMap[route.name];
           const iconName = focused ? names.focused : names.unfocused;

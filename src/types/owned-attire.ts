@@ -12,12 +12,10 @@ export type EntryLanguage = 'english' | 'taglish';
 
 export type AttireCategory =
   | 'wig'
-  | 'clothing'
+  | 'top'
+  | 'bottom'
   | 'footwear'
   | 'accessory'
-  | 'armor'
-  | 'weapon'
-  | 'prop'
   | 'fabric'
   | 'material'
   | 'other';
@@ -35,6 +33,7 @@ export interface ConditionPhotoHistoryEntry {
 export interface OwnedAttire {
   attire_id: string;
   user_id: string;
+  client_id: string | null;
   entry_method: EntryMethod;
   entry_language: EntryLanguage;
   original_input_text: string;
@@ -47,9 +46,12 @@ export interface OwnedAttire {
   condition_photo_history: ConditionPhotoHistoryEntry[];
   availability_status: AvailabilityStatus;
   committed_to_project_id: string | null;
+  original_project_ref: string | null;
+  reserved_trade_id: string | null; // Read-only for marketplace
   acquired_date: string;
   acquisition_cost: number;
   notes: string;
+  version: number;
   created_at: string;
   updated_at: string;
 }
@@ -58,7 +60,7 @@ export interface NewOwnedAttireInput {
   entry_method: EntryMethod;
   entry_language: EntryLanguage;
   original_input_text: string;
-  photo_urls: (string | null)[];
+  photo_urls?: (string | null)[]; // Optional: text/voice entry don't provide photos
   auto_categorized_type: AttireCategory;
   auto_categorized_color: string;
   auto_categorized_style: string;
@@ -78,4 +80,5 @@ export interface UpdateOwnedAttireInput {
   acquired_date?: string;
   acquisition_cost?: number;
   notes?: string;
+  photo_urls?: (string | null)[]; // Allow updating photos
 }

@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: spacing.sm,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   timeSlotTextBest: {
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '600',
   },
   timeSlotAvailability: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   },
   participantInitial: {
     ...typography.body,
-    color: colors.backgroundLight,
+    color: colors.background,
     fontWeight: '700',
   },
   participantInfo: {
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     padding: spacing.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     borderLeftWidth: 3,
     borderLeftColor: colors.warning,

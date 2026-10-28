@@ -47,8 +47,8 @@ export const OfferDetailScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MarketplaceStackParamList>>();
   const route = useRoute<OfferDetailRouteProp>();
   const { user } = useUser();
-  const { getOfferById, acceptOffer, declineOffer, withdrawOffer, refreshOffers } = useOffers();
-  const { getOrCreateThread } = useChat();
+  const { getOfferById, acceptOffer, declineOffer, withdrawOffer, confirmOffer, refreshOffers } = useOffers();
+  const { startThread, getThreadForListing, threads } = useChat();
   const { createMilestonesForOffer, getProgressPercentage } = useCommissionMilestones();
 
   // Refresh offer when screen comes into focus
@@ -61,12 +61,14 @@ export const OfferDetailScreen: React.FC = () => {
   const [confirmAcceptVisible, setConfirmAcceptVisible] = useState(false);
   const [confirmDeclineVisible, setConfirmDeclineVisible] = useState(false);
   const [confirmWithdrawVisible, setConfirmWithdrawVisible] = useState(false);
+  const [confirmDealVisible, setConfirmDealVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [successTitle, setSuccessTitle] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
 
   const offer = getOfferById(route.params.offerId);
 
@@ -103,17 +105,47 @@ export const OfferDetailScreen: React.FC = () => {
   const isParticipant = isRecipient || isProposer;
   const isVerified = user?.verification_status === 'verified';
 
-  const handleMessage = async () => {
-    if (!user?.email || !isParticipant) return;
-    const buyerEmail = offer.proposer_email;
-    const result = await getOrCreateThread(offer.listing_id, buyerEmail);
-    if (result.success && result.thread) {
-      navigation.navigate('ChatThread', { threadId: result.thread.id });
+  // Proposer/buyer: create thread -> navigate
+  // Seller: open existing thread only if it exists
+  const handleMessageSeller = async () => {
+    if (!isProposer) return;
+    
+    setIsCreatingThread(true);
+    const result = await startThread(offer.listing_id);
+    setIsCreatingThread(false);
+
+    if (result.success) {
+      navigation.navigate('ChatThread', { threadId: result.thread.thread_id });
     } else {
-      setErrorMessage(result.error || 'Failed to open conversation.');
+      let userMessage = 'Unable to start conversation.';
+      
+      if (result.error === 'unverified_user') {
+        userMessage = 'You must be verified to message sellers.';
+      } else if (result.error === 'listing_not_found' || result.error === 'invalid_listing_id') {
+        userMessage = 'Listing no longer available.';
+      } else if (result.error === 'listing_not_active') {
+        userMessage = 'Listing is not accepting messages.';
+      } else if (result.error === 'network_error') {
+        userMessage = 'Network error. Please check your connection.';
+      }
+
+      setErrorMessage(userMessage);
       setErrorVisible(true);
     }
   };
+
+  const handleOpenChat = () => {
+    if (!isRecipient || !offer.proposer_user_id) return;
+    
+    // Find thread for this listing where buyer is the proposer
+    const existingThread = getThreadForListing(offer.listing_id, offer.proposer_user_id);
+    
+    if (existingThread) {
+      navigation.navigate('ChatThread', { threadId: existingThread.thread_id });
+    }
+  };
+
+  const canOpenChat = isRecipient && !!offer.proposer_user_id && !!getThreadForListing(offer.listing_id, offer.proposer_user_id);
 
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString('en-US', {
@@ -168,6 +200,32 @@ export const OfferDetailScreen: React.FC = () => {
   const handleWithdrawConfirm = () => {
     setConfirmWithdrawVisible(false);
     runAction('withdraw');
+  };
+
+  const handleConfirmDeal = async () => {
+    setConfirmDealVisible(false);
+    setIsProcessing(true);
+    try {
+      const result = await confirmOffer(offer.id);
+
+      if (result.success) {
+        setSuccessTitle('Confirmation Received');
+        setSuccessMessage(
+          isProposer
+            ? 'Your confirmation has been recorded. The item will transfer once the seller also confirms.'
+            : 'Your confirmation has been recorded. The item will transfer once the buyer also confirms.'
+        );
+        setSuccessVisible(true);
+      } else {
+        setErrorMessage(result.error ?? 'Something went wrong. Please try again.');
+        setErrorVisible(true);
+      }
+    } catch (error) {
+      setErrorMessage('Something went wrong. Please try again.');
+      setErrorVisible(true);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const statusBadgeColor = statusColor(offer.status);
@@ -312,7 +370,70 @@ export const OfferDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {!isPending && (
+      {/* Confirmation UI for awaiting_confirmation status */}
+      {offer.status === 'awaiting_confirmation' && isParticipant && offer.offer_type !== 'commission' && (
+        <View style={styles.confirmationSection}>
+          <View style={styles.confirmationHeader}>
+            <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
+            <Text style={styles.confirmationTitle}>Deal Accepted - Awaiting Confirmation</Text>
+          </View>
+
+          {/* Status indicators */}
+          <View style={styles.confirmationStatus}>
+            <View style={styles.statusRow}>
+              <Ionicons 
+                name={offer.proposer_confirmed_at ? "checkmark-circle" : "ellipse-outline"} 
+                size={20} 
+                color={offer.proposer_confirmed_at ? colors.success : colors.textSecondary} 
+              />
+              <Text style={styles.statusText}>
+                Buyer {offer.proposer_confirmed_at ? 'confirmed' : 'needs to confirm'}
+              </Text>
+            </View>
+            <View style={styles.statusRow}>
+              <Ionicons 
+                name={offer.recipient_confirmed_at ? "checkmark-circle" : "ellipse-outline"} 
+                size={20} 
+                color={offer.recipient_confirmed_at ? colors.success : colors.textSecondary} 
+              />
+              <Text style={styles.statusText}>
+                Seller {offer.recipient_confirmed_at ? 'confirmed' : 'needs to confirm'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Info message */}
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={18} color={colors.info} />
+            <Text style={styles.infoText}>
+              Both parties must confirm before the item transfers. Once both confirm, the item will automatically move to the buyer's inventory.
+            </Text>
+          </View>
+
+          {/* Confirmation button */}
+          {((isProposer && !offer.proposer_confirmed_at) || (isRecipient && !offer.recipient_confirmed_at)) && (
+            <Button
+              title={isProposer ? "Confirm Deal" : "Confirm Transfer"}
+              onPress={() => setConfirmDealVisible(true)}
+              variant="primary"
+              fullWidth
+              loading={isProcessing}
+            />
+          )}
+
+          {/* Already confirmed message */}
+          {((isProposer && offer.proposer_confirmed_at) || (isRecipient && offer.recipient_confirmed_at)) && (
+            <View style={styles.confirmedBanner}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={styles.confirmedText}>
+                You've confirmed. Waiting for the {isProposer ? 'seller' : 'buyer'} to confirm.
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {!isPending && offer.status !== 'awaiting_confirmation' && (
         <View style={styles.readOnlyNote}>
           <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.readOnlyText}>
@@ -322,15 +443,32 @@ export const OfferDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Message button (FE-6 Step 4) - Coming soon */}
+      {/* Message button (FE-6 Step 4) */}
       {isVerified && isParticipant && (
         <View style={styles.messageButtonContainer}>
-          <View style={styles.ineligibleBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.ineligibleText}>
-              Chat will use the server in an upcoming update.
-            </Text>
-          </View>
+          {isProposer ? (
+            <Button
+              title={isCreatingThread ? "Starting chat..." : "Message Seller"}
+              onPress={handleMessageSeller}
+              variant="secondary"
+              fullWidth
+              disabled={isCreatingThread}
+            />
+          ) : canOpenChat ? (
+            <Button
+              title="Open Chat"
+              onPress={handleOpenChat}
+              variant="secondary"
+              fullWidth
+            />
+          ) : (
+            <View style={styles.ineligibleBanner}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.ineligibleText}>
+                Chat opens when the buyer messages you.
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -371,6 +509,18 @@ export const OfferDetailScreen: React.FC = () => {
         confirmText="Withdraw"
         onConfirm={handleWithdrawConfirm}
         onCancel={() => setConfirmWithdrawVisible(false)}
+      />
+      <ConfirmationModal
+        visible={confirmDealVisible}
+        title={isProposer ? "Confirm Deal?" : "Confirm Transfer?"}
+        message={
+          isProposer
+            ? "By confirming, you agree that you're ready to receive the item. The item will transfer to your inventory once the seller also confirms."
+            : "By confirming, you agree to transfer the item. The item will move to the buyer's inventory once both parties confirm."
+        }
+        confirmText="Confirm"
+        onConfirm={handleConfirmDeal}
+        onCancel={() => setConfirmDealVisible(false)}
       />
       <ConfirmationModal
         visible={successVisible}
@@ -554,5 +704,48 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
+  },
+  confirmationSection: {
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  confirmationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  confirmationTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  confirmationStatus: {
+    backgroundColor: colors.backgroundLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statusText: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  confirmedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.success + '15',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  confirmedText: {
+    ...typography.body,
+    color: colors.success,
+    flex: 1,
   },
 });

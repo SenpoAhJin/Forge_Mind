@@ -1,23 +1,35 @@
 /**
  * ForgeMind - Voice Entry (FE-5)
- * Mock recording UI (mic button, recording indicator) with a language toggle.
- * Transcription is MOCKED — real speech-to-text is a BE-1 backend feature.
- * Maps to OwnedAttire original_input_text / entry_language / entry_method='voice'.
+ * Real audio recording with transcription via backend AI service.
+ * Web: MediaRecorder API
+ * Native: expo-audio v57 recording
+ * User ALWAYS confirms/edits transcript before save.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, ActivityIndicator, Platform, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, ConditionSlider } from '../../components';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { EntryLanguage } from '../../types/owned-attire';
-import { mockTranscription, mockCategorizationFromText } from '../../utils/mockCatalog';
+import { mockCategorizationFromText } from '../../utils/mockCatalog';
+import { API_BASE_URL } from '../../config/api';
+
+// Expo Audio v57 imports
+import {
+  useAudioRecorder,
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorderState,
+} from 'expo-audio';
 
 interface VoiceEntryScreenProps {
   onContinue: (input: {
     entry_method: 'voice';
     entry_language: EntryLanguage;
     original_input_text: string;
+    photo_urls: string[];
     auto_categorized_type: string;
     auto_categorized_color: string;
     auto_categorized_style: string;
@@ -56,33 +68,228 @@ export const VoiceEntryScreen: React.FC<VoiceEntryScreenProps> = ({ onContinue }
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [transcription, setTranscription] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTranscription, setEditedTranscription] = useState('');
   const [conditionRating, setConditionRating] = useState(3);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [transcriptionSource, setTranscriptionSource] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const pulse = usePulse();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
+  // Native audio recorder (expo-audio v57)
+  const audioRecorder = Platform.OS !== 'web' ? useAudioRecorder(RecordingPresets.HIGH_QUALITY) : null;
+  const recorderState = Platform.OS !== 'web' && audioRecorder ? useAudioRecorderState(audioRecorder) : null;
+
+  // Request microphone permission on mount
   useEffect(() => {
+    (async () => {
+      try {
+        if (Platform.OS === 'web') {
+          // Web: check navigator.mediaDevices
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            setPermissionGranted(false);
+            setErrorMessage('Your browser does not support audio recording.');
+            return;
+          }
+          // getUserMedia will prompt on first use
+          setPermissionGranted(true);
+        } else {
+          // Native: request expo-audio permission
+          const status = await AudioModule.requestRecordingPermissionsAsync();
+          setPermissionGranted(status.granted);
+          if (status.granted) {
+            await setAudioModeAsync({
+              playsInSilentMode: true,
+              allowsRecording: true,
+            });
+          } else {
+            setErrorMessage('Microphone permission denied. Please enable it in settings or type your entry.');
+          }
+        }
+      } catch (err) {
+        console.error('Permission request failed:', err);
+        setPermissionGranted(false);
+        setErrorMessage('Could not request microphone permission.');
+      }
+    })();
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, []);
 
-  const startRecording = () => {
+  const startRecording = async () => {
     setTranscription(null);
+    setErrorMessage(null);
     setElapsed(0);
     setIsRecording(true);
     timerRef.current = setInterval(() => setElapsed((prev) => prev + 1), 1000);
+
+    try {
+      if (Platform.OS === 'web') {
+        // Web: MediaRecorder API
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        const recorder = new MediaRecorder(stream, { mimeType });
+        audioChunksRef.current = [];
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.start();
+        mediaRecorderRef.current = recorder;
+      } else {
+        // Native: expo-audio v57
+        if (audioRecorder) {
+          await audioRecorder.prepareToRecordAsync();
+          audioRecorder.record();
+        }
+      }
+    } catch (err) {
+      console.error('Start recording failed:', err);
+      setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setErrorMessage('Failed to start recording. Please check microphone permission or type your entry.');
+    }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     setIsRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
+
+    try {
+      if (Platform.OS === 'web') {
+        // Web: stop MediaRecorder and get blob
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+          
+          // Wait for final data
+          await new Promise<void>((resolve) => {
+            if (mediaRecorderRef.current) {
+              mediaRecorderRef.current.onstop = () => resolve();
+            } else {
+              resolve();
+            }
+          });
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          await transcribeAudio(audioBlob, 'audio.webm');
+
+          // Stop tracks
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+      } else {
+        // Native: stop expo-audio recorder
+        if (audioRecorder) {
+          await audioRecorder.stop();
+          const uri = audioRecorder.uri;
+          
+          if (uri) {
+            await transcribeAudioFromUri(uri);
+          } else {
+            setErrorMessage('Recording failed to save. Please try again or type your entry.');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Stop recording failed:', err);
+      setErrorMessage('Failed to process recording. Please try again or type your entry.');
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob, filename: string) => {
     setIsTranscribing(true);
-    setTimeout(() => {
-      const transcript = mockTranscription(language);
-      setTranscription(transcript);
+    setErrorMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, filename);
+
+      const response = await fetch(`${API_BASE_URL}/api/ai/transcribe`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Backend returned error - show message and allow typed fallback
+        setErrorMessage(result.message || 'Transcription failed. Please type your entry instead.');
+        setIsTranscribing(false);
+        return;
+      }
+
+      // Success
+      setTranscription(result.transcript);
+      setEditedTranscription(result.transcript);
+      setTranscriptionSource(result.source || 'openai_whisper');
       setIsTranscribing(false);
-    }, 1200);
+    } catch (err) {
+      console.error('Transcription failed:', err);
+      setErrorMessage('Voice transcription is unavailable. Please type your entry instead.');
+      setIsTranscribing(false);
+    }
+  };
+
+  const transcribeAudioFromUri = async (uri: string) => {
+    setIsTranscribing(true);
+    setErrorMessage(null);
+
+    try {
+      // Read file from uri using expo-file-system
+      const { uri: audioUri } = await import('expo-file-system').then(FileSystem => 
+        FileSystem.getInfoAsync(uri)
+      );
+
+      if (!audioUri) {
+        setErrorMessage('Could not read recorded audio. Please try again or type your entry.');
+        setIsTranscribing(false);
+        return;
+      }
+
+      // Fetch audio as blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Send to backend
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.m4a');
+
+      const transcribeResponse = await fetch(`${API_BASE_URL}/api/ai/transcribe`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      const result = await transcribeResponse.json();
+
+      if (!transcribeResponse.ok) {
+        setErrorMessage(result.message || 'Transcription failed. Please type your entry instead.');
+        setIsTranscribing(false);
+        return;
+      }
+
+      // Success
+      setTranscription(result.transcript);
+      setEditedTranscription(result.transcript);
+      setTranscriptionSource(result.source || 'openai_whisper');
+      setIsTranscribing(false);
+    } catch (err) {
+      console.error('Transcription from URI failed:', err);
+      setErrorMessage('Voice transcription is unavailable. Please type your entry instead.');
+      setIsTranscribing(false);
+    }
   };
 
   const toggleRecording = () => {
@@ -93,14 +300,30 @@ export const VoiceEntryScreen: React.FC<VoiceEntryScreenProps> = ({ onContinue }
     }
   };
 
+  const handleEditTranscript = () => {
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    setTranscription(editedTranscription.trim());
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditedTranscription(transcription || '');
+    setIsEditing(false);
+  };
+
   const handleContinue = () => {
-    if (!transcription) return;
-    const trimmed = transcription.trim();
+    const finalTranscript = isEditing ? editedTranscription.trim() : (transcription || '').trim();
+    if (!finalTranscript) return;
+
     onContinue({
       entry_method: 'voice',
       entry_language: language,
-      original_input_text: trimmed,
-      ...mockCategorizationFromText(trimmed),
+      original_input_text: finalTranscript,
+      photo_urls: [],
+      ...mockCategorizationFromText(finalTranscript),
       condition_rating: conditionRating,
     });
   };

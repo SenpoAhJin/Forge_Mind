@@ -63,7 +63,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'destructive' ? themeColors.backgroundLight : themeColors.primary}
+          color={variant === 'primary' || variant === 'destructive' ? themeColors.buttonPrimaryText : themeColors.text}
         />
       ) : (
         <Text style={textStyle}>{variant === 'primary' ? title.toUpperCase() : title}</Text>
@@ -73,42 +73,42 @@ export const Button: React.FC<ButtonProps> = ({
 };
 
 const getDynamicStyles = (colors: ThemeColors) => ({
-  // Primary: Filled with primary color, white text, rounded 8px
+  // Primary: Filled button with theme-aware colors
   primary: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.buttonPrimary,
   },
   primaryText: {
-    color: colors.backgroundLight,
+    color: colors.buttonPrimaryText,
     ...typography.buttonText,
   },
-  // Secondary: Outlined with primary color, primary text, rounded 8px
+  // Secondary: Outlined with border, text matches theme
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.border,
   },
   secondaryText: {
-    color: colors.primary,
+    color: colors.text,
     ...typography.buttonText,
   },
-  // Tertiary: Text-only, primary text, no border
+  // Tertiary: Text-only, theme text color
   tertiary: {
     backgroundColor: 'transparent',
   },
   tertiaryText: {
-    color: colors.primary,
+    color: colors.text,
     ...typography.buttonText,
   },
-  // Destructive: Filled with error color, white text, rounded 8px
+  // Destructive: Uses accent (PINK) with proper contrast
   destructive: {
-    backgroundColor: colors.error,
+    backgroundColor: colors.accent,
   },
   destructiveText: {
-    color: colors.backgroundLight,
+    color: colors.accentText,
     ...typography.buttonText,
   },
   disabledText: {
-    color: colors.textDisabled,
+    color: colors.disabled,
   },
 });
 

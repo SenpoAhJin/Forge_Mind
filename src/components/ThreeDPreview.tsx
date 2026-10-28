@@ -25,8 +25,8 @@ import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
  * gone. See CHANGELOG_V2.md.
  *
  * The former `bodySizeValue` / `showBoneDebug` props are gone: runtime body-size
- * scaling was cancelled, so the wrapper no longer has a size to pass down. The
- * persisted `User.body_size_slider` column is untouched. See CHANGELOG_V2.md.
+ * scaling was cancelled, so the wrapper no longer has a size to pass down.
+ * See CHANGELOG_V2.md and CHANGELOG.md (October 14, 2026 entry).
  */
 
 interface ThreeDPreviewProps {

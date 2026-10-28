@@ -185,7 +185,7 @@ export const CreateProjectScreen: React.FC<CreateProjectScreenProps> = ({ onCrea
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextActive: {
-    color: colors.backgroundLight,
+    color: colors.background,
   },
   optInRow: {
     flexDirection: 'row',
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },

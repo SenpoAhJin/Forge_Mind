@@ -123,7 +123,6 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
         false, // is_cosplayer
         true,  // is_organizer
         'male', // baseBody (placeholder - not used for organizers)
-        0.5,    // bodySize (placeholder - not used for organizers)
         department
           ? {
               organizer_role: 'staff',
@@ -351,7 +350,7 @@ export const StaffRegistrationScreen: React.FC<StaffRegistrationScreenProps> = (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -459,7 +458,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingTop: spacing.md,
     gap: spacing.md,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

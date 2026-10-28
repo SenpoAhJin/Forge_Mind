@@ -1,4 +1,4 @@
 export * from './WelcomeScreen';
 export * from './RoleSelectionScreen';
 export * from './AccountCreationScreen';
-export * from './BodySliderOnboardingScreen';
+// BodySliderOnboardingScreen removed (October 14, 2026) - feature cancelled

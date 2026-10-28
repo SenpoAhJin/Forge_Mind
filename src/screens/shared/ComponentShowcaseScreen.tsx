@@ -12,7 +12,6 @@ import {
   ItemCard,
   MatchCard,
   Tag,
-  BodySizeSlider,
   ConditionSlider,
   ChatBubble,
   StatusBadge,
@@ -24,7 +23,6 @@ import {
 import { colors, typography, spacing } from '../../theme';
 
 export const ComponentShowcaseScreen: React.FC = () => {
-  const [bodySize, setBodySize] = useState(0.5);
   const [condition, setCondition] = useState(3);
   const [textInput, setTextInput] = useState('');
   const [textArea, setTextArea] = useState('');
@@ -78,7 +76,6 @@ export const ComponentShowcaseScreen: React.FC = () => {
 
       <Text style={styles.sectionTitle}>Sliders</Text>
       <View style={styles.section}>
-        <BodySizeSlider value={bodySize} onValueChange={setBodySize} />
         <ConditionSlider value={condition} onValueChange={setCondition} />
       </View>
 
@@ -139,7 +136,7 @@ export const ComponentShowcaseScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,
