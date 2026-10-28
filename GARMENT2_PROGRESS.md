@@ -133,4 +133,34 @@ interface AttachmentOffset {
 - Module handles both cases (exact + sanitized) for maximum compatibility
 
 ## Step 6: Changelog and Git
-**Status**: NOT STARTED
+**Status**: COMPLETE
+
+### Git Operations:
+- ✅ Staged all GARMENT-2 files (8 new files, 1 modified)
+- ✅ Excluded V1_backup.glb files (untracked)
+- ✅ Committed: 3185ba2 "GARMENT-2: Standalone attach-by-bone module + integration audit"
+- ✅ Pushed task/garment2-attach-module to origin
+
+### CHANGELOG Update:
+- Added GARMENT-2 session at top with summary
+- Documented all steps 0-6
+- Listed 6 files created with line counts
+- Recorded test results (60/60 module, 10/10 follow, 0 TS errors)
+- Technical details: offset implementation, resolveBone fix, zero initial offsets
+
+---
+
+## TASK GARMENT-2: COMPLETE ✓
+
+**Branch**: task/garment2-attach-module (pushed to origin)
+**Commit**: 3185ba2
+
+**Deliverables**:
+1. ✅ Standalone attachToBone module (286 lines)
+2. ✅ Attachment offsets JSON + loader with validation
+3. ✅ Comprehensive test suite (60 tests, real THREE.js)
+4. ✅ Integration audit document (5 findings)
+5. ✅ All tests PASS, 0 new TypeScript errors
+6. ✅ CHANGELOG updated, committed, pushed
+
+**No app behavior changes** - module tested standalone, ready for integration in next task.
