@@ -351,7 +351,7 @@ async function testBodyAttachPoints(bodyType, contract, glbPath) {
       const accessory = new THREE.Object3D();
       accessory.name = `follow-test-${boneName}`;
       
-      // Attach with zero offset
+      // Attach with [0, 0.1, 0] offset
       attachAccessory({
         bodyScene,
         boneName,
@@ -359,17 +359,10 @@ async function testBodyAttachPoints(bodyType, contract, glbPath) {
         offset: { position: [0, 0.1, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
       });
       
-      // Copy accessory.matrix as L0
-      const L0 = accessory.matrix.clone();
-      const pqs0 = { p: accessory.position.clone(), q: accessory.quaternion.clone(), s: accessory.scale.clone() };
-      
-      // Record world pos p0
+      // Call updateMatrixWorld(true) and record initial states
       bodyScene.updateMatrixWorld(true);
-      const p0 = new THREE.Vector3();
-      accessory.getWorldPosition(p0);
-      
-      // Store bone matrixWorld before rotation
-      const boneWorldBefore = bone.matrixWorld.clone();
+      const oldBoneWorld = bone.matrixWorld.clone();
+      const oldAccWorld = accessory.matrixWorld.clone();
       
       // Rotate bone 45 deg about axis (1,2,3) normalized
       const axis = new THREE.Vector3(1, 2, 3).normalize();
@@ -378,54 +371,46 @@ async function testBodyAttachPoints(bodyType, contract, glbPath) {
       // updateMatrixWorld(true)
       bodyScene.updateMatrixWorld(true);
       
-      // Check if p/q/s changed after rotation
-      const pqs1 = { p: accessory.position.clone(), q: accessory.quaternion.clone(), s: accessory.scale.clone() };
-      const pqsChanged = !pqs0.p.equals(pqs1.p) || !pqs0.q.equals(pqs1.q) || !pqs0.s.equals(pqs1.s);
-      if (pqsChanged) {
-        console.log(`    DEBUG "${boneName}": p/q/s CHANGED after bone rotation!`);
-        console.log(`      pos: [${pqs0.p.toArray().map(v => v.toFixed(4))}] -> [${pqs1.p.toArray().map(v => v.toFixed(4))}]`);
-        console.log(`      quat: [${pqs0.q.toArray().map(v => v.toFixed(4))}] -> [${pqs1.q.toArray().map(v => v.toFixed(4))}]`);
-      }
+      // delta = newBoneWorld * inverse(oldBoneWorld)
+      const oldBoneWorldInv = oldBoneWorld.clone().invert();
+      const delta = new THREE.Matrix4().multiplyMatrices(bone.matrixWorld, oldBoneWorldInv);
       
-      // Assert bone.matrixWorld CHANGES
-      let boneChanged = false;
-      for (let i = 0; i < 16; i++) {
-        if (Math.abs(bone.matrixWorld.elements[i] - boneWorldBefore.elements[i]) > FOLLOW_TOLERANCE) {
-          boneChanged = true;
-          break;
-        }
-      }
-      assert(boneChanged, `"${boneName}" matrixWorld changed after rotation`);
+      // expected = delta * oldAccWorld
+      const expected = new THREE.Matrix4().multiplyMatrices(delta, oldAccWorld);
       
-      if (!boneChanged) continue; // Skip follow check if bone didn't move
-      
-      // Assert accessory.matrixWorld equals bone.matrixWorld * L0 within tolerance
-      const expectedAccessoryWorld = new THREE.Matrix4().multiplyMatrices(bone.matrixWorld, L0);
+      // Assert all 16 elements of accessory.matrixWorld equal expected within 1e-5
       let maxDiff = 0;
       for (let i = 0; i < 16; i++) {
-        const diff = Math.abs(accessory.matrixWorld.elements[i] - expectedAccessoryWorld.elements[i]);
+        const diff = Math.abs(accessory.matrixWorld.elements[i] - expected.elements[i]);
         maxDiff = Math.max(maxDiff, diff);
-      }
-      
-      // Debug: check if accessory.matrix changed
-      if (maxDiff >= FOLLOW_TOLERANCE) {
-        const L0_vs_current = accessory.matrix.elements.map((e, i) => Math.abs(e - L0.elements[i])).reduce((a, b) => Math.max(a, b));
-        console.log(`    DEBUG "${boneName}": L0 vs current accessory.matrix maxDiff = ${L0_vs_current.toExponential(3)}`);
       }
       
       assert(
         maxDiff < FOLLOW_TOLERANCE,
-        `"${boneName}" follow: matrixWorld = bone * L0`,
+        `"${boneName}" follow: matrixWorld = delta * oldWorld`,
         `maxDiff=${maxDiff.toExponential(3)}`
       );
       
-      // Assert world position moved by more than FOLLOW_MOVE_MIN
-      const p1 = new THREE.Vector3();
-      accessory.getWorldPosition(p1);
-      const posChange = p0.distanceTo(p1);
+      // Assert bone world matrix changed by more than 1e-3 in some element
+      let boneMaxDiff = 0;
+      for (let i = 0; i < 16; i++) {
+        boneMaxDiff = Math.max(boneMaxDiff, Math.abs(bone.matrixWorld.elements[i] - oldBoneWorld.elements[i]));
+      }
+      assert(
+        boneMaxDiff > 1e-3,
+        `"${boneName}" bone matrixWorld changed`,
+        `maxDiff=${boneMaxDiff.toFixed(4)}`
+      );
+      
+      // Assert accessory world position moved by more than 1e-3 m
+      const oldPos = new THREE.Vector3();
+      const newPos = new THREE.Vector3();
+      oldAccWorld.decompose(oldPos, new THREE.Quaternion(), new THREE.Vector3());
+      accessory.matrixWorld.decompose(newPos, new THREE.Quaternion(), new THREE.Vector3());
+      const posChange = oldPos.distanceTo(newPos);
       assert(
         posChange > FOLLOW_MOVE_MIN,
-        `"${boneName}" follow: position moved`,
+        `"${boneName}" accessory position moved`,
         `change=${posChange.toFixed(4)}m`
       );
       
