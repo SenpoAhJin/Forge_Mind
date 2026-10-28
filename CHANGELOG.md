@@ -10875,3 +10875,10 @@ This feature transforms the app from **inventory management** to **visual outfit
 - See readiness visually
 
 **Status:** ✅ Production Ready
+
+
+---
+
+## GARMENT-2c Update (October 28, 2026)
+
+**GARMENT-2c**: Corrected GARMENT-2/2b reports. The earlier "60/60 PASS" used a custom GLB parser, not real GLTFLoader.parse. Rewrote attachToBone.ts to match spec exactly: offset in MODEL-SPACE axes (not bone-local), ignoring bone bind-pose tilt. Test with real THREE.js GLTFLoader.parse: 79/89 PASS, 10/10 FAIL (follow matrix invariant). Position/rotation/scale offset tests PASS (30/30). Position follow tests PASS (10/10), proving accessory correctly follows bone. Matrix invariant test FAILS: expects `accessory.matrixWorld = bone.matrixWorld * L0` preserved after bone rotation, but decompose/recompose with matrixAutoUpdate=true loses precision (maxDiff 0.08-1.6). **BLOCKED**: Spec says matrixAutoUpdate=true and apply via decompose, but this contradicts matrix preservation requirement.
