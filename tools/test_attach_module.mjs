@@ -3,6 +3,9 @@
  * Unit tests for attachToBone module with REAL GLTFLoader.
  * Tests all attach points on male and female V2 bodies.
  * 
+ * SPEC: Offset is in MODEL-SPACE axes at bind pose, relative to bone's WORLD HEAD position.
+ * NOT bone-local axes. Rotation ignores bone's bind-pose tilt.
+ * 
  * CRITICAL: Exit code 1 on any test failure.
  */
 
@@ -19,6 +22,8 @@ const ROOT = path.resolve(__dirname, '..');
 // Tolerances as named constants
 const POSITION_TOLERANCE = 1e-5; // metres
 const ROTATION_TOLERANCE = 1e-5; // radians
+const FOLLOW_TOLERANCE = 1e-5; // matrix element diff
+const FOLLOW_MOVE_MIN = 1e-3; // minimum position change to prove follow
 
 // Import contracts
 const maleContract = JSON.parse(
@@ -46,36 +51,39 @@ async function loadGLB(filepath) {
 }
 
 /**
- * Minimal implementation of resolveBone (inline to avoid TypeScript compilation).
+ * Minimal implementation of resolveBone matching attachToBone.ts
  */
 function resolveBone(bodyScene, boneName) {
-  // First try exact match
-  let found = null;
+  const bones = [];
   bodyScene.traverse((obj) => {
-    if (obj.isBone && obj.name === boneName) {
-      found = obj;
-    }
+    if (obj.isBone) bones.push(obj);
   });
   
-  if (found) return found;
-  
-  // Then try sanitized match (for contract names like "foot.L" that may become "footL" in some loaders)
-  const sanitized = THREE.PropertyBinding.sanitizeNodeName(boneName);
-  bodyScene.traverse((obj) => {
-    if (obj.isBone && obj.name === sanitized) {
-      found = obj;
-    }
-  });
-  
-  if (!found) {
-    throw new Error(`Bone "${boneName}" (sanitized: "${sanitized}") not found in skeleton`);
+  // Try exact match first
+  const exactMatches = bones.filter((bone) => bone.name === boneName);
+  if (exactMatches.length === 1) return exactMatches[0];
+  if (exactMatches.length > 1) {
+    throw new Error(`Ambiguous bone name "${boneName}": found ${exactMatches.length} exact matches`);
   }
   
-  return found;
+  // Fall back to sanitized matching
+  const sanitized = THREE.PropertyBinding.sanitizeNodeName(boneName);
+  const sanitizedMatches = bones.filter((bone) => bone.name === sanitized);
+  if (sanitizedMatches.length === 1) return sanitizedMatches[0];
+  if (sanitizedMatches.length > 1) {
+    throw new Error(`Bone "${boneName}" (sanitized: "${sanitized}") is ambiguous`);
+  }
+  
+  throw new Error(`Bone "${boneName}" (sanitized: "${sanitized}") not found in skeleton`);
 }
 
 /**
- * Minimal implementation of attachAccessory (inline).
+ * Implementation matching SPEC exactly:
+ * - bodyScene.updateMatrixWorld(true)
+ * - desiredWorld = compose(boneWorldHead + offset.position, quaternion(offset.rotation_deg, XYZ), offset.scale)
+ * - accessoryLocal = inverse(bone.matrixWorld) * desiredWorld
+ * - Apply via decompose, matrixAutoUpdate stays true
+ * - bone.add(accessory)
  */
 function attachAccessory({ bodyScene, boneName, accessory, offset }) {
   const bone = resolveBone(bodyScene, boneName);
@@ -86,32 +94,53 @@ function attachAccessory({ bodyScene, boneName, accessory, offset }) {
     accessory.matrixAutoUpdate = true;
   }
   
-  // Compute bone head in world space
-  bone.updateWorldMatrix(true, false);
-  const boneWorld = bone.matrixWorld.clone();
+  // SPEC: bodyScene.updateMatrixWorld(true)
+  bodyScene.updateMatrixWorld(true);
   
-  // Build offset matrix in model space (relative to bone head)
-  const offsetMatrix = new THREE.Matrix4();
-  const pos = new THREE.Vector3(...offset.position);
-  const rot = new THREE.Euler(
-    THREE.MathUtils.degToRad(offset.rotation_deg[0]),
-    THREE.MathUtils.degToRad(offset.rotation_deg[1]),
-    THREE.MathUtils.degToRad(offset.rotation_deg[2]),
-    'XYZ'
+  // SPEC: boneWorldHead position
+  const boneWorldHead = new THREE.Vector3();
+  bone.getWorldPosition(boneWorldHead);
+  
+  // SPEC: desiredWorld = compose(boneWorldHead + offset.position, quaternion(offset.rotation_deg, XYZ), offset.scale)
+  const desiredWorldPos = new THREE.Vector3(
+    boneWorldHead.x + offset.position[0],
+    boneWorldHead.y + offset.position[1],
+    boneWorldHead.z + offset.position[2]
   );
-  const scale = new THREE.Vector3(...offset.scale);
-  offsetMatrix.compose(pos, new THREE.Quaternion().setFromEuler(rot), scale);
   
-  // desired_world = bone_world * offset
-  const desiredWorld = new THREE.Matrix4().multiplyMatrices(boneWorld, offsetMatrix);
+  const desiredWorldQuat = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(
+      THREE.MathUtils.degToRad(offset.rotation_deg[0]),
+      THREE.MathUtils.degToRad(offset.rotation_deg[1]),
+      THREE.MathUtils.degToRad(offset.rotation_deg[2]),
+      'XYZ'
+    )
+  );
   
-  // accessory_local = inverse(bone_world) * desired_world
-  const boneWorldInv = boneWorld.clone().invert();
+  const desiredWorldScale = new THREE.Vector3(
+    offset.scale[0],
+    offset.scale[1],
+    offset.scale[2]
+  );
+  
+  const desiredWorld = new THREE.Matrix4();
+  desiredWorld.compose(desiredWorldPos, desiredWorldQuat, desiredWorldScale);
+  
+  // SPEC: accessoryLocal = inverse(bone.matrixWorld) * desiredWorld
+  const boneWorldInv = bone.matrixWorld.clone().invert();
   const accessoryLocal = new THREE.Matrix4().multiplyMatrices(boneWorldInv, desiredWorld);
   
-  // Apply to accessory
-  accessory.matrix.copy(accessoryLocal);
-  accessory.matrixAutoUpdate = false;
+  // SPEC: Apply via decompose, matrixAutoUpdate stays true
+  const localPos = new THREE.Vector3();
+  const localQuat = new THREE.Quaternion();
+  const localScale = new THREE.Vector3();
+  accessoryLocal.decompose(localPos, localQuat, localScale);
+  
+  accessory.position.copy(localPos);
+  accessory.quaternion.copy(localQuat);
+  accessory.scale.copy(localScale);
+  
+  // SPEC: bone.add(accessory)
   bone.add(accessory);
   
   return {
@@ -125,29 +154,49 @@ function attachAccessory({ bodyScene, boneName, accessory, offset }) {
 }
 
 /**
- * Get attach bones filtered by side.
+ * Get attach bones filtered by side or part
  */
-function getAttachBones(contract, slotName, options = {}) {
+function getAttachBones(contract, slotName, filter = {}) {
   const attachMap = contract.attach || {};
-  const bones = attachMap[slotName] || [];
+  const bones = attachMap[slotName];
   
-  if (!options.side) return bones;
+  if (!bones) {
+    throw new Error(`Slot "${slotName}" not found in contract attach map`);
+  }
   
-  const suffix = `.${options.side}`;
-  return bones.filter(name => name.endsWith(suffix));
+  let filtered = [...bones];
+  
+  if (filter.side) {
+    const suffix = `.${filter.side}`;
+    filtered = filtered.filter(name => name.endsWith(suffix));
+  }
+  
+  if (filter.part) {
+    filtered = filtered.filter(name => {
+      const baseName = name.replace(/\.[LR]$/, '');
+      return baseName.startsWith(filter.part);
+    });
+  }
+  
+  return filtered;
 }
 
 /**
- * Test suite
+ * Test framework
  */
 let totalTests = 0;
 let passedTests = 0;
 let failedTests = 0;
+const failureDetails = [];
 
-function assert(condition, message) {
+function assert(condition, message, details = '') {
   totalTests++;
   if (!condition) {
     console.error(`  ✗ FAIL: ${message}`);
+    if (details) {
+      console.error(`         ${details}`);
+      failureDetails.push({ test: message, details });
+    }
     failedTests++;
     return false;
   } else {
@@ -158,7 +207,9 @@ function assert(condition, message) {
 }
 
 async function testBodyAttachPoints(bodyType, contract, glbPath) {
-  console.log(`\n=== Testing ${bodyType} body ===`);
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`${bodyType.toUpperCase()} BODY`);
+  console.log('='.repeat(60));
   
   // Load with real GLTFLoader
   let gltf;
@@ -166,25 +217,10 @@ async function testBodyAttachPoints(bodyType, contract, glbPath) {
     gltf = await loadGLB(glbPath);
   } catch (err) {
     console.error(`BLOCKED: GLTFLoader.parse failed: ${err.message}`);
-    console.error(err.stack);
     process.exit(1);
   }
   
   const bodyScene = gltf.scene;
-  
-  // STEP 2: Print foot.L contract name vs actual loaded name
-  const footLContract = 'foot.L';
-  let footLActual = null;
-  try {
-    const bone = resolveBone(bodyScene, footLContract);
-    footLActual = bone.name;
-  } catch (err) {
-    footLActual = 'NOT_FOUND';
-  }
-  console.log(`  foot.L: contract="${footLContract}", loaded="${footLActual}"`);
-  
-  // Update world matrices once
-  bodyScene.updateWorldMatrix(true, true);
   
   // Get all attach bones from contract
   const attachMap = contract.attach || {};
@@ -195,243 +231,315 @@ async function testBodyAttachPoints(bodyType, contract, glbPath) {
     }
   }
   
-  console.log(`  Found ${allBones.size} attach bones in contract\n`);
+  console.log(`Contract has ${allBones.size} attach bones\n`);
   
-  // Test 3a: All contract bones resolve to THREE.Bone
+  // Test 2a: All contract bones resolve to THREE.Bone
+  console.log('Test 2a: Bone resolution');
   for (const boneName of allBones) {
     try {
       const bone = resolveBone(bodyScene, boneName);
       assert(
         bone && bone.isBone === true,
-        `Bone "${boneName}" resolves to THREE.Bone`
+        `"${boneName}" resolves to THREE.Bone`
       );
     } catch (err) {
-      assert(false, `Bone "${boneName}" resolves to THREE.Bone: ${err.message}`);
+      assert(false, `"${boneName}" resolves to THREE.Bone`, err.message);
     }
   }
   
-  // Test 3b: Position check with offset [0, 0.1, 0]
-  const dummyAccessory = new THREE.Object3D();
-  dummyAccessory.name = 'test-accessory';
+  // Test 2b: Offset checks - position, rotation, scale
+  console.log('\nTest 2b: Offset position, rotation, scale');
   
-  const testBone = Array.from(allBones)[0]; // Use first bone
-  console.log(`  Using test bone: "${testBone}"`);
-  const posOffset = { position: [0, 0.1, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] };
-  
-  try {
-    const bone = resolveBone(bodyScene, testBone);
-    bone.updateWorldMatrix(true, false);
-    const boneWorldBefore = bone.matrixWorld.clone();
-    
-    // Get bone head position in world space
-    const boneHeadWorld = new THREE.Vector3();
-    boneHeadWorld.setFromMatrixPosition(boneWorldBefore);
-    
-    // Debug: check bone orientation
-    const debugBoneQuat = new THREE.Quaternion();
-    const debugBoneScale = new THREE.Vector3();
-    boneWorldBefore.decompose(new THREE.Vector3(), debugBoneQuat, debugBoneScale);
-    const boneEuler = new THREE.Euler().setFromQuaternion(debugBoneQuat, 'XYZ');
-    console.log(`  Bone world pos: [${boneHeadWorld.x.toFixed(4)}, ${boneHeadWorld.y.toFixed(4)}, ${boneHeadWorld.z.toFixed(4)}]`);
-    console.log(`  Bone world rot (deg): [${THREE.MathUtils.radToDeg(boneEuler.x).toFixed(2)}, ${THREE.MathUtils.radToDeg(boneEuler.y).toFixed(2)}, ${THREE.MathUtils.radToDeg(boneEuler.z).toFixed(2)}]`);
-    console.log(`  Bone world scale: [${debugBoneScale.x.toFixed(4)}, ${debugBoneScale.y.toFixed(4)}, ${debugBoneScale.z.toFixed(4)}]`);
-    
-    // Attach with offset
-    attachAccessory({
-      bodyScene,
-      boneName: testBone,
-      accessory: dummyAccessory,
-      offset: posOffset
-    });
-    
-    // Update accessory world matrix
-    dummyAccessory.updateWorldMatrix(true, false);
-    const accessoryWorldPos = new THREE.Vector3();
-    accessoryWorldPos.setFromMatrixPosition(dummyAccessory.matrixWorld);
-    console.log(`  Accessory world pos: [${accessoryWorldPos.x.toFixed(4)}, ${accessoryWorldPos.y.toFixed(4)}, ${accessoryWorldPos.z.toFixed(4)}]`);
-    
-    // Expected: boneHeadWorld + [0, 0.1, 0]
-    const expectedPos = boneHeadWorld.clone().add(new THREE.Vector3(0, 0.1, 0));
-    console.log(`  Expected pos: [${expectedPos.x.toFixed(4)}, ${expectedPos.y.toFixed(4)}, ${expectedPos.z.toFixed(4)}]`);
-    const posDiff = accessoryWorldPos.distanceTo(expectedPos);
-    
-    assert(
-      posDiff < POSITION_TOLERANCE,
-      `Accessory world pos = bone head + offset [0,0.1,0] (diff=${posDiff.toExponential(2)})`
-    );
-    
-    // Test with rotation offset (45 deg about Y)
-    const rotOffset = { position: [0, 0, 0], rotation_deg: [0, 45, 0], scale: [1, 1, 1] };
-    attachAccessory({
-      bodyScene,
-      boneName: testBone,
-      accessory: dummyAccessory,
-      offset: rotOffset
-    });
-    
-    dummyAccessory.updateWorldMatrix(true, false);
-    const accessoryQuat = new THREE.Quaternion();
-    accessoryQuat.setFromRotationMatrix(dummyAccessory.matrixWorld);
-    
-    const boneQuat = new THREE.Quaternion();
-    boneQuat.setFromRotationMatrix(boneWorldBefore);
-    
-    const offsetQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(0, THREE.MathUtils.degToRad(45), 0, 'XYZ')
-    );
-    const expectedQuat = boneQuat.clone().multiply(offsetQuat);
-    
-    const quatDiff = accessoryQuat.angleTo(expectedQuat);
-    assert(
-      quatDiff < ROTATION_TOLERANCE,
-      `Accessory orientation = bone * rotOffset (diff=${quatDiff.toExponential(2)} rad)`
-    );
-    
-  } catch (err) {
-    assert(false, `Position/rotation offset test: ${err.message}`);
-  }
-  
-  // Test 3c: Follow - bone rotation changes, accessory follows
-  try {
-    const bone = resolveBone(bodyScene, testBone);
-    
-    // Attach with zero offset
-    const zeroOffset = { position: [0, 0, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] };
-    attachAccessory({
-      bodyScene,
-      boneName: testBone,
-      accessory: dummyAccessory,
-      offset: zeroOffset
-    });
-    
-    // Store original local matrix
-    const originalLocal = dummyAccessory.matrix.clone();
-    
-    // Get position before rotation
-    bodyScene.updateWorldMatrix(true, true);
-    const posBefore = new THREE.Vector3();
-    posBefore.setFromMatrixPosition(dummyAccessory.matrixWorld);
-    
-    // Rotate bone 45 degrees about [1,1,0] normalized
-    const axis = new THREE.Vector3(1, 1, 0).normalize();
-    bone.rotateOnAxis(axis, THREE.MathUtils.degToRad(45));
-    
-    // Update world matrices
-    bodyScene.updateWorldMatrix(true, true);
-    
-    // Get new bone world and compute expected accessory world
-    const newBoneWorld = bone.matrixWorld.clone();
-    const expectedAccessoryWorld = new THREE.Matrix4().multiplyMatrices(newBoneWorld, originalLocal);
-    
-    // Get actual accessory world
-    const actualAccessoryWorld = dummyAccessory.matrixWorld.clone();
-    
-    // Compare matrices element-wise
-    let maxDiff = 0;
-    for (let i = 0; i < 16; i++) {
-      const diff = Math.abs(actualAccessoryWorld.elements[i] - expectedAccessoryWorld.elements[i]);
-      maxDiff = Math.max(maxDiff, diff);
+  for (const boneName of allBones) {
+    try {
+      const bone = resolveBone(bodyScene, boneName);
+      
+      // Fresh accessory per test
+      const accessory = new THREE.Object3D();
+      accessory.name = `test-accessory-${boneName}`;
+      
+      // Measure boneWorldHead BEFORE attach
+      bodyScene.updateMatrixWorld(true);
+      const boneWorldHeadBefore = new THREE.Vector3();
+      bone.getWorldPosition(boneWorldHeadBefore);
+      
+      // Attach with position offset [0, 0.1, 0]
+      attachAccessory({
+        bodyScene,
+        boneName,
+        accessory,
+        offset: { position: [0, 0.1, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
+      });
+      
+      // After attach, updateMatrixWorld and check world position
+      bodyScene.updateMatrixWorld(true);
+      const accessoryWorldPos = new THREE.Vector3();
+      accessory.getWorldPosition(accessoryWorldPos);
+      
+      const expectedPos = new THREE.Vector3(
+        boneWorldHeadBefore.x + 0,
+        boneWorldHeadBefore.y + 0.1,
+        boneWorldHeadBefore.z + 0
+      );
+      
+      const posDiff = accessoryWorldPos.distanceTo(expectedPos);
+      assert(
+        posDiff < POSITION_TOLERANCE,
+        `"${boneName}" pos offset [0,0.1,0]`,
+        `diff=${posDiff.toExponential(3)}`
+      );
+      
+      // Rotation offset [0, 45, 0] - fresh accessory
+      const accessory2 = new THREE.Object3D();
+      attachAccessory({
+        bodyScene,
+        boneName,
+        accessory: accessory2,
+        offset: { position: [0, 0, 0], rotation_deg: [0, 45, 0], scale: [1, 1, 1] }
+      });
+      
+      bodyScene.updateMatrixWorld(true);
+      const accessoryWorldQuat = new THREE.Quaternion();
+      accessory2.getWorldQuaternion(accessoryWorldQuat);
+      
+      const expectedQuat = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(0, THREE.MathUtils.degToRad(45), 0, 'XYZ')
+      );
+      
+      const quatDiff = accessoryWorldQuat.angleTo(expectedQuat);
+      assert(
+        quatDiff < ROTATION_TOLERANCE,
+        `"${boneName}" rot offset [0,45,0]`,
+        `diff=${quatDiff.toExponential(3)} rad`
+      );
+      
+      // Scale offset [1.5, 1.5, 1.5] - fresh accessory
+      const accessory3 = new THREE.Object3D();
+      attachAccessory({
+        bodyScene,
+        boneName,
+        accessory: accessory3,
+        offset: { position: [0, 0, 0], rotation_deg: [0, 0, 0], scale: [1.5, 1.5, 1.5] }
+      });
+      
+      bodyScene.updateMatrixWorld(true);
+      const accessoryWorldScale = new THREE.Vector3();
+      accessory3.getWorldScale(accessoryWorldScale);
+      
+      const scaleDiff = Math.abs(accessoryWorldScale.x - 1.5) + 
+                         Math.abs(accessoryWorldScale.y - 1.5) + 
+                         Math.abs(accessoryWorldScale.z - 1.5);
+      assert(
+        scaleDiff < POSITION_TOLERANCE * 3,
+        `"${boneName}" scale offset [1.5,1.5,1.5]`,
+        `diff=${scaleDiff.toExponential(3)}`
+      );
+      
+    } catch (err) {
+      assert(false, `"${boneName}" offset tests`, err.message);
     }
-    
-    assert(
-      maxDiff < POSITION_TOLERANCE,
-      `After bone rotation, accessory matrix = newBoneWorld * originalLocal (maxDiff=${maxDiff.toExponential(2)})`
-    );
-    
-    // Check position changed
-    const posAfter = new THREE.Vector3();
-    posAfter.setFromMatrixPosition(actualAccessoryWorld);
-    const posChange = posBefore.distanceTo(posAfter);
-    
-    assert(
-      posChange > POSITION_TOLERANCE,
-      `Accessory position changed after bone rotation (change=${posChange.toFixed(4)}m)`
-    );
-    
-  } catch (err) {
-    assert(false, `Follow test: ${err.message}`);
   }
   
-  // Test 3d: Detach restores bone child count, second detach is no-op
+  // Test 2c: Follow - bone rotates, accessory follows
+  console.log('\nTest 2c: Follow bone rotation');
+  
+  for (const boneName of allBones) {
+    try {
+      const bone = resolveBone(bodyScene, boneName);
+      
+      // Fresh accessory
+      const accessory = new THREE.Object3D();
+      accessory.name = `follow-test-${boneName}`;
+      
+      // Attach with zero offset
+      attachAccessory({
+        bodyScene,
+        boneName,
+        accessory,
+        offset: { position: [0, 0.1, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
+      });
+      
+      // Copy accessory.matrix as L0
+      const L0 = accessory.matrix.clone();
+      const pqs0 = { p: accessory.position.clone(), q: accessory.quaternion.clone(), s: accessory.scale.clone() };
+      
+      // Record world pos p0
+      bodyScene.updateMatrixWorld(true);
+      const p0 = new THREE.Vector3();
+      accessory.getWorldPosition(p0);
+      
+      // Store bone matrixWorld before rotation
+      const boneWorldBefore = bone.matrixWorld.clone();
+      
+      // Rotate bone 45 deg about axis (1,2,3) normalized
+      const axis = new THREE.Vector3(1, 2, 3).normalize();
+      bone.rotateOnAxis(axis, THREE.MathUtils.degToRad(45));
+      
+      // updateMatrixWorld(true)
+      bodyScene.updateMatrixWorld(true);
+      
+      // Check if p/q/s changed after rotation
+      const pqs1 = { p: accessory.position.clone(), q: accessory.quaternion.clone(), s: accessory.scale.clone() };
+      const pqsChanged = !pqs0.p.equals(pqs1.p) || !pqs0.q.equals(pqs1.q) || !pqs0.s.equals(pqs1.s);
+      if (pqsChanged) {
+        console.log(`    DEBUG "${boneName}": p/q/s CHANGED after bone rotation!`);
+        console.log(`      pos: [${pqs0.p.toArray().map(v => v.toFixed(4))}] -> [${pqs1.p.toArray().map(v => v.toFixed(4))}]`);
+        console.log(`      quat: [${pqs0.q.toArray().map(v => v.toFixed(4))}] -> [${pqs1.q.toArray().map(v => v.toFixed(4))}]`);
+      }
+      
+      // Assert bone.matrixWorld CHANGES
+      let boneChanged = false;
+      for (let i = 0; i < 16; i++) {
+        if (Math.abs(bone.matrixWorld.elements[i] - boneWorldBefore.elements[i]) > FOLLOW_TOLERANCE) {
+          boneChanged = true;
+          break;
+        }
+      }
+      assert(boneChanged, `"${boneName}" matrixWorld changed after rotation`);
+      
+      if (!boneChanged) continue; // Skip follow check if bone didn't move
+      
+      // Assert accessory.matrixWorld equals bone.matrixWorld * L0 within tolerance
+      const expectedAccessoryWorld = new THREE.Matrix4().multiplyMatrices(bone.matrixWorld, L0);
+      let maxDiff = 0;
+      for (let i = 0; i < 16; i++) {
+        const diff = Math.abs(accessory.matrixWorld.elements[i] - expectedAccessoryWorld.elements[i]);
+        maxDiff = Math.max(maxDiff, diff);
+      }
+      
+      // Debug: check if accessory.matrix changed
+      if (maxDiff >= FOLLOW_TOLERANCE) {
+        const L0_vs_current = accessory.matrix.elements.map((e, i) => Math.abs(e - L0.elements[i])).reduce((a, b) => Math.max(a, b));
+        console.log(`    DEBUG "${boneName}": L0 vs current accessory.matrix maxDiff = ${L0_vs_current.toExponential(3)}`);
+      }
+      
+      assert(
+        maxDiff < FOLLOW_TOLERANCE,
+        `"${boneName}" follow: matrixWorld = bone * L0`,
+        `maxDiff=${maxDiff.toExponential(3)}`
+      );
+      
+      // Assert world position moved by more than FOLLOW_MOVE_MIN
+      const p1 = new THREE.Vector3();
+      accessory.getWorldPosition(p1);
+      const posChange = p0.distanceTo(p1);
+      assert(
+        posChange > FOLLOW_MOVE_MIN,
+        `"${boneName}" follow: position moved`,
+        `change=${posChange.toFixed(4)}m`
+      );
+      
+    } catch (err) {
+      assert(false, `"${boneName}" follow test`, err.message);
+    }
+  }
+  
+  // Test 2d: Detach restores bone child count, second detach is no-op
+  console.log('\nTest 2d: Detach idempotence');
+  
+  const testBone = Array.from(allBones)[0];
   try {
-    // Create fresh accessory for this test
-    const freshAccessory = new THREE.Object3D();
-    freshAccessory.name = 'fresh-test-accessory';
-    
     const bone = resolveBone(bodyScene, testBone);
     const childCountBefore = bone.children.length;
     
+    const accessory = new THREE.Object3D();
     const { detach } = attachAccessory({
       bodyScene,
       boneName: testBone,
-      accessory: freshAccessory,
+      accessory,
       offset: { position: [0, 0, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
     });
     
     const childCountAttached = bone.children.length;
     assert(
       childCountAttached === childCountBefore + 1,
-      `Attach increases bone child count by 1 (before=${childCountBefore}, after=${childCountAttached})`
+      `Attach increases child count`,
+      `before=${childCountBefore}, after=${childCountAttached}`
     );
     
     detach();
     const childCountAfterDetach = bone.children.length;
     assert(
       childCountAfterDetach === childCountBefore,
-      `Detach restores bone child count (expected=${childCountBefore}, actual=${childCountAfterDetach})`
+      `Detach restores child count`,
+      `expected=${childCountBefore}, actual=${childCountAfterDetach}`
     );
     
     detach(); // Second detach
-    const childCountAfterSecondDetach = bone.children.length;
+    const childCountAfterSecond = bone.children.length;
     assert(
-      childCountAfterSecondDetach === childCountBefore,
-      `Second detach is no-op (expected=${childCountBefore}, actual=${childCountAfterSecondDetach})`
+      childCountAfterSecond === childCountBefore,
+      `Second detach is no-op`,
+      `expected=${childCountBefore}, actual=${childCountAfterSecond}`
     );
     
   } catch (err) {
-    assert(false, `Detach test: ${err.message}`);
+    assert(false, `Detach test`, err.message);
   }
   
-  // Test 3e: Attach to male, detach, attach to female (only if both bodies available)
-  // Skip for now - this test needs both bodies loaded simultaneously
+  // Test 2f: Missing bone throws clear error
+  console.log('\nTest 2f: Error handling');
   
-  // Test 3f: Missing bone and missing slot throw clear errors
   try {
-    try {
-      resolveBone(bodyScene, 'nonexistent_bone_xyz');
-      assert(false, `Missing bone throws error`);
-    } catch (err) {
-      assert(
-        err.message.includes('not found'),
-        `Missing bone throws error with "not found" message`
-      );
-    }
+    resolveBone(bodyScene, 'nonexistent_bone_xyz');
+    assert(false, `Missing bone throws error`);
   } catch (err) {
-    assert(false, `Missing bone error test: ${err.message}`);
+    assert(
+      err.message.includes('not found') && err.message.includes('nonexistent_bone_xyz'),
+      `Missing bone error names the bone`
+    );
   }
   
-  // Test 3g: getAttachBones with side filter
+  // Missing slot error
+  try {
+    getAttachBones(contract, 'nonexistent_slot_xyz');
+    assert(false, `Missing slot throws error`);
+  } catch (err) {
+    assert(
+      err.message.includes('not found') && err.message.includes('nonexistent_slot_xyz'),
+      `Missing slot error names the slot`
+    );
+  }
+  
+  // Test 2g: getAttachBones with filters
+  console.log('\nTest 2g: getAttachBones filtering');
+  
   const leftShoes = getAttachBones(contract, 'shoes', { side: 'L' });
   const rightShoes = getAttachBones(contract, 'shoes', { side: 'R' });
   
   assert(
-    leftShoes.every(name => name.endsWith('.L')),
-    `getAttachBones(shoes, side:L) returns only .L bones`
+    leftShoes.length > 0 && leftShoes.every(name => name.endsWith('.L')),
+    `getAttachBones(shoes, side:L) returns only .L bones`,
+    `found ${leftShoes.length}: ${leftShoes.join(', ')}`
   );
   
   assert(
-    rightShoes.every(name => name.endsWith('.R')),
-    `getAttachBones(shoes, side:R) returns only .R bones`
+    rightShoes.length > 0 && rightShoes.every(name => name.endsWith('.R')),
+    `getAttachBones(shoes, side:R) returns only .R bones`,
+    `found ${rightShoes.length}: ${rightShoes.join(', ')}`
+  );
+  
+  // Filter by part
+  const footBones = getAttachBones(contract, 'shoes', { part: 'foot' });
+  const toeBones = getAttachBones(contract, 'shoes', { part: 'toe' });
+  
+  assert(
+    footBones.length > 0 && footBones.every(name => name.replace(/\.[LR]$/, '').startsWith('foot')),
+    `getAttachBones(shoes, part:foot) returns only foot bones`,
+    `found ${footBones.length}: ${footBones.join(', ')}`
   );
   
   assert(
-    leftShoes.length > 0 && rightShoes.length > 0,
-    `Both L and R sides have bones`
+    toeBones.length > 0 && toeBones.every(name => name.replace(/\.[LR]$/, '').startsWith('toe')),
+    `getAttachBones(shoes, part:toe) returns only toe bones`,
+    `found ${toeBones.length}: ${toeBones.join(', ')}`
   );
 }
 
 async function main() {
-  console.log('Attach Module Tests with REAL GLTFLoader\n');
+  console.log('\n' + '='.repeat(60));
+  console.log('ATTACH MODULE TEST with REAL GLTFLoader');
+  console.log('='.repeat(60));
   
   try {
     // Test male body
@@ -448,18 +556,78 @@ async function main() {
       path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb')
     );
     
+    // Test 2e: Attach to male, detach, attach to female - no stray children
+    console.log('\n' + '='.repeat(60));
+    console.log('CROSS-BODY DETACH TEST');
+    console.log('='.repeat(60));
+    
+    const maleGltf = await loadGLB(path.join(ROOT, 'assets/models/3D_Model_Male_V2_rigged.glb'));
+    const femaleGltf = await loadGLB(path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'));
+    
+    const maleScene = maleGltf.scene;
+    const femaleScene = femaleGltf.scene;
+    
+    const accessory = new THREE.Object3D();
+    accessory.name = 'cross-body-test-accessory';
+    
+    // Count male scene children before
+    const maleChildCountBefore = maleScene.children.length;
+    
+    // Attach to male
+    const { detach: detachMale } = attachAccessory({
+      bodyScene: maleScene,
+      boneName: 'head',
+      accessory,
+      offset: { position: [0, 0, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
+    });
+    
+    // Detach from male
+    detachMale();
+    
+    // Count male scene children after detach
+    const maleChildCountAfter = maleScene.children.length;
+    
+    // Attach to female
+    attachAccessory({
+      bodyScene: femaleScene,
+      boneName: 'head',
+      accessory,
+      offset: { position: [0, 0, 0], rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
+    });
+    
+    // Count male scene total descendants
+    let maleDescendantCount = 0;
+    maleScene.traverse(() => maleDescendantCount++);
+    
+    let femaleDescendantCount = 0;
+    femaleScene.traverse(() => femaleDescendantCount++);
+    
+    assert(
+      maleChildCountAfter === maleChildCountBefore,
+      `Male scene has zero stray children after detach`,
+      `before=${maleChildCountBefore}, after=${maleChildCountAfter}`
+    );
+    
     // Summary
-    console.log(`\n${'='.repeat(50)}`);
+    console.log('\n' + '='.repeat(60));
+    console.log('SUMMARY');
+    console.log('='.repeat(60));
     console.log(`Total:  ${totalTests}`);
     console.log(`Passed: ${passedTests}`);
     console.log(`Failed: ${failedTests}`);
-    console.log('='.repeat(50));
     
     if (failedTests > 0) {
-      console.error(`\n❌ ${failedTests} test(s) FAILED`);
+      console.log('\n' + '='.repeat(60));
+      console.log('FAILURE DETAILS');
+      console.log('='.repeat(60));
+      for (const { test, details } of failureDetails) {
+        console.log(`\n${test}`);
+        console.log(`  ${details}`);
+      }
+      console.log('\n❌ FAILED');
       process.exit(1);
     } else {
-      console.log('\n✅ All tests PASSED');
+      console.log('\n✅ ALL TESTS PASSED');
       process.exit(0);
     }
     

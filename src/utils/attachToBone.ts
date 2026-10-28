@@ -38,12 +38,13 @@ import { PropertyBinding } from 'three';
 
 /**
  * Attachment offset specification
- * All in model-space axes at bind pose, relative to bone's head position
+ * All in MODEL-SPACE axes at bind pose, relative to bone's world head position.
+ * Rotation is in model-space axes (NOT bone-local), ignoring bone's bind-pose tilt.
  */
 export interface AttachmentOffset {
-  /** Position offset in metres [x, y, z] */
+  /** Position offset in metres [x, y, z] in model-space axes */
   position: [number, number, number];
-  /** Rotation in degrees, Euler XYZ order */
+  /** Rotation in degrees, Euler XYZ order, in model-space axes */
   rotation_deg: [number, number, number];
   /** Scale multiplier [x, y, z] */
   scale: [number, number, number];
@@ -175,7 +176,8 @@ export function getAttachBones(
  * Attach an accessory to a bone
  * 
  * The accessory will follow the bone's transforms automatically.
- * Offset is in model-space axes at bind pose, relative to bone's head position.
+ * Offset is in MODEL-SPACE axes at bind pose, relative to bone's world head position.
+ * Rotation is in model-space axes (NOT bone-local), ignoring bone's bind-pose tilt.
  * 
  * IMPORTANT: Caller must clone useGLTF scenes before attaching to avoid mutating
  * the cached asset.
@@ -184,7 +186,7 @@ export function getAttachBones(
  * @param params.bodyScene - Root scene containing the skeleton (must have updateMatrixWorld called)
  * @param params.boneName - Bone name from contract (will be sanitized)
  * @param params.accessory - Object3D to attach (will be parented to bone)
- * @param params.offset - Offset relative to bone head in model-space
+ * @param params.offset - Offset relative to bone world head in model-space axes
  * @returns Object with detach function
  */
 export function attachAccessory(params: {
@@ -198,6 +200,7 @@ export function attachAccessory(params: {
   // If accessory is already attached somewhere, detach it first
   if (accessory.parent) {
     accessory.removeFromParent();
+    accessory.matrixAutoUpdate = true;
   }
   
   // Resolve bone
@@ -206,27 +209,29 @@ export function attachAccessory(params: {
   // Ensure world matrices are up to date
   bodyScene.updateMatrixWorld(true);
   
-  // Get bone's current world position (head position)
-  const boneWorldPos = new THREE.Vector3();
-  bone.getWorldPosition(boneWorldPos);
+  // Get bone's world head position
+  const boneWorldHead = new THREE.Vector3();
+  bone.getWorldPosition(boneWorldHead);
   
-  // Build desired world matrix from offset
-  // Position: bone world position + offset
+  // Build desired world transform in model-space axes
+  // Position: bone world head + offset.position (both in model-space)
   const desiredWorldPos = new THREE.Vector3(
-    boneWorldPos.x + offset.position[0],
-    boneWorldPos.y + offset.position[1],
-    boneWorldPos.z + offset.position[2]
+    boneWorldHead.x + offset.position[0],
+    boneWorldHead.y + offset.position[1],
+    boneWorldHead.z + offset.position[2]
   );
   
-  // Rotation: offset rotation in degrees converted to radians
-  const desiredWorldRot = new THREE.Euler(
-    offset.rotation_deg[0] * Math.PI / 180,
-    offset.rotation_deg[1] * Math.PI / 180,
-    offset.rotation_deg[2] * Math.PI / 180,
-    'XYZ'
+  // Rotation: offset.rotation_deg in model-space axes (ignoring bone tilt)
+  const desiredWorldQuat = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(
+      THREE.MathUtils.degToRad(offset.rotation_deg[0]),
+      THREE.MathUtils.degToRad(offset.rotation_deg[1]),
+      THREE.MathUtils.degToRad(offset.rotation_deg[2]),
+      'XYZ'
+    )
   );
   
-  // Scale: offset scale
+  // Scale: offset.scale
   const desiredWorldScale = new THREE.Vector3(
     offset.scale[0],
     offset.scale[1],
@@ -234,20 +239,24 @@ export function attachAccessory(params: {
   );
   
   // Build desired world matrix
-  const desiredWorldMatrix = new THREE.Matrix4();
-  desiredWorldMatrix.compose(desiredWorldPos, new THREE.Quaternion().setFromEuler(desiredWorldRot), desiredWorldScale);
+  const desiredWorld = new THREE.Matrix4();
+  desiredWorld.compose(desiredWorldPos, desiredWorldQuat, desiredWorldScale);
   
-  // Calculate local matrix: inverse(boneWorld) * desiredWorld
-  const boneWorldMatrix = bone.matrixWorld.clone();
-  const boneWorldInverse = boneWorldMatrix.clone().invert();
-  const localMatrix = boneWorldInverse.clone().multiply(desiredWorldMatrix);
+  // Compute accessory local matrix: inverse(bone.matrixWorld) * desiredWorld
+  const boneWorldInv = bone.matrixWorld.clone().invert();
+  const accessoryLocal = new THREE.Matrix4().multiplyMatrices(boneWorldInv, desiredWorld);
   
-  // Set accessory's local transform
-  accessory.matrix.copy(localMatrix);
-  accessory.matrix.decompose(accessory.position, accessory.quaternion, accessory.scale);
+  // Decompose and apply to accessory (matrixAutoUpdate stays true)
+  const localPos = new THREE.Vector3();
+  const localQuat = new THREE.Quaternion();
+  const localScale = new THREE.Vector3();
+  accessoryLocal.decompose(localPos, localQuat, localScale);
   
-  // Disable auto-update and parent to bone
-  accessory.matrixAutoUpdate = false;
+  accessory.position.copy(localPos);
+  accessory.quaternion.copy(localQuat);
+  accessory.scale.copy(localScale);
+  
+  // Parent to bone
   bone.add(accessory);
   
   // Return detach function
@@ -255,7 +264,7 @@ export function attachAccessory(params: {
     detach: () => {
       if (accessory.parent === bone) {
         accessory.removeFromParent();
-        accessory.matrixAutoUpdate = true; // Restore default
+        accessory.matrixAutoUpdate = true;
       }
     }
   };
