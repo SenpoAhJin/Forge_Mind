@@ -436,10 +436,13 @@ export interface PieceDebugInfo {
   boneSet: Set<string>;
   eligibleVertexCount: number;
   coveredVertexCount: number;
+  missingVertexPositions?: Float32Array; // Positions of missing vertices for debug visualization
+  missingVertexInfo?: Array<{ index: number; dominantBone: string; reason: string }>; // Details about why each vertex was missing
 }
 
 /**
  * Compute debug info for a piece without building the mesh.
+ * Includes positions of missing vertices for visualization.
  */
 export function computePieceDebugInfo(
   bodyScene: THREE.Object3D,
@@ -492,28 +495,61 @@ export function computePieceDebugInfo(
   // Find vertices that belong to this piece (summed weight >= 0.5)
   const SOFT_WEIGHT_MIN = 0.5;
   const eligibleVertices = new Set<number>();
+  const missingVertexInfo: Array<{ index: number; dominantBone: string; reason: string }> = [];
 
   for (let i = 0; i < position.count; i++) {
     const y = position.getY(i);
     
-    // Check y-band
-    if (yMin !== undefined && y < yMin) continue;
-    if (yMax !== undefined && y > yMax) continue;
-
     // Sum weights for this piece's bones
     let sumWeight = 0;
+    let maxWeight = -1;
+    let dominantBoneIdx = -1;
+    
     for (let j = 0; j < 4; j++) {
       const boneIdx = skinIndex.getComponent(i, j);
+      const weight = skinWeight.getComponent(i, j);
+      
+      if (weight > maxWeight) {
+        maxWeight = weight;
+        dominantBoneIdx = boneIdx;
+      }
+      
       if (boneIdx >= 0 && boneIdx < bones.length) {
         const boneName = sanitizeBoneName(bones[boneIdx].name);
         if (boneSet.has(boneName)) {
-          sumWeight += skinWeight.getComponent(i, j);
+          sumWeight += weight;
         }
       }
     }
 
+    // Track why vertex was included or excluded
     if (sumWeight >= SOFT_WEIGHT_MIN) {
-      eligibleVertices.add(i);
+      // Check y-band
+      const inYBand = (yMin === undefined || y >= yMin) && (yMax === undefined || y <= yMax);
+      
+      if (inYBand) {
+        eligibleVertices.add(i);
+      } else {
+        // Eligible by weight but excluded by y-band
+        const dominantBoneName = dominantBoneIdx >= 0 && dominantBoneIdx < bones.length
+          ? sanitizeBoneName(bones[dominantBoneIdx].name)
+          : 'unknown';
+        missingVertexInfo.push({
+          index: i,
+          dominantBone: dominantBoneName,
+          reason: `y-band (y=${y.toFixed(3)}, yMin=${yMin?.toFixed(3)}, yMax=${yMax?.toFixed(3)})`,
+        });
+      }
+    } else if (yMin !== undefined && yMax !== undefined && y >= yMin && y <= yMax) {
+      // In y-band but insufficient weight
+      const dominantBoneName = dominantBoneIdx >= 0 && dominantBoneIdx < bones.length
+        ? sanitizeBoneName(bones[dominantBoneIdx].name)
+        : 'unknown';
+      missingVertexInfo.push({
+        index: i,
+        dominantBone: dominantBoneName,
+        reason: `weight (sum=${sumWeight.toFixed(3)} < ${SOFT_WEIGHT_MIN})`,
+      });
     }
   }
 
@@ -538,6 +574,44 @@ export function computePieceDebugInfo(
     }
   }
 
+  // Find missing vertices (eligible but not covered)
+  const missingVertices = new Set<number>();
+  for (const vIdx of eligibleVertices) {
+    if (!coveredVertices.has(vIdx)) {
+      missingVertices.add(vIdx);
+      
+      // Find dominant bone and reason
+      let maxWeight = -1;
+      let dominantBoneIdx = -1;
+      for (let j = 0; j < 4; j++) {
+        const weight = skinWeight.getComponent(vIdx, j);
+        if (weight > maxWeight) {
+          maxWeight = weight;
+          dominantBoneIdx = skinIndex.getComponent(vIdx, j);
+        }
+      }
+      
+      const dominantBoneName = dominantBoneIdx >= 0 && dominantBoneIdx < bones.length
+        ? sanitizeBoneName(bones[dominantBoneIdx].name)
+        : 'unknown';
+      
+      missingVertexInfo.push({
+        index: vIdx,
+        dominantBone: dominantBoneName,
+        reason: 'eligible but not in selected triangles (2-of-3 rule or clip)',
+      });
+    }
+  }
+
+  // Extract positions of missing vertices
+  const missingPositions = new Float32Array(missingVertices.size * 3);
+  let posIdx = 0;
+  for (const vIdx of missingVertices) {
+    missingPositions[posIdx++] = position.getX(vIdx);
+    missingPositions[posIdx++] = position.getY(vIdx);
+    missingPositions[posIdx++] = position.getZ(vIdx);
+  }
+
   const coverage = eligibleVertices.size > 0 ? coveredVertices.size / eligibleVertices.size : 0;
 
   return {
@@ -546,6 +620,8 @@ export function computePieceDebugInfo(
     boneSet,
     eligibleVertexCount: eligibleVertices.size,
     coveredVertexCount: coveredVertices.size,
+    missingVertexPositions: missingPositions,
+    missingVertexInfo,
   };
 }
 

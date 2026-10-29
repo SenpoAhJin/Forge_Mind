@@ -60,6 +60,7 @@ export default function V2CostumeDemo({
 
   const scene = useThree((state) => state.scene);
   const pieceMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  const debugPointsRef = useRef<Map<string, THREE.Points>>(new Map());
 
   // Find body scene root
   const bodyScene = useMemo(() => {
@@ -72,11 +73,22 @@ export default function V2CostumeDemo({
       return;
     }
 
-    // Clean up old pieces
+    // Clean up old pieces and debug points
     pieceMeshesRef.current.forEach((mesh) => {
       bodyScene.remove(mesh);
     });
     pieceMeshesRef.current.clear();
+    
+    debugPointsRef.current.forEach((points) => {
+      bodyScene.remove(points);
+      points.geometry.dispose();
+      if (Array.isArray(points.material)) {
+        points.material.forEach(m => m.dispose());
+      } else {
+        points.material.dispose();
+      }
+    });
+    debugPointsRef.current.clear();
 
     // Collect debug info
     const debugInfo = new Map<string, PieceDebugInfo>();
@@ -91,6 +103,47 @@ export default function V2CostumeDemo({
           const info = computePieceDebugInfo(bodyScene, contract, pieceDef, costumePiecesData);
           if (info) {
             debugInfo.set(pieceDef.id, info);
+            
+            // In debug mode, render missing vertices as red points (top and wig only)
+            if (debugMode && (pieceDef.id === 'top' || pieceDef.id === 'wig') && info.missingVertexPositions && info.missingVertexPositions.length > 0) {
+              const pointsGeometry = new THREE.BufferGeometry();
+              pointsGeometry.setAttribute('position', new THREE.BufferAttribute(info.missingVertexPositions, 3));
+              
+              const pointsMaterial = new THREE.PointsMaterial({
+                color: 0xff0000,
+                size: 0.005,
+                sizeAttenuation: true,
+              });
+              
+              const points = new THREE.Points(pointsGeometry, pointsMaterial);
+              bodyScene.add(points);
+              debugPointsRef.current.set(`${pieceDef.id}-missing`, points);
+              
+              // Log missing vertex details
+              console.log(`[${pieceDef.id}] Missing ${info.missingVertexPositions.length / 3} vertices:`);
+              if (info.missingVertexInfo && info.missingVertexInfo.length <= 20) {
+                // Log details for first 20 missing vertices
+                const sampleCount = Math.min(20, info.missingVertexInfo.length);
+                for (let i = 0; i < sampleCount; i++) {
+                  const v = info.missingVertexInfo[i];
+                  console.log(`  v${v.index}: bone=${v.dominantBone}, reason=${v.reason}`);
+                }
+                if (info.missingVertexInfo.length > 20) {
+                  console.log(`  ... and ${info.missingVertexInfo.length - 20} more`);
+                }
+              } else if (info.missingVertexInfo) {
+                // Summarize by reason
+                const reasonCounts = new Map<string, number>();
+                for (const v of info.missingVertexInfo) {
+                  const key = v.reason.includes('y-band') ? 'y-band' : v.reason.includes('weight') ? 'weight' : 'clip/2-of-3';
+                  reasonCounts.set(key, (reasonCounts.get(key) || 0) + 1);
+                }
+                console.log(`  Summary by reason:`);
+                reasonCounts.forEach((count, reason) => {
+                  console.log(`    ${reason}: ${count} vertices`);
+                });
+              }
+            }
           }
 
           // Use debug color or user color
@@ -129,6 +182,17 @@ export default function V2CostumeDemo({
     return () => {
       scene.remove(bodyScene);
       disposeCachedPieces(bodyScene);
+      
+      // Clean up debug points
+      debugPointsRef.current.forEach((points) => {
+        points.geometry.dispose();
+        if (Array.isArray(points.material)) {
+          points.material.forEach(m => m.dispose());
+        } else {
+          points.material.dispose();
+        }
+      });
+      debugPointsRef.current.clear();
     };
   }, [bodyType, enabledPieces, pieceColors, debugMode, contract, bodyScene, scene, onDebugInfo]);
 

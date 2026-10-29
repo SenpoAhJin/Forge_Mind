@@ -13,12 +13,12 @@
       "slot": "torso",
       "groupDetails": {
         "torso": ["pelvis", "spine_01", "spine_02", "spine_03", "clavicle.L", "clavicle.R"],
-        "armL": ["upperarm.L", "forearm.L"],
-        "armR": ["upperarm.R", "forearm.R"]
+        "armL": ["upperarm.L", "forearm.L", "hand.L"],
+        "armR": ["upperarm.R", "forearm.R", "hand.R"]
       },
-      "yMin": { "landmark": "hip_y", "offset": -0.03 },
-      "yMax": { "landmark": "neck_y", "offset": 0.02 },
-      "armYMax": { "landmark": "wrist_y", "offset": 0 },
+      "yMin": { "landmark": "hip_y", "offset": -0.05 },
+      "yMax": { "landmark": "head_top_y", "offset": 0 },
+      "armYMax": { "landmark": "wrist_y", "offset": 0.02 },
       "offset_m": 0.008,
       "defaultColor": "#3B82F6",
       "defaultEnabled": true
@@ -33,7 +33,7 @@
         "legR": ["thigh.R", "shin.R"]
       },
       "yMin": { "landmark": "ankle_y", "offset": 0.04 },
-      "yMax": { "landmark": "hip_y", "offset": 0.12 },
+      "yMax": { "landmark": "hip_y", "offset": 0.15 },
       "offset_m": 0.005,
       "defaultColor": "#1E293B",
       "defaultEnabled": true
@@ -68,10 +68,10 @@
       "id": "wig",
       "slot": "head",
       "groupDetails": {
-        "head_full": ["neck", "head"]
+        "head_full": ["head"]
       },
-      "yMin": { "landmark": "neck_y", "offset": 0 },
-      "yMax": { "landmark": "head_top_y", "offset": 0.01 },
+      "yMin": { "landmark": "neck_y", "offset": 0.05 },
+      "yMax": { "landmark": "head_top_y", "offset": 0.02 },
       "offset_m": 0.015,
       "defaultColor": "#4B5563",
       "defaultEnabled": false
