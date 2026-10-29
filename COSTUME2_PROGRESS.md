@@ -171,3 +171,63 @@ The app uses AsyncStorage for persistence. Need to:
 
 TypeScript: 36 errors (baseline, no new errors)
 
+
+## Step 4: 3D Preview Consumers
+
+**Search methodology:**
+- Searched for: Canvas + three.js imports, useGLTF, bodyAssets imports, getActiveBodyAsset, Preview3D usage
+- Checked: Preview/3D/avatar/garment/outfit/matcher keywords in screen names
+- Verified: Actual 3D rendering presence (not just data display)
+
+**Consumers found:**
+
+| Screen/Component | File Path | Body Set Used | How Garments Are Chosen Today |
+|-----------------|-----------|---------------|-------------------------------|
+| **Preview3DTestScreen** | `src/screens/Preview3DTestScreen.tsx` (lines 10-11: Canvas, OrbitControls imports; line 241: BodyModel; line 425: V2CostumeDemo) | Active body set (v1/v2 dev-switchable, line 140) | **Registry mode:** Toggleable garments from `garmentRegistry.ts` (line 101-115 in Preview3D.tsx) OR **V2 Costume Demo mode:** Runtime-derived pieces from `costumePieces.json` with AsyncStorage persistence (lines 87-112) |
+| **Preview3D component** (used by 2 screens) | `src/components/Preview3D.tsx` (line 3: Canvas import; line 5: BodyModel; line 6: GarmentLayer) | Active body set (v1/v2, line 97) | **Registry mode:** `getGarmentsForBodyType()` from `garmentRegistry.ts`, user toggles visibility (lines 101-115, 284-311) OR **Worn mode:** Accepts `wornGarments` prop from matcher, renders via GarmentLayer (lines 254-260) |
+| **ProjectPlanningScreen** | `src/screens/cosplayer/ProjectPlanningScreen.tsx` (line 25: Canvas import; line 33-34: BodyModel, GarmentLayer, SelectedGarment imports; line 188: Canvas rendering) | User-selected body type (male/female state, line 76) | User selects owned items per slot → `SelectedGarment` component maps item to garment model via `mapItemToGarmentModel()` (lines 216-238). Missing slots render nothing. |
+| **MatchResultsScreen** | `src/screens/cosplayer/MatchResultsScreen.tsx` (line 17: Preview3D import; line 146: `buildWornGarments()` call; line 158: Preview3D usage) | User's base_body_selection from profile (line 146) | AI matcher returns `suggested_outfit` per slot → `buildWornGarments()` converts to `WornGarment[]` → passed to Preview3D wornGarments prop (lines 145-164). Missing slots have itemId=null. |
+
+**Screens/components with NO 3D rendering:**
+
+| Screen/Component | File Path | Reason |
+|-----------------|-----------|--------|
+| ProjectPlanning2DScreen | `src/screens/cosplayer/ProjectPlanning2DScreen.tsx` | 2D photo overlay system, no Canvas/three.js imports |
+| OwnedItemDetail | `src/screens/cosplayer/OwnedItemDetail.tsx` | Shows item details only, no 3D preview |
+| CharacterBrowseScreen | `src/screens/cosplayer/CharacterBrowseScreen.tsx` | Character list, no 3D visualization |
+| VariantListScreen | Navigation only, no component rendering |
+| MarketplaceScreen | Data browsing only, no 3D preview |
+
+**Body set switching:**
+- `setActiveBodySet()` and `getActiveBodySetId()` from `src/config/bodyAssets.ts` (lines 101-111)
+- Used only in Preview3DTestScreen (dev mode, line 140)
+- Production: always uses v1 (default)
+
+**Garment loading patterns identified:**
+
+1. **Registry pattern** (Preview3D, Preview3DTestScreen):
+   - `getGarmentsForBodyType(bodyType)` returns static garment list
+   - User toggles visibility per garment
+   - Garments defined in `src/data/garmentRegistry.ts`
+
+2. **Worn pattern** (MatchResultsScreen → Preview3D):
+   - Matcher returns slot→item mapping
+   - `buildWornGarments()` converts to `WornGarment[]`
+   - Preview3D renders via GarmentLayer with `runtimeGarment` prop
+
+3. **Owned item pattern** (ProjectPlanningScreen):
+   - User selects owned items per slot
+   - `SelectedGarment` component maps item → garment model
+   - Uses `mapItemToGarmentModel()` from `src/utils/wearing.ts`
+
+4. **V2 runtime derivation** (Preview3DTestScreen V2 demo mode):
+   - Uses `costumePieces.json` definitions
+   - `V2CostumeDemo` component builds meshes from body vertices
+   - Piece selection + colors persisted in AsyncStorage
+
+**Line number verification:**
+- Preview3D.tsx: Canvas (line 3), BodyModel (line 5), GarmentLayer (line 6), wornGarments prop (line 97), registry toggles (lines 284-311)
+- ProjectPlanningScreen.tsx: Canvas (line 25), BodyModel (line 188), SelectedGarment (lines 216-238)
+- MatchResultsScreen.tsx: Preview3D (line 17), buildWornGarments (line 146), Preview3D usage (line 158)
+- Preview3DTestScreen.tsx: Canvas (line 10), V2CostumeDemo (line 12, line 425), BodyModel (line 241)
+
