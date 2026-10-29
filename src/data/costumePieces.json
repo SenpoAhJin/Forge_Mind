@@ -70,10 +70,10 @@
       "slot": "head",
       "groups": ["head"],
       "groupDetails": {
-        "head": ["head"]
+        "head_full": ["neck", "head"]
       },
-      "yMin": { "landmark": "head_top_y", "offset": -0.12 },
-      "yMax": { "landmark": "head_top_y", "offset": 0 },
+      "yMin": { "landmark": "neck_y", "offset": 0 },
+      "yMax": { "landmark": "head_top_y", "offset": 0.01 },
       "offset_m": 0.015,
       "defaultColor": "#4B5563",
       "defaultEnabled": false

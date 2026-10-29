@@ -1,7 +1,95 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 29, 2026 (Task GARMENT-3b-A: Generator audit and V2 body profile extractor)
+**Last updated:** Thursday, October 29, 2026 (Task COSTUME-1: Runtime-derived V2 costume pieces)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 29, 2026 (Task COSTUME-1: V2 Costume Demo with Runtime-Derived Pieces)
+
+**Summary**
+
+Completed COSTUME-1: V2 bodies now show a full costume with garment pieces derived at runtime from the body's own surface. No asset pipeline, no generators, no V1 migration. Visible result first. User opens Profile → 3D Preview Test → V2 Costume Demo, taps male or female, taps "Wear Full Costume", and sees the body wearing a colored outfit (shirt, pants, shoes, optional wig/gloves/belt) built from the body mesh in real-time.
+
+**What you can see now**
+
+Open the ForgeMind app, go to **Profile → 3D Preview Test**, scroll to **V2 Costume Demo**, tap **Enter V2 Costume Demo**. Pick male or female body, then tap **Wear Full Costume**. The body appears wearing:
+- Blue shirt (torso + upper arms)
+- Dark pants (pelvis + legs to ankles)
+- Black shoes (feet)
+- Optional: gray wig (head cap), dark gloves (hands), brown belt (waist ring)
+
+Toggle individual pieces on/off. Tap a piece name, then tap a color swatch to change its color. The outfit updates instantly. Orbit the camera to verify all sides render correctly.
+
+**How it works**
+
+Pieces are built at runtime from the V2 body mesh (no pre-made GLB files):
+1. **Select triangles**: Each piece defines bone groups (e.g., torso = pelvis + spine bones) and a y-band (e.g., hip to neck). The builder finds all triangles whose three vertices belong to those bones and fall in that height range.
+2. **Offset along normals**: Push each vertex outward by a small offset (5-15mm depending on piece) along its normal to create a shell that sits over the body surface.
+3. **Render as mesh**: The shell is rendered with a colored material in the body's frame. No skinning or bone attachment needed (static rest pose).
+
+**Belt**: A torus (ring) at hip height, radii measured from body vertices at that height.
+
+**Piece definitions** (src/data/costumePieces.json):
+- Bone groups: torso, head, armL, armR, legL, legR (all 23 bones assigned to exactly one group)
+- Landmarks computed from contract bones: hip_y, knee_y, ankle_y, shoulder_y, wrist_y, neck_y, head_top_y
+- 6 pieces: top, bottom, shoes, gloves, wig, belt (each with default color, offset, y-band)
+- 8 color presets
+
+**Test results** (tools/test_costume_pieces.mjs):
+```
+Male:
+  top:    2938 tris, 8814 verts, height 0.488 m
+  bottom: 5056 tris, 15168 verts, height 0.984 m
+  shoes:  2277 tris, 6831 verts, height 0.122 m
+  gloves: 2694 tris, 8082 verts, height 0.684 m
+  wig:    293 tris, 879 verts, height 0.110 m
+  belt:   torus radius 0.267 m
+
+Female:
+  top:    3885 tris, 11655 verts, height 0.489 m
+  bottom: 5320 tris, 15960 verts, height 0.984 m
+  shoes:  2052 tris, 6156 verts, height 0.118 m
+  gloves: 2880 tris, 8640 verts, height 0.677 m
+  wig:    288 tris, 864 verts, height 0.100 m
+  belt:   torus radius 0.251 m
+```
+
+All checks pass: no NaN, all triangles > 0 and < 20000, offset distances within 1e-6 m, shell bbox within body bbox + tolerance, belt radii correct, all 23 bones assigned.
+
+**Demo behavior**
+- Entering demo: switches active body set to V2, remembers previous set (v1 or v2)
+- Exiting demo: restores previous body set
+- Piece toggles: turn each piece on/off independently
+- Color picker: appears when a piece is selected, 8 preset swatches
+- "Wear full costume": enables top, bottom, shoes with default colors
+- "Remove all": clears all pieces
+- Body type selector: male/female, pieces rebuild instantly
+
+**Files added/changed**
+
+Added:
+- src/data/costumePieces.json — piece definitions, bone groups, landmarks, color presets
+- src/utils/costumeBuilder.ts — pure functions (Node-testable): triangle selection, offset geometry, belt torus, memoization
+- src/components/V2CostumeDemo.tsx — React Three Fiber component renders pieces in body's frame
+- tools/test_costume_pieces.mjs — Node check: builds every piece for both genders, verifies geometry
+- COSTUME1_PROGRESS.md — task progress tracker
+
+Changed:
+- src/screens/Preview3DTestScreen.tsx — added V2 Costume Demo section with UI controls
+
+**Verification**
+- tsc --noEmit: 36 errors (3 fewer than baseline 39)
+- tools/test_costume_pieces.mjs: ALL PASS (6 pieces × 2 genders + bone assignments)
+- tools/test_attach_module.mjs: 99/99 PASS (unchanged)
+- scripts/verify-glb-models.mjs: 15 PASS (unchanged)
+- npx expo export --platform web: SUCCESS, V2 GLBs present (Male 568KB, Female 568KB)
+
+**DEVIATIONS**: None.
+
+**NOT TESTED**: On device (Expo Go or built app). All tests run on Node.js or web preview. Belt ellipse approximation not tested visually. Color picker UX not tested with real user.
+
+**Next**: COSTUME-2 will add piece layering (wear multiple garments in slots), slot conflicts, and fit validation.
 
 ---
 
