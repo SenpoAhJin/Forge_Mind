@@ -107,3 +107,67 @@ Top triangle count increased significantly:
 
 TypeScript: 36 errors (baseline, no new errors from costume code)
 
+
+## Step 3: Outfit State and UI (In Progress)
+
+The app uses AsyncStorage for persistence. Need to:
+1. Create outfit state storage per body type
+2. Fix color row clipping on phone
+3. Add camera controls (Front/Side/Back)
+4. Persist outfit across gender switch and screen nav
+5. Make "Wear full costume" a one-time preset (all 6 pieces including gloves)
+
+
+## Step 3: Outfit State and UI (Complete)
+
+### Changes Made
+
+1. **AsyncStorage-backed outfit state**:
+   - Storage structure: `{ male: {pieces: [], colors: {}}, female: {pieces: [], colors: {}} }`
+   - Loads on mount and when body type changes
+   - Saves whenever enabledPieces or pieceColors changes
+   - Outfit survives gender switch (saved per body type) and screen navigation
+   
+2. **"Wear full costume" behavior**:
+   - Enables ALL 6 pieces (top, bottom, shoes, gloves, wig, belt) with default colors
+   - After that, pieces stay individually changeable
+   - "Remove all" clears all pieces
+   
+3. **Color row fixes**:
+   - Added `flexWrap: 'wrap'` to colorRow style
+   - All 8 swatches now visible without clipping on phone width
+   - Wear/Remove buttons not clipped
+   
+4. **Camera controls**:
+   - Added Front/Side/Back camera position buttons
+   - Camera distance computed from body bounds with 30% margin
+   - OrbitControls target set to body center (computed from BODY_BOUNDS)
+   - OrbitControls ref allows programmatic camera updates
+   - Orbit controls still work (user can drag/zoom)
+   
+5. **Debug panel visibility**:
+   - Triangle count and coverage shown ONLY when Debug toggle is ON
+   - Hidden when Debug is OFF
+
+### Test Plan
+
+1. Verify outfit state persists:
+   - Enable pieces, change colors
+   - Switch body type → outfit should save/load per body type
+   - Navigate away and back → outfit should persist (AsyncStorage)
+   
+2. Verify camera controls:
+   - Click Front/Side/Back buttons → camera should move
+   - Orbit controls still work after button click
+   - Body fits in view with margin
+   
+3. Verify UI layout:
+   - Color row shows all 8 swatches without clipping
+   - Wrap to second row if needed
+   
+4. Verify debug panel:
+   - Debug OFF → no triangle/coverage info visible
+   - Debug ON → info appears
+
+TypeScript: 36 errors (baseline, no new errors)
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Preview3D from '../components/Preview3D';
@@ -10,9 +10,63 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Suspense } from 'react';
 import V2CostumeDemo from '../components/V2CostumeDemo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 // Load costume pieces data
 const costumePiecesData = require('../data/costumePieces.json');
+
+// Storage keys
+const OUTFIT_STORAGE_KEY = 'v2_costume_outfit';
+
+// Camera positions
+const CAMERA_POSITIONS = {
+  front: [0, 0.95, 3.5] as [number, number, number],
+  side: [3.5, 0.95, 0] as [number, number, number],
+  back: [0, 0.95, -3.5] as [number, number, number],
+};
+
+// Body bounds for camera fitting
+const BODY_BOUNDS = {
+  yMin: 0,
+  yMax: 1.8,
+  width: 0.8,
+};
+
+// Calculate camera distance to fit body with margin
+const fitCameraDistance = () => {
+  const bodyHeight = BODY_BOUNDS.yMax - BODY_BOUNDS.yMin;
+  const bodyWidth = BODY_BOUNDS.width;
+  const fov = 50;
+  const margin = 1.3; // 30% margin
+  const aspect = 1; // Assume roughly square viewport
+  
+  const vFov = (fov * Math.PI) / 180;
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  
+  const distanceV = (bodyHeight / 2) / Math.tan(vFov / 2);
+  const distanceH = (bodyWidth / 2) / Math.tan(hFov / 2);
+  
+  return Math.max(distanceV, distanceH) * margin;
+};
+
+const CAMERA_DISTANCE = fitCameraDistance();
+
+// Outfit state structure
+interface OutfitState {
+  pieces: string[];
+  colors: Record<string, string>;
+}
+
+interface OutfitStorage {
+  male: OutfitState;
+  female: OutfitState;
+}
+
+const defaultOutfitState = (): OutfitState => ({
+  pieces: [],
+  colors: {},
+});
 
 /**
  * Preview3DTestScreen
@@ -40,6 +94,7 @@ export default function Preview3DTestScreen() {
   const [showTestCubes, setShowTestCubes] = useState(false);
   const [bodySet, setBodySet] = useState<BodySetId>(() => getActiveBodySetId());
   const scrollViewRef = React.useRef<any>(null);
+  const orbitControlsRef = useRef<OrbitControlsImpl>(null);
   
   // V2 Costume Demo state
   const [costumeBodyType, setCostumeBodyType] = useState<BaseBodySelection>('male');
@@ -50,6 +105,56 @@ export default function Preview3DTestScreen() {
   const [showCostumeDemo, setShowCostumeDemo] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [debugInfo, setDebugInfo] = useState<Map<string, any>>(new Map());
+  const [cameraPosition, setCameraPosition] = useState<'front' | 'side' | 'back'>('front');
+
+  // Load outfit state from AsyncStorage on mount
+  useEffect(() => {
+    const loadOutfitState = async () => {
+      try {
+        const storedData = await AsyncStorage.getItem(OUTFIT_STORAGE_KEY);
+        if (storedData) {
+          const outfitStorage: OutfitStorage = JSON.parse(storedData);
+          const currentOutfit = outfitStorage[costumeBodyType] || defaultOutfitState();
+          
+          setEnabledPieces(new Set(currentOutfit.pieces));
+          setPieceColors(new Map(Object.entries(currentOutfit.colors)));
+        }
+      } catch (error) {
+        console.error('[Preview3DTestScreen] Failed to load outfit state:', error);
+      }
+    };
+
+    if (showCostumeDemo) {
+      loadOutfitState();
+    }
+  }, [showCostumeDemo, costumeBodyType]);
+
+  // Save outfit state to AsyncStorage whenever it changes
+  useEffect(() => {
+    const saveOutfitState = async () => {
+      try {
+        // Load existing storage
+        const storedData = await AsyncStorage.getItem(OUTFIT_STORAGE_KEY);
+        const outfitStorage: OutfitStorage = storedData 
+          ? JSON.parse(storedData)
+          : { male: defaultOutfitState(), female: defaultOutfitState() };
+
+        // Update current body type outfit
+        outfitStorage[costumeBodyType] = {
+          pieces: Array.from(enabledPieces),
+          colors: Object.fromEntries(pieceColors),
+        };
+
+        await AsyncStorage.setItem(OUTFIT_STORAGE_KEY, JSON.stringify(outfitStorage));
+      } catch (error) {
+        console.error('[Preview3DTestScreen] Failed to save outfit state:', error);
+      }
+    };
+
+    if (showCostumeDemo) {
+      saveOutfitState();
+    }
+  }, [enabledPieces, pieceColors, costumeBodyType, showCostumeDemo]);
 
   const handleBodySetChange = (newSet: BodySetId) => {
     if (__DEV__) {
@@ -64,6 +169,7 @@ export default function Preview3DTestScreen() {
       setActiveBodySet('v2');
       setBodySet('v2');
       setShowCostumeDemo(true);
+      setCameraPosition('front');
     }
   };
 
@@ -73,6 +179,22 @@ export default function Preview3DTestScreen() {
       setBodySet(previousBodySet);
       setShowCostumeDemo(false);
       setPreviousBodySet(null);
+    }
+  };
+
+  const handleCameraPositionChange = (position: 'front' | 'side' | 'back') => {
+    setCameraPosition(position);
+    
+    // Update OrbitControls target and camera position
+    if (orbitControlsRef.current) {
+      const controls = orbitControlsRef.current;
+      const targetY = (BODY_BOUNDS.yMin + BODY_BOUNDS.yMax) / 2;
+      const newCameraPos = CAMERA_POSITIONS[position];
+      
+      // Set new camera position
+      controls.object.position.set(newCameraPos[0], newCameraPos[1], newCameraPos[2]);
+      controls.target.set(0, targetY, 0);
+      controls.update();
     }
   };
 
@@ -103,7 +225,7 @@ export default function Preview3DTestScreen() {
     const allPieces = new Set<string>();
     const allColors = new Map<string, string>();
     
-    // Wear ALL pieces, not just defaultEnabled ones
+    // Wear ALL pieces (including gloves, wig, belt)
     for (const piece of costumePiecesData.pieces) {
       allPieces.add(piece.id);
       allColors.set(piece.id, piece.defaultColor);
@@ -274,7 +396,10 @@ export default function Preview3DTestScreen() {
               }}
             >
               <Canvas
-                camera={{ position: [0, 0.95, 3.5], fov: 50 }}
+                camera={{ 
+                  position: CAMERA_POSITIONS[cameraPosition], 
+                  fov: 50 
+                }}
                 style={{ width: '100%', height: '100%' }}
                 gl={{
                   preserveDrawingBuffer: true,
@@ -288,7 +413,8 @@ export default function Preview3DTestScreen() {
                 <directionalLight position={[10, 3, 0]} intensity={0.8} />
                 
                 <OrbitControls
-                  target={[0, 0.95, 0]}
+                  ref={orbitControlsRef}
+                  target={[0, (BODY_BOUNDS.yMin + BODY_BOUNDS.yMax) / 2, 0]}
                   enableDamping
                   dampingFactor={0.25}
                   minDistance={2.0}
@@ -314,6 +440,59 @@ export default function Preview3DTestScreen() {
 
             {/* Body Type Selector */}
             <View style={styles.costumeControls}>
+              {/* Camera Controls */}
+              <Text style={styles.sectionLabel}>Camera:</Text>
+              <View style={styles.cameraButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.cameraButton,
+                    cameraPosition === 'front' && styles.cameraButtonActive,
+                  ]}
+                  onPress={() => handleCameraPositionChange('front')}
+                >
+                  <Text
+                    style={[
+                      styles.cameraButtonText,
+                      cameraPosition === 'front' && styles.cameraButtonTextActive,
+                    ]}
+                  >
+                    Front
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.cameraButton,
+                    cameraPosition === 'side' && styles.cameraButtonActive,
+                  ]}
+                  onPress={() => handleCameraPositionChange('side')}
+                >
+                  <Text
+                    style={[
+                      styles.cameraButtonText,
+                      cameraPosition === 'side' && styles.cameraButtonTextActive,
+                    ]}
+                  >
+                    Side
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.cameraButton,
+                    cameraPosition === 'back' && styles.cameraButtonActive,
+                  ]}
+                  onPress={() => handleCameraPositionChange('back')}
+                >
+                  <Text
+                    style={[
+                      styles.cameraButtonText,
+                      cameraPosition === 'back' && styles.cameraButtonTextActive,
+                    ]}
+                  >
+                    Back
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Debug Toggle */}
               <View style={styles.debugToggleRow}>
                 <Text style={styles.sectionLabel}>Debug Mode:</Text>
@@ -656,6 +835,7 @@ const styles = StyleSheet.create({
   },
   colorRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 4,
   },
@@ -669,6 +849,34 @@ const styles = StyleSheet.create({
   colorSwatchActive: {
     borderWidth: 3,
     borderColor: '#2c3e50',
+  },
+  cameraButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  cameraButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  cameraButtonActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  cameraButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  cameraButtonTextActive: {
+    color: '#fff',
   },
   debugToggleRow: {
     flexDirection: 'row',
