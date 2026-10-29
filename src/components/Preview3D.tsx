@@ -1,4 +1,4 @@
-import React, { Suspense, useRef, ErrorInfo, Component, useState } from 'react';
+import React, { Suspense, useRef, ErrorInfo, Component, useState, useMemo } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Box } from '@react-three/drei';
@@ -8,6 +8,7 @@ import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { getGarmentsForBodyType } from '../data/garmentRegistry';
 import { colors, spacing, typography } from '../theme';
 import type { WornGarment } from '../utils/wearing';
+import { computeCameraFraming } from '../utils/cameraFraming';
 
 /**
  * Error Boundary for 3D Canvas
@@ -126,15 +127,21 @@ export default function Preview3D({
   // Worn garments mode (from matcher) vs registry mode (test toggles)
   const useWornMode = wornGarments !== undefined;
 
+  // Compute camera framing from body bounds (data-driven)
+  const cameraConfig = useMemo(
+    () => computeCameraFraming(bodyType, 50, 2.1),
+    [bodyType]
+  );
+
   return (
     <Canvas3DErrorBoundary>
       <View style={styles.container}>
         <Canvas
-          // The real bodies are ~1.89 m tall and sit centred on the origin
-          // (feet at y ~= -0.95), so the camera is pulled in from the old
-          // placeholder framing of [0, 1, 5]. The ground plane below still lines
-          // up with the feet at y = -1.2.
-          camera={{ position: [0, 0.2, 4], fov: 50 }}
+          // Camera framing computed from body bounds: ensures the body is centered
+          // and fully visible for both V1 (feet ≈ y=-0.95) and V2 (feet ≈ y=0).
+          // For V1 male: position ≈ [0, 0.179, 3.950], within tolerance of the
+          // original [0, 0.2, 4].
+          camera={{ position: cameraConfig.position, fov: cameraConfig.fov }}
           style={styles.canvas}
           gl={{
             // Expo GL compatibility settings

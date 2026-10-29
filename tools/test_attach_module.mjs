@@ -418,6 +418,95 @@ async function testBodyAttachPoints(bodyType, contract, glbPath) {
       assert(false, `"${boneName}" follow test`, err.message);
     }
   }
+
+  // Test 2c-analytic: Independent analytic follow check
+  // Verify that the marker follows the bone rotation using analytic geometry,
+  // NOT derived from the module's own matrix math or bone.matrixWorld.
+  //
+  // APPROACH: Rotate bone using THREE's methods, then verify the marker's new position
+  // matches the analytic rotation of its old position about the bone head.
+  // The rotation axis is bone-local X-axis (bone.rotateX), transformed to world space.
+  console.log('\nTest 2c-analytic: Independent follow check (analytic rotation)');
+  
+  for (const boneName of allBones) {
+    try {
+      const bone = resolveBone(bodyScene, boneName);
+      
+      // Fresh accessory with known offset [0, 0.05, 0]
+      const accessory = new THREE.Object3D();
+      accessory.name = `follow-analytic-${boneName}`;
+      const offsetVec = new THREE.Vector3(0, 0.05, 0);
+      
+      attachAccessory({
+        bodyScene,
+        boneName,
+        accessory,
+        offset: { position: offsetVec.toArray(), rotation_deg: [0, 0, 0], scale: [1, 1, 1] }
+      });
+      
+      // Record initial state after updateMatrixWorld
+      bodyScene.updateMatrixWorld(true);
+      const oldMarkerWorldPos = new THREE.Vector3();
+      accessory.getWorldPosition(oldMarkerWorldPos);
+      
+      const boneWorldHeadBefore = new THREE.Vector3();
+      bone.getWorldPosition(boneWorldHeadBefore);
+      
+      // Get bone's local X-axis in world coordinates BEFORE rotation
+      const boneWorldMatrixBefore = bone.matrixWorld.clone();
+      const boneLocalXWorld = new THREE.Vector3(1, 0, 0).applyMatrix4(
+        new THREE.Matrix4().extractRotation(boneWorldMatrixBefore)
+      ).normalize();
+      
+      // Rotation angle
+      const rotationAngle = THREE.MathUtils.degToRad(45);
+      
+      // Analytic expected position:
+      // 1. Marker position relative to bone head: relVec = oldMarkerPos - boneHead
+      // 2. Rotate relVec by 45° about boneLocalXWorld axis using Rodrigues formula
+      // 3. Expected marker position: boneHead + rotatedRelVec
+      
+      const relVec = oldMarkerWorldPos.clone().sub(boneWorldHeadBefore);
+      
+      // Rodrigues rotation formula: v' = v*cos(θ) + (k×v)*sin(θ) + k*(k·v)*(1-cos(θ))
+      // where k is the unit rotation axis
+      const k = boneLocalXWorld;
+      const cosTheta = Math.cos(rotationAngle);
+      const sinTheta = Math.sin(rotationAngle);
+      
+      const kDotV = k.dot(relVec);
+      const kCrossV = new THREE.Vector3().crossVectors(k, relVec);
+      
+      const term1 = relVec.clone().multiplyScalar(cosTheta);
+      const term2 = kCrossV.multiplyScalar(sinTheta);
+      const term3 = k.clone().multiplyScalar(kDotV * (1 - cosTheta));
+      
+      const rotatedRelVec = term1.add(term2).add(term3);
+      const expectedMarkerPos = boneWorldHeadBefore.clone().add(rotatedRelVec);
+      
+      // Now rotate the bone using bone.rotateX (bone-local rotation)
+      bone.rotateX(rotationAngle);
+      
+      // Update world matrices
+      bodyScene.updateMatrixWorld(true);
+      
+      // Get actual new marker position
+      const newMarkerWorldPos = new THREE.Vector3();
+      accessory.getWorldPosition(newMarkerWorldPos);
+      
+      // Assert positions match within tolerance
+      const posDiff = newMarkerWorldPos.distanceTo(expectedMarkerPos);
+      
+      assert(
+        posDiff < POSITION_TOLERANCE,
+        `"${boneName}" analytic follow (45° X-rotation)`,
+        `posDiff=${posDiff.toExponential(3)} m`
+      );
+      
+    } catch (err) {
+      assert(false, `"${boneName}" analytic follow test`, err.message);
+    }
+  }
   
   // Test 2d: Detach restores bone child count, second detach is no-op
   console.log('\nTest 2d: Detach idempotence');

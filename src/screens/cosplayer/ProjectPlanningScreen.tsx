@@ -33,6 +33,7 @@ import BodyModel from '../../components/BodyModel';
 import GarmentLayer from '../../components/GarmentLayer';
 import SelectedGarment from '../../components/SelectedGarment';
 import { colors, typography, spacing, borderRadius } from '../../theme';
+import { computeCameraFraming } from '../../utils/cameraFraming';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PREVIEW_HEIGHT = 400;
@@ -105,6 +106,12 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
     const filledRequired = requiredSlots.filter(s => selectedSlots[s.id] !== null);
     return requiredSlots.length > 0 ? (filledRequired.length / requiredSlots.length) * 100 : 0;
   }, [selectedSlots]);
+
+  // Compute camera framing for the current body type (closer view for planning screen)
+  const cameraConfig = useMemo(
+    () => computeCameraFraming(bodyType, 50, 1.33),
+    [bodyType]
+  );
   
   if (!isLoaded) {
     return (
@@ -190,7 +197,7 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preview (Drag to Rotate)</Text>
         <View style={styles.previewContainer}>
-          <Canvas camera={{ position: [0, 0.3, 2.5], fov: 50 }}>
+          <Canvas camera={{ position: cameraConfig.position, fov: cameraConfig.fov }}>
             <ambientLight intensity={0.6} />
             <directionalLight position={[5, 5, 5]} intensity={0.8} />
             <directionalLight position={[-5, 5, -5]} intensity={0.4} />

@@ -4,6 +4,6 @@ Starting Metro Bundler
 warning: Bundler cache is empty, rebuilding (this may take a minute)
 Waiting on http://localhost:8081
 
-An update for expo is available: 58.0.17 → ~58.0.20
-3 other packages may need updating. Run npx expo install --check for details.
+An update for expo is available: 58.0.17 → ~58.0.21
+6 other packages may need updating. Run npx expo install --check for details.
 Logs for your project will appear below.

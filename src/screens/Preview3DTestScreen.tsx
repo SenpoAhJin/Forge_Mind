@@ -5,6 +5,7 @@ import Preview3D from '../components/Preview3D';
 import BodyTypeSelector from '../components/BodyTypeSelector';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { Button } from '../components/buttons/Button';
+import { setActiveBodySet, getActiveBodySetId, type BodySetId } from '../config/bodyAssets';
 
 /**
  * Preview3DTestScreen
@@ -30,7 +31,15 @@ export default function Preview3DTestScreen() {
   // user-facing labels moved off the gendered value names.
   const [bodyType, setBodyType] = useState<BaseBodySelection>(DEFAULT_BASE_BODY);
   const [showTestCubes, setShowTestCubes] = useState(false);
+  const [bodySet, setBodySet] = useState<BodySetId>(() => getActiveBodySetId());
   const scrollViewRef = React.useRef<ScrollView>(null);
+
+  const handleBodySetChange = (newSet: BodySetId) => {
+    if (__DEV__) {
+      setActiveBodySet(newSet);
+      setBodySet(newSet);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -68,6 +77,35 @@ export default function Preview3DTestScreen() {
             onChange={setBodyType}
             label="Body type"
           />
+
+          {__DEV__ && (
+            <>
+              <Text style={[styles.label, styles.labelSpaced]}>Body set (dev only)</Text>
+              <View style={styles.bodySetRow}>
+                <View
+                  style={[styles.bodySetButton, bodySet === 'v1' && styles.bodySetButtonActive]}
+                  onTouchEnd={() => handleBodySetChange('v1')}
+                >
+                  <Text style={[styles.bodySetText, bodySet === 'v1' && styles.bodySetTextActive]}>
+                    V1
+                  </Text>
+                </View>
+                <View
+                  style={[styles.bodySetButton, bodySet === 'v2' && styles.bodySetButtonActive]}
+                  onTouchEnd={() => handleBodySetChange('v2')}
+                >
+                  <Text style={[styles.bodySetText, bodySet === 'v2' && styles.bodySetTextActive]}>
+                    V2
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.bodySetNote}>
+                {bodySet === 'v1' 
+                  ? 'V1: Original bodies (feet ≈ y=-0.95), legacy garments fit correctly.'
+                  : 'V2: Rigged bodies (feet at y=0), legacy garments are misplaced.'}
+              </Text>
+            </>
+          )}
 
           <Text style={[styles.label, styles.labelSpaced]}>
             {showTestCubes
@@ -183,6 +221,39 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: 12,
+  },
+  bodySetRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  bodySetButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  bodySetButtonActive: {
+    backgroundColor: '#8e44ad',
+    borderColor: '#8e44ad',
+  },
+  bodySetText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  bodySetTextActive: {
+    color: '#fff',
+  },
+  bodySetNote: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   instructions: {
     padding: 20,

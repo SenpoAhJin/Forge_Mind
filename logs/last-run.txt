@@ -1,12 +1,12 @@
 ﻿**********************
 Windows PowerShell transcript start
-Start time: 20261028185900
+Start time: 20261029074613
 Username: LAPTOP-6M69GMJP\Alord
 RunAs User: LAPTOP-6M69GMJP\Alord
 Configuration Name: 
 Machine: LAPTOP-6M69GMJP (Microsoft Windows NT 10.0.26200.0)
 Host Application: PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\scripts\start-all.ps1
-Process ID: 34432
+Process ID: 19052
 PSVersion: 5.1.26100.9711
 PSEdition: Desktop
 PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
@@ -31,11 +31,11 @@ SerializationVersion: 1.1.0.1
 [>] Checking PostgreSQL service...
 [OK] PostgreSQL is running (postgresql-x64-18)
 [>] Starting forgemind-backend...
-[OK] Backend started (PID: 36544) -> logs\backend-*.log
+[OK] Backend started (PID: 38648) -> logs\backend-*.log
 [>] Starting forgemind-ai (Flask)...
-[OK] Flask started (PID: 31308) -> logs\flask-*.log
+[OK] Flask started (PID: 38060) -> logs\flask-*.log
 [>] Starting Metro on 192.168.254.168...
-[OK] Metro started (PID: 36260) -> logs\metro-*.log
+[OK] Metro started (PID: 15420) -> logs\metro-*.log
 
 [>] Waiting for services to initialize (15 seconds)...
 
@@ -76,5 +76,5 @@ Stop:
 
 **********************
 Windows PowerShell transcript end
-End time: 20261028185920
+End time: 20261029074630
 **********************

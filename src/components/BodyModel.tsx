@@ -2,15 +2,17 @@ import React from 'react';
 import { Asset } from 'expo-asset';
 import { useGLTF } from '@react-three/drei';
 
-import MALE_GLTF from '../../assets/models/3D_Model_Male.glb';
-import FEMALE_GLTF from '../../assets/models/3D_Model_Female.glb';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
+import { getActiveBodyAsset } from '../config/bodyAssets';
 
 /**
  * BodyModel
  *
- * Renders the real Blender base bodies (assets/models/*.glb) at the proportions
- * authored in Blender.
+ * Renders the active body asset set (V1 or V2) from the data-driven body asset
+ * configuration.
+ *
+ * V1 (default): The original skinned bodies (3D_Model_Male.glb, 3D_Model_Female.glb).
+ * V2 (dev-switchable): The rigged bodies (*_V2_rigged.glb) with contracts.
  *
  * SCOPE DECISION: runtime body-size scaling (formerly FE-3D Milestone 2) is
  * cancelled. Nothing in this component touches bone scale - the .glb loads and
@@ -28,27 +30,28 @@ import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
  */
 export type { BaseBodySelection };
 
-const GLB_MODULES: Record<BaseBodySelection, string | number> = {
-  male: MALE_GLTF,
-  female: FEMALE_GLTF,
-};
-
 /**
  * Metro hands back a numeric asset ID on native and a dev-server URL on web.
  * `Asset.fromModule` normalises both, and its `localUri` is set once the asset
  * has been downloaded — otherwise the remote URI is used and react-three-fiber
- * downloads it on the native side. Resolved once per body type, since the result
- * is stable and `useGLTF` keys its cache on the path string.
+ * downloads it on the native side. Resolved once per body type + asset set combo,
+ * since the result is stable and `useGLTF` keys its cache on the path string.
  */
-const uriCache = new Map<BaseBodySelection, string>();
+type UriCacheKey = `${BaseBodySelection}:${string}`;
+const uriCache = new Map<UriCacheKey, string>();
 
 function resolveModelUri(bodyType: BaseBodySelection): string {
-  const cached = uriCache.get(bodyType);
+  const bodyAsset = getActiveBodyAsset(bodyType);
+  const glbModule = bodyAsset.glb;
+  
+  // Cache key includes both body type and the module reference (to distinguish v1/v2)
+  const cacheKey: UriCacheKey = `${bodyType}:${String(glbModule)}`;
+  const cached = uriCache.get(cacheKey);
   if (cached) return cached;
 
-  const asset = Asset.fromModule(GLB_MODULES[bodyType]);
+  const asset = Asset.fromModule(glbModule);
   const uri = asset.localUri ?? asset.uri;
-  uriCache.set(bodyType, uri);
+  uriCache.set(cacheKey, uri);
   return uri;
 }
 

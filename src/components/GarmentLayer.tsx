@@ -14,7 +14,7 @@
  * - Tinting applied to garments with tintable regions
  */
 
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { Asset } from 'expo-asset';
 import { GarmentEntry, BodyType } from '../data/garmentRegistry';
@@ -24,6 +24,10 @@ import type { WornGarment } from '../utils/wearing';
 import { getHeadTopY, getTorsoMidY, getFeetY } from '../data/bodyBounds';
 import { getGarmentForOwnedItem } from '../utils/wearing';
 import TintableGarment, { SimpleGarment } from './TintableGarment';
+import { getActiveBodySetId } from '../config/bodyAssets';
+
+// Track whether we've shown the V2 legacy warning (one-time only)
+let hasWarnedAboutLegacyGarments = false;
 
 interface GarmentLayerProps {
   /** Garment entry from registry (for static test mode) */
@@ -67,7 +71,17 @@ class GarmentErrorBoundary extends React.Component<
 }
 
 /** Real GLB garment. No try/catch here: Suspense needs the loading signal. */
-function GarmentGLB({ assetModule, tintable }: { assetModule: number | string; tintable?: { regions: any[]; tints: any[] } }) {
+function GarmentGLB({ assetModule, tintable, isLegacy = false }: { assetModule: number | string; tintable?: { regions: any[]; tints: any[] }; isLegacy?: boolean }) {
+  // Warn once if legacy garment is rendered on V2 body (dev-only)
+  const activeBodySet = getActiveBodySetId();
+  if (__DEV__ && activeBodySet === 'v2' && isLegacy && !hasWarnedAboutLegacyGarments) {
+    hasWarnedAboutLegacyGarments = true;
+    console.warn(
+      '[GarmentLayer] Legacy garments are fitted to V1 and will be misplaced on V2.\n' +
+      'See Preview3DTestScreen for the body set toggle.'
+    );
+  }
+
   if (tintable && tintable.regions.length > 0) {
     return (
       <TintableGarment 
@@ -105,7 +119,7 @@ function CatalogGarmentRenderer({ spec, bodyType }: { spec: WearingSlotSpec; bod
     
     return (
       <Suspense fallback={null}>
-        <GarmentGLB assetModule={garment.assetModule} tintable={tintData} />
+        <GarmentGLB assetModule={garment.assetModule} tintable={tintData} isLegacy={false} />
       </Suspense>
     );
   }
@@ -214,11 +228,11 @@ function RuntimeGarmentPrimitive({ garment, bodyType }: { garment: WornGarment; 
     ? getGarmentForOwnedItem(garment.ownedItem, bodyType)
     : null;
   
-  // If a real garment exists, render it instead of placeholder
+  // If a real garment exists, render it instead of placeholder (legacy garment)
   if (realGarment && realGarment.asset !== null) {
     return (
       <Suspense fallback={null}>
-        <GarmentGLB assetModule={realGarment.asset} />
+        <GarmentGLB assetModule={realGarment.asset} isLegacy={true} />
       </Suspense>
     );
   }
@@ -354,12 +368,12 @@ export default function GarmentLayer({ garment, runtimeGarment, wearingSpec, bod
     return null;
   }
 
-  // If real asset exists, load it
+  // If real asset exists, load it (legacy procedural garments)
   if (garment.asset !== null) {
     return (
       <GarmentErrorBoundary garmentId={garment.id}>
         <Suspense fallback={null}>
-          <GarmentGLB assetModule={garment.asset} />
+          <GarmentGLB assetModule={garment.asset} isLegacy={true} />
         </Suspense>
       </GarmentErrorBoundary>
     );
