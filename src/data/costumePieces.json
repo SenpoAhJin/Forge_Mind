@@ -68,9 +68,9 @@
       "id": "wig",
       "slot": "head",
       "groupDetails": {
-        "head_full": ["head"]
+        "head_full": ["neck", "head"]
       },
-      "yMin": { "landmark": "neck_y", "offset": 0.05 },
+      "yMin": { "landmark": "neck_y", "offset": 0 },
       "yMax": { "landmark": "head_top_y", "offset": 0.02 },
       "offset_m": 0.015,
       "defaultColor": "#4B5563",
