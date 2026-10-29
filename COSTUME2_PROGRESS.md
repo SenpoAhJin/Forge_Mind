@@ -231,3 +231,52 @@ TypeScript: 36 errors (baseline, no new errors)
 - MatchResultsScreen.tsx: Preview3D (line 17), buildWornGarments (line 146), Preview3D usage (line 158)
 - Preview3DTestScreen.tsx: Canvas (line 10), V2CostumeDemo (line 12, line 425), BodyModel (line 241)
 
+
+## Step 5: One Shared Viewer (Complete)
+
+### Changes Made
+
+1. **Created CostumeViewer component** (`src/components/CostumeViewer.tsx`):
+   - Props: bodyType, enabledPieces (Set<string>), pieceColors (Map<string, string>), debugMode, showCameraControls, onDebugInfo
+   - Loads V2 body GLB via V2CostumeDemo
+   - Builds and renders costume pieces using existing V2CostumeDemo logic
+   - Camera fitted to show whole body with 30% margin (computed from BODY_BOUNDS)
+   - Provides Front/Side/Back camera controls (optional via showCameraControls prop)
+   - Disposes geometry cleanly on unmount (via V2CostumeDemo cleanup)
+   - Handles body type switching without memory leaks (V2CostumeDemo handles this)
+
+2. **Refactored Preview3DTestScreen**:
+   - Replaced Canvas + OrbitControls + V2CostumeDemo setup with CostumeViewer component
+   - Removed duplicate 3D setup code (Canvas, lights, OrbitControls, ground plane)
+   - Removed camera position handling (now in CostumeViewer)
+   - Removed camera-related styles (cameraButtons, cameraButton, etc.)
+   - Kept outfit state management (AsyncStorage, piece toggles, color selection)
+   - Kept screen-specific UI (body type selector, debug toggle, piece toggles, color picker)
+   - Costume demo still works as before, now via shared viewer
+
+### Verification
+
+- **TypeScript**: 36 errors (baseline, no new errors introduced)
+- **V2CostumeDemo usage**: Only used by CostumeViewer (confirmed via grep)
+- **Duplicate Canvas setup**: Removed from Preview3DTestScreen
+- **Preview3DTestScreen**: Still works with same functionality, now using shared viewer
+
+### Consumer Summary
+
+**V2 Costume consumers (using CostumeViewer):**
+- Preview3DTestScreen (V2 demo mode) - **REFACTORED** ✅
+
+**V1 Garment consumers (NOT using CostumeViewer):**
+- Preview3D component (registry + worn modes) - Uses V1 garment system
+- ProjectPlanningScreen - Uses V1 garment system
+- MatchResultsScreen - Uses V1 garment system via Preview3D
+
+**Note:** Only Preview3DTestScreen used V2CostumeDemo (runtime-derived pieces). Other consumers use the V1 garment registry system and were not refactored per the task requirements.
+
+### Code Quality
+
+- CostumeViewer is presentation-only (outfit state stays in calling screens)
+- Clean separation of concerns (viewer vs. state management)
+- No memory leaks (proper cleanup via V2CostumeDemo)
+- Reusable for future V2 costume consumers
+
