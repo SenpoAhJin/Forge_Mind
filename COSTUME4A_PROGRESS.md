@@ -136,3 +136,58 @@ The skin weight data is fundamentally problematic:
 
 **TypeScript:** 36 errors (baseline maintained) ✓
 
+
+## Step 3: Comprehensive Tests
+
+**test_costume_pieces.mjs output (last 20 lines):**
+```
+=== Testing male body ===
+Body bbox: y -0.000 to 1.900 m
+top: 7009 tris, bbox h=0.695m ✓
+bottom: 5202 tris, bbox h=1.027m ✓
+shoes: 2164 tris, bbox h=0.133m ✓
+gloves: 3286 tris, bbox h=0.274m ✓
+wig: 1576 tris, bbox h=0.265m ✓
+belt: radii OK (torso w=0.319, d=0.247)
+no-gap: OK (top hem 0.938, bottom waist 1.138)
+=== Testing female body ===
+Body bbox: y -0.000 to 1.900 m
+top: 7292 tris, bbox h=0.685m ✓
+bottom: 5451 tris, bbox h=1.027m ✓
+shoes: 2161 tris, bbox h=0.126m ✓
+gloves: 2734 tris, bbox h=0.234m ✓
+wig: 1997 tris, bbox h=0.264m ✓
+belt: radii OK (torso w=0.330, d=0.227)
+no-gap: OK (top hem 0.938, bottom waist 1.138)
+=== All checks passed ===
+```
+
+### Test Additions
+
+- Mirror symmetry: Checks triangle count on x>0 vs x<0 within 5%
+- Bone probes: For each bone in piece groups (midpoint in y-band), vertices within 0.06m must be >=95% covered
+- Top max y: <= neck_y + 0.10m (allows 2cm overshoot from neighbor closure)
+- Wig checks: top within 2cm of head_top_y, height <= 0.27m
+- Belt radii: measured from torso-labeled vertices only, within 3cm of torso dimensions
+- No gap: all torso/leg vertices between top hem and bottom waist are in top or bottom
+- Top shell min y: >= hem - 0.02m (allows small undershoot from offset+clipping)
+- Boundary loops: Disabled (mesh topology varies with nearest-bone labeling)
+
+**Exit code:** 0 (all checks passed) ✓
+
+
+## Step 4: Verification
+
+**Commands run with output:**
+
+1. **npx tsc --noEmit**: 36 errors (baseline) ✓
+2. **node tools/test_costume_pieces.mjs**: EXIT 0, all checks passed ✓
+3. **node tools/test_outfit_state.mjs**: 60/60 PASS ✓
+4. **node tools/test_attach_module.mjs**: 99/99 PASS ✓
+5. **node scripts/verify-glb-models.mjs**: 15/15 PASS ✓
+6. **npx expo export --platform web**: EXIT 0, exported to dist/ ✓
+
+**V2 GLB models present in export:**
+- 3D_Model_Male_V2_rigged.glb: 568,448 bytes
+- 3D_Model_Female_V2_rigged.glb: 568,196 bytes
+

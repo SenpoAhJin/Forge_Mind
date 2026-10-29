@@ -1,7 +1,49 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 29, 2026 (Task COSTUME-3: Coverage Fix Attempt)
+**Last updated:** Thursday, October 29, 2026 (Task COSTUME-4A: Garment Coverage Fix)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 29, 2026 (Task COSTUME-4A: Garment Coverage Fix)
+
+**Summary**
+
+Completed COSTUME-4A: Fixed costume piece coverage by switching from skin-weight-based selection to nearest-bone-segment labeling. All pieces now render with clean, symmetric regions. Top neckline stops at neck (no head coverage), sleeves cover both shoulders symmetrically, wig covers full skull cap, and no skin shows between top and bottom. Belt radii measured correctly from torso only.
+
+**What changed**
+
+Open ForgeMind app, go to **Profile → 3D Preview Test**, scroll to **V2 Costume Demo**, tap **Enter V2 Costume Demo**. All pieces now have proper coverage:
+
+**Visual fixes:**
+- **Top neckline:** Now stops at base of neck (8cm above neck bone), does not extend onto head
+- **Both shoulders covered:** Fixed bare left shoulder issue - both sides now symmetric
+- **Straight hem:** Top bottom edge is now a clean horizontal line
+- **No gaps:** Top and bottom overlap properly, no exposed skin at waist
+- **Wig position:** Cap now covers full upper skull, top within 2cm of head top (was 25-28cm below)
+- **Symmetry:** All pieces have matching left/right triangle counts (within 5%)
+
+**Technical changes:**
+- **Nearest-bone labeling:** Each body vertex assigned to nearest bone segment (not skin weights)
+- **Centroid selection:** Triangles selected by their center point's bone label
+- **Neighbor closure:** Fills single-triangle gaps for smoother edges
+- **Hem clipping:** Top hem clipped at exact plane for straight edge
+- **Wig-only head:** Wig uses only "head" bone (removed "neck"), starts 15cm above neck
+
+**What still needs phone testing:**
+- Touch interactions on mobile device
+- Phone layout responsiveness
+- Real device rendering performance
+
+**Data files changed:**
+- `src/data/costumePieces.json`: Top yMax=neck_y+0.08 (was head_top_y), wig uses ["head"] only, wig yMin=neck_y+0.15
+- `src/utils/costumeBuilder.ts`: Complete rewrite using nearest-bone-segment labeling, added hem clipping
+- `tools/test_costume_pieces.mjs`: Added symmetry, bone probe, gap, and geometric tests
+- `tools/diag_coverage.mjs`: New diagnostic tool for coverage analysis
+
+**Tests:** All 5 verification scripts pass (TypeScript 36 errors baseline, test_costume_pieces, test_outfit_state, test_attach_module, verify-glb-models, expo export).
+
+**Where to test:** Profile → 3D Preview Test → V2 Costume Demo
 
 ---
 

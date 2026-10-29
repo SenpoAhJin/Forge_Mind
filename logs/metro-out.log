@@ -5,5 +5,335 @@ warning: Bundler cache is empty, rebuilding (this may take a minute)
 Waiting on http://localhost:8081
 
 An update for expo is available: 58.0.17 → ~58.0.21
-6 other packages may need updating. Run npx expo install --check for details.
+7 other packages may need updating. Run npx expo install --check for details.
 Logs for your project will appear below.
+Web Bundled 18038ms index.ts (1648 modules)
+Web  LOG  [api] backend base URL: http://localhost:3000 (source: window location; platform: web)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  [api] health ping http://localhost:3000/health -> reachable in 356 ms
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  DEBUG LOGGER AVAILABLE
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  Available commands in browser console:
+Web  LOG  - await DebugLogger.logAllAccounts()
+Web  LOG  - await DebugLogger.logActiveSession()
+Web  LOG  - await DebugLogger.logAccountByEmail("email")
+Web  LOG  - await DebugLogger.logAllAccessRequests()
+Web  LOG  - await DebugLogger.logAccessRequestByUser("email")
+Web  LOG  - await DebugLogger.clearAllStorage()
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  [OwnedAttire] Fetched 3 items from server
+Web  LOG  [OwnedAttire] Items with usable photos: 0/3
+Web  WARN  [OwnedAttire] ⚠️ Found 3 items with file: URLs (dead local paths)
+Web  LOG  [OwnedAttire] Using server data: 3 items
+Web  LOG  [OwnedAttire] Saving 3 items to cache
+Web  LOG  [ProjectDashboard] Project: Gojo — Season 2 Uniform
+Web  LOG  [ProjectDashboard] Project linked_event_id: null
+Web  LOG  [ProjectDashboard] Linked event found: null
+Web  LOG  [ProjectDashboard] All confirmed events: [{"date": "2026-11-15", "id": "event-manila-coscon-2026", "name": "Manila CosCon 2026"}]
+Web  LOG  [ProjectDashboard] Project: Gojo — Season 2 Uniform
+Web  LOG  [ProjectDashboard] Project linked_event_id: null
+Web  LOG  [ProjectDashboard] Linked event found: null
+Web  LOG  [ProjectDashboard] All confirmed events: [{"date": "2026-11-15", "id": "event-manila-coscon-2026", "name": "Manila CosCon 2026"}]
+Web Bundled 608ms index.ts (1 module)
+Web  LOG  [api] backend base URL: http://localhost:3000 (source: window location; platform: web)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  [api] health ping http://localhost:3000/health -> reachable in 342 ms
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  DEBUG LOGGER AVAILABLE
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  Available commands in browser console:
+Web  LOG  - await DebugLogger.logAllAccounts()
+Web  LOG  - await DebugLogger.logActiveSession()
+Web  LOG  - await DebugLogger.logAccountByEmail("email")
+Web  LOG  - await DebugLogger.logAllAccessRequests()
+Web  LOG  - await DebugLogger.logAccessRequestByUser("email")
+Web  LOG  - await DebugLogger.clearAllStorage()
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  [OwnedAttire] Fetched 3 items from server
+Web  LOG  [OwnedAttire] Items with usable photos: 0/3
+Web  WARN  [OwnedAttire] ⚠️ Found 3 items with file: URLs (dead local paths)
+Web  LOG  [OwnedAttire] Using server data: 3 items
+Web  LOG  [OwnedAttire] Saving 3 items to cache
+Web  ERROR  Unexpected text node: . A text node cannot be a child of a <View>. 
+
+Code: DiagnosticsScreen.tsx
+[0m [90m 48 |[39m
+ [90m 49 |[39m   [36mreturn[39m (
+[31m[1m>[22m[39m[90m 50 |[39m     [33m<[39m[33mScrollView[39m style[33m=[39m{styles[33m.[39mcontainer} contentContainerStyle[33m=[39m{styles[33m.[39mcontent}[33m>[39m
+ [90m    |[39m     [31m[1m^[22m[39m
+ [90m 51 |[39m       [33m<[39m[33mText[39m style[33m=[39m{styles[33m.[39mtitle}[33m>[39m[33mDiagnostics[39m[33m<[39m[33m/[39m[33mText[39m[33m>[39m
+ [90m 52 |[39m
+ [90m 53 |[39m       [33m<[39m[33mView[39m style[33m=[39m{styles[33m.[39msection}[33m>[39m[0m
+Call Stack
+  DiagnosticsScreen (src\screens\shared\DiagnosticsScreen.tsx:50:5)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  NativeStackNavigator (node_modules\@react-navigation\native-stack\lib\module\navigators\createNativeStackNavigator.js:25:27)
+  ProfileStackNavigator (src\navigation\ProfileStackNavigator.tsx:42:5)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  BottomTabNavigator (node_modules\@react-navigation\bottom-tabs\lib\module\navigators\createBottomTabNavigator.js:24:27)
+  CosplayerTabNavigator (src\navigation\CosplayerTabNavigator.tsx:28:5)
+  RootNavigator (src\navigation\RootNavigator.tsx:92:13)
+  App (App.tsx:98:45)
+Web  LOG  [bodyAssets] Active body set: v2
+Web Bundled 165ms index.ts (1 module)
+Web  LOG  [api] backend base URL: http://localhost:3000 (source: window location; platform: web)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  [api] health ping http://localhost:3000/health -> reachable in 85 ms
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  DEBUG LOGGER AVAILABLE
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  Available commands in browser console:
+Web  LOG  - await DebugLogger.logAllAccounts()
+Web  LOG  - await DebugLogger.logActiveSession()
+Web  LOG  - await DebugLogger.logAccountByEmail("email")
+Web  LOG  - await DebugLogger.logAllAccessRequests()
+Web  LOG  - await DebugLogger.logAccessRequestByUser("email")
+Web  LOG  - await DebugLogger.clearAllStorage()
+Web  LOG  ═══════════════════════════════════════
+Web  LOG  [OwnedAttire] Fetched 3 items from server
+Web  LOG  [OwnedAttire] Items with usable photos: 0/3
+Web  WARN  [OwnedAttire] ⚠️ Found 3 items with file: URLs (dead local paths)
+Web  LOG  [OwnedAttire] Using server data: 3 items
+Web  LOG  [OwnedAttire] Saving 3 items to cache
+Web  LOG  [bodyAssets] Active body set: v2
+Web  ERROR  [ErrorBoundary] render error: vertexBelongsToPiece is not defined 
+
+Code: react-three-fiber.esm.js
+[0m [90m 11 |[39m
+ [90m 12 |[39m [36mfunction[39m [33mCanvasImpl[39m({
+[31m[1m>[22m[39m[90m 13 |[39m   ref[33m,[39m
+ [90m    |[39m   [31m[1m^[22m[39m
+ [90m 14 |[39m   children[33m,[39m
+ [90m 15 |[39m   fallback[33m,[39m
+ [90m 16 |[39m   resize[33m,[39m[0m
+Call Stack
+  CanvasImpl (node_modules\@react-three\fiber\dist\react-three-fiber.esm.js:13:3)
+  h (node_modules\its-fine\dist\index.js:39)
+  CostumeViewer (src\components\CostumeViewer.tsx:68:3)
+  React.forwardRef$argument_0 (node_modules\react-native-safe-area-context\lib\module\SafeAreaView.web.js:23:3)
+  Preview3DTestScreen (src\screens\Preview3DTestScreen.tsx:59:43)
+  StaticContainer (node_modules\@react-navigation\core\lib\module\StaticContainer.js:9:16)
+  EnsureSingleNavigator (node_modules\@react-navigation\core\lib\module\EnsureSingleNavigator.js:12:3)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:16:3)
+  NavigationProvider (node_modules\@react-navigation\core\lib\module\NavigationProvider.js:17:3)
+  AnimatedHeaderHeightProvider (node_modules\@react-navigation\native-stack\lib\module\views\NativeStackView.js:112:3)
+  Background (node_modules\@react-navigation\elements\lib\module\Background.js:8:3)
+  Screen (node_modules\@react-navigation\elements\lib\module\Screen.js:14:35)
+  FrameSizeProvider (node_modules\@react-navigation\elements\lib\module\useFrameSize.js:19:3)
+  SafeAreaProviderCompat (node_modules\@react-navigation\elements\lib\module\SafeAreaProviderCompat.js:31:3)
+  NativeStackView (node_modules\@react-navigation\native-stack\lib\module\views\NativeStackView.js:11:3)
+  PreventRemoveProvider (node_modules\@react-navigation\core\lib\module\PreventRemoveProvider.js:27:3)
+  NavigationStateListenerProvider (node_modules\@react-navigation\core\lib\module\useNavigationState.js:56:3)
+  NativeStackNavigator (node_modules\@react-navigation\native-stack\lib\module\navigators\createNativeStackNavigator.js:8:3)
+  ProfileStackNavigator (src\navigation\ProfileStackNavigator.tsx:39:35)
+  StaticContainer (node_modules\@react-navigation\core\lib\module\StaticContainer.js:9:16)
+  EnsureSingleNavigator (node_modules\@react-navigation\core\lib\module\EnsureSingleNavigator.js:12:3)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:16:3)
+  NavigationProvider (node_modules\@react-navigation\core\lib\module\NavigationProvider.js:17:3)
+  Background (node_modules\@react-navigation\elements\lib\module\Background.js:8:3)
+  Screen (node_modules\@react-navigation\elements\lib\module\Screen.js:14:35)
+  MaybeScreen (node_modules\@react-navigation\bottom-tabs\lib\module\views\ScreenFallback.js:27:3)
+  MaybeScreenContainer (node_modules\@react-navigation\bottom-tabs\lib\module\views\ScreenFallback.js:13:3)
+  FrameSizeProvider (node_modules\@react-navigation\elements\lib\module\useFrameSize.js:19:3)
+  SafeAreaProviderCompat (node_modules\@react-navigation\elements\lib\module\SafeAreaProviderCompat.js:31:3)
+  BottomTabView (node_modules\@react-navigation\bottom-tabs\lib\module\views\BottomTabView.js:47:5)
+  PreventRemoveProvider (node_modules\@react-navigation\core\lib\module\PreventRemoveProvider.js:27:3)
+  NavigationStateListenerProvider (node_modules\@react-navigation\core\lib\module\useNavigationState.js:56:3)
+  BottomTabNavigator (node_modules\@react-navigation\bottom-tabs\lib\module\navigators\createBottomTabNavigator.js:7:3)
+  CosplayerTabNavigator (src\navigation\CosplayerTabNavigator.tsx:25:35)
+  ThemeProvider (node_modules\@react-navigation\core\lib\module\theming\ThemeProvider.js:7:3)
+  EnsureSingleNavigator (node_modules\@react-navigation\core\lib\module\EnsureSingleNavigator.js:12:3)
+  BaseNavigationContainer (node_modules\@react-navigation\core\lib\module\BaseNavigationContainer.js:74:3)
+  NavigationContainerInner (node_modules\@react-navigation\native\lib\module\NavigationContainer.js:16:3)
+  RootNavigator (src\navigation\RootNavigator.tsx:16:75)
+  constructor (src\components\ErrorBoundary.tsx:39:5)
+  CalendarProvider (src\contexts\CalendarContext.tsx:33:71)
+  LogisticsProvider (src\contexts\LogisticsContext.tsx:216:72)
+  ContestProvider (src\contexts\ContestContext.tsx:48:67)
+  ChatProvider (src\contexts\ChatContext.tsx:75:73)
+  CommissionMilestonesProvider (src\contexts\CommissionMilestonesContext.tsx:54:89)
+  OffersProvider (src\contexts\OffersContext.tsx:53:75)
+  MarketplaceProvider (src\contexts\MarketplaceContext.tsx:130:80)
+  UserCharactersProvider (src\contexts\UserCharactersContext.tsx:45:77)
+  OwnedAttireProvider (src\contexts\OwnedAttireContext.tsx:50:74)
+  InviteMeetupsProvider (src\contexts\InviteMeetupsContext.tsx:74:76)
+  MeetupsProvider (src\contexts\MeetupsContext.tsx:73:70)
+  ProjectsProvider (src\contexts\ProjectsContext.tsx:53:71)
+  EventsProvider (src\contexts\EventsContext.tsx:75:69)
+  CommitmentLogProvider (src\contexts\CommitmentLogContext.tsx:41:79)
+  SelectionProvider (src\contexts\SelectionContext.tsx:24:78)
+  DiaryProvider (src\contexts\DiaryContext.tsx:37:68)
+  ThemeProvider (src\contexts\ThemeContext.tsx:38:68)
+  UserProvider (src\contexts\UserContext.tsx:121:67)
+  NativeSafeAreaProvider (node_modules\react-native-safe-area-context\lib\module\NativeSafeAreaProvider.web.js:13:3)
+  SafeAreaProvider (node_modules\react-native-safe-area-context\lib\module\SafeAreaContext.js:15:3)
+  App (App.tsx:60:12) 
+
+Code: ErrorBoundary.tsx
+[0m [90m 48 |[39m   componentDidCatch(error[33m:[39m [33mError[39m[33m,[39m info[33m:[39m [33mReact[39m[33m.[39m[33mErrorInfo[39m)[33m:[39m [36mvoid[39m {
+ [90m 49 |[39m     [90m// The stack is a developer aid. It never carries listing text into the UI.[39m
+[31m[1m>[22m[39m[90m 50 |[39m     console[33m.[39merror([32m'[ErrorBoundary] render error:'[39m[33m,[39m error[33m.[39mmessage[33m,[39m info[33m.[39mcomponentStack)[33m;[39m
+ [90m    |[39m             [31m[1m^[22m[39m
+ [90m 51 |[39m   }
+ [90m 52 |[39m
+ [90m 53 |[39m   handleReset()[33m:[39m [36mvoid[39m {[0m
+Call Stack
+  componentDidCatch (src\components\ErrorBoundary.tsx:50:13) 
+
+Code: App.tsx
+[0m [90m 94 |[39m                                       [33m<[39m[33mLogisticsProvider[39m[33m>[39m
+ [90m 95 |[39m                                         [33m<[39m[33mCalendarProvider[39m[33m>[39m
+[31m[1m>[22m[39m[90m 96 |[39m                                           [33m<[39m[33mErrorBoundary[39m label[33m=[39m[32m"The app"[39m[33m>[39m
+ [90m    |[39m                                           [31m[1m^[22m[39m
+ [90m 97 |[39m                                             [33m<[39m[33mServerStatusBanner[39m [33m/[39m[33m>[39m
+ [90m 98 |[39m                                             [33m<[39m[33mRootNavigator[39m [33m/[39m[33m>[39m
+ [90m 99 |[39m                                             [33m<[39m[33mConsentBanner[39m [33m/[39m[33m>[39m[0m
+Call Stack
+  App (App.tsx:96:43)
+Web  ERROR  [V2CostumeDemo] Failed to build piece wig: [ReferenceError: vertexBelongsToPiece is not defined] 
+
+Code: costumeBuilder.ts
+[0m [90m 320 |[39m
+ [90m 321 |[39m     [90m// Check vertex belonging using summed weights[39m
+[31m[1m>[22m[39m[90m 322 |[39m     [36mconst[39m belongs0 [33m=[39m vertexBelongsToPiece(i0[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m     |[39m                      [31m[1m^[22m[39m
+ [90m 323 |[39m     [36mconst[39m belongs1 [33m=[39m vertexBelongsToPiece(i1[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m 324 |[39m     [36mconst[39m belongs2 [33m=[39m vertexBelongsToPiece(i2[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m 325 |[39m[0m
+Call Stack
+  selectTriangles (src\utils\costumeBuilder.ts:322:22)
+  computePieceDebugInfo (src\utils\costumeBuilder.ts:619:29)
+  useEffect$argument_0 (src\components\V2CostumeDemo.tsx:103:45)
+  py.react_stack_bottom_frame (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:15169:36)
+  B (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:9042:60)
+  Ll (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:12117:87)
+  Cm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:12166:24)
+  Hm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13215:150)
+  dr (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13200:182)
+  Hm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13244:267) 
+
+Code: CostumeViewer.tsx
+[0m [90m 123 |[39m
+ [90m 124 |[39m           [33m<[39m[33mSuspense[39m fallback[33m=[39m{[36mnull[39m}[33m>[39m
+[31m[1m>[22m[39m[90m 125 |[39m             [33m<[39m[33mV2CostumeDemo[39m
+ [90m     |[39m             [31m[1m^[22m[39m
+ [90m 126 |[39m               bodyType[33m=[39m{bodyType}
+ [90m 127 |[39m               enabledPieces[33m=[39m{enabledPieces}
+ [90m 128 |[39m               pieceColors[33m=[39m{pieceColors}[0m
+Call Stack
+  CostumeViewer (src\components\CostumeViewer.tsx:125:13)
+  Preview3DTestScreen (src\screens\Preview3DTestScreen.tsx:377:15)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  NativeStackNavigator (node_modules\@react-navigation\native-stack\lib\module\navigators\createNativeStackNavigator.js:25:27)
+  ProfileStackNavigator (src\navigation\ProfileStackNavigator.tsx:42:5)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  BottomTabNavigator (node_modules\@react-navigation\bottom-tabs\lib\module\navigators\createBottomTabNavigator.js:24:27)
+  CosplayerTabNavigator (src\navigation\CosplayerTabNavigator.tsx:28:5)
+  RootNavigator (src\navigation\RootNavigator.tsx:92:13)
+  App (App.tsx:98:45)
+Web  ERROR  [ReferenceError: vertexBelongsToPiece is not defined] 
+
+Code: costumeBuilder.ts
+[0m [90m 320 |[39m
+ [90m 321 |[39m     [90m// Check vertex belonging using summed weights[39m
+[31m[1m>[22m[39m[90m 322 |[39m     [36mconst[39m belongs0 [33m=[39m vertexBelongsToPiece(i0[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m     |[39m                      [31m[1m^[22m[39m
+ [90m 323 |[39m     [36mconst[39m belongs1 [33m=[39m vertexBelongsToPiece(i1[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m 324 |[39m     [36mconst[39m belongs2 [33m=[39m vertexBelongsToPiece(i2[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m 325 |[39m[0m
+Call Stack
+  selectTriangles (src\utils\costumeBuilder.ts:322:22)
+  computePieceDebugInfo (src\utils\costumeBuilder.ts:619:29)
+  useEffect$argument_0 (src\components\V2CostumeDemo.tsx:166:45)
+  py.react_stack_bottom_frame (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:15169:36)
+  B (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:9042:60)
+  Ll (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:12117:87)
+  Cm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:12166:24)
+  Hm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13215:150)
+  dr (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13200:182)
+  Hm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13244:267) 
+
+Code: CostumeViewer.tsx
+[0m [90m 123 |[39m
+ [90m 124 |[39m           [33m<[39m[33mSuspense[39m fallback[33m=[39m{[36mnull[39m}[33m>[39m
+[31m[1m>[22m[39m[90m 125 |[39m             [33m<[39m[33mV2CostumeDemo[39m
+ [90m     |[39m             [31m[1m^[22m[39m
+ [90m 126 |[39m               bodyType[33m=[39m{bodyType}
+ [90m 127 |[39m               enabledPieces[33m=[39m{enabledPieces}
+ [90m 128 |[39m               pieceColors[33m=[39m{pieceColors}[0m
+Call Stack
+  CostumeViewer (src\components\CostumeViewer.tsx:125:13)
+  Preview3DTestScreen (src\screens\Preview3DTestScreen.tsx:377:15)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  NativeStackNavigator (node_modules\@react-navigation\native-stack\lib\module\navigators\createNativeStackNavigator.js:25:27)
+  ProfileStackNavigator (src\navigation\ProfileStackNavigator.tsx:42:5)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  BottomTabNavigator (node_modules\@react-navigation\bottom-tabs\lib\module\navigators\createBottomTabNavigator.js:24:27)
+  CosplayerTabNavigator (src\navigation\CosplayerTabNavigator.tsx:28:5)
+  RootNavigator (src\navigation\RootNavigator.tsx:92:13)
+  App (App.tsx:98:45)
+Web  ERROR  
+
+Code: costumeBuilder.ts
+[0m [90m 320 |[39m
+ [90m 321 |[39m     [90m// Check vertex belonging using summed weights[39m
+[31m[1m>[22m[39m[90m 322 |[39m     [36mconst[39m belongs0 [33m=[39m vertexBelongsToPiece(i0[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m     |[39m                      [31m[1m^[22m[39m
+ [90m 323 |[39m     [36mconst[39m belongs1 [33m=[39m vertexBelongsToPiece(i1[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m 324 |[39m     [36mconst[39m belongs2 [33m=[39m vertexBelongsToPiece(i2[33m,[39m boneSet[33m,[39m skinIndex[33m,[39m skinWeight[33m,[39m bones)[33m;[39m
+ [90m 325 |[39m[0m
+Call Stack
+  selectTriangles (src\utils\costumeBuilder.ts:322:22)
+  computePieceDebugInfo (src\utils\costumeBuilder.ts:619:29)
+  useEffect$argument_0 (src\components\V2CostumeDemo.tsx:166:45)
+  py.react_stack_bottom_frame (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:15169:36)
+  B (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:9042:60)
+  Ll (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:12117:87)
+  Cm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:12166:24)
+  Hm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13215:150)
+  dr (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13200:182)
+  Hm (node_modules\@react-three\fiber\dist\events-9ce18a08.esm.js:13244:267)
+  Canvas (node_modules\@react-three\fiber\dist\react-three-fiber.esm.js:194:31)
+  CostumeViewer (src\components\CostumeViewer.tsx:98:9)
+  Preview3DTestScreen (src\screens\Preview3DTestScreen.tsx:377:15)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  NativeStackNavigator (node_modules\@react-navigation\native-stack\lib\module\navigators\createNativeStackNavigator.js:25:27)
+  ProfileStackNavigator (src\navigation\ProfileStackNavigator.tsx:42:5)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js:117:70)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js:111:36)
+  routes.reduce$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js:143:21)
+  useDescriptors (node_modules\@react-navigation\core\lib\module\useDescriptors.js:140:30)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js:596:21)
+  BottomTabNavigator (node_modules\@react-navigation\bottom-tabs\lib\module\navigators\createBottomTabNavigator.js:24:27)
+  CosplayerTabNavigator (src\navigation\CosplayerTabNavigator.tsx:28:5)
+  RootNavigator (src\navigation\RootNavigator.tsx:92:13)
+  App (App.tsx:98:45)
