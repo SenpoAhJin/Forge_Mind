@@ -59,6 +59,7 @@ function getPositions(gltf, binBuffer, accessorIndex) {
   
   for (let i = 0; i < count; i++) {
     const idx = offset + i * 12; // 3 floats × 4 bytes
+    // DO NOT negate X - skinning is correct relative to mesh positions as-is
     positions.push([
       binBuffer.readFloatLE(idx),
       binBuffer.readFloatLE(idx + 4),
@@ -184,13 +185,18 @@ function determineFrontAxis(positions, bounds) {
 function extractLandmarks(contract, bounds) {
   const boneMap = {};
   contract.bones.forEach(b => {
-    boneMap[b.name] = b.head;
+    // Contract bone heads are already in glTF Y-up coordinates [x, y, z]
+    // where z is forward/back, y is height. Blender's Z (height) → glTF's Y.
+    // Contract format is [Blender_X, Blender_Y, Blender_Z]
+    // glTF format is [X, Y, Z] where Y=height
+    // So: glTF_X = Blender_X, glTF_Y = Blender_Z, glTF_Z = Blender_Y
+    boneMap[b.name] = [b.head[0], b.head[2], b.head[1]];
   });
   
   const get = (name) => {
     const head = boneMap[name];
     if (!head) throw new Error(`Bone ${name} not found in contract`);
-    return head[2]; // head[2] is Z, which is the height coordinate in the contract
+    return head[1]; // head[1] is Y (height) after conversion
   };
   
   return {
@@ -234,14 +240,14 @@ function getVerticesByBone(gltf, binBuffer, boneName) {
   
   const verts = [];
   for (let i = 0; i < positions.length; i++) {
-    const jOffset = (jointsView.byteOffset || 0) + i * 8; // 4 × UNSIGNED_SHORT
+    const jOffset = (jointsView.byteOffset || 0) + i * 4; // 4 × UNSIGNED_BYTE
     const wOffset = (weightsView.byteOffset || 0) + i * 16; // 4 × FLOAT
     
     const joints = [
-      binBuffer.readUInt16LE(jOffset),
-      binBuffer.readUInt16LE(jOffset + 2),
-      binBuffer.readUInt16LE(jOffset + 4),
-      binBuffer.readUInt16LE(jOffset + 6),
+      binBuffer.readUInt8(jOffset),
+      binBuffer.readUInt8(jOffset + 1),
+      binBuffer.readUInt8(jOffset + 2),
+      binBuffer.readUInt8(jOffset + 3),
     ];
     const weights = [
       binBuffer.readFloatLE(wOffset),
@@ -299,14 +305,14 @@ function computeTorsoSlices(gltf, binBuffer, contract, bounds, numSlices = 50) {
   
   const torsoVerts = [];
   for (let i = 0; i < positions.length; i++) {
-    const jOffset = (jointsView.byteOffset || 0) + i * 8;
-    const wOffset = (weightsView.byteOffset || 0) + i * 16;
+    const jOffset = (jointsView.byteOffset || 0) + i * 4; // 4 × UNSIGNED_BYTE
+    const wOffset = (weightsView.byteOffset || 0) + i * 16; // 4 × FLOAT
     
     const joints = [
-      binBuffer.readUInt16LE(jOffset),
-      binBuffer.readUInt16LE(jOffset + 2),
-      binBuffer.readUInt16LE(jOffset + 4),
-      binBuffer.readUInt16LE(jOffset + 6),
+      binBuffer.readUInt8(jOffset),
+      binBuffer.readUInt8(jOffset + 1),
+      binBuffer.readUInt8(jOffset + 2),
+      binBuffer.readUInt8(jOffset + 3),
     ];
     const weights = [
       binBuffer.readFloatLE(wOffset),
