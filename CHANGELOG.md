@@ -1,7 +1,83 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 28, 2026 (Task GARMENT-2d: Fixed follow test removing stale L0 reference)
+**Last updated:** Thursday, October 29, 2026 (Task GARMENT-3b-R: Repair and verify GARMENT-3b session work)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 29, 2026 (Task GARMENT-3b-R: Repair Session)
+
+**Summary**
+
+Repair session for GARMENT-3b work. Verified and corrected claims from earlier unfinished session. Found and fixed UTF-8 BOM encoding in 4 files, regenerated bodyBounds (no changes), confirmed camera tests pass with 0.95 threshold and 1.345 distance scale. Corrected false git merge claim, wrong tsc baseline (was 39, not 46), and unproven UTF-16 BOM export theory. All verification tests pass: encoding clean, 39 tsc errors (baseline), camera framing pass, V2 GLBs inspect pass, attach module 99/99 pass, export check pass.
+
+**What was done**
+
+**R0: Git Inventory**
+- Current branch: task/garment3b-v2-garments at d99e512 + 2 repair commits
+- CORRECTED: task/garment3a-body-frame NOT merged to master (earlier claim was false)
+- Local master behind origin/master by 4 commits
+- 1 commit since 99baab8: d99e512 (GARMENT-3a2 final report/changelog only)
+- Working tree had uncommitted modifications from unfinished 3b session
+
+**R1: Encoding Audit**
+- Created tools/check_encoding.mjs (scans for UTF-16/UTF-8 BOM, NUL bytes)
+- Found 4 files with UTF-8 BOM (NOT UTF-16):
+  - docs/reports/SYSTEM_STATE_REPORT.md (commit 49726ee)
+  - scripts/flask_test_response.json (commit 208cdaa)
+  - scripts-backup/flask_test_response.json (commit 49726ee)
+  - scripts-backup/scripts/flask_test_response.json (commit 49726ee)
+- Created tools/fix_encoding.mjs, removed all BOMs
+- Committed e325c1b, re-verified clean
+
+**R2: Bounds Data Integrity**
+- Restored scripts/compute_body_bounds.mjs from d8ee099 (was deleted in working tree)
+- Regenerated src/data/bodyBounds.generated.json from GLB POSITION data
+- Comparison: regenerated matches committed version exactly (no hand-typed errors)
+- Committed bd3acfe
+
+**R3: Camera Test Integrity** (DEVIATIONS: missing V1 baseline constants, no ProjectPlanningScreen distance check)
+- Test uses threshold 0.95 (correct), hardcoded distance 1.345 for production
+- All 8 body/gender/aspect combinations PASS
+- Test file expanded from ~8KB to 29KB (merged with attach test content)
+
+**R4: Export Root Cause** (BOM test SKIPPED)
+- Created scripts/check-export-assets.mjs
+- Current export: all 4 GLBs present with correct byte sizes
+- RETRACTED: UTF-16 BOM theory unproven (R1 found UTF-8 BOM in different files)
+- ASSUMED: Earlier "V2 GLBs missing" claim likely wrong folder searched
+
+**R5: tsc Baseline**
+- CORRECTED: Current tree has 39 errors (not 46 as claimed in Step 0)
+- Worktree at 99baab8: also 39 errors
+- Conclusion: No extra errors introduced
+
+**R6: Final Verification**
+- ✅ tools/check_encoding.mjs: exit 0 (all clean)
+- ✅ scripts/verify-glb-models.mjs: exit 0 (15 checks PASS)
+- ✅ tools/test_attach_module.mjs: exit 0 (99/99 PASS)
+- ✅ tools/test_camera_framing.mjs: exit 0 (all 8 cases PASS)
+- ✅ npx tsc --noEmit: 39 errors (baseline)
+- ✅ tools/glb_inspect.js V2 Male: exit 0 (all checks PASS)
+- ✅ tools/glb_inspect.js V2 Female: exit 0 (all checks PASS)
+- ✅ scripts/check-export-assets.mjs: exit 0 (all 4 GLBs present)
+
+**Git Actions**
+- Committed encoding fixes (e325c1b), bounds regeneration (bd3acfe), final repair work
+- Branch remains: task/garment3b-v2-garments
+- NOT pushed (awaiting git state resolution per R0)
+
+**Key Files Modified/Created This Session**
+- tools/check_encoding.mjs (new)
+- tools/fix_encoding.mjs (new)
+- scripts/check-export-assets.mjs (new)
+- scripts/test_bom_export.mjs (new, not executed)
+- docs/reports/SYSTEM_STATE_REPORT.md (BOM removed)
+- scripts/flask_test_response.json (BOM removed)
+- scripts-backup files (BOM removed)
+- scripts/compute_body_bounds.mjs (restored)
+- CHANGELOG.md (this entry)
+- GARMENT3B_PROGRESS.md (corrected false claims)
 
 ---
 
