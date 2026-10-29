@@ -1,7 +1,68 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 29, 2026 (Task COSTUME-1: Runtime-derived V2 costume pieces)
+**Last updated:** Thursday, October 29, 2026 (Task COSTUME-2: V2 Costume Integration)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 29, 2026 (Task COSTUME-2: V2 Costume Integration)
+
+**Summary**
+
+Completed COSTUME-2: Fixed V2 costume piece coverage issues, added outfit state persistence, created shared costume viewer, and integrated owned item-to-piece mapping. User opens Profile → 3D Preview Test → V2 Costume Demo to see improved costume coverage with shoulders/wig visible, camera controls (Front/Side/Back), and can apply owned items to costume pieces.
+
+**What you can see now**
+
+Open ForgeMind app, go to **Profile → 3D Preview Test**, scroll to **V2 Costume Demo**, tap **Enter V2 Costume Demo**. 
+
+**Features:**
+- **Pick body type:** Male or female
+- **Wear full costume:** Enables all 6 pieces (top, bottom, shoes, gloves, wig, belt) with default colors
+- **Toggle pieces:** Turn each piece on/off individually
+- **Change colors:** Tap piece name → pick from 8 color swatches
+- **Camera controls:** Front/Side/Back buttons to orbit around body
+- **Owned items:** Expand "Owned Items" section → tap item → applies to matching costume slot with item's color
+- **Outfit persistence:** Outfit saved per body type, survives gender switch and navigation
+
+**Improvements from COSTUME-1:**
+- Top now covers shoulders and upper arms (was missing before)
+- Wig now visible (was invisible with 0 triangles)
+- Gloves included in "Wear full costume" (was missing)
+- Belt radii correctly measured from torso only (was too wide from counting arms)
+- Outfit state persists in AsyncStorage (was lost on navigation)
+
+**Data files:**
+- **Costume piece definitions:** `src/data/costumePieces.json` (bone groups, landmarks, y-bands, offsets, colors)
+- **Item-to-slot mapping:** `src/data/itemSlotMap.json` (wig→wig, top→top, bottom→bottom, footwear→shoes, accessory→belt)
+
+**Test results summary:**
+- TypeScript: 36 errors (baseline, no new errors)
+- test_costume_pieces.mjs: PASS (male 6 pieces, female 6 pieces, all geometry checks)
+- test_outfit_state.mjs: 60/60 PASS (state management, item mapping)
+- test_attach_module.mjs: 99/99 PASS (bone attachment system)
+- expo export: Both V2 GLBs present (Male 568KB, Female 568KB)
+
+**Coverage findings:**
+- Shoes: 100% coverage ✓
+- Gloves: 100% coverage ✓
+- Bottom: 96% coverage (close to 97% target)
+- Top: 51-62% coverage (below target due to y-band clipping and joint blending)
+- Wig: 25-32% coverage (below target due to narrow y-band at head cap)
+
+**Files changed:**
+- Added: `CostumeViewer.tsx`, `itemSlotMap.json`, `outfitHelpers.ts`, `test_outfit_state.mjs`
+- Modified: `V2CostumeDemo.tsx`, `costumePieces.json`, `Preview3DTestScreen.tsx`, `costumeBuilder.ts`, `test_costume_pieces.mjs`
+
+**NOT TESTED:**
+- Real device (only tested on web preview and Node.js)
+- Phone layout and touch interactions
+- AsyncStorage persistence across app restarts (end-to-end)
+
+**DEVIATIONS:**
+- Coverage target 97% maintained, not lowered (top and wig below target, documented as known limitation)
+- Real device testing skipped (web-only verification)
+
+**Next:** V1 garment system still used in production screens (ProjectPlanningScreen, MatchResultsScreen). V2 default decision deferred until more consumers migrate to CostumeViewer.
 
 ---
 
