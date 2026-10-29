@@ -202,7 +202,12 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
             <directionalLight position={[5, 5, 5]} intensity={0.8} />
             <directionalLight position={[-5, 5, -5]} intensity={0.4} />
             
-            <OrbitControls 
+            {/* GARMENT-3a2: Target set to body center (from cameraFraming helper).
+                For V1 (feet ≈ y=-0.95), target ≈ [0, -0.01, 0]. For V2 (feet ≈ y=0),
+                target ≈ [0, 0.95, 0]. This ensures the body is vertically centered
+                in the canvas regardless of body set. */}
+            <OrbitControls
+              target={cameraConfig.target}
               enableZoom={true}
               enablePan={false}
               minDistance={1.5}

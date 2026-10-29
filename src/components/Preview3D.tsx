@@ -187,8 +187,14 @@ export default function Preview3D({
               - Drag to rotate around model
               - Pinch to zoom
               - minDistance/maxDistance keep model always visible
+              
+              GARMENT-3a2: Target set to body center (from cameraFraming helper).
+              For V1 (feet ≈ y=-0.95), target ≈ [0, -0.01, 0]. For V2 (feet ≈ y=0),
+              target ≈ [0, 0.95, 0]. This ensures the body is vertically centered
+              in the canvas regardless of body set.
           */}
           <OrbitControls
+            target={cameraConfig.target}
             enableDamping
             dampingFactor={0.25}
             minDistance={2.0}

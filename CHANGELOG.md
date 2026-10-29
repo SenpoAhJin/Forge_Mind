@@ -42,6 +42,41 @@ Made the 3D body frame data-driven and added a dev-only V1/V2 body switch. Body 
   - V2 male: centerY 0.9499m, height 1.900m (feet at y≈0)
   - V2 female: centerY 0.9499m, height 1.900m (feet at y≈0)
 
+## Task GARMENT-3a2: Camera Look-At Target Fix
+
+**Root Cause:**
+OrbitControls target was not set in either Preview3D or ProjectPlanningScreen. Defaulted to [0,0,0] (origin). For V2 bodies (feet at y=0, center at y≈0.95), camera looked at the feet instead of body center, causing the body to render far above the canvas center with the head cut off.
+
+**Fix:**
+Applied `cameraConfig.target` (computed by `computeCameraFraming` from body bounds) to OrbitControls `target` prop in both screens. For V1 (center ≈ y=-0.01), target ≈ [0, -0.01, 0]. For V2 (center ≈ y=0.95), target ≈ [0, 0.95, 0]. Camera now looks at body center regardless of body set.
+
+**Projection Numbers (Bbox Center NDC):**
+| Body Set | Gender | Canvas | Before          | After           |
+|----------|--------|--------|-----------------|-----------------|
+| V1       | male   | test   | [0.0000,-0.0050]| [0.0000,-0.0000]|
+| V1       | male   | prod   | [0.0000,-0.0079]| [0.0000,-0.0000]|
+| V1       | female | test   | [0.0000,-0.0020]| [0.0000, 0.0000]|
+| V1       | female | prod   | [0.0000,-0.0031]| [0.0000, 0.0000]|
+| V2       | male   | test   | [0.0000, 0.5036]| [0.0000,-0.0000]|
+| V2       | male   | prod   | [0.0000, 0.7796]| [0.0000, 0.0000]|
+| V2       | female | test   | [0.0000, 0.5037]| [0.0000,-0.0000]|
+| V2       | female | prod   | [0.0000, 0.7797]| [0.0000, 0.0000]|
+
+V2 bodies now centered; V1 visually unchanged (center NDC diff < 0.01).
+
+**Files Changed:**
+- src/components/Preview3D.tsx
+- src/screens/cosplayer/ProjectPlanningScreen.tsx
+- tools/test_camera_framing.mjs (new numerical test)
+- GARMENT3A2_PROGRESS.md
+
+**NOT TESTED (device required):**
+- Visual confirmation on physical device with V2 toggle
+- Profile screen 3D preview
+- 3D Preview Test screen V1/V2 toggle
+
+---
+
 **Step 3: Camera Framing from Bounds**
 - Created `src/utils/cameraFraming.ts` with `computeCameraFraming()`
 - Computes camera position and target from body centerY and height
