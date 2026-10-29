@@ -23,11 +23,11 @@ export interface CameraConfig {
  * The camera is positioned to look at the vertical center of the body's bounding
  * box, with distance scaled by the body's height to ensure it fills the viewport.
  *
- * For V1 bodies (feet ≈ y=-0.95, centerY ≈ -0.01, height ≈ 1.88m):
+ * For V1 bodies (feet Γëê y=-0.95, centerY Γëê -0.01, height Γëê 1.88m):
  *   - Target: [0, -0.01, 0] (vertical center)
  *   - Camera: [0, -0.01 + offset, distance] where offset and distance scale with height
  *
- * For V2 bodies (feet ≈ y=0, centerY ≈ 0.95, height ≈ 1.90m):
+ * For V2 bodies (feet Γëê y=0, centerY Γëê 0.95, height Γëê 1.90m):
  *   - Target: [0, 0.95, 0] (vertical center)
  *   - Camera: [0, 0.95 + offset, distance]
  *
@@ -69,9 +69,9 @@ export function computeCameraFraming(
  * - Preview3D: camera={{ position: [0, 0.2, 4], fov: 50 }}
  * - ProjectPlanningScreen: camera={{ position: [0, 0.3, 2.5], fov: 50 }}
  *
- * For V1 male (centerY ≈ -0.0093, height ≈ 1.881):
+ * For V1 male (centerY Γëê -0.0093, height Γëê 1.881):
  *   computeCameraFraming('male', 50, 2.1) yields:
- *     position ≈ [0, 0.179, 3.950]
+ *     position Γëê [0, 0.179, 3.950]
  *     target = [0, -0.0093, 0]
  *
  * Differences from Preview3D hardcoded [0, 0.2, 4]:

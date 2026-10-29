@@ -109,7 +109,7 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
 
   // Compute camera framing for the current body type (closer view for planning screen)
   const cameraConfig = useMemo(
-    () => computeCameraFraming(bodyType, 50, 1.33),
+    () => computeCameraFraming(bodyType, 50, 1.345),
     [bodyType]
   );
   

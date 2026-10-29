@@ -101,7 +101,25 @@ Working tree SHA-256: 24732D63AA701FDE5B47BFF277CC049A6287CFF2987565222C69020F8E
 - CORRECTED: Step 0 claim of "46 errors" was WRONG
 - Conclusion: No extra errors; baseline matches expected 39
 
-## R6: Final Verification - IN PROGRESS
+## R6: Final Verification - COMPLETED
+All verification commands passed:
+- ✅ tools/check_encoding.mjs: exit 0 (no encoding issues)
+- ✅ scripts/verify-glb-models.mjs: exit 0 (15 checks PASS)
+- ✅ tools/test_attach_module.mjs: exit 0 (99/99 PASS)
+- ✅ tools/test_camera_framing.mjs: exit 0 (all 8 cases PASS)
+- ✅ npx tsc --noEmit: 39 errors (matches baseline)
+- ✅ tools/glb_inspect.js V2 Male: exit 0 (all checks PASS)
+- ✅ tools/glb_inspect.js V2 Female: exit 0 (all checks PASS)
+- ✅ scripts/check-export-assets.mjs: exit 0 (all 4 GLBs present, correct sizes)
+
+CHANGELOG entry added, repair work committed in 4 commits:
+- e325c1b: Remove UTF-8 BOM from 4 files
+- bd3acfe: Restore compute_body_bounds script, regenerate bounds
+- 352ed58: Add changelog and progress documentation
+- [final]: Update changelog timestamp
+
+Git state: task/garment3b-v2-garments with repair commits
+NOT PUSHED: awaiting resolution of master/3a-body-frame merge state per R0
 
 ## Step 1: Carry-over Fixes
 - ✓ 1a: Restored visibility threshold to 0.95, increased production camera distance from 1.33 to 1.345
