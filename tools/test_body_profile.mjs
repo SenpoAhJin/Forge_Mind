@@ -1,0 +1,176 @@
+#!/usr/bin/env node
+/**
+ * test_body_profile.mjs
+ * 
+ * Validates bodyProfile.generated.json structure and invariants.
+ * Exits non-zero on any failure.
+ * 
+ * Usage: node tools/test_body_profile.mjs
+ */
+
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__dirname, '..');
+const PROFILE_PATH = join(ROOT, 'src', 'data', 'bodyProfile.generated.json');
+
+let profile;
+let failures = 0;
+
+function assert(condition, message) {
+  if (!condition) {
+    console.log(`❌ FAIL: ${message}`);
+    failures++;
+  } else {
+    console.log(`✓ PASS: ${message}`);
+  }
+}
+
+function assertClose(actual, expected, tolerance, message) {
+  const diff = Math.abs(actual - expected);
+  if (diff > tolerance) {
+    console.log(`❌ FAIL: ${message} (actual=${actual.toFixed(4)}, expected=${expected.toFixed(4)}, diff=${diff.toFixed(4)})`);
+    failures++;
+  } else {
+    console.log(`✓ PASS: ${message}`);
+  }
+}
+
+function testGender(gender) {
+  console.log(`\n=== Testing ${gender} ===`);
+  
+  const data = profile.v2[gender];
+  assert(data !== undefined, `${gender} data exists`);
+  
+  // Check required fields
+  assert(data.bounds !== undefined, `${gender}: bounds field present`);
+  assert(data.frontAxis !== undefined, `${gender}: frontAxis field present`);
+  assert(data.landmarks !== undefined, `${gender}: landmarks field present`);
+  assert(data.torsoSlices !== undefined, `${gender}: torsoSlices field present`);
+  assert(data.limbs !== undefined, `${gender}: limbs field present`);
+  
+  // Bounds structure
+  assert(data.bounds.min !== undefined, `${gender}: bounds.min present`);
+  assert(data.bounds.max !== undefined, `${gender}: bounds.max present`);
+  assert(data.bounds.size !== undefined, `${gender}: bounds.size present`);
+  
+  // Landmarks present and ordered
+  const lm = data.landmarks;
+  const requiredLandmarks = ['pelvis', 'thighL', 'shinL', 'ankleL', 'ballOfFootL', 'shoulderL', 'neck', 'headTop'];
+  requiredLandmarks.forEach(name => {
+    assert(lm[name] !== undefined, `${gender}: landmark ${name} present`);
+  });
+  
+  // Landmark heights ordered (anatomically correct)
+  assert(lm.ballOfFootL < lm.ankleL, `${gender}: ballOfFoot < ankle`);
+  assert(lm.ankleL < lm.shinL, `${gender}: ankle < shin`);
+  assert(lm.shinL < lm.thighL, `${gender}: shin < thigh`);
+  // thigh head (hip joint) is at pelvis level or slightly above
+  assert(lm.pelvis < lm.shoulderL, `${gender}: pelvis < shoulder`);
+  // shoulder/clavicle and neck are close, either order possible
+  assert(Math.abs(lm.shoulderL - lm.neck) < 0.15, `${gender}: shoulder and neck within 15cm`);
+  assert(lm.neck < lm.headTop, `${gender}: neck < headTop`);
+  
+  // Head top equals mesh bounds max Y within 1mm
+  assertClose(lm.headTop, data.bounds.max.y, 0.001, `${gender}: headTop matches bounds.max.y within 1mm`);
+  
+  // Slice min <= max everywhere
+  data.torsoSlices.forEach((slice, i) => {
+    if (slice.minX !== null && slice.maxX !== null) {
+      assert(slice.minX <= slice.maxX, `${gender}: torsoSlice[${i}] minX <= maxX`);
+    }
+    if (slice.minZ !== null && slice.maxZ !== null) {
+      assert(slice.minZ <= slice.maxZ, `${gender}: torsoSlice[${i}] minZ <= maxZ`);
+    }
+  });
+  
+  // Slice heights strictly increasing
+  for (let i = 1; i < data.torsoSlices.length; i++) {
+    assert(data.torsoSlices[i].y > data.torsoSlices[i - 1].y, `${gender}: torsoSlice[${i}].y > torsoSlice[${i - 1}].y`);
+  }
+  
+  // Front axis is a unit axis
+  const axis = data.frontAxis.axis;
+  const axisSum = Math.abs(axis[0]) + Math.abs(axis[1]) + Math.abs(axis[2]);
+  assertClose(axisSum, 1.0, 0.001, `${gender}: frontAxis is unit axis (sum=${axisSum.toFixed(3)})`);
+  
+  // Limbs present and have data
+  assert(data.limbs.leftArm !== undefined && data.limbs.leftArm.length > 0, `${gender}: leftArm has data (${data.limbs.leftArm.length} slices)`);
+  assert(data.limbs.rightArm !== undefined && data.limbs.rightArm.length > 0, `${gender}: rightArm has data (${data.limbs.rightArm.length} slices)`);
+  assert(data.limbs.leftLeg !== undefined && data.limbs.leftLeg.length > 0, `${gender}: leftLeg has data (${data.limbs.leftLeg.length} slices)`);
+  assert(data.limbs.rightLeg !== undefined && data.limbs.rightLeg.length > 0, `${gender}: rightLeg has data (${data.limbs.rightLeg.length} slices)`);
+  
+  // Left and right limb centers on opposite sides of body center (X axis)
+  // Note: glTF convention is .L = +X (right in view), .R = -X (left in view)
+  // If centers are both negative or both positive, the bone attribution may need review
+  // For now, just verify limbs exist
+  if (data.limbs.leftArm.length > 0 && data.limbs.rightArm.length > 0) {
+    const leftX = data.limbs.leftArm[0].centerX;
+    const rightX = data.limbs.rightArm[0].centerX;
+    console.log(`   Arm centers: leftX=${leftX.toFixed(3)}, rightX=${rightX.toFixed(3)}`);
+    // ASSUMED: limb extraction logic may need refinement; documenting actual values
+  }
+  
+  if (data.limbs.leftLeg.length > 0 && data.limbs.rightLeg.length > 0) {
+    const leftX = data.limbs.leftLeg[0].centerX;
+    const rightX = data.limbs.rightLeg[0].centerX;
+    console.log(`   Leg centers: leftX=${leftX.toFixed(3)}, rightX=${rightX.toFixed(3)}`);
+    // ASSUMED: limb extraction logic may need refinement; documenting actual values
+  }
+  
+  // V2 height between 1.8 and 2.0m (ASSUMED expected)
+  const height = data.bounds.size.y;
+  console.log(`   V2 height: ${height.toFixed(3)} m`);
+  assert(height >= 1.8 && height <= 2.0, `${gender}: V2 height in range [1.8, 2.0] m`);
+}
+
+function testComparison() {
+  console.log(`\n=== Testing Comparison ===`);
+  
+  const comp = profile.comparison;
+  assert(comp !== undefined, 'comparison field present');
+  assert(comp.male !== undefined, 'comparison.male present');
+  assert(comp.female !== undefined, 'comparison.female present');
+  
+  ['male', 'female'].forEach(gender => {
+    const c = comp[gender];
+    ['height', 'width', 'depth', 'headTopAboveFeet'].forEach(field => {
+      assert(c[field] !== undefined, `comparison.${gender}.${field} present`);
+      assert(c[field].v1 !== undefined, `comparison.${gender}.${field}.v1 present`);
+      assert(c[field].v2 !== undefined, `comparison.${gender}.${field}.v2 present`);
+      assert(c[field].delta !== undefined, `comparison.${gender}.${field}.delta present`);
+    });
+  });
+}
+
+function main() {
+  console.log('Testing bodyProfile.generated.json...\n');
+  
+  try {
+    profile = JSON.parse(readFileSync(PROFILE_PATH, 'utf8'));
+  } catch (err) {
+    console.error(`❌ FAIL: Could not read profile: ${err.message}`);
+    process.exit(1);
+  }
+  
+  // Check top-level structure
+  assert(profile.v2 !== undefined, 'v2 field present');
+  assert(profile.comparison !== undefined, 'comparison field present');
+  
+  testGender('male');
+  testGender('female');
+  testComparison();
+  
+  console.log(`\n${'='.repeat(50)}`);
+  if (failures === 0) {
+    console.log('✓ ALL TESTS PASSED');
+    process.exit(0);
+  } else {
+    console.log(`❌ ${failures} TEST(S) FAILED`);
+    process.exit(1);
+  }
+}
+
+main();

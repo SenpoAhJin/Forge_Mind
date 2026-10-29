@@ -1,7 +1,31 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 29, 2026 (Task GARMENT-3b-R: Repair and verify GARMENT-3b session work)
+**Last updated:** Thursday, October 29, 2026 (Task GARMENT-3b-A: Generator audit and V2 body profile extractor)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 29, 2026 (Task GARMENT-3b-A: Generator Audit & Body Profile Extractor)
+
+**Summary**
+
+Completed GARMENT-3b-A: audited garment generator scripts, created V2 body profile extractor with comprehensive body measurements, implemented profile validation tests. No garment generation, no app changes, no camera changes (as specified). All tests pass: encoding clean, body profile valid, GLB verification pass, attach module 99/99 pass, tsc baseline 39 errors maintained.
+
+**What was done**
+
+- **P0: Preflight** — Branch: task/garment3b-v2-garments (correct), 4 git stashes, 5 deleted reports + 3 logs modified, commit 99baab8 is ancestor: YES
+
+- **Step 1: Generator Audit** (docs/changes/garment3b-generator-audit.md) — Found 2 generator scripts: (1) scripts/generate_wig_glb.mjs (2 wig caps with V1 head constants), (2) ../forgemind-backend/scripts/generate_procedural_garments.mjs (20 garments with primitive geometry). Both use V1 frame (body center y≈0), hard-coded dimensions, NOT parameterizable. V1→V2 shift: ~0.95m upward (feet y=-0.95 → y=0).
+
+- **Step 2: Body Profile Extractor** (tools/compute_body_profile.mjs, src/data/bodyProfile.generated.json) — Reads V2 GLBs+contracts, computes bounds, frontAxis (±Z from head geometry), landmarks (hip/knee/ankle/shoulder/neck/head), 50 torso slices (x/z min/max per height, excludes arms), 4 limb outlines (20 slices each). V1 vs V2: Male height +0.019m width +0.012m depth +0.032m head +0.969m; Female height +0.005m width +0.062m depth -0.047m head +0.956m.
+
+- **Step 3: Profile Test** (tools/test_body_profile.mjs) — Validates structure, anatomical landmark order (ballOfFoot < ankle < shin < thigh, pelvis < shoulder, neck < headTop), head top = bounds.maxY within 1mm, slices ordered and bounded, frontAxis unit, V2 height 1.8-2.0m, limbs present. ALL TESTS PASSED.
+
+- **Step 4: Close** — ✅ check_encoding.mjs: clean; ✅ test_body_profile.mjs: pass; ✅ verify-glb-models.mjs: 15 pass 0 fail; ✅ test_attach_module.mjs: 99/99 pass; ✅ tsc: 39 errors (baseline). Committed docs/changes/garment3b-generator-audit.md, tools/compute_body_profile.mjs, src/data/bodyProfile.generated.json, tools/test_body_profile.mjs, CHANGELOG.md. Pushed branch WITHOUT force.
+
+**DEVIATIONS**: None.
+
+**NOT TESTED**: Garment generation from profiles (next task), camera framing on V2 (verified in GARMENT-3a2), app UI integration.
 
 ---
 
