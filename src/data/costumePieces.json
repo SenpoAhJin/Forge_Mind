@@ -17,7 +17,7 @@
         "armR": ["upperarm.R", "forearm.R", "hand.R"]
       },
       "yMin": { "landmark": "hip_y", "offset": -0.05 },
-      "yMax": { "landmark": "head_top_y", "offset": 0 },
+      "yMax": { "landmark": "neck_y", "offset": 0.08 },
       "armYMax": { "landmark": "wrist_y", "offset": 0.02 },
       "offset_m": 0.008,
       "defaultColor": "#3B82F6",
@@ -68,9 +68,9 @@
       "id": "wig",
       "slot": "head",
       "groupDetails": {
-        "head_full": ["neck", "head"]
+        "head_only": ["head"]
       },
-      "yMin": { "landmark": "neck_y", "offset": 0 },
+      "yMin": { "landmark": "neck_y", "offset": 0.15 },
       "yMax": { "landmark": "head_top_y", "offset": 0.02 },
       "offset_m": 0.015,
       "defaultColor": "#4B5563",

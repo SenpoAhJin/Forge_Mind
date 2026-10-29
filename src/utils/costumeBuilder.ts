@@ -178,103 +178,280 @@ function resolveBoneSet(
   return boneSet;
 }
 
-// Soft weight threshold for vertex belonging
-const SOFT_WEIGHT_MIN = 0.5;
+/**
+ * Compute distance from point to line segment.
+ */
+function distanceToSegment(
+  point: THREE.Vector3,
+  segmentStart: THREE.Vector3,
+  segmentEnd: THREE.Vector3
+): number {
+  const segment = new THREE.Vector3().subVectors(segmentEnd, segmentStart);
+  const toPoint = new THREE.Vector3().subVectors(point, segmentStart);
+  
+  const segmentLengthSq = segment.lengthSq();
+  if (segmentLengthSq === 0) {
+    // Degenerate segment (point)
+    return point.distanceTo(segmentStart);
+  }
+  
+  // Project toPoint onto segment
+  const t = Math.max(0, Math.min(1, toPoint.dot(segment) / segmentLengthSq));
+  const projection = new THREE.Vector3().copy(segmentStart).addScaledVector(segment, t);
+  
+  return point.distanceTo(projection);
+}
 
 /**
- * Check if a vertex belongs to a piece using summed skin weights.
+ * Build bone segment endpoints from contract.
+ * Each bone becomes a segment from head to tail.
  */
-function vertexBelongsToPiece(
-  vertexIndex: number,
-  boneSet: Set<string>,
-  skinIndex: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  skinWeight: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  bones: Array<{ name: string }>
-): boolean {
-  let sumWeight = 0;
-  for (let j = 0; j < 4; j++) {
-    const boneIdx = skinIndex.getComponent(vertexIndex, j);
-    if (boneIdx >= 0 && boneIdx < bones.length) {
-      const boneName = sanitizeBoneName(bones[boneIdx].name);
-      if (boneSet.has(boneName)) {
-        sumWeight += skinWeight.getComponent(vertexIndex, j);
+function buildBoneSegments(contract: any): Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }> {
+  const bones = contract.bones as Array<{ 
+    name: string; 
+    head: [number, number, number];
+    tail: [number, number, number];
+  }>;
+  
+  const segments = new Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>();
+  
+  for (const bone of bones) {
+    if (bone.name === 'root') continue;
+    
+    // Blender (x, y, z) -> glTF (x, z, -y)
+    const head = new THREE.Vector3(bone.head[0], bone.head[2], -bone.head[1]);
+    const tail = new THREE.Vector3(bone.tail[0], bone.tail[2], -bone.tail[1]);
+    
+    segments.set(sanitizeBoneName(bone.name), { head, tail });
+  }
+  
+  return segments;
+}
+
+/**
+ * Label each vertex with its nearest bone segment.
+ * Returns a map from vertex index to sanitized bone name.
+ */
+function labelVerticesByNearestBone(
+  geometry: THREE.BufferGeometry,
+  boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>
+): Map<number, string> {
+  const position = geometry.attributes.position;
+  const vertexLabels = new Map<number, string>();
+  const point = new THREE.Vector3();
+  
+  for (let i = 0; i < position.count; i++) {
+    point.set(
+      position.getX(i),
+      position.getY(i),
+      position.getZ(i)
+    );
+    
+    let nearestBone = '';
+    let nearestDist = Infinity;
+    
+    for (const [boneName, segment] of boneSegments) {
+      const dist = distanceToSegment(point, segment.head, segment.tail);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestBone = boneName;
       }
     }
+    
+    if (nearestBone) {
+      vertexLabels.set(i, nearestBone);
+    }
   }
-  return sumWeight >= SOFT_WEIGHT_MIN;
+  
+  return vertexLabels;
 }
 
 /**
- * Clip a triangle against horizontal planes (yMin, yMax).
- * Returns triangle indices if the triangle intersects the band.
- */
-function clipTriangleToYBand(
-  i0: number, i1: number, i2: number,
-  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  yMin: number | undefined,
-  yMax: number | undefined
-): boolean {
-  const y0 = position.getY(i0);
-  const y1 = position.getY(i1);
-  const y2 = position.getY(i2);
-
-  // Check if any vertex is in band
-  const in0 = (yMin === undefined || y0 >= yMin) && (yMax === undefined || y0 <= yMax);
-  const in1 = (yMin === undefined || y1 >= yMin) && (yMax === undefined || y1 <= yMax);
-  const in2 = (yMin === undefined || y2 >= yMin) && (yMax === undefined || y2 <= yMax);
-
-  // Keep triangle if any vertex is in band (we'll clip geometry later)
-  return in0 || in1 || in2;
-}
-
-/**
- * Select triangles where at least 2 of 3 vertices belong to the piece's bone groups
- * (using summed skin weights) and intersect the y-band.
+ * Select triangles using nearest-bone-segment labeling with neighbor closure.
+ * 1. Label each vertex with nearest bone segment
+ * 2. Label each triangle by centroid's nearest bone
+ * 3. Select triangles whose label is in boneSet and centroid is in y-band
+ * 4. Close gaps: include unselected triangles with >=2 selected edge neighbors
  */
 function selectTriangles(
   geometry: THREE.BufferGeometry,
   boneSet: Set<string>,
-  bones: Array<{ name: string }>,
+  boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
   yMin: number | undefined,
   yMax: number | undefined,
   armYMax?: number | undefined
 ): number[] {
   const position = geometry.attributes.position;
   const index = geometry.index;
-  const skinIndex = geometry.attributes.skinIndex;
-  const skinWeight = geometry.attributes.skinWeight;
   
-  if (!index || !skinIndex || !skinWeight) {
-    throw new Error('Geometry must have index, skinIndex, and skinWeight');
+  if (!index) {
+    throw new Error('Geometry must have index');
   }
 
-  const selectedTriangles: number[] = [];
   const triangleCount = index.count / 3;
-
+  const centroid = new THREE.Vector3();
+  const v0 = new THREE.Vector3();
+  const v1 = new THREE.Vector3();
+  const v2 = new THREE.Vector3();
+  
+  // Label each triangle by its centroid's nearest bone
+  const triangleLabels = new Map<number, string>();
+  
   for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
     const i0 = index.getX(triIdx * 3);
     const i1 = index.getX(triIdx * 3 + 1);
     const i2 = index.getX(triIdx * 3 + 2);
-
-    // Check vertex belonging using summed weights
-    const belongs0 = vertexBelongsToPiece(i0, boneSet, skinIndex, skinWeight, bones);
-    const belongs1 = vertexBelongsToPiece(i1, boneSet, skinIndex, skinWeight, bones);
-    const belongs2 = vertexBelongsToPiece(i2, boneSet, skinIndex, skinWeight, bones);
-
-    const belongCount = (belongs0 ? 1 : 0) + (belongs1 ? 1 : 0) + (belongs2 ? 1 : 0);
     
-    // Keep triangle if at least 2 vertices belong
-    if (belongCount < 2) continue;
-
-    // Check y-band (clip against planes)
-    const inBand = clipTriangleToYBand(i0, i1, i2, position, yMin, yMax);
+    v0.set(position.getX(i0), position.getY(i0), position.getZ(i0));
+    v1.set(position.getX(i1), position.getY(i1), position.getZ(i1));
+    v2.set(position.getX(i2), position.getY(i2), position.getZ(i2));
     
-    if (inBand) {
-      selectedTriangles.push(triIdx);
+    centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
+    
+    // Find nearest bone to centroid
+    let nearestBone = '';
+    let nearestDist = Infinity;
+    
+    for (const [boneName, segment] of boneSegments) {
+      const dist = distanceToSegment(centroid, segment.head, segment.tail);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestBone = boneName;
+      }
+    }
+    
+    triangleLabels.set(triIdx, nearestBone);
+  }
+  
+  // Select triangles: label in boneSet AND centroid in y-band
+  const initialSelection = new Set<number>();
+  
+  for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
+    const label = triangleLabels.get(triIdx);
+    if (!label || !boneSet.has(label)) continue;
+    
+    const i0 = index.getX(triIdx * 3);
+    const i1 = index.getX(triIdx * 3 + 1);
+    const i2 = index.getX(triIdx * 3 + 2);
+    
+    v0.set(position.getX(i0), position.getY(i0), position.getZ(i0));
+    v1.set(position.getX(i1), position.getY(i1), position.getZ(i1));
+    v2.set(position.getX(i2), position.getY(i2), position.getZ(i2));
+    
+    centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
+    
+    // Check y-band
+    if (yMin !== undefined && centroid.y < yMin) continue;
+    if (yMax !== undefined && centroid.y > yMax) continue;
+    
+    initialSelection.add(triIdx);
+  }
+  
+  // Build edge-to-triangle adjacency
+  const edgeKey = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+  const edgeToTriangles = new Map<string, number[]>();
+  
+  for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
+    const i0 = index.getX(triIdx * 3);
+    const i1 = index.getX(triIdx * 3 + 1);
+    const i2 = index.getX(triIdx * 3 + 2);
+    
+    const edges = [
+      edgeKey(i0, i1),
+      edgeKey(i1, i2),
+      edgeKey(i2, i0),
+    ];
+    
+    for (const edge of edges) {
+      if (!edgeToTriangles.has(edge)) {
+        edgeToTriangles.set(edge, []);
+      }
+      edgeToTriangles.get(edge)!.push(triIdx);
     }
   }
+  
+  // Neighbor closure: add unselected triangles with >=2 selected edge neighbors
+  const finalSelection = new Set(initialSelection);
+  let added = true;
+  
+  while (added) {
+    added = false;
+    
+    for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
+      if (finalSelection.has(triIdx)) continue;
+      
+      const i0 = index.getX(triIdx * 3);
+      const i1 = index.getX(triIdx * 3 + 1);
+      const i2 = index.getX(triIdx * 3 + 2);
+      
+      const edges = [
+        edgeKey(i0, i1),
+        edgeKey(i1, i2),
+        edgeKey(i2, i0),
+      ];
+      
+      let selectedNeighbors = 0;
+      for (const edge of edges) {
+        const neighbors = edgeToTriangles.get(edge) || [];
+        for (const neighborIdx of neighbors) {
+          if (neighborIdx !== triIdx && finalSelection.has(neighborIdx)) {
+            selectedNeighbors++;
+            break;
+          }
+        }
+      }
+      
+      if (selectedNeighbors >= 2) {
+        finalSelection.add(triIdx);
+        added = true;
+      }
+    }
+  }
+  
+  return Array.from(finalSelection);
+}
 
-  return selectedTriangles;
+/**
+ * Clip triangles at a horizontal plane (for straight hems).
+ * Removes triangles with all vertices above or below the plane.
+ */
+function clipTrianglesAtPlane(
+  selectedTriangles: number[],
+  geometry: THREE.BufferGeometry,
+  clipY: number,
+  keepAbove: boolean
+): number[] {
+  const position = geometry.attributes.position;
+  const index = geometry.index!;
+  const result: number[] = [];
+  const tolerance = 1e-4;
+  
+  for (const triIdx of selectedTriangles) {
+    const i0 = index.getX(triIdx * 3);
+    const i1 = index.getX(triIdx * 3 + 1);
+    const i2 = index.getX(triIdx * 3 + 2);
+    
+    const y0 = position.getY(i0);
+    const y1 = position.getY(i1);
+    const y2 = position.getY(i2);
+    
+    const minY = Math.min(y0, y1, y2);
+    const maxY = Math.max(y0, y1, y2);
+    
+    if (keepAbove) {
+      // Keep triangle if any vertex is >= clipY
+      if (maxY >= clipY - tolerance) {
+        result.push(triIdx);
+      }
+    } else {
+      // Keep triangle if any vertex is <= clipY
+      if (minY <= clipY + tolerance) {
+        result.push(triIdx);
+      }
+    }
+  }
+  
+  return result;
 }
 
 /**
@@ -442,7 +619,7 @@ export interface PieceDebugInfo {
 
 /**
  * Compute debug info for a piece without building the mesh.
- * Includes positions of missing vertices for visualization.
+ * Uses nearest-bone labeling for coverage calculation.
  */
 export function computePieceDebugInfo(
   bodyScene: THREE.Object3D,
@@ -467,6 +644,7 @@ export function computePieceDebugInfo(
   const meshBounds = new THREE.Box3().setFromObject(skinnedMesh);
   const landmarks = computeLandmarks(contract, meshBounds);
   const boneSet = resolveBoneSet(pieceDef, data);
+  const boneSegments = buildBoneSegments(contract);
 
   let yMin: number | undefined;
   let yMax: number | undefined;
@@ -478,91 +656,35 @@ export function computePieceDebugInfo(
     yMax = landmarks[pieceDef.yMax.landmark as keyof Landmarks] + pieceDef.yMax.offset;
   }
 
-  // Build vertex map using SUMMED skin weights (not dominant bone)
+  // Label vertices by nearest bone
   const geometry = skinnedMesh.geometry;
-  const skinIndex = geometry.attributes.skinIndex;
-  const skinWeight = geometry.attributes.skinWeight;
   const position = geometry.attributes.position;
+  const vertexLabels = labelVerticesByNearestBone(geometry, boneSegments);
 
-  if (!skinIndex || !skinWeight) return null;
-
-  const bones = contract.bones as Array<{ name: string }>;
-  const boneNameToIndex = new Map<string, number>();
-  bones.forEach((b, idx) => {
-    boneNameToIndex.set(sanitizeBoneName(b.name), idx);
-  });
-
-  // Find vertices that belong to this piece (summed weight >= 0.5)
-  const SOFT_WEIGHT_MIN = 0.5;
+  // Find eligible vertices (label in boneSet, y in band)
   const eligibleVertices = new Set<number>();
-  const missingVertexInfo: Array<{ index: number; dominantBone: string; reason: string }> = [];
-
   for (let i = 0; i < position.count; i++) {
+    const label = vertexLabels.get(i);
+    if (!label || !boneSet.has(label)) continue;
+    
     const y = position.getY(i);
+    if (yMin !== undefined && y < yMin) continue;
+    if (yMax !== undefined && y > yMax) continue;
     
-    // Sum weights for this piece's bones
-    let sumWeight = 0;
-    let maxWeight = -1;
-    let dominantBoneIdx = -1;
-    
-    for (let j = 0; j < 4; j++) {
-      const boneIdx = skinIndex.getComponent(i, j);
-      const weight = skinWeight.getComponent(i, j);
-      
-      if (weight > maxWeight) {
-        maxWeight = weight;
-        dominantBoneIdx = boneIdx;
-      }
-      
-      if (boneIdx >= 0 && boneIdx < bones.length) {
-        const boneName = sanitizeBoneName(bones[boneIdx].name);
-        if (boneSet.has(boneName)) {
-          sumWeight += weight;
-        }
-      }
-    }
-
-    // Track why vertex was included or excluded
-    if (sumWeight >= SOFT_WEIGHT_MIN) {
-      // Check y-band
-      const inYBand = (yMin === undefined || y >= yMin) && (yMax === undefined || y <= yMax);
-      
-      if (inYBand) {
-        eligibleVertices.add(i);
-      } else {
-        // Eligible by weight but excluded by y-band
-        const dominantBoneName = dominantBoneIdx >= 0 && dominantBoneIdx < bones.length
-          ? sanitizeBoneName(bones[dominantBoneIdx].name)
-          : 'unknown';
-        missingVertexInfo.push({
-          index: i,
-          dominantBone: dominantBoneName,
-          reason: `y-band (y=${y.toFixed(3)}, yMin=${yMin?.toFixed(3)}, yMax=${yMax?.toFixed(3)})`,
-        });
-      }
-    } else if (yMin !== undefined && yMax !== undefined && y >= yMin && y <= yMax) {
-      // In y-band but insufficient weight
-      const dominantBoneName = dominantBoneIdx >= 0 && dominantBoneIdx < bones.length
-        ? sanitizeBoneName(bones[dominantBoneIdx].name)
-        : 'unknown';
-      missingVertexInfo.push({
-        index: i,
-        dominantBone: dominantBoneName,
-        reason: `weight (sum=${sumWeight.toFixed(3)} < ${SOFT_WEIGHT_MIN})`,
-      });
-    }
+    eligibleVertices.add(i);
   }
 
-  // Now find which eligible vertices are covered by selected triangles
+  // Select triangles
   const selectedTriangles = selectTriangles(
     geometry,
     boneSet,
-    bones,
+    boneSegments,
     yMin,
     yMax,
     pieceDef.armYMax ? landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset : undefined
   );
 
+  // Find covered vertices
   const coveredVertices = new Set<number>();
   const index = geometry.index!;
   for (const triIdx of selectedTriangles) {
@@ -574,31 +696,18 @@ export function computePieceDebugInfo(
     }
   }
 
-  // Find missing vertices (eligible but not covered)
+  // Find missing vertices
   const missingVertices = new Set<number>();
+  const missingVertexInfo: Array<{ index: number; dominantBone: string; reason: string }> = [];
+  
   for (const vIdx of eligibleVertices) {
     if (!coveredVertices.has(vIdx)) {
       missingVertices.add(vIdx);
-      
-      // Find dominant bone and reason
-      let maxWeight = -1;
-      let dominantBoneIdx = -1;
-      for (let j = 0; j < 4; j++) {
-        const weight = skinWeight.getComponent(vIdx, j);
-        if (weight > maxWeight) {
-          maxWeight = weight;
-          dominantBoneIdx = skinIndex.getComponent(vIdx, j);
-        }
-      }
-      
-      const dominantBoneName = dominantBoneIdx >= 0 && dominantBoneIdx < bones.length
-        ? sanitizeBoneName(bones[dominantBoneIdx].name)
-        : 'unknown';
-      
+      const label = vertexLabels.get(vIdx) || 'unknown';
       missingVertexInfo.push({
         index: vIdx,
-        dominantBone: dominantBoneName,
-        reason: 'eligible but not in selected triangles (2-of-3 rule or clip)',
+        dominantBone: label,
+        reason: 'eligible but not in selected triangles',
       });
     }
   }
@@ -667,10 +776,11 @@ export function buildCostumePiece(
     const yPos = landmarks[pieceDef.yPosition.landmark as keyof Landmarks] + pieceDef.yPosition.offset;
     geometry = buildBeltGeometry(skinnedMesh, contract, yPos, pieceDef.tubeRadius);
   } else {
-    // Derive piece
+    // Derive piece using nearest-bone labeling
     const meshBounds = new THREE.Box3().setFromObject(skinnedMesh);
     const landmarks = computeLandmarks(contract, meshBounds);
     const boneSet = resolveBoneSet(pieceDef, data);
+    const boneSegments = buildBoneSegments(contract);
 
     let yMin: number | undefined;
     let yMax: number | undefined;
@@ -686,15 +796,24 @@ export function buildCostumePiece(
       armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
     }
 
-    const bones = contract.bones as Array<{ name: string }>;
-    const selectedTriangles = selectTriangles(
+    let selectedTriangles = selectTriangles(
       skinnedMesh.geometry,
       boneSet,
-      bones,
+      boneSegments,
       yMin,
       yMax,
       armYMax
     );
+
+    // Special handling for top piece: clip at hem for straight edge
+    if (pieceId === 'top' && yMin !== undefined) {
+      selectedTriangles = clipTrianglesAtPlane(
+        selectedTriangles,
+        skinnedMesh.geometry,
+        yMin,
+        true // keep above hem
+      );
+    }
 
     if (selectedTriangles.length === 0) {
       throw new Error(`Piece ${pieceId}: no triangles selected (groups: ${Array.from(boneSet).join(', ')})`);
