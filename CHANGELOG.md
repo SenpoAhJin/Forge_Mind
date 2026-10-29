@@ -1,7 +1,41 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 29, 2026 (Task COSTUME-2: V2 Costume Integration)
+**Last updated:** Thursday, October 29, 2026 (Task COSTUME-3: Coverage Fix Attempt)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Thursday, October 29, 2026 (Task COSTUME-3: Coverage Fix Attempt)
+
+**Summary**
+
+Attempted COSTUME-3 to fix V2 costume piece coverage and connect Outfit Planning workflow. **STATUS: INCOMPLETE**. Top coverage improved from 51-62% to 72-78% (target: 97%). Wig remains at 25-32% (target: 97%). Added debug visualization to show missing vertices as red points. Outfit Planning screen integration NOT completed due to time constraints and unresolved coverage issues.
+
+**What changed**
+
+Open ForgeMind app, go to **Profile → 3D Preview Test**, scroll to **V2 Costume Demo**, tap **Enter V2 Costume Demo**.
+
+**Improvements:**
+- **Top coverage:** Male 51% → 72%, Female 62% → 79% (still below 97% target)
+- **Bottom coverage:** Now meets 97% target (was 96%)
+- **Debug mode:** Toggle Debug ON to see flat colors and missing vertices as red points (top/wig only)
+- **Top extends higher:** Now covers shoulder caps and upper chest (yMax raised to head_top_y)
+- **Top extends to wrist:** Sleeves now include hand bones (was stopping at forearm)
+- **Wig unchanged:** Still at 25-32% coverage, top 25-28cm below head (issue not fixed)
+
+**What's INCOMPLETE:**
+- Top and wig coverage still far below 97% target (NOT claimed as "all met")
+- Wig placement still 25-28cm below head top (target: within 2cm)
+- Outfit Planning screen (ProjectPlanningScreen) NOT converted to V2
+- V1 consumers (Preview3D, MatchResultsScreen, ProjectPlanningScreen) still use V1 garments
+- Dark right shoulder patch cause NOT diagnosed
+
+**Data files changed:**
+- `src/data/costumePieces.json`: Top yMax=head_top_y (was neck_y+0.02), armYMax=wrist_y+0.02, includes hand bones, bottom yMax=hip_y+0.15
+- `src/utils/costumeBuilder.ts`: Added missing vertex tracking (positions, dominant bone, rejection reason)
+- `src/components/V2CostumeDemo.tsx`: Renders red debug points for missing vertices, logs to console
+
+**Where to test:** Profile → 3D Preview Test → V2 Costume Demo → Toggle Debug ON → Enable top or wig
 
 ---
 
