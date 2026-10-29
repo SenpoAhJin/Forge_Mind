@@ -36,5 +36,6 @@
 - [x] V2 GLBs present in export (Male: 568KB, Female: 568KB)
 
 ## Step 6: Changelog and git
-- [ ] Update CHANGELOG.md
-- [ ] Commit and push
+- [x] Update CHANGELOG.md
+- [x] Commit and push
+- [x] Final report created
