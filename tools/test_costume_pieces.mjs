@@ -29,6 +29,7 @@ const ROOT = path.resolve(__dirname, '..');
 const OFFSET_TOLERANCE = 1e-6; // metres
 const BBOX_TOLERANCE = 0.01; // metres
 const BELT_RADIUS_TOLERANCE = 0.03; // metres (3 cm)
+const COVERAGE_MIN = 0.97; // 97% minimum vertex coverage
 
 // Import data
 const costumePiecesData = JSON.parse(
@@ -355,6 +356,61 @@ function checkPieceGeometry(geometry, offset_m) {
 }
 
 /**
+ * Check vertex coverage for a piece.
+ * Coverage = (vertices with summed skin weight >= 0.5 inside selected triangles) / (all eligible vertices in bone groups)
+ */
+function checkVertexCoverage(sourceGeometry, selectedTriangles, boneSet, bones) {
+  const position = sourceGeometry.attributes.position;
+  const skinIndex = sourceGeometry.attributes.skinIndex;
+  const skinWeight = sourceGeometry.attributes.skinWeight;
+  const sourceIndex = sourceGeometry.index;
+
+  if (!skinIndex || !skinWeight || !sourceIndex) {
+    throw new Error('Source geometry missing skinIndex, skinWeight, or index');
+  }
+
+  const SOFT_WEIGHT_MIN = 0.5;
+
+  // Find all eligible vertices (belong to bone groups)
+  const eligibleVertices = new Set();
+  for (let i = 0; i < position.count; i++) {
+    let sumWeight = 0;
+    for (let j = 0; j < 4; j++) {
+      const boneIdx = skinIndex.getComponent(i, j);
+      if (boneIdx >= 0 && boneIdx < bones.length) {
+        const boneName = sanitizeBoneName(bones[boneIdx].name);
+        if (boneSet.has(boneName)) {
+          sumWeight += skinWeight.getComponent(i, j);
+        }
+      }
+    }
+    if (sumWeight >= SOFT_WEIGHT_MIN) {
+      eligibleVertices.add(i);
+    }
+  }
+
+  // Find covered vertices (inside selected triangles)
+  const coveredVertices = new Set();
+  for (const triIdx of selectedTriangles) {
+    const i0 = sourceIndex.getX(triIdx * 3);
+    const i1 = sourceIndex.getX(triIdx * 3 + 1);
+    const i2 = sourceIndex.getX(triIdx * 3 + 2);
+
+    if (eligibleVertices.has(i0)) coveredVertices.add(i0);
+    if (eligibleVertices.has(i1)) coveredVertices.add(i1);
+    if (eligibleVertices.has(i2)) coveredVertices.add(i2);
+  }
+
+  const coverage = eligibleVertices.size > 0 ? coveredVertices.size / eligibleVertices.size : 0;
+
+  return {
+    coverage,
+    eligibleCount: eligibleVertices.size,
+    coveredCount: coveredVertices.size,
+  };
+}
+
+/**
  * Check bbox is within body bounds + tolerance.
  */
 function checkBboxWithinBody(pieceBbox, bodyBbox, offset_m) {
@@ -501,6 +557,8 @@ async function testBody(gender, glbPath, contract) {
 
   console.log(`Body bbox: y ${bodyBbox.min.y.toFixed(3)} to ${bodyBbox.max.y.toFixed(3)} m`);
 
+  const coverageIssues = [];
+
   for (const pieceDef of costumePiecesData.pieces) {
     try {
       if (pieceDef.type === 'torus') {
@@ -541,7 +599,55 @@ async function testBody(gender, glbPath, contract) {
         const result = checkPieceGeometry(geometry, pieceDef.offset_m);
         checkBboxWithinBody(result.bbox, bodyBbox, pieceDef.offset_m);
 
-        console.log(`${pieceDef.id}: ${result.triangles} tris, ${result.vertices} verts, bbox height ${result.bboxHeight.toFixed(3)} m`);
+        // Check vertex coverage
+        const coverageResult = checkVertexCoverage(
+          skinnedMesh.geometry,
+          selectedTriangles,
+          boneSet,
+          contract.bones
+        );
+
+        const coveragePct = (coverageResult.coverage * 100).toFixed(2);
+        const coverageStatus = coverageResult.coverage >= COVERAGE_MIN ? 'OK' : 'BELOW TARGET';
+        
+        if (coverageResult.coverage < COVERAGE_MIN) {
+          coverageIssues.push({
+            piece: pieceDef.id,
+            coverage: coveragePct,
+            covered: coverageResult.coveredCount,
+            eligible: coverageResult.eligibleCount
+          });
+        }
+
+        // Piece-specific checks
+        if (pieceDef.id === 'top') {
+          // Top should reach wrist
+          if (armYMax !== undefined) {
+            const topArmMinY = result.bbox.min.y;
+            if (topArmMinY > armYMax + 0.01) {
+              throw new Error(`Top does not reach wrist: minY=${topArmMinY.toFixed(3)} > armYMax=${armYMax.toFixed(3)}`);
+            }
+          }
+          
+          // Top should reach shoulder top (near shoulder_y)
+          const shoulderY = landmarks.shoulder_y;
+          const topMaxY = result.bbox.max.y;
+          if (topMaxY < shoulderY - 0.02) {
+            throw new Error(`Top does not reach shoulder: maxY=${topMaxY.toFixed(3)} < shoulder_y=${shoulderY.toFixed(3)}`);
+          }
+        }
+
+        if (pieceDef.id === 'wig') {
+          // Wig bbox top should be within 2 cm of head_top_y
+          const headTopY = landmarks.head_top_y;
+          const wigTopY = result.bbox.max.y;
+          const wigTopDiff = Math.abs(wigTopY - headTopY);
+          if (wigTopDiff > 0.02) {
+            console.log(`  NOTE: Wig top ${wigTopDiff.toFixed(3)}m from head_top_y (wigTop=${wigTopY.toFixed(3)}, headTop=${headTopY.toFixed(3)})`);
+          }
+        }
+
+        console.log(`${pieceDef.id}: ${result.triangles} tris, ${result.vertices} verts, bbox height ${result.bboxHeight.toFixed(3)} m, coverage ${coveragePct}% ${coverageStatus}`);
 
         geometry.dispose();
       }
@@ -550,6 +656,16 @@ async function testBody(gender, glbPath, contract) {
       process.exit(1);
     }
   }
+
+  // Report coverage issues
+  if (coverageIssues.length > 0) {
+    console.log(`\nCoverage warnings for ${gender}:`);
+    for (const issue of coverageIssues) {
+      console.log(`  ${issue.piece}: ${issue.coverage}% (${issue.covered}/${issue.eligible} vertices, target ${(COVERAGE_MIN * 100).toFixed(0)}%)`);
+    }
+  }
+
+  return coverageIssues;
 }
 
 /**
@@ -565,20 +681,32 @@ async function main() {
     console.log('All 23 bones assigned to exactly one group ✓');
 
     // Test male
-    await testBody(
+    const maleCoverageIssues = await testBody(
       'male',
       path.join(ROOT, 'assets/models/3D_Model_Male_V2_rigged.glb'),
       maleContract
     );
 
     // Test female
-    await testBody(
+    const femaleCoverageIssues = await testBody(
       'female',
       path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'),
       femaleContract
     );
 
     console.log('\n=== All checks passed ===');
+    
+    // Report coverage summary
+    const allCoverageIssues = [...maleCoverageIssues, ...femaleCoverageIssues];
+    if (allCoverageIssues.length > 0) {
+      console.log(`\n=== Coverage Report ===`);
+      console.log(`${allCoverageIssues.length} piece(s) below ${(COVERAGE_MIN * 100).toFixed(0)}% coverage target:`);
+      for (const issue of allCoverageIssues) {
+        console.log(`  ${issue.piece}: ${issue.coverage}% (target: ${(COVERAGE_MIN * 100).toFixed(0)}%)`);
+      }
+      console.log(`\nNote: Coverage target is ${(COVERAGE_MIN * 100).toFixed(0)}%. Actual coverage reported above.`);
+    }
+    
     process.exit(0);
   } catch (error) {
     console.error('\n=== FAIL ===');
