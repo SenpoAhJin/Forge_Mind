@@ -1,0 +1,12 @@
+{
+  "_comment": "Maps owned item categories (AttireCategory) to costume piece slots (from costumePieces.json)",
+  "_usage": "When user selects an owned item, map its auto_categorized_type to a costume piece slot. Unmapped categories return null (show 'No 3D piece for this item yet').",
+  "wig": "wig",
+  "top": "top",
+  "bottom": "bottom",
+  "footwear": "shoes",
+  "accessory": "belt",
+  "fabric": null,
+  "material": null,
+  "other": null
+}

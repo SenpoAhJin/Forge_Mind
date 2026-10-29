@@ -280,3 +280,106 @@ TypeScript: 36 errors (baseline, no new errors)
 - No memory leaks (proper cleanup via V2CostumeDemo)
 - Reusable for future V2 costume consumers
 
+
+## Step 6: Owned Items -> Pieces (Complete)
+
+### Changes Made
+
+1. **Created itemSlotMap.json** (`src/data/itemSlotMap.json`):
+   - Maps item categories (AttireCategory) to costume piece slots
+   - Mappings: wig→wig, top→top, bottom→bottom, footwear→shoes, accessory→belt
+   - Unmapped categories (fabric, material, other) return null
+   - Includes documentation comments in JSON
+
+2. **Item field analysis**:
+   - Item structure: OwnedAttire interface in `src/types/owned-attire.ts`
+   - Category field: `auto_categorized_type` (AttireCategory)
+   - Color field: `auto_categorized_color` (string)
+   - Both fields exist and are used throughout the app
+
+3. **Created outfitHelpers.ts** (`src/utils/outfitHelpers.ts`):
+   - `mapItemToPieceSlot(item)`: Maps item category to piece slot (returns null if unmapped)
+   - `getItemColor(item, defaultColor)`: Extracts color from item, with fallback and color name→hex mapping
+   - `applySuggestedPiece(slot, color, source, itemId)`: Stub function for AI integration (returns PieceSuggestion)
+   - `applyItemToOutfit(item, defaultColor)`: Combines mapping + color extraction
+   - `canMapItemToPiece(item)`: Helper to check if item has a 3D piece
+   - `getUnmappedItemMessage(item)`: User-friendly message for unmapped items
+
+4. **Integrated into Preview3DTestScreen**:
+   - Added owned items selector (collapsible section)
+   - Shows first 10 owned items from OwnedAttireContext
+   - Tapping an item applies it to the matching costume piece slot
+   - Sets piece color from item's auto_categorized_color
+   - Shows "No 3D piece for {category} items yet" for unmapped items
+   - Disabled state for unmapped items (can't be clicked)
+   - Success message shows which slot was updated
+   - All integration logic uses the new helper functions
+
+5. **V2 default decision**:
+   - **V1 remains the default** (no change to bodyAssets.ts)
+   - Rationale: Only Preview3DTestScreen uses V2 CostumeViewer (dev/test screen)
+   - Production consumers (ProjectPlanningScreen, MatchResultsScreen, Preview3D component) all use V1 garment system
+   - Per task: "IF every Step 4 consumer now renders with shared viewer using V2: make V2 the app default"
+   - Current state: NO production consumer uses V2 yet
+   - V1/V2 toggle remains available in Preview3DTestScreen for dev testing
+   - One-line revert: `setActiveBodySet('v1')` (already exists in code)
+
+6. **Missing field handling**:
+   - No missing fields detected
+   - Items have both `auto_categorized_type` and `auto_categorized_color`
+   - Color handling includes fallback for "unclear" or missing values
+   - No crashes on missing data (all helpers handle null/undefined safely)
+
+### Test Plan
+
+1. **Item-to-piece mapping**:
+   - Enter V2 Costume Demo
+   - Expand "Owned Items" section
+   - Tap a wig item → should enable wig piece with item's color
+   - Tap a top item → should enable top piece with item's color
+   - Tap a material/fabric item → should show "No 3D piece" message
+   - Verify unmapped items are visually disabled
+
+2. **Color extraction**:
+   - Items with color names (red, blue, etc.) → should convert to hex colors
+   - Items with "unclear" color → should use piece default color
+   - Manual color change still works (doesn't get overridden)
+
+3. **Integration with existing features**:
+   - Item selection works alongside manual piece toggles
+   - Color picker still works after applying an item
+   - Body type switch preserves item-applied pieces
+   - AsyncStorage persistence still works
+
+### TypeScript Status
+
+Baseline maintained: **36 errors** (no new errors introduced)
+
+### BLOCKED Items
+
+None. All requirements completed:
+- ✅ Item structure analyzed (has category and color fields)
+- ✅ itemSlotMap.json created with all categories
+- ✅ Mapping function handles unmapped categories gracefully
+- ✅ Integration added to outfit planning (Preview3DTestScreen)
+- ✅ applySuggestedPiece stub created for future AI
+- ✅ V2 default decision made (V1 remains default)
+- ✅ No crashes on missing data (all helpers are defensive)
+
+### V2 Default Decision Rationale
+
+**Current V2 Usage:**
+- Preview3DTestScreen (dev/test only)
+
+**Current V1 Usage:**
+- Preview3D component (used by MatchResultsScreen, ThreeDPreview)
+- ProjectPlanningScreen (3D outfit builder)
+- All production 3D garment rendering
+
+**Decision:**
+Keep V1 as default. V2 is not yet used by any production consumer. When more consumers migrate to V2 CostumeViewer in future steps, the default can be reconsidered.
+
+**Migration path preserved:**
+- `setActiveBodySet('v2')` available in dev mode
+- CostumeViewer ready for new consumers
+- Item-to-piece mapping works with any body set

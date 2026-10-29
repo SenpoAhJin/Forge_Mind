@@ -8,6 +8,9 @@ import { Button } from '../components/buttons/Button';
 import { setActiveBodySet, getActiveBodySetId, type BodySetId } from '../config/bodyAssets';
 import CostumeViewer from '../components/CostumeViewer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useOwnedAttire } from '../contexts/OwnedAttireContext';
+import { applyItemToOutfit, canMapItemToPiece, getUnmappedItemMessage } from '../utils/outfitHelpers';
+import type { OwnedAttire } from '../types/owned-attire';
 
 // Load costume pieces data
 const costumePiecesData = require('../data/costumePieces.json');
@@ -68,6 +71,11 @@ export default function Preview3DTestScreen() {
   const [debugMode, setDebugMode] = useState(false);
   const [debugInfo, setDebugInfo] = useState<Map<string, any>>(new Map());
   const [cameraPosition, setCameraPosition] = useState<'front' | 'side' | 'back'>('front');
+  const [showItemSelector, setShowItemSelector] = useState(false);
+  const [itemMessage, setItemMessage] = useState<string | null>(null);
+  
+  // Access owned items for integration demo
+  const { items: ownedItems } = useOwnedAttire();
 
   // Load outfit state from AsyncStorage on mount
   useEffect(() => {
@@ -182,6 +190,32 @@ export default function Preview3DTestScreen() {
 
   const removeAllPieces = () => {
     setEnabledPieces(new Set());
+  };
+
+  // COSTUME-2 Step 6: Handle owned item selection
+  const handleItemSelect = (item: OwnedAttire) => {
+    // Try to map item to a costume piece
+    const suggestion = applyItemToOutfit(item);
+    
+    if (!suggestion) {
+      // No 3D piece for this item type
+      setItemMessage(getUnmappedItemMessage(item));
+      return;
+    }
+    
+    // Apply the piece
+    const updatedPieces = new Set(enabledPieces);
+    updatedPieces.add(suggestion.slot);
+    setEnabledPieces(updatedPieces);
+    
+    // Apply the color
+    setPieceColor(suggestion.slot, suggestion.color);
+    
+    // Show success message
+    setItemMessage(`Applied ${item.auto_categorized_type} to ${suggestion.slot} slot`);
+    
+    // Clear message after 3 seconds
+    setTimeout(() => setItemMessage(null), 3000);
   };
 
   return (
@@ -444,6 +478,57 @@ export default function Preview3DTestScreen() {
                     ))}
                   </View>
                 </>
+              )}
+
+              {/* COSTUME-2 Step 6: Owned Items Integration */}
+              <TouchableOpacity
+                style={styles.itemSelectorToggle}
+                onPress={() => setShowItemSelector(!showItemSelector)}
+              >
+                <Text style={styles.sectionLabel}>
+                  Owned Items {showItemSelector ? '▼' : '▶'}
+                </Text>
+                <Text style={styles.itemSelectorHint}>
+                  Apply owned items to costume pieces
+                </Text>
+              </TouchableOpacity>
+
+              {showItemSelector && ownedItems.length > 0 && (
+                <View style={styles.itemSelector}>
+                  {ownedItems.slice(0, 10).map((item) => {
+                    const canMap = canMapItemToPiece(item);
+                    return (
+                      <TouchableOpacity
+                        key={item.attire_id}
+                        style={[
+                          styles.itemCard,
+                          !canMap && styles.itemCardDisabled,
+                        ]}
+                        onPress={() => handleItemSelect(item)}
+                        disabled={!canMap}
+                      >
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`}
+                        </Text>
+                        <Text style={styles.itemCategory}>
+                          {item.auto_categorized_type}
+                        </Text>
+                        {!canMap && (
+                          <Text style={styles.itemNoMapping}>No 3D piece</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {ownedItems.length === 0 && (
+                    <Text style={styles.noItemsText}>No owned items yet</Text>
+                  )}
+                </View>
+              )}
+
+              {itemMessage && (
+                <View style={styles.itemMessage}>
+                  <Text style={styles.itemMessageText}>{itemMessage}</Text>
+                </View>
               )}
             </View>
           </View>
@@ -754,5 +839,65 @@ const styles = StyleSheet.create({
     color: '#34495e',
     fontFamily: 'monospace',
     marginVertical: 2,
+  },
+  itemSelectorToggle: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  itemSelectorHint: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 2,
+  },
+  itemSelector: {
+    marginTop: 8,
+    maxHeight: 200,
+  },
+  itemCard: {
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 8,
+  },
+  itemCardDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#f5f5f5',
+  },
+  itemName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 2,
+  },
+  itemCategory: {
+    fontSize: 11,
+    color: '#7f8c8d',
+  },
+  itemNoMapping: {
+    fontSize: 10,
+    color: '#e74c3c',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  noItemsText: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 20,
+  },
+  itemMessage: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#d4edda',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#c3e6cb',
+  },
+  itemMessageText: {
+    fontSize: 12,
+    color: '#155724',
   },
 });
