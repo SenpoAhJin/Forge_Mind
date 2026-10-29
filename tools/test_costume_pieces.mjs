@@ -163,12 +163,42 @@ function resolveBoneSet(pieceDef) {
 /**
  * Select triangles for a piece.
  */
-function selectTriangles(geometry, vertexBoneMap, boneSet, yMin, yMax, armYMax) {
+function selectTriangles(geometry, boneSet, bones, yMin, yMax, armYMax) {
   const position = geometry.attributes.position;
   const index = geometry.index;
+  const skinIndex = geometry.attributes.skinIndex;
+  const skinWeight = geometry.attributes.skinWeight;
 
-  if (!index) {
-    throw new Error('Geometry must have an index');
+  if (!index || !skinIndex || !skinWeight) {
+    throw new Error('Geometry must have index, skinIndex, and skinWeight');
+  }
+
+  const SOFT_WEIGHT_MIN = 0.5;
+
+  function vertexBelongsToPiece(vertexIndex) {
+    let sumWeight = 0;
+    for (let j = 0; j < 4; j++) {
+      const boneIdx = skinIndex.getComponent(vertexIndex, j);
+      if (boneIdx >= 0 && boneIdx < bones.length) {
+        const boneName = sanitizeBoneName(bones[boneIdx].name);
+        if (boneSet.has(boneName)) {
+          sumWeight += skinWeight.getComponent(vertexIndex, j);
+        }
+      }
+    }
+    return sumWeight >= SOFT_WEIGHT_MIN;
+  }
+
+  function clipTriangleToYBand(i0, i1, i2) {
+    const y0 = position.getY(i0);
+    const y1 = position.getY(i1);
+    const y2 = position.getY(i2);
+
+    const in0 = (yMin === undefined || y0 >= yMin) && (yMax === undefined || y0 <= yMax);
+    const in1 = (yMin === undefined || y1 >= yMin) && (yMax === undefined || y1 <= yMax);
+    const in2 = (yMin === undefined || y2 >= yMin) && (yMax === undefined || y2 <= yMax);
+
+    return in0 || in1 || in2;
   }
 
   const selectedTriangles = [];
@@ -179,30 +209,16 @@ function selectTriangles(geometry, vertexBoneMap, boneSet, yMin, yMax, armYMax) 
     const i1 = index.getX(triIdx * 3 + 1);
     const i2 = index.getX(triIdx * 3 + 2);
 
-    const bone0 = vertexBoneMap.get(i0);
-    const bone1 = vertexBoneMap.get(i1);
-    const bone2 = vertexBoneMap.get(i2);
+    const belongs0 = vertexBelongsToPiece(i0);
+    const belongs1 = vertexBelongsToPiece(i1);
+    const belongs2 = vertexBelongsToPiece(i2);
 
-    if (!bone0 || !bone1 || !bone2) continue;
-    if (!boneSet.has(bone0) || !boneSet.has(bone1) || !boneSet.has(bone2)) continue;
+    const belongCount = (belongs0 ? 1 : 0) + (belongs1 ? 1 : 0) + (belongs2 ? 1 : 0);
+    
+    if (belongCount < 2) continue;
 
-    const y0 = position.getY(i0);
-    const y1 = position.getY(i1);
-    const y2 = position.getY(i2);
-
-    let inBand = true;
-
-    const isArm = bone0.includes('arm') || bone1.includes('arm') || bone2.includes('arm');
-    const isHand = bone0.includes('hand') || bone1.includes('hand') || bone2.includes('hand');
-
-    if (isArm && !isHand && armYMax !== undefined) {
-      if (yMin !== undefined && (y0 < yMin || y1 < yMin || y2 < yMin)) inBand = false;
-      if (armYMax !== undefined && (y0 > armYMax || y1 > armYMax || y2 > armYMax)) inBand = false;
-    } else {
-      if (yMin !== undefined && (y0 < yMin || y1 < yMin || y2 < yMin)) inBand = false;
-      if (yMax !== undefined && (y0 > yMax || y1 > yMax || y2 > yMax)) inBand = false;
-    }
-
+    const inBand = clipTriangleToYBand(i0, i1, i2);
+    
     if (inBand) {
       selectedTriangles.push(triIdx);
     }
@@ -357,17 +373,38 @@ function checkBboxWithinBody(pieceBbox, bodyBbox, offset_m) {
 /**
  * Check belt radii.
  */
-function checkBeltRadii(skinnedMesh, yPosition, tubeRadius) {
+function checkBeltRadii(skinnedMesh, contract, yPosition, tubeRadius) {
   const geometry = skinnedMesh.geometry;
   const position = geometry.attributes.position;
+  const skinIndex = geometry.attributes.skinIndex;
+  const skinWeight = geometry.attributes.skinWeight;
 
-  const tolerance = 0.05;
+  const bones = contract.bones;
+  const torsoBoneIndices = new Set();
+  bones.forEach((bone, idx) => {
+    const name = bone.name.toLowerCase();
+    if (!name.includes('arm') && !name.includes('hand')) {
+      torsoBoneIndices.add(idx);
+    }
+  });
+
+  const tolerance = 0.01;
   let minX = Infinity, maxX = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
 
   for (let i = 0; i < position.count; i++) {
     const y = position.getY(i);
-    if (Math.abs(y - yPosition) < tolerance) {
+    if (Math.abs(y - yPosition) > tolerance) continue;
+
+    let torsoWeight = 0;
+    for (let j = 0; j < 4; j++) {
+      const boneIdx = skinIndex.getComponent(i, j);
+      if (torsoBoneIndices.has(boneIdx)) {
+        torsoWeight += skinWeight.getComponent(i, j);
+      }
+    }
+
+    if (torsoWeight > 0.5) {
       const x = position.getX(i);
       const z = position.getZ(i);
       minX = Math.min(minX, x);
@@ -378,7 +415,7 @@ function checkBeltRadii(skinnedMesh, yPosition, tubeRadius) {
   }
 
   if (!isFinite(minX)) {
-    throw new Error(`No vertices found near y=${yPosition} for belt`);
+    throw new Error(`No torso vertices found near y=${yPosition} for belt`);
   }
 
   const radiusX = (maxX - minX) / 2;
@@ -388,11 +425,10 @@ function checkBeltRadii(skinnedMesh, yPosition, tubeRadius) {
 
   const torusRadius = (radiusX + radiusZ) / 2;
 
-  // Check that torus radius is the average of body radii (within tolerance)
-  // Since the body is not circular, we approximate with average radius
-  const expectedAverage = (radiusX + radiusZ) / 2;
-  if (Math.abs(torusRadius - expectedAverage) > BELT_RADIUS_TOLERANCE) {
-    throw new Error(`Belt torus radius ${torusRadius.toFixed(3)} m differs from expected average ${expectedAverage.toFixed(3)} m`);
+  // Check that belt dimensions match body torso dimensions within 3 cm
+  if (Math.abs(radiusX * 2 - bodyWidth) > BELT_RADIUS_TOLERANCE || 
+      Math.abs(radiusZ * 2 - bodyDepth) > BELT_RADIUS_TOLERANCE) {
+    throw new Error(`Belt radii exceed tolerance: width=${bodyWidth.toFixed(3)}m, depth=${bodyDepth.toFixed(3)}m`);
   }
 
   return { torusRadius, bodyWidth, bodyDepth };
@@ -470,7 +506,7 @@ async function testBody(gender, glbPath, contract) {
       if (pieceDef.type === 'torus') {
         // Belt
         const yPos = landmarks[pieceDef.yPosition.landmark] + pieceDef.yPosition.offset;
-        const { torusRadius, bodyWidth, bodyDepth } = checkBeltRadii(skinnedMesh, yPos, pieceDef.tubeRadius);
+        const { torusRadius, bodyWidth, bodyDepth } = checkBeltRadii(skinnedMesh, contract, yPos, pieceDef.tubeRadius);
         console.log(`${pieceDef.id}: belt torus radius ${torusRadius.toFixed(3)} m (body w=${bodyWidth.toFixed(3)} m, d=${bodyDepth.toFixed(3)} m)`);
       } else {
         // Derived piece
@@ -489,8 +525,8 @@ async function testBody(gender, glbPath, contract) {
 
         const selectedTriangles = selectTriangles(
           skinnedMesh.geometry,
-          vertexBoneMap,
           boneSet,
+          contract.bones,
           yMin,
           yMax,
           armYMax

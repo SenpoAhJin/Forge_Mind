@@ -48,6 +48,8 @@ export default function Preview3DTestScreen() {
   const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
   const [previousBodySet, setPreviousBodySet] = useState<BodySetId | null>(null);
   const [showCostumeDemo, setShowCostumeDemo] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<Map<string, any>>(new Map());
 
   const handleBodySetChange = (newSet: BodySetId) => {
     if (__DEV__) {
@@ -101,11 +103,10 @@ export default function Preview3DTestScreen() {
     const allPieces = new Set<string>();
     const allColors = new Map<string, string>();
     
+    // Wear ALL pieces, not just defaultEnabled ones
     for (const piece of costumePiecesData.pieces) {
-      if (piece.defaultEnabled) {
-        allPieces.add(piece.id);
-        allColors.set(piece.id, piece.defaultColor);
-      }
+      allPieces.add(piece.id);
+      allColors.set(piece.id, piece.defaultColor);
     }
     
     setEnabledPieces(allPieces);
@@ -299,6 +300,8 @@ export default function Preview3DTestScreen() {
                     bodyType={costumeBodyType}
                     enabledPieces={enabledPieces}
                     pieceColors={pieceColors}
+                    debugMode={debugMode}
+                    onDebugInfo={setDebugInfo}
                   />
                 </Suspense>
 
@@ -311,6 +314,31 @@ export default function Preview3DTestScreen() {
 
             {/* Body Type Selector */}
             <View style={styles.costumeControls}>
+              {/* Debug Toggle */}
+              <View style={styles.debugToggleRow}>
+                <Text style={styles.sectionLabel}>Debug Mode:</Text>
+                <TouchableOpacity
+                  style={[styles.debugToggle, debugMode && styles.debugToggleActive]}
+                  onPress={() => setDebugMode(!debugMode)}
+                >
+                  <Text style={[styles.debugToggleText, debugMode && styles.debugToggleTextActive]}>
+                    {debugMode ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {debugMode && debugInfo.size > 0 && (
+                <View style={styles.debugPanel}>
+                  <Text style={styles.debugTitle}>Debug Info:</Text>
+                  {Array.from(debugInfo.entries()).map(([pieceId, info]) => (
+                    <Text key={pieceId} style={styles.debugText}>
+                      {pieceId}: {info.triangleCount} tris, coverage {(info.vertexCoverage * 100).toFixed(1)}% 
+                      ({info.coveredVertexCount}/{info.eligibleVertexCount} verts)
+                    </Text>
+                  ))}
+                </View>
+              )}
+
               <BodyTypeSelector
                 value={costumeBodyType}
                 onChange={setCostumeBodyType}
@@ -641,5 +669,51 @@ const styles = StyleSheet.create({
   colorSwatchActive: {
     borderWidth: 3,
     borderColor: '#2c3e50',
+  },
+  debugToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  debugToggle: {
+    marginLeft: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    backgroundColor: '#fff',
+  },
+  debugToggleActive: {
+    backgroundColor: '#f39c12',
+    borderColor: '#f39c12',
+  },
+  debugToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  debugToggleTextActive: {
+    color: '#fff',
+  },
+  debugPanel: {
+    padding: 12,
+    backgroundColor: '#fff9e6',
+    borderLeftWidth: 3,
+    borderLeftColor: '#f39c12',
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  debugTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 6,
+  },
+  debugText: {
+    fontSize: 11,
+    color: '#34495e',
+    fontFamily: 'monospace',
+    marginVertical: 2,
   },
 });

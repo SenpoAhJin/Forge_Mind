@@ -178,23 +178,74 @@ function resolveBoneSet(
   return boneSet;
 }
 
+// Soft weight threshold for vertex belonging
+const SOFT_WEIGHT_MIN = 0.5;
+
 /**
- * Select triangles whose three vertices all belong to the piece's bone groups
- * and fall within the y-band.
+ * Check if a vertex belongs to a piece using summed skin weights.
+ */
+function vertexBelongsToPiece(
+  vertexIndex: number,
+  boneSet: Set<string>,
+  skinIndex: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  skinWeight: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  bones: Array<{ name: string }>
+): boolean {
+  let sumWeight = 0;
+  for (let j = 0; j < 4; j++) {
+    const boneIdx = skinIndex.getComponent(vertexIndex, j);
+    if (boneIdx >= 0 && boneIdx < bones.length) {
+      const boneName = sanitizeBoneName(bones[boneIdx].name);
+      if (boneSet.has(boneName)) {
+        sumWeight += skinWeight.getComponent(vertexIndex, j);
+      }
+    }
+  }
+  return sumWeight >= SOFT_WEIGHT_MIN;
+}
+
+/**
+ * Clip a triangle against horizontal planes (yMin, yMax).
+ * Returns triangle indices if the triangle intersects the band.
+ */
+function clipTriangleToYBand(
+  i0: number, i1: number, i2: number,
+  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  yMin: number | undefined,
+  yMax: number | undefined
+): boolean {
+  const y0 = position.getY(i0);
+  const y1 = position.getY(i1);
+  const y2 = position.getY(i2);
+
+  // Check if any vertex is in band
+  const in0 = (yMin === undefined || y0 >= yMin) && (yMax === undefined || y0 <= yMax);
+  const in1 = (yMin === undefined || y1 >= yMin) && (yMax === undefined || y1 <= yMax);
+  const in2 = (yMin === undefined || y2 >= yMin) && (yMax === undefined || y2 <= yMax);
+
+  // Keep triangle if any vertex is in band (we'll clip geometry later)
+  return in0 || in1 || in2;
+}
+
+/**
+ * Select triangles where at least 2 of 3 vertices belong to the piece's bone groups
+ * (using summed skin weights) and intersect the y-band.
  */
 function selectTriangles(
   geometry: THREE.BufferGeometry,
-  vertexBoneMap: Map<number, string>,
   boneSet: Set<string>,
+  bones: Array<{ name: string }>,
   yMin: number | undefined,
   yMax: number | undefined,
   armYMax?: number | undefined
 ): number[] {
   const position = geometry.attributes.position;
   const index = geometry.index;
+  const skinIndex = geometry.attributes.skinIndex;
+  const skinWeight = geometry.attributes.skinWeight;
   
-  if (!index) {
-    throw new Error('Geometry must have an index');
+  if (!index || !skinIndex || !skinWeight) {
+    throw new Error('Geometry must have index, skinIndex, and skinWeight');
   }
 
   const selectedTriangles: number[] = [];
@@ -205,34 +256,19 @@ function selectTriangles(
     const i1 = index.getX(triIdx * 3 + 1);
     const i2 = index.getX(triIdx * 3 + 2);
 
-    const bone0 = vertexBoneMap.get(i0);
-    const bone1 = vertexBoneMap.get(i1);
-    const bone2 = vertexBoneMap.get(i2);
+    // Check vertex belonging using summed weights
+    const belongs0 = vertexBelongsToPiece(i0, boneSet, skinIndex, skinWeight, bones);
+    const belongs1 = vertexBelongsToPiece(i1, boneSet, skinIndex, skinWeight, bones);
+    const belongs2 = vertexBelongsToPiece(i2, boneSet, skinIndex, skinWeight, bones);
 
-    // All three vertices must have bones in the set
-    if (!bone0 || !bone1 || !bone2) continue;
-    if (!boneSet.has(bone0) || !boneSet.has(bone1) || !boneSet.has(bone2)) continue;
-
-    // Check y-band
-    const y0 = position.getY(i0);
-    const y1 = position.getY(i1);
-    const y2 = position.getY(i2);
-
-    let inBand = true;
-
-    // Special handling for arms with armYMax
-    const isArm = bone0.includes('arm') || bone1.includes('arm') || bone2.includes('arm');
-    const isHand = bone0.includes('hand') || bone1.includes('hand') || bone2.includes('hand');
+    const belongCount = (belongs0 ? 1 : 0) + (belongs1 ? 1 : 0) + (belongs2 ? 1 : 0);
     
-    if (isArm && !isHand && armYMax !== undefined) {
-      // Arm vertices use armYMax instead of yMax
-      if (yMin !== undefined && (y0 < yMin || y1 < yMin || y2 < yMin)) inBand = false;
-      if (armYMax !== undefined && (y0 > armYMax || y1 > armYMax || y2 > armYMax)) inBand = false;
-    } else {
-      if (yMin !== undefined && (y0 < yMin || y1 < yMin || y2 < yMin)) inBand = false;
-      if (yMax !== undefined && (y0 > yMax || y1 > yMax || y2 > yMax)) inBand = false;
-    }
+    // Keep triangle if at least 2 vertices belong
+    if (belongCount < 2) continue;
 
+    // Check y-band (clip against planes)
+    const inBand = clipTriangleToYBand(i0, i1, i2, position, yMin, yMax);
+    
     if (inBand) {
       selectedTriangles.push(triIdx);
     }
@@ -308,24 +344,53 @@ function buildOffsetGeometry(
 
 /**
  * Build a torus (belt) at the specified y position.
- * Radii measured from body vertices at that height.
+ * Radii measured from torso vertices only (exclude arms/hands) at that height.
  */
 export function buildBeltGeometry(
   skinnedMesh: THREE.SkinnedMesh,
+  contract: any,
   yPosition: number,
   tubeRadius: number
 ): THREE.BufferGeometry {
   const geometry = skinnedMesh.geometry;
   const position = geometry.attributes.position;
+  const skinIndex = geometry.attributes.skinIndex;
+  const skinWeight = geometry.attributes.skinWeight;
 
-  // Find vertices near yPosition
-  const tolerance = 0.05; // metres
+  if (!skinIndex || !skinWeight) {
+    throw new Error('SkinnedMesh missing skinIndex or skinWeight');
+  }
+
+  const bones = contract.bones as Array<{ name: string }>;
+  
+  // Build set of torso bone indices (exclude arms and hands)
+  const torsoBoneIndices = new Set<number>();
+  bones.forEach((bone, idx) => {
+    const name = bone.name.toLowerCase();
+    if (!name.includes('arm') && !name.includes('hand')) {
+      torsoBoneIndices.add(idx);
+    }
+  });
+
+  // Find vertices near yPosition that are primarily torso-weighted
+  const tolerance = 0.01; // 1 cm
   let minX = Infinity, maxX = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
 
   for (let i = 0; i < position.count; i++) {
     const y = position.getY(i);
-    if (Math.abs(y - yPosition) < tolerance) {
+    if (Math.abs(y - yPosition) > tolerance) continue;
+
+    // Check if vertex is primarily torso (sum torso weights > 0.5)
+    let torsoWeight = 0;
+    for (let j = 0; j < 4; j++) {
+      const boneIdx = skinIndex.getComponent(i, j);
+      if (torsoBoneIndices.has(boneIdx)) {
+        torsoWeight += skinWeight.getComponent(i, j);
+      }
+    }
+
+    if (torsoWeight > 0.5) {
       const x = position.getX(i);
       const z = position.getZ(i);
       minX = Math.min(minX, x);
@@ -336,11 +401,21 @@ export function buildBeltGeometry(
   }
 
   if (!isFinite(minX)) {
-    throw new Error(`No vertices found near y=${yPosition} for belt`);
+    throw new Error(`No torso vertices found near y=${yPosition} for belt`);
   }
 
   const radiusX = (maxX - minX) / 2;
   const radiusZ = (maxZ - minZ) / 2;
+
+  // Validate belt radii are within 3 cm of body dimensions
+  const bodyWidth = maxX - minX;
+  const bodyDepth = maxZ - minZ;
+  const tolerance3cm = 0.03;
+  
+  if (Math.abs(radiusX * 2 - bodyWidth) > tolerance3cm || 
+      Math.abs(radiusZ * 2 - bodyDepth) > tolerance3cm) {
+    console.warn(`Belt radii validation: width=${bodyWidth.toFixed(3)}m, depth=${bodyDepth.toFixed(3)}m`);
+  }
 
   // Create torus with elliptical cross-section approximation
   // Use average radius for now (proper ellipse would need custom geometry)
@@ -353,6 +428,125 @@ export function buildBeltGeometry(
   torusGeometry.translate(0, yPosition, 0);
 
   return torusGeometry;
+}
+
+export interface PieceDebugInfo {
+  triangleCount: number;
+  vertexCoverage: number; // 0-1: eligible vertices inside triangles / all eligible vertices
+  boneSet: Set<string>;
+  eligibleVertexCount: number;
+  coveredVertexCount: number;
+}
+
+/**
+ * Compute debug info for a piece without building the mesh.
+ */
+export function computePieceDebugInfo(
+  bodyScene: THREE.Object3D,
+  contract: any,
+  pieceDef: PieceDefinition,
+  data: CostumePiecesData
+): PieceDebugInfo | null {
+  const skinnedMesh = findBodyMesh(bodyScene);
+  if (!skinnedMesh) return null;
+
+  if (pieceDef.type === 'torus') {
+    // Belt has no vertex coverage concept
+    return {
+      triangleCount: 0,
+      vertexCoverage: 1.0,
+      boneSet: new Set(),
+      eligibleVertexCount: 0,
+      coveredVertexCount: 0,
+    };
+  }
+
+  const meshBounds = new THREE.Box3().setFromObject(skinnedMesh);
+  const landmarks = computeLandmarks(contract, meshBounds);
+  const boneSet = resolveBoneSet(pieceDef, data);
+
+  let yMin: number | undefined;
+  let yMax: number | undefined;
+
+  if (pieceDef.yMin) {
+    yMin = landmarks[pieceDef.yMin.landmark as keyof Landmarks] + pieceDef.yMin.offset;
+  }
+  if (pieceDef.yMax) {
+    yMax = landmarks[pieceDef.yMax.landmark as keyof Landmarks] + pieceDef.yMax.offset;
+  }
+
+  // Build vertex map using SUMMED skin weights (not dominant bone)
+  const geometry = skinnedMesh.geometry;
+  const skinIndex = geometry.attributes.skinIndex;
+  const skinWeight = geometry.attributes.skinWeight;
+  const position = geometry.attributes.position;
+
+  if (!skinIndex || !skinWeight) return null;
+
+  const bones = contract.bones as Array<{ name: string }>;
+  const boneNameToIndex = new Map<string, number>();
+  bones.forEach((b, idx) => {
+    boneNameToIndex.set(sanitizeBoneName(b.name), idx);
+  });
+
+  // Find vertices that belong to this piece (summed weight >= 0.5)
+  const SOFT_WEIGHT_MIN = 0.5;
+  const eligibleVertices = new Set<number>();
+
+  for (let i = 0; i < position.count; i++) {
+    const y = position.getY(i);
+    
+    // Check y-band
+    if (yMin !== undefined && y < yMin) continue;
+    if (yMax !== undefined && y > yMax) continue;
+
+    // Sum weights for this piece's bones
+    let sumWeight = 0;
+    for (let j = 0; j < 4; j++) {
+      const boneIdx = skinIndex.getComponent(i, j);
+      if (boneIdx >= 0 && boneIdx < bones.length) {
+        const boneName = sanitizeBoneName(bones[boneIdx].name);
+        if (boneSet.has(boneName)) {
+          sumWeight += skinWeight.getComponent(i, j);
+        }
+      }
+    }
+
+    if (sumWeight >= SOFT_WEIGHT_MIN) {
+      eligibleVertices.add(i);
+    }
+  }
+
+  // Now find which eligible vertices are covered by selected triangles
+  const selectedTriangles = selectTriangles(
+    geometry,
+    boneSet,
+    bones,
+    yMin,
+    yMax,
+    pieceDef.armYMax ? landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset : undefined
+  );
+
+  const coveredVertices = new Set<number>();
+  const index = geometry.index!;
+  for (const triIdx of selectedTriangles) {
+    for (let j = 0; j < 3; j++) {
+      const vIdx = index.getX(triIdx * 3 + j);
+      if (eligibleVertices.has(vIdx)) {
+        coveredVertices.add(vIdx);
+      }
+    }
+  }
+
+  const coverage = eligibleVertices.size > 0 ? coveredVertices.size / eligibleVertices.size : 0;
+
+  return {
+    triangleCount: selectedTriangles.length,
+    vertexCoverage: coverage,
+    boneSet,
+    eligibleVertexCount: eligibleVertices.size,
+    coveredVertexCount: coveredVertices.size,
+  };
 }
 
 /**
@@ -395,12 +589,11 @@ export function buildCostumePiece(
     // Belt
     const landmarks = computeLandmarks(contract, new THREE.Box3().setFromObject(skinnedMesh));
     const yPos = landmarks[pieceDef.yPosition.landmark as keyof Landmarks] + pieceDef.yPosition.offset;
-    geometry = buildBeltGeometry(skinnedMesh, yPos, pieceDef.tubeRadius);
+    geometry = buildBeltGeometry(skinnedMesh, contract, yPos, pieceDef.tubeRadius);
   } else {
-    // Derived piece
+    // Derive piece
     const meshBounds = new THREE.Box3().setFromObject(skinnedMesh);
     const landmarks = computeLandmarks(contract, meshBounds);
-    const vertexBoneMap = buildVertexBoneMap(skinnedMesh, contract);
     const boneSet = resolveBoneSet(pieceDef, data);
 
     let yMin: number | undefined;
@@ -417,10 +610,11 @@ export function buildCostumePiece(
       armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
     }
 
+    const bones = contract.bones as Array<{ name: string }>;
     const selectedTriangles = selectTriangles(
       skinnedMesh.geometry,
-      vertexBoneMap,
       boneSet,
+      bones,
       yMin,
       yMax,
       armYMax
