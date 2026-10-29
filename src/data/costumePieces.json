@@ -12,12 +12,12 @@
       "id": "top",
       "slot": "torso",
       "groupDetails": {
-        "torso": ["pelvis", "spine_01", "spine_02", "spine_03", "clavicle.L", "clavicle.R"],
+        "torso": ["pelvis", "spine_01", "spine_02", "spine_03"],
         "armL": ["upperarm.L", "forearm.L", "hand.L"],
         "armR": ["upperarm.R", "forearm.R", "hand.R"]
       },
-      "yMin": { "landmark": "hip_y", "offset": -0.05 },
-      "yMax": { "landmark": "neck_y", "offset": 0.08 },
+      "yMin": { "landmark": "hip_y", "offset": 0.00 },
+      "yMax": { "landmark": "neck_y", "offset": 0.06 },
       "armYMax": { "landmark": "wrist_y", "offset": 0.02 },
       "offset_m": 0.008,
       "defaultColor": "#3B82F6",
@@ -33,7 +33,7 @@
         "legR": ["thigh.R", "shin.R"]
       },
       "yMin": { "landmark": "ankle_y", "offset": 0.04 },
-      "yMax": { "landmark": "hip_y", "offset": 0.15 },
+      "yMax": { "landmark": "hip_y", "offset": 0.05 },
       "offset_m": 0.005,
       "defaultColor": "#1E293B",
       "defaultEnabled": true
@@ -70,8 +70,9 @@
       "groupDetails": {
         "head_only": ["head"]
       },
-      "yMin": { "landmark": "neck_y", "offset": 0.15 },
-      "yMax": { "landmark": "head_top_y", "offset": 0.02 },
+      "yMin": { "landmark": "head_top_y", "offset": -0.18 },
+      "yMax": { "landmark": "head_top_y", "offset": 0.00 },
+      "hairlineDrop": 0.02,
       "offset_m": 0.015,
       "defaultColor": "#4B5563",
       "defaultEnabled": false

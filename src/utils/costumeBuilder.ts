@@ -27,6 +27,7 @@ export interface PieceDefinition {
   yMin?: LandmarkDef;
   yMax?: LandmarkDef;
   armYMax?: LandmarkDef;
+  hairlineDrop?: number; // For wig: distance below head_top_y for front hairline
   offset_m: number;
   defaultColor: string;
   defaultEnabled: boolean;
@@ -272,6 +273,7 @@ function labelVerticesByNearestBone(
  * 2. Label each triangle by centroid's nearest bone
  * 3. Select triangles whose label is in boneSet and centroid is in y-band
  * 4. Close gaps: include unselected triangles with >=2 selected edge neighbors
+ * 5. For wig pieces: exclude front face region (z < -0.05, below hairline)
  */
 function selectTriangles(
   geometry: THREE.BufferGeometry,
@@ -279,7 +281,9 @@ function selectTriangles(
   boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
   yMin: number | undefined,
   yMax: number | undefined,
-  armYMax?: number | undefined
+  armYMax?: number | undefined,
+  isWig?: boolean,
+  hairlineY?: number
 ): number[] {
   const position = geometry.attributes.position;
   const index = geometry.index;
@@ -323,7 +327,7 @@ function selectTriangles(
     triangleLabels.set(triIdx, nearestBone);
   }
   
-  // Select triangles: label in boneSet AND centroid in y-band
+  // Select triangles: label in boneSet AND centroid in y-band AND (for wig) not in face zone
   const initialSelection = new Set<number>();
   
   for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
@@ -343,6 +347,14 @@ function selectTriangles(
     // Check y-band
     if (yMin !== undefined && centroid.y < yMin) continue;
     if (yMax !== undefined && centroid.y > yMax) continue;
+    
+    // For wig: exclude face region (front = negative z, below hairline)
+    if (isWig && hairlineY !== undefined) {
+      // Face exclusion: triangles with z < -0.05 AND y < hairlineY
+      if (centroid.z < -0.05 && centroid.y < hairlineY) {
+        continue;
+      }
+    }
     
     initialSelection.add(triIdx);
   }
@@ -411,10 +423,6 @@ function selectTriangles(
   return Array.from(finalSelection);
 }
 
-/**
- * Clip triangles at a horizontal plane (for straight hems).
- * Removes triangles with all vertices above or below the plane.
- */
 function clipTrianglesAtPlane(
   selectedTriangles: number[],
   geometry: THREE.BufferGeometry,
@@ -424,7 +432,7 @@ function clipTrianglesAtPlane(
   const position = geometry.attributes.position;
   const index = geometry.index!;
   const result: number[] = [];
-  const tolerance = 1e-4;
+  const tolerance = 0; // Strict clipping for exact hem
   
   for (const triIdx of selectedTriangles) {
     const i0 = index.getX(triIdx * 3);
@@ -439,13 +447,13 @@ function clipTrianglesAtPlane(
     const maxY = Math.max(y0, y1, y2);
     
     if (keepAbove) {
-      // Keep triangle if any vertex is >= clipY
-      if (maxY >= clipY - tolerance) {
+      // Keep triangle if ALL vertices are >= clipY
+      if (minY >= clipY - tolerance) {
         result.push(triIdx);
       }
     } else {
-      // Keep triangle if any vertex is <= clipY
-      if (minY <= clipY + tolerance) {
+      // Keep triangle if ALL vertices are <= clipY
+      if (maxY <= clipY + tolerance) {
         result.push(triIdx);
       }
     }
@@ -681,7 +689,9 @@ export function computePieceDebugInfo(
     boneSegments,
     yMin,
     yMax,
-    pieceDef.armYMax ? landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset : undefined
+    pieceDef.armYMax ? landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset : undefined,
+    pieceDef.id === 'wig',
+    pieceDef.hairlineDrop ? landmarks.head_top_y - pieceDef.hairlineDrop : undefined
   );
 
   // Find covered vertices
@@ -796,13 +806,15 @@ export function buildCostumePiece(
       armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
     }
 
-    let selectedTriangles = selectTriangles(
+    let selected Triangles = selectTriangles(
       skinnedMesh.geometry,
       boneSet,
       boneSegments,
       yMin,
       yMax,
-      armYMax
+      armYMax,
+      pieceId === 'wig',
+      pieceDef.hairlineDrop ? landmarks.head_top_y - pieceDef.hairlineDrop : undefined
     );
 
     // Special handling for top piece: clip at hem for straight edge

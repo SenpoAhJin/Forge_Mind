@@ -132,7 +132,7 @@ function vertexBelongsToPiece(vertexIndex, boneSet, skinIndex, skinWeight, bones
   return sumWeight >= SOFT_WEIGHT_MIN;
 }
 
-function selectTriangles(geometry, boneSet, bones, yMin, yMax, armYMax) {
+function selectTriangles(geometry, boneSet, bones, yMin, yMax, armYMax, isWig, hairlineY) {
   const position = geometry.attributes.position;
   const index = geometry.index;
   const skinIndex = geometry.attributes.skinIndex;
@@ -261,7 +261,7 @@ async function diagnoseBody(gender, glbPath, contract) {
   console.log(`   neck_y: ${landmarks.neck_y.value.toFixed(4)}, head_top_y: ${landmarks.head_top_y.value.toFixed(4)}`);
   console.log(`   bone groups: ${Array.from(topBoneSet).join(', ')}`);
   
-  const selectedTopTriangles = selectTriangles(geometry, topBoneSet, bones, topYMin, topYMax, topArmYMax);
+  const selectedTopTriangles = selectTriangles(geometry, topBoneSet, bones, topYMin, topYMax, topArmYMax, false, undefined);
   
   // Find vertices in selected triangles
   const selectedVertices = new Set();
@@ -429,7 +429,7 @@ async function diagnoseBody(gender, glbPath, contract) {
   }
   
   // Check wig selected triangles
-  const selectedWigTriangles = selectTriangles(geometry, wigBoneSet, bones, wigYMin, wigYMax, undefined);
+  const selectedWigTriangles = selectTriangles(geometry, wigBoneSet, bones, wigYMin, wigYMax, undefined, true, undefined);
   const selectedWigVertices = new Set();
   let wigMinY = Infinity, wigMaxY = -Infinity;
   for (const triIdx of selectedWigTriangles) {
