@@ -1,0 +1,101 @@
+{
+  "boneGroups": {
+    "torso": ["pelvis", "spine_01", "spine_02", "spine_03", "clavicle.L", "clavicle.R"],
+    "head": ["neck", "head"],
+    "armL": ["upperarm.L", "forearm.L", "hand.L"],
+    "armR": ["upperarm.R", "forearm.R", "hand.R"],
+    "legL": ["thigh.L", "shin.L", "foot.L", "toe.L"],
+    "legR": ["thigh.R", "shin.R", "foot.R", "toe.R"]
+  },
+  "pieces": [
+    {
+      "id": "top",
+      "slot": "torso",
+      "groups": ["torso", "armL_upper", "armR_upper"],
+      "groupDetails": {
+        "torso": ["pelvis", "spine_01", "spine_02", "spine_03", "clavicle.L", "clavicle.R"],
+        "armL_upper": ["upperarm.L", "forearm.L"],
+        "armR_upper": ["upperarm.R", "forearm.R"]
+      },
+      "yMin": { "landmark": "hip_y", "offset": 0.05 },
+      "yMax": { "landmark": "neck_y", "offset": 0 },
+      "armYMax": { "landmark": "wrist_y", "offset": 0 },
+      "offset_m": 0.008,
+      "defaultColor": "#3B82F6",
+      "defaultEnabled": true
+    },
+    {
+      "id": "bottom",
+      "slot": "legs",
+      "groups": ["torso_lower", "legL", "legR"],
+      "groupDetails": {
+        "torso_lower": ["pelvis"],
+        "legL": ["thigh.L", "shin.L"],
+        "legR": ["thigh.R", "shin.R"]
+      },
+      "yMin": { "landmark": "ankle_y", "offset": 0.04 },
+      "yMax": { "landmark": "hip_y", "offset": 0.12 },
+      "offset_m": 0.005,
+      "defaultColor": "#1E293B",
+      "defaultEnabled": true
+    },
+    {
+      "id": "shoes",
+      "slot": "feet",
+      "groups": ["legL_feet", "legR_feet"],
+      "groupDetails": {
+        "legL_feet": ["foot.L", "toe.L"],
+        "legR_feet": ["foot.R", "toe.R"]
+      },
+      "yMin": { "landmark": "floor", "offset": 0 },
+      "yMax": { "landmark": "ankle_y", "offset": 0.05 },
+      "offset_m": 0.008,
+      "defaultColor": "#0F172A",
+      "defaultEnabled": true
+    },
+    {
+      "id": "gloves",
+      "slot": "hands",
+      "groups": ["hand.L", "hand.R"],
+      "groupDetails": {
+        "hand.L": ["hand.L"],
+        "hand.R": ["hand.R"]
+      },
+      "offset_m": 0.005,
+      "defaultColor": "#1E293B",
+      "defaultEnabled": false
+    },
+    {
+      "id": "wig",
+      "slot": "head",
+      "groups": ["head"],
+      "groupDetails": {
+        "head": ["head"]
+      },
+      "yMin": { "landmark": "head_top_y", "offset": -0.12 },
+      "yMax": { "landmark": "head_top_y", "offset": 0 },
+      "offset_m": 0.015,
+      "defaultColor": "#4B5563",
+      "defaultEnabled": false
+    },
+    {
+      "id": "belt",
+      "slot": "accessory",
+      "type": "torus",
+      "yPosition": { "landmark": "hip_y", "offset": 0.10 },
+      "tubeRadius": 0.012,
+      "defaultColor": "#92400E",
+      "defaultEnabled": false
+    }
+  ],
+  "colorPresets": [
+    "#FFFFFF",
+    "#000000",
+    "#EF4444",
+    "#3B82F6",
+    "#10B981",
+    "#F59E0B",
+    "#8B5CF6",
+    "#EC4899"
+  ]
+}
