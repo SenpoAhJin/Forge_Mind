@@ -100,13 +100,11 @@ export const OutfitControls: React.FC<OutfitControlsProps> = ({
           title="Wear full costume"
           onPress={() => { void wearFull(); }}
           variant="secondary"
-          size="small"
         />
         <Button
           title="Remove All"
           onPress={() => { void removeAll(); }}
           variant="secondary"
-          size="small"
         />
       </View>
     </View>

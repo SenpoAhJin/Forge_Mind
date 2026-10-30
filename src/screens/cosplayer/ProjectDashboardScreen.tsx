@@ -395,7 +395,7 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
           setColor={setColor}
           wearFull={wearFull}
           removeAll={removeAll}
-          targetColorSwatches={character?.targetColors || []}
+          targetColorSwatches={[]}
         />
         
         <View 
