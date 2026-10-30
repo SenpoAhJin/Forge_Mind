@@ -299,28 +299,72 @@ function clipTrianglesAtPlane(selectedTriangles, geometry, clipY, keepAbove) {
   const position = geometry.attributes.position;
   const index = geometry.index;
   const result = [];
-  const tolerance = 1e-4;
   
   for (const triIdx of selectedTriangles) {
     const i0 = index.getX(triIdx * 3);
     const i1 = index.getX(triIdx * 3 + 1);
     const i2 = index.getX(triIdx * 3 + 2);
     
-    const y0 = position.getY(i0);
-    const y1 = position.getY(i1);
-    const y2 = position.getY(i2);
+    const v0 = new THREE.Vector3(position.getX(i0), position.getY(i0), position.getZ(i0));
+    const v1 = new THREE.Vector3(position.getX(i1), position.getY(i1), position.getZ(i1));
+    const v2 = new THREE.Vector3(position.getX(i2), position.getY(i2), position.getZ(i2));
     
-    const minY = Math.min(y0, y1, y2);
-    const maxY = Math.max(y0, y1, y2);
+    // Classify vertices relative to plane
+    const side0 = keepAbove ? (v0.y >= clipY ? 1 : -1) : (v0.y <= clipY ? 1 : -1);
+    const side1 = keepAbove ? (v1.y >= clipY ? 1 : -1) : (v1.y <= clipY ? 1 : -1);
+    const side2 = keepAbove ? (v2.y >= clipY ? 1 : -1) : (v2.y <= clipY ? 1 : -1);
     
-    if (keepAbove) {
-      if (maxY >= clipY - tolerance) {
-        result.push(triIdx);
-      }
-    } else {
-      if (minY <= clipY + tolerance) {
-        result.push(triIdx);
-      }
+    const onKeepSide = side0 + side1 + side2;
+    
+    // All vertices on keep side: keep triangle as-is
+    if (onKeepSide === 3) {
+      result.push({ triIdx, vertices: [v0, v1, v2] });
+      continue;
+    }
+    
+    // All vertices on discard side: drop triangle
+    if (onKeepSide === -3) {
+      continue;
+    }
+    
+    // Triangle crosses plane: split it
+    const kept = [];
+    const discarded = [];
+    
+    [v0, v1, v2].forEach((v, idx) => {
+      const side = [side0, side1, side2][idx];
+      if (side === 1) kept.push(v);
+      else discarded.push(v);
+    });
+    
+    // Helper: interpolate vertex at plane intersection
+    const intersect = (a, b) => {
+      const t = (clipY - a.y) / (b.y - a.y);
+      return new THREE.Vector3(
+        a.x + t * (b.x - a.x),
+        clipY,
+        a.z + t * (b.z - a.z)
+      );
+    };
+    
+    if (kept.length === 1) {
+      // 1 kept vertex: forms triangle with 2 intersection points
+      const k = kept[0];
+      const d0 = discarded[0];
+      const d1 = discarded[1];
+      const int0 = intersect(k, d0);
+      const int1 = intersect(k, d1);
+      result.push({ triIdx, vertices: [k, int0, int1] });
+    } else if (kept.length === 2) {
+      // 2 kept vertices: forms quad, split into 2 triangles
+      const k0 = kept[0];
+      const k1 = kept[1];
+      const d = discarded[0];
+      const int0 = intersect(k0, d);
+      const int1 = intersect(k1, d);
+      
+      result.push({ triIdx, vertices: [k0, k1, int0] });
+      result.push({ triIdx, vertices: [k1, int1, int0] });
     }
   }
   
@@ -341,40 +385,124 @@ function buildOffsetGeometry(sourceGeometry, selectedTriangles, offset_m) {
     sourceNormal = sourceGeometry.attributes.normal;
   }
 
+  // Check if we have clipped triangles or simple indices
+  const isClipped = selectedTriangles.length > 0 && typeof selectedTriangles[0] === 'object';
+  
   const vertexCount = selectedTriangles.length * 3;
   const positions = new Float32Array(vertexCount * 3);
   const normals = new Float32Array(vertexCount * 3);
   const indices = new Uint32Array(vertexCount);
   const sourcePositions = new Float32Array(vertexCount * 3);
 
-  for (let i = 0; i < selectedTriangles.length; i++) {
-    const triIdx = selectedTriangles[i];
+  // Helper: get normal for a vertex, or interpolate if it's a new clipped vertex
+  const getNormal = (v, triIdx) => {
+    // Try to find exact match in source
+    const i0 = sourceIndex.getX(triIdx * 3);
+    const i1 = sourceIndex.getX(triIdx * 3 + 1);
+    const i2 = sourceIndex.getX(triIdx * 3 + 2);
+    
+    const v0 = new THREE.Vector3(sourcePosition.getX(i0), sourcePosition.getY(i0), sourcePosition.getZ(i0));
+    const v1 = new THREE.Vector3(sourcePosition.getX(i1), sourcePosition.getY(i1), sourcePosition.getZ(i1));
+    const v2 = new THREE.Vector3(sourcePosition.getX(i2), sourcePosition.getY(i2), sourcePosition.getZ(i2));
+    
+    const n0 = new THREE.Vector3(sourceNormal.getX(i0), sourceNormal.getY(i0), sourceNormal.getZ(i0));
+    const n1 = new THREE.Vector3(sourceNormal.getX(i1), sourceNormal.getY(i1), sourceNormal.getZ(i1));
+    const n2 = new THREE.Vector3(sourceNormal.getX(i2), sourceNormal.getY(i2), sourceNormal.getZ(i2));
+    
+    // Check for exact match
+    const eps = 1e-6;
+    if (v.distanceToSquared(v0) < eps) return n0;
+    if (v.distanceToSquared(v1) < eps) return n1;
+    if (v.distanceToSquared(v2) < eps) return n2;
+    
+    // New vertex: interpolate using barycentric coordinates
+    const e1 = new THREE.Vector3().subVectors(v1, v0);
+    const e2 = new THREE.Vector3().subVectors(v2, v0);
+    const vp = new THREE.Vector3().subVectors(v, v0);
+    
+    const d00 = e1.dot(e1);
+    const d01 = e1.dot(e2);
+    const d11 = e2.dot(e2);
+    const d20 = vp.dot(e1);
+    const d21 = vp.dot(e2);
+    const denom = d00 * d11 - d01 * d01;
+    
+    if (Math.abs(denom) < eps) {
+      // Degenerate triangle, return face normal
+      return new THREE.Vector3().crossVectors(e1, e2).normalize();
+    }
+    
+    const b1 = (d11 * d20 - d01 * d21) / denom;
+    const b2 = (d00 * d21 - d01 * d20) / denom;
+    const b0 = 1 - b1 - b2;
+    
+    return new THREE.Vector3()
+      .addScaledVector(n0, b0)
+      .addScaledVector(n1, b1)
+      .addScaledVector(n2, b2)
+      .normalize();
+  };
 
-    for (let j = 0; j < 3; j++) {
-      const srcIdx = sourceIndex.getX(triIdx * 3 + j);
-      const dstIdx = i * 3 + j;
+  if (isClipped) {
+    // Handle clipped triangles with explicit vertices
+    for (let i = 0; i < selectedTriangles.length; i++) {
+      const { triIdx, vertices } = selectedTriangles[i];
+      
+      for (let j = 0; j < 3; j++) {
+        const v = vertices[j];
+        const n = getNormal(v, triIdx);
+        const dstIdx = i * 3 + j;
+        
+        // Source position (before offset)
+        sourcePositions[dstIdx * 3] = v.x;
+        sourcePositions[dstIdx * 3 + 1] = v.y;
+        sourcePositions[dstIdx * 3 + 2] = v.z;
+        
+        // Offset position
+        positions[dstIdx * 3] = v.x + n.x * offset_m;
+        positions[dstIdx * 3 + 1] = v.y + n.y * offset_m;
+        positions[dstIdx * 3 + 2] = v.z + n.z * offset_m;
+        
+        normals[dstIdx * 3] = n.x;
+        normals[dstIdx * 3 + 1] = n.y;
+        normals[dstIdx * 3 + 2] = n.z;
+        
+        indices[dstIdx] = dstIdx;
+      }
+    }
+  } else {
+    // Handle simple triangle indices (no clipping)
+    for (let i = 0; i < selectedTriangles.length; i++) {
+      const triIdx = selectedTriangles[i];
+      
+      for (let j = 0; j < 3; j++) {
+        const srcIdx = sourceIndex.getX(triIdx * 3 + j);
+        const dstIdx = i * 3 + j;
 
-      const px = sourcePosition.getX(srcIdx);
-      const py = sourcePosition.getY(srcIdx);
-      const pz = sourcePosition.getZ(srcIdx);
+        const px = sourcePosition.getX(srcIdx);
+        const py = sourcePosition.getY(srcIdx);
+        const pz = sourcePosition.getZ(srcIdx);
 
-      const nx = sourceNormal.getX(srcIdx);
-      const ny = sourceNormal.getY(srcIdx);
-      const nz = sourceNormal.getZ(srcIdx);
+        const nx = sourceNormal.getX(srcIdx);
+        const ny = sourceNormal.getY(srcIdx);
+        const nz = sourceNormal.getZ(srcIdx);
 
-      sourcePositions[dstIdx * 3] = px;
-      sourcePositions[dstIdx * 3 + 1] = py;
-      sourcePositions[dstIdx * 3 + 2] = pz;
+        // Source position (before offset)
+        sourcePositions[dstIdx * 3] = px;
+        sourcePositions[dstIdx * 3 + 1] = py;
+        sourcePositions[dstIdx * 3 + 2] = pz;
 
-      positions[dstIdx * 3] = px + nx * offset_m;
-      positions[dstIdx * 3 + 1] = py + ny * offset_m;
-      positions[dstIdx * 3 + 2] = pz + nz * offset_m;
+        // Offset position
+        positions[dstIdx * 3] = px + nx * offset_m;
+        positions[dstIdx * 3 + 1] = py + ny * offset_m;
+        positions[dstIdx * 3 + 2] = pz + nz * offset_m;
 
-      normals[dstIdx * 3] = nx;
-      normals[dstIdx * 3 + 1] = ny;
-      normals[dstIdx * 3 + 2] = nz;
+        normals[dstIdx * 3] = nx;
+        normals[dstIdx * 3 + 1] = ny;
+        normals[dstIdx * 3 + 2] = nz;
 
-      indices[dstIdx] = dstIdx;
+        indices[dstIdx] = dstIdx;
+      }
     }
   }
 
