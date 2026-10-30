@@ -1,15 +1,12 @@
 /**
  * Project Planning Screen
  * 
- * 3D outfit planning with character context:
+ * COSTUME-7C-2: V2 outfit planning with CostumeViewer and shared OutfitControls.
  * - Shows character info (name, series, colors)
- * - AI suggestions based on character's target colors
- * - 3D preview with owned items on body model
- * - Missing slots marked with placeholders
- * - Readiness indicator
- * 
- * This is the main outfit builder where users see
- * what they own and what they need to acquire.
+ * - CostumeViewer with enabled pieces and colors from useOutfit (per-body scope)
+ * - Male/Female selector drives the viewer
+ * - Your Items grid: tap to switch matching V2 slot on and set color
+ * - Outfit state uses per-body scope (no projectId available on this screen)
  */
 
 import React, { useState, useMemo } from 'react';
@@ -22,35 +19,23 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
-import { Canvas } from '@react-three/fiber/native';
-import { OrbitControls } from '@react-three/drei';
 import { Ionicons } from '@expo/vector-icons';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import { useUserCharacters } from '../../contexts/UserCharactersContext';
-import type { BodyType } from '../../data/garmentCatalog';
+import { useOutfit } from '../../hooks/useOutfit';
 import type { OwnedAttire } from '../../types/owned-attire';
-import BodyModel from '../../components/BodyModel';
-import GarmentLayer from '../../components/GarmentLayer';
-import SelectedGarment from '../../components/SelectedGarment';
+import { BaseBodySelection } from '../../constants/bodyType';
+import CostumeViewer from '../../components/CostumeViewer';
+import { OutfitControls } from '../../components/OutfitControls';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { computeCameraFraming } from '../../utils/cameraFraming';
+import { applyItemToOutfit, canMapItemToPiece, getUnmappedItemMessage } from '../../utils/outfitHelpers';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PREVIEW_HEIGHT = 400;
 
 interface ProjectPlanningScreenProps {
   navigation: any;
   route?: any;
 }
-
-// Garment slots for outfit planning
-const GARMENT_SLOTS = [
-  { id: 'wig', label: 'Wig', required: false },
-  { id: 'accessory', label: 'Accessory', required: false },
-  { id: 'top', label: 'Top', required: true },
-  { id: 'bottom', label: 'Bottom', required: true },
-  { id: 'footwear', label: 'Footwear', required: true },
-];
 
 export default function ProjectPlanningScreen({ navigation, route }: ProjectPlanningScreenProps) {
   const characterId = route?.params?.characterId;
@@ -66,52 +51,37 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
   console.log(`[ProjectPlanning] isLoaded=${isLoaded}, ownedItems.length=${ownedItems.length}`);
   
   // State
-  const [bodyType, setBodyType] = useState<BodyType>('female');
-  const [selectedSlots, setSelectedSlots] = useState<Record<string, OwnedAttire | null>>({
-    wig: null,
-    accessory: null,
-    top: null,
-    bottom: null,
-    footwear: null,
-  });
+  const [bodyType, setBodyType] = useState<BaseBodySelection>('female');
   
-  // AI Suggestions: filter items by character's target colors
-  const suggestedItems = useMemo(() => {
-    if (!character || !isLoaded) return [];
-    
-    const targetColors = character.targetColors.map(c => c.toLowerCase());
-    
-    return ownedItems.filter(item => {
-      // Match color
-      const itemColor = item.auto_categorized_color?.toLowerCase();
-      if (itemColor && targetColors.some(tc => 
-        itemColor.includes(tc) || tc.includes(itemColor)
-      )) {
-        return true;
-      }
-      
-      // Match tags
-      if (character.styleTags.length > 0 && item.original_input_text) {
-        const itemText = item.original_input_text.toLowerCase();
-        return character.styleTags.some(tag => itemText.includes(tag.toLowerCase()));
-      }
-      
-      return false;
-    }).slice(0, 10); // Limit to 10 suggestions
-  }, [character, ownedItems, isLoaded]);
+  // COSTUME-7C-2: useOutfit with per-body scope (no projectId on this screen)
+  const { outfit, isLoading: outfitLoading, togglePiece, setColor, wearFull, removeAll } = useOutfit(bodyType);
   
-  // Calculate readiness
-  const readiness = useMemo(() => {
-    const requiredSlots = GARMENT_SLOTS.filter(s => s.required);
-    const filledRequired = requiredSlots.filter(s => selectedSlots[s.id] !== null);
-    return requiredSlots.length > 0 ? (filledRequired.length / requiredSlots.length) * 100 : 0;
-  }, [selectedSlots]);
-
-  // Compute camera framing for the current body type (closer view for planning screen)
-  const cameraConfig = useMemo(
-    () => computeCameraFraming(bodyType, 50, 1.345),
-    [bodyType]
-  );
+  // Convert outfit to Sets/Maps for CostumeViewer
+  const enabledPieces = useMemo(() => {
+    if (!outfit) return new Set<string>();
+    return new Set(Object.entries(outfit.pieces).filter(([_, p]) => p.on).map(([slot]) => slot));
+  }, [outfit]);
+  
+  const pieceColors = useMemo(() => {
+    if (!outfit) return new Map<string, string>();
+    return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.color]));
+  }, [outfit]);
+  
+  // Separate owned items into mapped and unmapped
+  const { mappedItems, unmappedItems } = useMemo(() => {
+    const mapped: OwnedAttire[] = [];
+    const unmapped: OwnedAttire[] = [];
+    
+    for (const item of ownedItems) {
+      if (canMapItemToPiece(item)) {
+        mapped.push(item);
+      } else {
+        unmapped.push(item);
+      }
+    }
+    
+    return { mappedItems: mapped, unmappedItems: unmapped };
+  }, [ownedItems]);
   
   if (!isLoaded) {
     return (
@@ -193,132 +163,82 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
         </View>
       </View>
       
+      {/* Outfit Controls */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Outfit Controls</Text>
+        <OutfitControls
+          enabledPieces={enabledPieces}
+          pieceColors={pieceColors}
+          togglePiece={togglePiece}
+          setColor={setColor}
+          wearFull={wearFull}
+          removeAll={removeAll}
+          targetColorSwatches={character?.targetColors || []}
+        />
+      </View>
+      
       {/* 3D Preview */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preview (Drag to Rotate)</Text>
+        <Text style={styles.sectionTitle}>3D Preview (Drag to Rotate)</Text>
         <View style={styles.previewContainer}>
-          <Canvas camera={{ position: cameraConfig.position, fov: cameraConfig.fov }}>
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[5, 5, 5]} intensity={0.8} />
-            <directionalLight position={[-5, 5, -5]} intensity={0.4} />
-            
-            {/* GARMENT-3a2: Target set to body center (from cameraFraming helper).
-                For V1 (feet ≈ y=-0.95), target ≈ [0, -0.01, 0]. For V2 (feet ≈ y=0),
-                target ≈ [0, 0.95, 0]. This ensures the body is vertically centered
-                in the canvas regardless of body set. */}
-            <OrbitControls
-              target={cameraConfig.target}
-              enableZoom={true}
-              enablePan={false}
-              minDistance={1.5}
-              maxDistance={4}
-              maxPolarAngle={Math.PI / 2}
-              minPolarAngle={Math.PI / 4}
-            />
-            
-            <BodyModel bodyType={bodyType} />
-            
-            {/* Render selected garments on body */}
-            {Object.entries(selectedSlots).map(([slotId, item]) => {
-              if (!item) {
-                console.log(`[ProjectPlanning] Slot ${slotId}: empty`);
-                return null;
-              }
-              
-              console.log(`[ProjectPlanning] Rendering slot ${slotId}:`, {
-                text: item.original_input_text,
-                type: item.auto_categorized_type,
-              });
-              
-              return (
-                <SelectedGarment
-                  key={slotId}
-                  item={item}
-                  bodyType={bodyType}
-                />
-              );
-            })}
-          </Canvas>
+          <CostumeViewer
+            bodyType={bodyType}
+            enabledPieces={enabledPieces}
+            pieceColors={pieceColors}
+          />
         </View>
       </View>
       
-      {/* Readiness Indicator */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Outfit Readiness</Text>
-        <View style={styles.readinessCard}>
-          <View style={styles.readinessRow}>
-            <Text style={styles.readinessLabel}>Completion:</Text>
-            <Text style={[styles.readinessValue, readiness === 100 && styles.readinessComplete]}>
-              {Math.round(readiness)}%
-            </Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${readiness}%` }]} />
-          </View>
-        </View>
-      </View>
-      
-      {/* Garment Slots */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Outfit</Text>
-        {GARMENT_SLOTS.map((slot) => (
-          <View key={slot.id} style={styles.slotCard}>
-            <View style={styles.slotHeader}>
-              <Text style={styles.slotLabel}>{slot.label}</Text>
-              {slot.required && (
-                <View style={styles.requiredBadge}>
-                  <Text style={styles.requiredText}>Required</Text>
-                </View>
-              )}
-            </View>
-            
-            {selectedSlots[slot.id] ? (
-              <View style={styles.selectedItem}>
-                <Text style={styles.selectedItemText}>
-                  {selectedSlots[slot.id]?.original_input_text}
-                </Text>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => setSelectedSlots(prev => ({ ...prev, [slot.id]: null }))}
-                >
-                  <Text style={styles.removeButtonText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.emptySlot}>
-                <Text style={styles.emptySlotText}>No item selected</Text>
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
-      
-      {/* All Owned Items Grid */}
-      {ownedItems.length > 0 && (
+      {/* Your Items Grid (Mapped) */}
+      {mappedItems.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Items</Text>
           <Text style={styles.sectionSubtitle}>
-            Tap any item to add it to a slot above
+            Tap any item to switch it on and set its color
           </Text>
           <View style={styles.itemsGrid}>
-            {ownedItems.map((item) => (
-              <TouchableOpacity
-                key={item.attire_id}
-                style={styles.gridItem}
-                onPress={() => {
-                  // Auto-select to matching slot based on type
-                  const itemType = item.auto_categorized_type?.toLowerCase();
-                  const matchingSlot = GARMENT_SLOTS.find(s => 
-                    s.id === itemType || 
-                    (itemType === 'clothing' && (s.id === 'top' || s.id === 'bottom')) ||
-                    (itemType === 'prop' && s.id === 'accessory')
-                  );
-                  
-                  if (matchingSlot) {
-                    setSelectedSlots(prev => ({ ...prev, [matchingSlot.id]: item }));
-                  }
-                }}
-              >
+            {mappedItems.map((item) => {
+              const suggestion = applyItemToOutfit(item);
+              
+              return (
+                <TouchableOpacity
+                  key={item.attire_id}
+                  style={styles.gridItem}
+                  onPress={() => {
+                    if (suggestion) {
+                      void togglePiece(suggestion.slot, true);
+                      void setColor(suggestion.slot, suggestion.color);
+                    }
+                  }}
+                >
+                  {item.photo_urls && item.photo_urls.length > 0 && item.photo_urls[0] ? (
+                    <Image 
+                      source={{ uri: item.photo_urls[0] }} 
+                      style={styles.gridItemImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.gridItemPlaceholder}>
+                      <Ionicons name="shirt-outline" size={24} color={colors.textSecondary} />
+                    </View>
+                  )}
+                  <Text style={styles.gridItemText} numberOfLines={2}>
+                    {item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+      
+      {/* Unmapped Items */}
+      {unmappedItems.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Not shown in 3D yet</Text>
+          <View style={styles.itemsGrid}>
+            {unmappedItems.map((item) => (
+              <View key={item.attire_id} style={[styles.gridItem, styles.gridItemUnmapped]}>
                 {item.photo_urls && item.photo_urls.length > 0 && item.photo_urls[0] ? (
                   <Image 
                     source={{ uri: item.photo_urls[0] }} 
@@ -333,48 +253,12 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
                 <Text style={styles.gridItemText} numberOfLines={2}>
                   {item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`}
                 </Text>
-              </TouchableOpacity>
+                <Text style={styles.unmappedLabel}>
+                  {getUnmappedItemMessage(item)}
+                </Text>
+              </View>
             ))}
           </View>
-        </View>
-      )}
-      
-      {/* AI Suggestions */}
-      {suggestedItems.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI Suggestions (Based on Character)</Text>
-          <Text style={styles.sectionSubtitle}>
-            Items matching {character.name}'s colors and style
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionsScroll}>
-            {suggestedItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.suggestionCard}
-                onPress={() => {
-                  // Auto-select to matching slot
-                  const itemType = item.auto_categorized_type?.toLowerCase();
-                  const matchingSlot = GARMENT_SLOTS.find(s => 
-                    s.id === itemType || 
-                    (itemType === 'clothing' && (s.id === 'top' || s.id === 'bottom'))
-                  );
-                  
-                  if (matchingSlot) {
-                    setSelectedSlots(prev => ({ ...prev, [matchingSlot.id]: item }));
-                  }
-                }}
-              >
-                <Text style={styles.suggestionText} numberOfLines={2}>
-                  {item.original_input_text}
-                </Text>
-                <View style={styles.suggestionBadge}>
-                  <Text style={styles.suggestionBadgeText}>
-                    {item.auto_categorized_type || 'Item'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
         </View>
       )}
     </ScrollView>
@@ -528,149 +412,10 @@ const styles = StyleSheet.create({
   
   // 3D Preview
   previewContainer: {
-    height: PREVIEW_HEIGHT,
+    height: 400,
     backgroundColor: '#263238',
     borderRadius: borderRadius.md,
     overflow: 'hidden',
-  },
-  
-  // Readiness
-  readinessCard: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-  },
-  readinessRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  readinessLabel: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  readinessValue: {
-    ...typography.h1,
-    fontWeight: 'bold',
-    color: colors.warning,
-  },
-  readinessComplete: {
-    color: colors.success,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-  },
-  
-  // Slot Cards
-  slotCard: {
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  slotHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  slotLabel: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  requiredBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    backgroundColor: colors.error + '20',
-    borderRadius: borderRadius.sm,
-  },
-  requiredText: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.error,
-  },
-  selectedItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.sm,
-    backgroundColor: colors.success + '10',
-    borderRadius: borderRadius.sm,
-  },
-  selectedItemText: {
-    ...typography.body,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  removeButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: colors.error + '20',
-    borderRadius: borderRadius.sm,
-  },
-  removeButtonText: {
-    ...typography.caption,
-    color: colors.error,
-    fontWeight: '600',
-  },
-  emptySlot: {
-    padding: spacing.sm,
-    backgroundColor: colors.backgroundLight,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-  },
-  emptySlotText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  
-  // AI Suggestions
-  suggestionsScroll: {
-    marginLeft: -spacing.lg,
-    paddingLeft: spacing.lg,
-  },
-  suggestionCard: {
-    width: 140,
-    padding: spacing.md,
-    marginRight: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 2,
-    borderColor: colors.secondary,
-  },
-  suggestionText: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    height: 32,
-  },
-  suggestionBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    backgroundColor: colors.secondary + '20',
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
-  },
-  suggestionBadgeText: {
-    ...typography.caption,
-    color: colors.secondary,
-    fontWeight: '600',
-    fontSize: 10,
   },
   
   // Items Grid
@@ -688,6 +433,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
+  gridItemUnmapped: {
+    opacity: 0.6,
+  },
   gridItemImage: {
     width: '100%',
     height: 100,
@@ -704,6 +452,14 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textPrimary,
     padding: spacing.sm,
-    height: 40,
+    minHeight: 40,
+  },
+  unmappedLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+    fontSize: 10,
+    fontStyle: 'italic',
   },
 });
