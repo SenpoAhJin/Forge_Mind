@@ -1,16 +1,56 @@
 {
   "male": {
-    "top": 5834,
-    "bottom": 4967,
-    "shoes": 2164,
-    "gloves": 3286,
-    "wig": 1115
+    "top": {
+      "triangles": 5892,
+      "covered": 2928,
+      "eligible": 2928
+    },
+    "bottom": {
+      "triangles": 4967,
+      "covered": 2475,
+      "eligible": 2475
+    },
+    "shoes": {
+      "triangles": 2164,
+      "covered": 1070,
+      "eligible": 1072
+    },
+    "gloves": {
+      "triangles": 3286,
+      "covered": 1639,
+      "eligible": 1639
+    },
+    "wig": {
+      "triangles": 1115,
+      "covered": 562,
+      "eligible": 636
+    }
   },
   "female": {
-    "top": 5962,
-    "bottom": 5206,
-    "shoes": 2161,
-    "gloves": 2734,
-    "wig": 1412
+    "top": {
+      "triangles": 6017,
+      "covered": 2995,
+      "eligible": 2995
+    },
+    "bottom": {
+      "triangles": 5206,
+      "covered": 2594,
+      "eligible": 2594
+    },
+    "shoes": {
+      "triangles": 2161,
+      "covered": 1048,
+      "eligible": 1049
+    },
+    "gloves": {
+      "triangles": 2734,
+      "covered": 1366,
+      "eligible": 1366
+    },
+    "wig": {
+      "triangles": 1412,
+      "covered": 715,
+      "eligible": 840
+    }
   }
 }

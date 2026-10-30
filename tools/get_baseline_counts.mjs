@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * COSTUME-7A: Get baseline triangle counts before any changes.
- * Count = number of selected triangles (already integers from selectPieceTriangles).
+ * COSTUME-7A: Get baseline counts matching the Debug panel.
+ * Debug panel shows triangleCount and (coveredVertexCount/eligibleVertexCount).
  */
 
 import * as THREE from 'three';
@@ -12,10 +12,7 @@ import { fileURLToPath } from 'url';
 
 import {
   findBodyMesh,
-  computeLandmarks,
-  buildBoneSegments,
-  selectPieceTriangles,
-  resolveBoneSet,
+  computePieceDebugInfo,
 } from '../src/utils/costumeBuilder.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,11 +36,6 @@ async function getCounts(gender, glbPath, contract) {
   const skinnedMesh = findBodyMesh(gltf.scene);
   if (!skinnedMesh) throw new Error(`No SkinnedMesh found for ${gender}`);
 
-  const geometry = skinnedMesh.geometry;
-  const bodyBbox = new THREE.Box3().setFromObject(skinnedMesh);
-  const landmarks = computeLandmarks(contract, bodyBbox);
-  const boneSegments = buildBoneSegments(contract);
-
   const pieces = ['top', 'bottom', 'shoes', 'gloves', 'wig'];
   const counts = {};
 
@@ -51,17 +43,14 @@ async function getCounts(gender, glbPath, contract) {
     const pieceDef = costumePiecesData.pieces.find(p => p.id === pieceId);
     if (!pieceDef) throw new Error(`${pieceId} not found in data`);
 
-    const boneSet = resolveBoneSet(pieceDef);
-    const selected = selectPieceTriangles(
-      geometry,
-      pieceDef,
-      boneSet,
-      boneSegments,
-      landmarks
-    );
+    const info = computePieceDebugInfo(gltf.scene, contract, pieceDef, costumePiecesData);
+    if (!info) throw new Error(`No debug info for ${pieceId}`);
 
-    // selected is an array of triangle indices
-    counts[pieceId] = selected.length;
+    counts[pieceId] = {
+      triangles: info.triangleCount,
+      covered: info.coveredVertexCount,
+      eligible: info.eligibleVertexCount,
+    };
   }
 
   return counts;
@@ -75,7 +64,7 @@ async function main() {
     await fs.readFile(path.join(ROOT, 'assets/models/3D_Model_Female_V2_contract.json'), 'utf8')
   );
 
-  console.log('Getting baseline counts...\n');
+  console.log('Getting baseline counts (Debug panel format)...\n');
 
   const maleCounts = await getCounts(
     'male',
@@ -92,18 +81,16 @@ async function main() {
   const result = { male: maleCounts, female: femaleCounts };
 
   console.log('Male:');
-  console.log(`  top:    ${maleCounts.top}`);
-  console.log(`  bottom: ${maleCounts.bottom}`);
-  console.log(`  shoes:  ${maleCounts.shoes}`);
-  console.log(`  gloves: ${maleCounts.gloves}`);
-  console.log(`  wig:    ${maleCounts.wig}`);
+  for (const [piece, c] of Object.entries(maleCounts)) {
+    const pct = c.eligible > 0 ? ((c.covered / c.eligible) * 100).toFixed(1) : '0.0';
+    console.log(`  ${piece}: ${c.triangles} tris (${c.covered}/${c.eligible} verts, ${pct}%)`);
+  }
 
   console.log('\nFemale:');
-  console.log(`  top:    ${femaleCounts.top}`);
-  console.log(`  bottom: ${femaleCounts.bottom}`);
-  console.log(`  shoes:  ${femaleCounts.shoes}`);
-  console.log(`  gloves: ${femaleCounts.gloves}`);
-  console.log(`  wig:    ${femaleCounts.wig}`);
+  for (const [piece, c] of Object.entries(femaleCounts)) {
+    const pct = c.eligible > 0 ? ((c.covered / c.eligible) * 100).toFixed(1) : '0.0';
+    console.log(`  ${piece}: ${c.triangles} tris (${c.covered}/${c.eligible} verts, ${pct}%)`);
+  }
 
   await fs.writeFile(
     path.join(ROOT, 'docs/costume7a_before.json'),
