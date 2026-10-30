@@ -188,6 +188,95 @@ export function resolveBoneSet(
 }
 
 /**
+ * Unified piece selection pipeline.
+ * This is the ONE pipeline used by both the app (buildCostumePiece) and tests.
+ * 
+ * Steps:
+ * 1. Convert clips to yMin/yMax (or use legacy yMin/yMax)
+ * 2. selectTriangles with bone labels and y-band filtering
+ * 3. clipTrianglesAtPlane for specific pieces (e.g., top hem)
+ * 4. Return selected triangle indices
+ */
+export function selectPieceTriangles(
+  geometry: THREE.BufferGeometry,
+  pieceDef: PieceDefinition,
+  boneSet: Set<string>,
+  boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
+  landmarks: Landmarks
+): number[] {
+  let yMin: number | undefined;
+  let yMax: number | undefined;
+  let armYMax: number | undefined;
+
+  // Support both clips and legacy yMin/yMax
+  if (pieceDef.clips && pieceDef.clips.length > 0) {
+    // Convert clips to yMin/yMax
+    for (const clip of pieceDef.clips) {
+      if (clip.groups.includes("*")) {
+        const clipY = landmarks[clip.landmark as keyof Landmarks] + clip.offset;
+        if (clip.keep === "above" && (yMin === undefined || clipY > yMin)) {
+          yMin = clipY;
+        } else if (clip.keep === "below" && (yMax === undefined || clipY < yMax)) {
+          yMax = clipY;
+        }
+      }
+    }
+  } else {
+    // Legacy path
+    if (pieceDef.yMin) {
+      yMin = landmarks[pieceDef.yMin.landmark as keyof Landmarks] + pieceDef.yMin.offset;
+    }
+    if (pieceDef.yMax) {
+      yMax = landmarks[pieceDef.yMax.landmark as keyof Landmarks] + pieceDef.yMax.offset;
+    }
+  }
+  
+  if (pieceDef.armYMax) {
+    armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
+  }
+
+  // Select triangles
+  let selectedTriangles = selectTriangles(
+    geometry,
+    boneSet,
+    boneSegments,
+    yMin,
+    yMax,
+    armYMax,
+    pieceDef.id === 'wig',
+    pieceDef.hairlineDrop ? landmarks.head_top_y - pieceDef.hairlineDrop : undefined
+  );
+
+  // Special clipping for top piece hem
+  if (pieceDef.id === 'top') {
+    let hemClipY: number | undefined;
+    if (pieceDef.clips) {
+      for (const clip of pieceDef.clips) {
+        if (clip.groups.includes("torso") && !clip.groups.includes("*") && clip.keep === "above") {
+          hemClipY = landmarks[clip.landmark as keyof Landmarks] + clip.offset;
+          break;
+        }
+      }
+    }
+    
+    if (hemClipY === undefined && yMin !== undefined) {
+      hemClipY = yMin;
+    }
+    
+    if (hemClipY !== undefined) {
+      selectedTriangles = clipTrianglesAtPlane(
+        selectedTriangles,
+        geometry,
+        hemClipY,
+        true // keep above hem
+      );
+    }
+  }
+
+  return selectedTriangles;
+}
+
+/**
  * Compute distance from point to line segment.
  */
 export function distanceToSegment(
@@ -800,76 +889,14 @@ export function buildCostumePiece(
     const boneSet = resolveBoneSet(pieceDef, data);
     const boneSegments = buildBoneSegments(contract);
 
-    let yMin: number | undefined;
-    let yMax: number | undefined;
-    let armYMax: number | undefined;
-
-    // Support both legacy yMin/yMax and new clips format
-    if (pieceDef.clips && pieceDef.clips.length > 0) {
-      // Convert clips to yMin/yMax for backward compatibility
-      // Find clips that apply to all groups ("*")
-      for (const clip of pieceDef.clips) {
-        if (clip.groups.includes("*")) {
-          const clipY = landmarks[clip.landmark as keyof Landmarks] + clip.offset;
-          if (clip.keep === "above" && (yMin === undefined || clipY > yMin)) {
-            yMin = clipY;
-          } else if (clip.keep === "below" && (yMax === undefined || clipY < yMax)) {
-            yMax = clipY;
-          }
-        }
-      }
-    } else {
-      // Legacy path
-      if (pieceDef.yMin) {
-        yMin = landmarks[pieceDef.yMin.landmark as keyof Landmarks] + pieceDef.yMin.offset;
-      }
-      if (pieceDef.yMax) {
-        yMax = landmarks[pieceDef.yMax.landmark as keyof Landmarks] + pieceDef.yMax.offset;
-      }
-    }
-    
-    if (pieceDef.armYMax) {
-      armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
-    }
-
-    let selectedTriangles = selectTriangles(
+    // Use unified pipeline
+    const selectedTriangles = selectPieceTriangles(
       skinnedMesh.geometry,
+      pieceDef,
       boneSet,
       boneSegments,
-      yMin,
-      yMax,
-      armYMax,
-      pieceId === 'wig',
-      pieceDef.hairlineDrop ? landmarks.head_top_y - pieceDef.hairlineDrop : undefined
+      landmarks
     );
-
-    // Special handling for top piece: clip at hem for straight edge
-    if (pieceId === 'top') {
-      // Check if there's a torso-specific clip (for hem)
-      let hemClipY: number | undefined;
-      if (pieceDef.clips) {
-        for (const clip of pieceDef.clips) {
-          if (clip.groups.includes("torso") && !clip.groups.includes("*") && clip.keep === "above") {
-            hemClipY = landmarks[clip.landmark as keyof Landmarks] + clip.offset;
-            break;
-          }
-        }
-      }
-      
-      // Fallback to legacy yMin
-      if (hemClipY === undefined && yMin !== undefined) {
-        hemClipY = yMin;
-      }
-      
-      if (hemClipY !== undefined) {
-        selectedTriangles = clipTrianglesAtPlane(
-          selectedTriangles,
-          skinnedMesh.geometry,
-          hemClipY,
-          true // keep above hem
-        );
-      }
-    }
 
     if (selectedTriangles.length === 0) {
       throw new Error(`Piece ${pieceId}: no triangles selected (groups: ${Array.from(boneSet).join(', ')})`);

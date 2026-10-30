@@ -31,8 +31,7 @@ import {
   distanceToSegment,
   buildBoneSegments,
   labelVerticesByNearestBone,
-  selectTriangles,
-  clipTrianglesAtPlane,
+  selectPieceTriangles,
   buildOffsetGeometry,
 } from '../src/utils/costumeBuilder.ts';
 
@@ -259,30 +258,58 @@ async function testBody(gender, glbPath, contract) {
 
     const boneSet = resolveBoneSet(pieceDef);
     
-    let yMin, yMax, armYMax;
-    if (pieceDef.yMin) {
-      yMin = landmarks[pieceDef.yMin.landmark] + pieceDef.yMin.offset;
-    }
-    if (pieceDef.yMax) {
-      yMax = landmarks[pieceDef.yMax.landmark] + pieceDef.yMax.offset;
-    }
-    if (pieceDef.armYMax) {
-      armYMax = landmarks[pieceDef.armYMax.landmark] + pieceDef.armYMax.offset;
-    }
-
-    let selectedTriangles = selectTriangles(geometry, boneSet, boneSegments, yMin, yMax, armYMax);
+    // Use unified pipeline
+    const selectedTriangles = selectPieceTriangles(
+      geometry,
+      pieceDef,
+      boneSet,
+      boneSegments,
+      landmarks
+    );
     
-    if (pieceDef.id === 'top' && yMin !== undefined) {
-      selectedTriangles = clipTrianglesAtPlane(selectedTriangles, geometry, yMin, true);
-      topHemY = yMin;
+    // Extract y-band for bone probe checks
+    let yMin, yMax;
+    if (pieceDef.clips && pieceDef.clips.length > 0) {
+      for (const clip of pieceDef.clips) {
+        if (clip.groups.includes("*")) {
+          const clipY = landmarks[clip.landmark] + clip.offset;
+          if (clip.keep === "above" && (yMin === undefined || clipY > yMin)) {
+            yMin = clipY;
+          } else if (clip.keep === "below" && (yMax === undefined || clipY < yMax)) {
+            yMax = clipY;
+          }
+        }
+      }
+    } else {
+      if (pieceDef.yMin) {
+        yMin = landmarks[pieceDef.yMin.landmark] + pieceDef.yMin.offset;
+      }
+      if (pieceDef.yMax) {
+        yMax = landmarks[pieceDef.yMax.landmark] + pieceDef.yMax.offset;
+      }
     }
     
+    // Track top/bottom for gap check
     if (pieceDef.id === 'top') {
       topSelectedTriangles = selectedTriangles;
+      // Extract topHemY from the piece clips or legacy yMin
+      if (pieceDef.clips) {
+        for (const clip of pieceDef.clips) {
+          if (clip.groups.includes("torso") && !clip.groups.includes("*") && clip.keep === "above") {
+            topHemY = landmarks[clip.landmark] + clip.offset;
+            break;
+          }
+        }
+      }
+      if (topHemY === undefined && pieceDef.yMin) {
+        topHemY = landmarks[pieceDef.yMin.landmark] + pieceDef.yMin.offset;
+      }
     }
     if (pieceDef.id === 'bottom') {
       bottomSelectedTriangles = selectedTriangles;
-      bottomWaistY = yMax;
+      if (pieceDef.yMax) {
+        bottomWaistY = landmarks[pieceDef.yMax.landmark] + pieceDef.yMax.offset;
+      }
     }
     
     if (selectedTriangles.length === 0) {
@@ -517,6 +544,7 @@ async function main() {
   try {
     await testBody('male', path.join(ROOT, 'assets/models/3D_Model_Male_V2_rigged.glb'), maleContract);
   } catch (error) {
+    console.error('Male test error stack:', error.stack);
     allFailures.push(`Male: ${error.message}`);
   }
   
@@ -524,6 +552,7 @@ async function main() {
   try {
     await testBody('female', path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'), femaleContract);
   } catch (error) {
+    console.error('Female test error stack:', error.stack);
     allFailures.push(`Female: ${error.message}`);
   }
   

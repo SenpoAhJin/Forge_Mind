@@ -3,6 +3,28 @@
 Branch: task/costume4c-clip-and-coverage
 Started: 2026-10-30
 
+## C1 ONE PIPELINE - COMPLETE
+
+Created selectPieceTriangles() function that unifies the app's buildCostumePiece and test sequences:
+1. Convert clips to yMin/yMax (or use legacy yMin/yMax)
+2. Call selectTriangles with bone labels and y-band filtering  
+3. Call clipTrianglesAtPlane for specific pieces (e.g., top hem)
+4. Return selected triangle indices
+
+Modified:
+- src/utils/costumeBuilder.ts: Added export function selectPieceTriangles(). Updated buildCostumePiece to call it.
+- tools/test_costume_pieces.mjs: Removed imports of selectTriangles and clipTrianglesAtPlane. Now calls selectPieceTriangles.
+- tools/check_no_duplicate_builder.mjs: Added check that test_costume_pieces.mjs must not import selectTriangles or clipTrianglesAtPlane.
+
+Verification:
+```
+C0: Male top 5834, bottom 4840, shoes 2150, gloves 3286, wig 1187, hash fd444a8e/f5fef383/6a2c95f5/79ae65bb/82242ad4
+C1: Male top 5834, bottom 4840, shoes 2150, gloves 3286, wig 1187, hash fd444a8e/f5fef383/6a2c95f5/79ae65bb/82242ad4
+IDENTICAL ✓
+```
+
+Baseline failures preserved: Male wig height 0.215 > 0.2, Female top 5 loops.
+
 ## C0 BEFORE SNAPSHOT - COMPLETE
 
 ### Male

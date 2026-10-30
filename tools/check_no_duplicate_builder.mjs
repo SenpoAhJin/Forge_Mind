@@ -62,6 +62,19 @@ async function main() {
     }
   }
   
+  // C1 specific check: test_costume_pieces.mjs must not import low-level piece building functions
+  const testFile = path.join(toolsDir, 'test_costume_pieces.mjs');
+  const testContent = await fs.readFile(testFile, 'utf8');
+  const forbiddenImports = ['selectTriangles', 'clipTrianglesAtPlane'];
+  for (const funcName of forbiddenImports) {
+    // Check if funcName appears in an import statement
+    const importRegex = new RegExp(`import\\s+\\{[^}]*\\b${funcName}\\b[^}]*\\}`, 'g');
+    if (importRegex.test(testContent)) {
+      console.error(`ERROR: test_costume_pieces.mjs must not import '${funcName}' (use selectPieceTriangles instead)`);
+      duplicatesFound = true;
+    }
+  }
+  
   if (duplicatesFound) {
     console.error('\nFAIL: tools/*.mjs files must import from costumeBuilder.ts, not duplicate functions.');
     process.exit(1);
