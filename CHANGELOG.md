@@ -1,7 +1,42 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Friday, October 30, 2026 (Task COSTUME-7C-1: Project Dashboard V2 Costume)
+**Last updated:** Friday, October 30, 2026 (Task COSTUME-7C-3: Fix 7C-2 Issues)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Friday, October 30, 2026 (Task COSTUME-7C-3: Fix 7C-2 Issues)
+
+**Summary**
+Fixed technical issues from COSTUME-7C-2 report: belt slot exclusion on ProjectPlanningScreen, triangle count discrepancy analysis, test runner improvements, and TypeScript errors.
+
+**Changes**
+- ProjectPlanningScreen: Items mapped to belt slot now appear in "Not shown in 3D yet" section (belt not offered in 5-slot system: top, bottom, shoes, gloves, wig)
+- Test runner now continues after failures, running all checks for both genders
+- Fixed TypeScript errors in modified files (OutfitControls, ProjectDashboardScreen)
+- Baseline counts analysis: 5834/5962 are correct (commit a969c04 changed builder logic)
+
+**Triangle counts (from get_baseline_counts.mjs)**
+- Male: top 5834, bottom 4967, shoes 2164, gloves 3286, wig 488
+- Female: top 5962, bottom 5206, shoes 2161, gloves 2734, wig 521
+
+**Test results**
+- test_costume_pieces: 1 failing (Female top: 5 boundary loops vs expected 4), all other checks pass
+- test_outfit_store: 75 tests pass
+- check_no_duplicate_builder: pass
+- expo export --platform web: success
+- tsc --noEmit: 35 errors (3 in modified files, all pre-existing from commit d5d3471e)
+
+**NOT TESTED (phone verification required)**
+- Belt item actual display in "Not shown in 3D yet"
+- ProjectPlanningScreen outfit controls and 3D preview
+- Per-body vs per-project outfit scope isolation
+- Target color swatches on ProjectPlanningScreen
+
+**Commits**
+- 8a46f68: STEP A - Exclude belt slot from ProjectPlanningScreen
+- 886bd63: STEP C - Test runner continues after failures
+- f7157ae: STEP D - Fix TypeScript errors in modified files
 
 ---
 
