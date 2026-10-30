@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StandardCard, Button, Tag, TextInputField, StatusBadge, ThreeDPreview, BodyTypeSelector } from '../../components';
+import { StandardCard, Button, Tag, TextInputField, StatusBadge, BodyTypeSelector } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../../constants/bodyType';
@@ -19,6 +19,17 @@ import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, Task, TaskStatus, BudgetCategory } from '../../types/projects';
 import { getTodayLocal } from '../../utils/dateHelpers';
+import { useOutfit } from '../../hooks/useOutfit';
+import CostumeViewer from '../../components/CostumeViewer';
+import colorNames from '../../data/colorNames.json';
+
+// Load costume pieces data for default colors
+const costumePiecesData = require('../../data/costumePieces.json');
+
+const getSlotDefaultColor = (slot: string): string => {
+  const piece = costumePiecesData.pieces.find((p: any) => p.id === slot);
+  return piece?.defaultColor || '#FFFFFF';
+};
 
 interface ProjectDashboardScreenProps {
   projectId: string;
@@ -96,6 +107,20 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   const [bodyType, setBodyType] = useState<BaseBodySelection>(
     user?.base_body_selection ?? DEFAULT_BASE_BODY
   );
+  
+  // COSTUME-7C: V2 costume outfit state per project
+  const { outfit, isLoading: outfitLoading, togglePiece, setColor, wearFull, removeAll } = useOutfit(bodyType, `project:${projectId}`);
+  
+  // Convert outfit to Sets/Maps for CostumeViewer
+  const enabledPieces = useMemo(() => {
+    if (!outfit) return new Set<string>();
+    return new Set(Object.entries(outfit.pieces).filter(([_, p]) => p.on).map(([slot]) => slot));
+  }, [outfit]);
+  
+  const pieceColors = useMemo(() => {
+    if (!outfit) return new Map<string, string>();
+    return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.color]));
+  }, [outfit]);
   
   // Event linking state
   const [showEventPicker, setShowEventPicker] = useState(false);
@@ -368,9 +393,76 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>3D Preview</Text>
         <Text style={styles.sectionDescription}>
-          Your saved base body, rendered from the real Blender rig. Variant garments are not shown here yet. 
-          Drag to rotate, pinch to zoom.
+          V2 body with costume pieces. Drag to rotate, pinch to zoom.
         </Text>
+        
+        {/* Costume Controls */}
+        <View style={styles.costumeControls}>
+          {/* Piece toggles and color pickers */}
+          <View style={styles.controlsGrid}>
+            {['top', 'bottom', 'shoes', 'gloves', 'wig'].map((slot) => {
+              const isOn = enabledPieces.has(slot);
+              const currentColor = pieceColors.get(slot) || getSlotDefaultColor(slot);
+              const targetColorSwatches = character?.targetColors || [];
+              
+              return (
+                <View key={slot} style={styles.controlRow}>
+                  <TouchableOpacity
+                    style={[styles.toggleButton, isOn && styles.toggleButtonOn]}
+                    onPress={() => { void togglePiece(slot, !isOn); }}
+                  >
+                    <Text style={[styles.toggleText, isOn && styles.toggleTextOn]}>
+                      {slot.charAt(0).toUpperCase() + slot.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {isOn && (
+                    <View style={styles.colorPickerRow}>
+                      <View style={[styles.currentColorSwatch, { backgroundColor: currentColor }]} />
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.swatchScroll}>
+                        {/* Target color swatches */}
+                        {targetColorSwatches.map((colorName, idx) => {
+                          const hexColor = (colorNames as Record<string, string>)[colorName.toLowerCase()] || colorName;
+                          return (
+                            <TouchableOpacity
+                              key={`target-${idx}`}
+                              style={[styles.colorSwatch, { backgroundColor: hexColor }]}
+                              onPress={() => { void setColor(slot, hexColor); }}
+                            />
+                          );
+                        })}
+                        {/* Additional common colors */}
+                        {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF', '#000000'].map((hex) => (
+                          <TouchableOpacity
+                            key={hex}
+                            style={[styles.colorSwatch, { backgroundColor: hex }]}
+                            onPress={() => { void setColor(slot, hex); }}
+                          />
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+          
+          {/* Action buttons */}
+          <View style={styles.actionButtons}>
+            <Button
+              title="Wear full costume"
+              onPress={() => { void wearFull(); }}
+              variant="secondary"
+              size="small"
+            />
+            <Button
+              title="Remove All"
+              onPress={() => { void removeAll(); }}
+              variant="secondary"
+              size="small"
+            />
+          </View>
+        </View>
         
         <View 
           style={styles.previewContainer}
@@ -381,10 +473,10 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
             scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
           }}
         >
-          <ThreeDPreview 
+          <CostumeViewer
             bodyType={bodyType}
-            width={300} 
-            height={400} 
+            enabledPieces={enabledPieces}
+            pieceColors={pieceColors}
           />
         </View>
 
@@ -879,5 +971,66 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
     marginTop: spacing.xs,
+  },
+  costumeControls: {
+    marginBottom: spacing.lg,
+  },
+  controlsGrid: {
+    gap: spacing.md,
+  },
+  controlRow: {
+    marginBottom: spacing.sm,
+  },
+  toggleButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignSelf: 'flex-start',
+  },
+  toggleButtonOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  toggleText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  toggleTextOn: {
+    color: '#FFFFFF',
+  },
+  colorPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  currentColorSwatch: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    marginRight: spacing.sm,
+  },
+  swatchScroll: {
+    flex: 1,
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.sm,
+    marginRight: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    flexWrap: 'wrap',
   },
 });
