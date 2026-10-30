@@ -129,3 +129,50 @@ FINAL REPORT (max 20 lines)
 7. Files changed.
 
 8. BLOCKED (exact reason); NOT TESTED; NEXT STEP.
+
+
+---
+
+TASK COSTUME-7A: WIG ONLY. Find what the dots on the back of the head are, then fix the wig so it covers the back of the head down to the nape, stays off the face, and has no dots. Do not touch any other piece, the camera, compare_before, or thresholds.
+
+R0: append this ENTIRE message to docs/COSTUME6C_PROMPT.md under "COSTUME-7A", commit and push. Branch task/costume4c-clip-and-coverage; no merges; if a git command fails with a file-lock error, report the exact error and stop. Windows PowerShell: no grep/tail/head/sort/cat; use the Grep tool and short reads. BOTH genders in every step. Paste RAW command output with real numbers. A command that exits non-zero is FAILING (never "expected failure"). DEVIATIONS first, including anything partly done. Commit and push after each step.
+
+FACTS (measured): body faces +Z in both genders. The wig face rule in src/utils/costumeBuilder.ts (about lines 447-452) is `centroid.z < -0.05 && centroid.y < hairlineY`; -0.05 is an absolute number and with +Z forward it drops the BACK of the head. hairlineY = head_top_y - hairlineDrop (0.02). The wig has front coverage 100%, back coverage about 75%; 74 (male) and 125 (female) unselected back vertices, all labeled "head". The male wig height is 0.215 and the existing test limit is 0.2 (do not change that limit). The app shows a coverage line in the Debug panel (female wig 715/840).
+
+STEP 1, EVIDENCE (read-only; optional debug return in the builder is allowed, default behavior must be unchanged):
+
+ a. Before any change, save per-gender triangle counts of top, bottom, shoes, gloves, wig to docs/costume7a_before.json (raw numbers).
+
+ b. Wig: for the back half (z < head bone z) print: total region triangles, triangles dropped by the face rule, dropped by closure, dropped by other reasons (print the code that decides closure). Print the same for the front half.
+
+ c. Count connected components of the SELECTED wig triangles (connected by shared vertices) and their sizes. Many small components = isolated floating triangles.
+
+ d. Read the Debug panel code in Preview3DTestScreen.tsx and say exactly what Debug ON draws and whether it draws anything per uncovered vertex (dots, points, markers) with line numbers.
+
+ e. Verdict in plain words: are the dots (1) debug markers, (2) isolated wig triangles, or (3) other. Give the numbers.
+
+STEP 2, FIX (wig only):
+
+ a. Wig uses band selection: every triangle whose centroid is in the wig region is taken, with NO bone labels and NO closure rule, so there are no holes.
+
+ b. Remove the hard-coded -0.05 face rule. Replace it with a slanted lower edge defined in costumePieces.json and measured from the head bone: plane y(z) = head_top_y - drop_front + slope * (head_z - z), clipped exactly on the plane (use the existing clip code; if it only keeps whole triangles, the wig edge may be ragged: say so and use the exact splitting clip). Start values, to be tuned by eye later: about 0.08 m below the crown at the face side (hairline) and about 0.17 m below at the back (nape). All numbers in the data file, none in code or tests.
+
+ c. Wig offset stays as it is in the data file.
+
+STEP 3, TESTS (both genders; each exits 1 when it fails; constants at the top of the test file, not read from the data file):
+
+ - at least 0.99 of body vertices inside the wig region are inside selected triangles, overall and in each of the four quadrants (front/back by z vs head bone z, left/right by x);
+
+ - face clear: no wig vertex with z > head_z + 0.06 below head_top_y - 0.10;
+
+ - nape: some wig vertex with z < head_z - 0.05 reaches y <= head_top_y - 0.14;
+
+ - wig height <= 0.2 (existing limit, unchanged);
+
+ - selected wig triangles form exactly 1 connected component (no floating dots) and 1 boundary loop.
+
+ Paste the complete failure list.
+
+STEP 4, VERIFY (raw): node --import tsx tools/test_costume_pieces.mjs (full output, then list every failing check by name with values; the female top 5 loops is a known, out-of-scope failure: still list it as FAILING), node tools/check_no_duplicate_builder.mjs. Print top, bottom, shoes, gloves counts per gender and compare with docs/costume7a_before.json: they must be identical. tsc: NOT RUN is fine. Update COSTUME6_PROGRESS.md and add a short CHANGELOG.md entry. Commit and push.
+
+FINAL REPORT (max 12 lines): 0. DEVIATIONS first, then STATUS per step. 1. What the dots are, with numbers. 2. Back/front wig triangles dropped by reason. 3. Wig table per gender and quadrant: covered/total/% (covered never above total). 4. Wig height, top-to-nape drop in cm, component count, loops. 5. Other pieces' counts before vs after. 6. Raw pass/fail of each command, full list of failing checks. 7. Files changed. 8. BLOCKED; NOT TESTED; NEXT STEP.
