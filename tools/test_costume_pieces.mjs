@@ -486,10 +486,14 @@ function countBoundaryLoops(geometry) {
 
 async function testBody(gender, glbPath, contract) {
   console.log(`\n=== Testing ${gender} body ===`);
+  const failures = [];
 
   const gltf = await loadGLB(glbPath);
   const skinnedMesh = findBodyMesh(gltf.scene);
-  if (!skinnedMesh) throw new Error(`No SkinnedMesh found`);
+  if (!skinnedMesh) {
+    failures.push(`No SkinnedMesh found`);
+    return failures;
+  }
 
   const geometry = skinnedMesh.geometry;
   const position = geometry.attributes.position;
@@ -541,7 +545,8 @@ async function testBody(gender, glbPath, contract) {
       }
       
       if (!isFinite(minX)) {
-        throw new Error(`belt: No torso vertices found at y=${yPos}`);
+        failures.push(`belt: No torso vertices found at y=${yPos}`);
+        continue;
       }
       
       const bodyWidth = maxX - minX;
@@ -552,7 +557,7 @@ async function testBody(gender, glbPath, contract) {
       
       if (Math.abs(torusRadius - radiusX) > BELT_RADIUS_TOL || 
           Math.abs(torusRadius - radiusZ) > BELT_RADIUS_TOL) {
-        throw new Error(`belt: Radii exceed tolerance: torusR=${torusRadius.toFixed(3)}, bodyW=${bodyWidth.toFixed(3)}, bodyD=${bodyDepth.toFixed(3)}`);
+        failures.push(`belt: Radii exceed tolerance: torusR=${torusRadius.toFixed(3)}, bodyW=${bodyWidth.toFixed(3)}, bodyD=${bodyDepth.toFixed(3)}`);
       }
       
       console.log(`belt: radii OK (torso w=${bodyWidth.toFixed(3)}, d=${bodyDepth.toFixed(3)})`);
@@ -589,7 +594,8 @@ async function testBody(gender, glbPath, contract) {
     }
     
     if (selectedTriangles.length === 0) {
-      throw new Error(`${pieceDef.id}: No triangles selected`);
+      failures.push(`${pieceDef.id}: No triangles selected`);
+      continue;
     }
 
     const pieceGeometry = buildOffsetGeometry(geometry, selectedTriangles, pieceDef.offset_m);
@@ -628,7 +634,7 @@ async function testBody(gender, glbPath, contract) {
       if (total > 0) {
         const ratio = Math.abs(leftCount - rightCount) / total;
         if (ratio > 0.05) {
-          throw new Error(`${pieceDef.id}: Asymmetry ${(ratio * 100).toFixed(1)}% (L=${leftCount}, R=${rightCount})`);
+          failures.push(`${pieceDef.id}: Asymmetry ${(ratio * 100).toFixed(1)}% (L=${leftCount}, R=${rightCount})`);
         }
       }
     }
@@ -683,7 +689,7 @@ async function testBody(gender, glbPath, contract) {
       if (nearCount > 0) {
         const coverage = insideCount / nearCount;
         if (coverage < PROBE_MIN) {
-          throw new Error(`${pieceDef.id}: Bone ${boneName} probe ${(coverage * 100).toFixed(1)}% < ${(PROBE_MIN * 100).toFixed(0)}%`);
+          failures.push(`${pieceDef.id}: Bone ${boneName} probe ${(coverage * 100).toFixed(1)}% < ${(PROBE_MIN * 100).toFixed(0)}%`);
         }
       }
     }
@@ -693,7 +699,7 @@ async function testBody(gender, glbPath, contract) {
       const maxY = bbox.max.y;
       const neckLimit = landmarks.neck_y + NECK_TOL;
       if (maxY > neckLimit) {
-        throw new Error(`top: max y ${maxY.toFixed(3)} > neck_y+${NECK_TOL} (${neckLimit.toFixed(3)})`);
+        failures.push(`top: max y ${maxY.toFixed(3)} > neck_y+${NECK_TOL} (${neckLimit.toFixed(3)})`);
       }
       
       // For hem: measure BEFORE offset (sourcePositions) instead of after
@@ -705,7 +711,7 @@ async function testBody(gender, glbPath, contract) {
           minSourceY = Math.min(minSourceY, y);
         }
         if (minSourceY < topHemY - HEM_TOL) {
-          throw new Error(`top: min source y ${minSourceY.toFixed(3)} < hem-${HEM_TOL} (${(topHemY - HEM_TOL).toFixed(3)})`);
+          failures.push(`top: min source y ${minSourceY.toFixed(3)} < hem-${HEM_TOL} (${(topHemY - HEM_TOL).toFixed(3)})`);
         }
       }
     }
@@ -717,12 +723,12 @@ async function testBody(gender, glbPath, contract) {
       const topDiff = Math.abs(wigTop - headTopY);
       
       if (topDiff > WIG_TOP_TOL) {
-        throw new Error(`wig: top ${wigTop.toFixed(3)} differs from head_top_y ${headTopY.toFixed(3)} by ${topDiff.toFixed(3)} > ${WIG_TOP_TOL}`);
+        failures.push(`wig: top ${wigTop.toFixed(3)} differs from head_top_y ${headTopY.toFixed(3)} by ${topDiff.toFixed(3)} > ${WIG_TOP_TOL}`);
       }
       
       const wigHeight = bbox.max.y - bbox.min.y;
       if (wigHeight > THRESHOLDS.wigMaxHeight) {
-        throw new Error(`wig: height ${wigHeight.toFixed(3)} > ${THRESHOLDS.wigMaxHeight}`);
+        failures.push(`wig: height ${wigHeight.toFixed(3)} > ${THRESHOLDS.wigMaxHeight}`);
       }
     }
     
@@ -730,7 +736,7 @@ async function testBody(gender, glbPath, contract) {
     if (THRESHOLDS.boundaryLoops[pieceDef.id]) {
       const loops = countBoundaryLoops(pieceGeometry);
       if (loops !== THRESHOLDS.boundaryLoops[pieceDef.id]) {
-        throw new Error(`${pieceDef.id}: ${loops} boundary loops, expected ${THRESHOLDS.boundaryLoops[pieceDef.id]}`);
+        failures.push(`${pieceDef.id}: ${loops} boundary loops, expected ${THRESHOLDS.boundaryLoops[pieceDef.id]}`);
       }
     }
     
@@ -778,17 +784,17 @@ async function testBody(gender, glbPath, contract) {
     }
     
     if (gapCount > 0) {
-      throw new Error(`no-gap: ${gapCount} torso/leg vertices between top hem and bottom waist not covered`);
+      failures.push(`no-gap: ${gapCount} torso/leg vertices between top hem and bottom waist not covered`);
+    } else {
+      console.log(`no-gap: OK (top hem ${topHemY.toFixed(3)}, bottom waist ${bottomWaistY.toFixed(3)})`);
     }
-    
-    console.log(`no-gap: OK (top hem ${topHemY.toFixed(3)}, bottom waist ${bottomWaistY.toFixed(3)})`);
   }
 
-  return results;
+  return failures;
 }
 
 async function main() {
-  console.log('COSTUME-4A2: Honest tests with original thresholds\n');
+  console.log('COSTUME-4C: Comprehensive tests with all checks\n');
   
   // First, verify thresholds haven't been raised
   console.log('=== Threshold validation ===');
@@ -814,16 +820,30 @@ async function main() {
   
   console.log('All thresholds at spec values ✓\n');
 
-  try {
-    await testBody('male', path.join(ROOT, 'assets/models/3D_Model_Male_V2_rigged.glb'), maleContract);
-    await testBody('female', path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'), femaleContract);
-    
+  // Run all tests and collect failures
+  const allFailures = [];
+  
+  const maleFailures = await testBody('male', path.join(ROOT, 'assets/models/3D_Model_Male_V2_rigged.glb'), maleContract);
+  if (maleFailures.length > 0) {
+    allFailures.push(...maleFailures.map(f => `[male] ${f}`));
+  }
+  
+  const femaleFailures = await testBody('female', path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'), femaleContract);
+  if (femaleFailures.length > 0) {
+    allFailures.push(...femaleFailures.map(f => `[female] ${f}`));
+  }
+  
+  // Print all failures
+  if (allFailures.length > 0) {
+    console.error('\n=== FAILURES ===');
+    for (const failure of allFailures) {
+      console.error(`  ${failure}`);
+    }
+    console.error(`\nTotal failures: ${allFailures.length}\n`);
+    process.exit(1);
+  } else {
     console.log('\n=== All checks passed ===\n');
     process.exit(0);
-  } catch (error) {
-    console.error('\n=== FAIL ===');
-    console.error(error.message);
-    process.exit(1);
   }
 }
 
