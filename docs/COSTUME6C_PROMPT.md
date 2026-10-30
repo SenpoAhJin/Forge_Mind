@@ -153,3 +153,50 @@ PART 2: C2 EVIDENCE. Do it exactly as written in CONTINUATION 1, PART 2 (wig fou
 PART 3: VERIFY (raw output): `node --import tsx tools/test_costume_pieces.mjs`, `node tools/check_no_duplicate_builder.mjs`, `node --import tsx tools/compare_before.mjs`. tsc: NOT RUN is acceptable.
 
 FINAL REPORT (max 18 lines): 0. DEVIATIONS first, then STATUS per part. 1. PRE_C1 hash and the metric definitions side by side (old baseline vs compare_before). 2. Old vs new table per gender and piece (count, bbox, hash). 3. Verdict X or Y per piece, the cause, and what differs (only-old, only-new counts). 4. Fact (b) answer and line numbers. 5. Wig quadrant table per gender, face-rule counts front vs back, hairlineY and its source. 6. Top table per gender: shoulder cap L and R %, upper back %; labels and reasons. 7. H1, H2, H3 with numbers. 8. Raw pass/fail of each command; files changed. 9. BLOCKED; NOT TESTED; NEXT STEP.
+
+
+## CONTINUATION 3
+
+TASK COSTUME-6C, CONTINUATION 3: fix the broken evidence, then resolve three contradictions with numbers. No behavior fixes. This message overrides docs/COSTUME6C_PROMPT.md and earlier continuations where they differ.
+
+R0: append this ENTIRE message verbatim to docs/COSTUME6C_PROMPT.md under "CONTINUATION 3", commit and push. Read COSTUME6_PROGRESS.md. All ENVIRONMENT, RULES and NOT-ALLOWED text still applies (Windows PowerShell, no grep/tail/head/sort/cat; Grep tool and short reads; branch task/costume4c-clip-and-coverage; no merges; BOTH genders; RAW command output with real numbers; DEVIATIONS first, including anything partly done). A command that exits non-zero is FAILING. Never write "PASS (expected failures)" or "FAIL (EXPECTED)".
+
+KNOWN: forward = +Z for both genders (measured, do not redo). Do NOT regenerate docs/costume6c_before.json from current code, do NOT edit compare_before.mjs to make it pass, do NOT change selection code, data values or thresholds. Read-only debug additions to the builder are allowed (optional debug argument that returns reasons; default behavior must be byte-identical).
+
+PART 1: CONTRADICTIONS (Grep and short reads; paste the lines)
+
+ a. Print the full current body of selectPieceTriangles and selectTriangles with line numbers (short reads). Say whether ANY wig face rule exists today (search: "hairline", "isWig", "-0.05", "z <"), with line numbers. Say whether the previous session's quote (lines 447-452) is in the file now. Run `git log -S"-0.05" --oneline -- src/utils/costumeBuilder.ts` and `git log -S"hairlineY" --oneline -- src/utils/costumeBuilder.ts` and print them: which commit added and which removed the rule, if any.
+
+ b. Print the full body of clipTrianglesAtPlane with line numbers. Does it split triangles on the plane, or keep only whole triangles? Is there a second clip function (search "clip", "split", "plane")? Which one does the app call for each piece today?
+
+ c. Print where the C0 baseline numbers were captured: the commit hash that was checked out when docs/costume6c_before.json's numbers were recorded (see COSTUME6_PROGRESS.md and git log of that file).
+
+PART 2: OLD VS NEW (the app's own public function, one shared metrics script)
+
+ a. Write ONE script OUTSIDE the repo, C:\temp\snap_pieces.mjs, that imports the repo's src/utils/costumeBuilder.ts from the current working directory, loads both rigged GLBs the way compare_before.mjs does, and for each gender and each of the 5 pieces calls the same top-level function the app calls (buildCostumePiece or its current equivalent; if the signature differs between commits, adapt only the call, and print it). It prints per piece: triangle count, vertex count, bbox min/max of the FINAL geometry, and a hash of the final position array. Output JSON to a file given on the command line.
+
+ b. Create two temporary worktrees: `git worktree add C:\temp\wt_pre 11701a7` and `git worktree add C:\temp\wt_c1 9786025` (also run it on the current HEAD in the main repo). In each worktree, make node_modules available (junction to the main repo's node_modules with `cmd /c mklink /J node_modules <path>`), run `node --import tsx C:\temp\snap_pieces.mjs <outfile>` from inside that worktree. If a commit cannot run, report the exact error and try its parent or child; never skip silently.
+
+ c. Compare the three JSON files in a small script and print one raw table per gender: piece, count PRE / C1 / HEAD, bbox PRE / C1 / HEAD, hash equal yes/no. Then: does 9786025 (C1) change any piece versus 11701a7? Does HEAD differ from C1? For every piece that differs, print triangles only-in-old and only-in-new (compare by sorted source-triangle index if the function can return it; otherwise by rounded centroid) and the first 5 centroids with owner label.
+
+ d. Verdict per piece: C1 PRESERVED BEHAVIOR / C1 CHANGED BEHAVIOR (with the cause and line numbers) / UNKNOWN. If C0's recorded numbers (Part 1c) equal PRE's numbers, say the baseline was right and compare_before is wrong; if not, say which commit the baseline really matches.
+
+ e. Remove both worktrees `git worktree remove --force`). Do not commit anything from C:\temp.
+
+PART 3: EVIDENCE WITH VALID NUMBERS (tools/diag_regions.mjs, CURRENT pipeline, both genders)
+
+ Fix the metric first: for a region, covered = number of UNIQUE body vertices that belong to at least one selected triangle; total = vertices in the region; covered <= total always; percent = covered/total. Add an assert that fails if covered > total.
+
+ Wig: region = body vertices with y >= head_top_y - 0.18; four quadrants around the head bone head (front z > head z, back z < head z; left/right by x). Print covered/total/% per quadrant, plus the FINAL rendered wig mesh (after offset): triangle count and centroid z split front/back, and its height from min y to max y (explain the male 0.215).
+
+ For every unselected region vertex, record ONE reason from this fixed list, using a debug return from the builder (no behavior change): LABEL_NOT_IN_GROUP, OUTSIDE_Y_BAND, FACE_RULE (only if Part 1a found a rule), CLOSURE, CLIP_REMOVED, OTHER. Print the counts per reason and quadrant, and the label split. If the builder cannot tell CLOSURE from the others, say so and show the code that decides.
+
+ Top: shoulder cap (within 0.06 m of each upperarm bone head, L and R) and upper back (y between shoulder_y - 0.15 and neck_y + 0.06, behind the spine_03 head, z < its z): covered/total/% and the same reason counts and labels.
+
+ End with H1, H2, H3 as CONFIRMED / REJECTED / OPEN with numbers. H2 may only be REJECTED if Part 1a proves no rule exists in the code the app runs.
+
+PART 4: TESTS (raw)
+
+ Run `node --import tsx tools/test_costume_pieces.mjs` and paste the COMPLETE output, then list every failing check by name with its values. Also run `node tools/check_no_duplicate_builder.mjs` and `node --import tsx tools/compare_before.mjs` (it may fail; report raw). tsc: NOT RUN is fine.
+
+FINAL REPORT (max 18 lines): 0. DEVIATIONS first, then STATUS per part. 1. Contradictions: face rule exists yes/no with lines and commits; clip function behavior with lines; commit of the C0 baseline. 2. Old vs new table per gender and piece. 3. Verdict per piece and the cause. 4. Wig table per gender and quadrant (covered/total/%), reason counts, rendered wig front/back triangles, wig height. 5. Top table per gender: shoulder L and R, upper back, reasons, labels. 6. H1, H2, H3. 7. Full list of failing checks. 8. Files changed (confirm no data, threshold or selection changes). 9. BLOCKED; NOT TESTED; NEXT STEP.
