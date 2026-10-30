@@ -1,0 +1,13 @@
+{
+  "_comment": "Maps color names to hex codes for costume pieces. Used when selecting owned items.",
+  "white": "#FFFFFF",
+  "black": "#000000",
+  "red": "#EF4444",
+  "blue": "#3B82F6",
+  "pink": "#EC4899",
+  "brown": "#92400E",
+  "green": "#10B981",
+  "purple": "#8B5CF6",
+  "yellow": "#F59E0B",
+  "unclear": null
+}
