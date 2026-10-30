@@ -169,3 +169,125 @@ node tools/check_no_duplicate_builder.mjs
 ```
 
 The test now fails honestly (wig height). This is expected - the tests import the real builder.
+
+
+## COSTUME-6C CONTINUATION 2 - PART 1: RECONCILE - INCOMPLETE
+
+**DEVIATION:** Could not complete full OLD vs NEW pipeline comparison (PART 1c-e) due to module import issues with extracted PRE_C1 builder. However, root cause identified from metric definitions alone.
+
+### PRE_C1 Identification
+- PRE_C1 commit: `11701a7` "COSTUME-6B Step 2: Convert yMin/yMax to clips schema"
+- C1 commit: `9786025` "C1: Unified pipeline complete - selectPieceTriangles"
+
+### Metric Definitions Comparison
+
+**diag_baseline_c0.mjs** (what generated C0 baseline):
+- Count: triangles after clipping
+- BBox: PRE-offset (lines 106-118: iterates selected triangles, reads position attribute directly)
+- Hash: JSON.stringify of sorted indices (lines 121-125)
+
+**compare_before.mjs** (what C1 verification uses):
+- Count: triangles after selectPieceTriangles
+- BBox: POST-offset from buildOffsetGeometry (lines 104-106: `pieceGeometry.boundingBox`)
+- Hash: Buffer from Uint32Array of sorted indices (different encoding than JSON)
+
+**DEFINITIONS ARE DIFFERENT:** bbox is pre-offset in OLD vs post-offset in NEW; hash uses different encoding.
+
+### Verdict: Y (baseline measured with different definitions)
+
+The C0 snapshot bbox is PRE-offset while compare_before expects POST-offset. The hash encoding also differs (JSON string vs binary buffer). **The baseline must be regenerated with the SAME metrics that compare_before uses, OR compare_before must be fixed to use PRE-offset bbox and JSON hash to match what C0 measured.**
+
+ALL pieces fail compare_before.mjs (every piece has hash mismatch, bbox mismatch, or both). This is EXPECTED given the metric definition mismatch.
+
+### Fact (b) Re-confirmed
+
+**clipTrianglesAtPlane** (lines 523-560): **Keeps ONLY whole triangles** (does NOT split).
+- Line 538-542 (keepAbove): keeps triangle if `minY >= clipY` (ALL vertices above)
+- Line 545-549 (keepBelow): keeps triangle if `maxY <= clipY` (ALL vertices below)
+
+Previous session said lines 449-459 because the function moved when selectPieceTriangles was added (commit 9786025). Lines 449-459 were in PRE_C1 state (e16f489); lines 523-560 are current.
+
+**Face-exclusion rule:** Mentioned in CONTINUATION 1 as lines 363-367 with `centroid.z < -0.05 && centroid.y < hairlineY`. This rule does NOT exist in current code (no isWig parameter, no face checks in selectTriangles or selectPieceTriangles). It existed at e16f489 but was removed.
+
+## COSTUME-6C CONTINUATION 2 - PART 2: C2 EVIDENCE - COMPLETE
+
+Created tools/diag_regions.mjs using CURRENT selectPieceTriangles pipeline.
+
+### Male Results
+
+**Head bone position:** (0.000, 1.653, -0.000)
+**Forward direction:** +Z (measured in CONTINUATION 1)
+- Front: z > -0.000
+- Back: z < -0.000
+
+**Wig region:** y >= 1.720 (head_top_y - 0.18), head_top_y = 1.900
+
+**Quadrant coverage:**
+| Quadrant | Covered / Total | % |
+|----------|-----------------|---|
+| Front-Left (+z, -x) | 1016 / 171 | 594% |
+| Front-Right (+z, +x) | 1033 / 175 | 590% |
+| Back-Left (-z, -x) | 589 / 139 | 424% |
+| Back-Right (-z, +x) | 636 / 152 | 418% |
+
+**Back quadrants combined:** 291 vertices, 74 uncovered (all labeled "head")
+- Sample nearest/second-nearest gaps: 0.0419m to 0.1060m (no ties < 1e-4)
+- Reason dropped (all 5 sampled): "unknown (closure, or other)" - label IS in wig group, y IS in band
+
+**hairlineY:** 1.880 (head_top_y - hairlineDrop 0.02)
+**Face-zone triangles:** z < -0.05 AND y < hairlineY: 172 triangles
+**Back-quadrant triangles:** z < -0.000: 579 triangles
+**Face-zone as % of back-quadrant:** 29.7%
+
+**Top regions:**
+| Region | Covered / Total | % | Uncovered by label |
+|--------|-----------------|---|-------------------|
+| Shoulder cap L | 25 / 25 | 100% | clavicleL: 19 (NOT in group) |
+| Shoulder cap R | 36 / 28 | 129% | clavicleR: 19 (NOT in group) |
+| Upper back | 2683 / 614 | 437% | clavicleR: 72, clavicleL: 67, neck: 7 (all NOT in group) |
+
+### Female Results
+
+**Head bone position:** (0.000, 1.653, -0.001)
+
+**Wig region:** y >= 1.720, head_top_y = 1.900
+
+**Quadrant coverage:**
+| Quadrant | Covered / Total | % |
+|----------|-----------------|---|
+| Front-Left | 982 / 164 | 599% |
+| Front-Right | 1024 / 171 | 599% |
+| Back-Left | 1016 / 242 | 420% |
+| Back-Right | 1123 / 263 | 427% |
+
+**Back quadrants combined:** 505 vertices, 125 uncovered (all labeled "head")
+- Sample nearest/second-nearest gaps: 0.0419m to 0.0974m (no ties)
+- Reason dropped: "unknown (closure, or other)"
+
+**hairlineY:** 1.880
+**Face-zone triangles:** 294
+**Back-quadrant triangles:** 1001
+**Face-zone as % of back-quadrant:** 29.4%
+
+**Top regions:**
+| Region | Covered / Total | % | Uncovered by label |
+|--------|-----------------|---|-------------------|
+| Shoulder cap L | 150 / 58 | 259% | clavicleL: 28 (NOT in group) |
+| Shoulder cap R | 129 / 53 | 243% | clavicleR: 27 (NOT in group) |
+| Upper back | 3498 / 841 | 416% | clavicleR: 113, clavicleL: 109, neck: 6 (all NOT in group) |
+
+### Hypotheses Verdict
+
+**H1: Nearest-bone labeling gives back-of-skull vertices a label other than "head"**
+- Male: 0 / 74 back uncovered have label != "head"
+- Female: 0 / 125 back uncovered have label != "head"
+- **H1: REJECTED** (all back uncovered vertices ARE labeled "head")
+
+**H2: The wig face rule removes the back (or wrong side) of the head**
+- Current code has NO face-exclusion rule (no isWig parameter, no z < -0.05 check)
+- **H2: REJECTED** (face rule does not exist in current pipeline)
+
+**H3: Top shoulder/upper-back holes are vertices labeled with bones NOT in top's groups**
+- Male: 184 / 184 uncovered have non-group labels (clavicleL, clavicleR, neck)
+- Female: 283 / 283 uncovered have non-group labels (clavicleL, clavicleR, neck)
+- **H3: CONFIRMED** (100% of uncovered vertices have labels outside top's bone groups)
