@@ -1,7 +1,67 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Thursday, October 29, 2026 (Task COSTUME-4A: Garment Coverage Fix)
+**Last updated:** Friday, October 30, 2026 (Task COSTUME-7C-1: Project Dashboard V2 Costume)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Friday, October 30, 2026 (Task COSTUME-7C-1: Project Dashboard V2 Costume)
+
+**Summary**
+
+Completed COSTUME-7C-1: ProjectDashboardScreen now shows V2 body with costume pieces instead of V1 body. Users can toggle 6 costume slots (top, bottom, shoes, gloves, wig), pick colors with character target-color swatches, and see changes persist per project.
+
+**What changed**
+
+Open ForgeMind app, go to any project dashboard (e.g. "Gojo — Season 2 Uniform"). The 3D Preview section now shows:
+
+**Visual changes:**
+- **V2 body rendering:** Full rigged body at floor origin (1.9m tall, 23 bones)
+- **Costume piece controls:** 5 toggle buttons (Top, Bottom, Shoes, Gloves, Wig) above the viewer
+- **Color pickers:** Each enabled piece shows current color swatch + scrollable color picker with character target colors first
+- **Action buttons:** "Wear full costume" and "Remove All" buttons
+- **State persistence:** Outfit choices save per project (not shared across projects)
+
+**Controls:**
+- **Toggle buttons:** Tap to enable/disable each piece
+- **Color swatches:** Tap any color to apply to that piece
+- **Target colors:** Character's targetColors appear as quick-pick swatches (not auto-applied)
+- **Male/Female switch:** Still drives body type below the viewer
+
+**Technical changes:**
+- Imported outfit store system (colorNames.json, test_outfit_store.mjs from task/costume4d1-outfit-planning)
+- ProjectDashboardScreen now uses CostumeViewer component (replaces ThreeDPreview/V1)
+- Outfit scope: `@forgemind:outfit:project:{id}` (per-project AsyncStorage)
+- Uses useOutfit hook with project-scoped storage
+
+**Files copied from task/costume4d1-outfit-planning:**
+- `src/data/colorNames.json`: Color name to hex mapping for AI matcher
+- `tools/test_outfit_store.mjs`: Outfit store test suite (75 tests pass)
+
+**Files modified:**
+- `src/screens/cosplayer/ProjectDashboardScreen.tsx`: Replaced V1 preview with CostumeViewer + outfit controls
+
+**What still needs testing (NOT TESTED):**
+- Phone touch interactions with color pickers
+- Phone layout at 380px width (controls should wrap)
+- ProjectPlanningScreen (next session, out of scope)
+- Real device rendering performance
+
+**Verification results:**
+- test_costume_pieces.mjs: Male pieces pass, Female top 5 loops FAILING (known, out of scope)
+- test_outfit_store.mjs: All 75 tests PASS
+- check_no_duplicate_builder.mjs: PASS (no duplicates in 23 tools)
+- expo export --platform web: PASS (7.6MB bundle)
+- tsc --noEmit: 26 errors (down from 72, improvement)
+
+**Piece counts (Debug panel style):**
+- Male: top 5834, bottom 4967, shoes 2164, gloves 3286, wig 488
+- Female: Cannot compute (test fails on boundary loop check for top)
+- Wig: 488 (male) differs from reference 1115 as expected (COSTUME-7A changes)
+
+**Where to test:** Any Project Dashboard → 3D Preview section
+
+**NOT TESTED:** Phone rendering, ProjectPlanningScreen integration
 
 ---
 
