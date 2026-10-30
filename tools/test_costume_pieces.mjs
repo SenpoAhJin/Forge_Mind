@@ -199,12 +199,14 @@ async function testBody(gender, glbPath, contract) {
   console.log(`Body bbox: y ${bodyBbox.min.y.toFixed(3)} to ${bodyBbox.max.y.toFixed(3)} m`);
 
   const results = [];
+  const failures = [];
   let topSelectedTriangles = null;
   let topHemY = null;
   let bottomSelectedTriangles = null;
   let bottomWaistY = null;
 
   for (const pieceDef of costumePiecesData.pieces) {
+    try {
     if (pieceDef.type === 'torus') {
       // Belt - special handling
       const yPos = landmarks[pieceDef.yPosition.landmark] + pieceDef.yPosition.offset;
@@ -462,10 +464,16 @@ async function testBody(gender, glbPath, contract) {
     results.push({ piece: pieceDef.id, passed: true });
     
     pieceGeometry.dispose();
+    } catch (error) {
+      // Record failure and continue with next piece
+      failures.push(`${pieceDef.id}: ${error.message}`);
+      console.error(`${pieceDef.id}: FAILED - ${error.message}`);
+    }
   }
 
   // No-gap check
   if (topSelectedTriangles && bottomSelectedTriangles && topHemY && bottomWaistY) {
+    try {
     const topSet = new Set();
     const bottomSet = new Set();
     
@@ -506,6 +514,14 @@ async function testBody(gender, glbPath, contract) {
     }
     
     console.log(`no-gap: OK (top hem ${topHemY.toFixed(3)}, bottom waist ${bottomWaistY.toFixed(3)})`);
+    } catch (error) {
+      failures.push(`no-gap: ${error.message}`);
+      console.error(`no-gap: FAILED - ${error.message}`);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(failures.join('; '));
   }
 
   return results;
