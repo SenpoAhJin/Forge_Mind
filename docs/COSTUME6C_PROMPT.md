@@ -67,3 +67,60 @@ C4 TESTS (each exits 1 on failure; both genders; constants at the TOP of the tes
 C5 VERIFY, raw output: `(npx tsc --noEmit 2>&1 | Select-String "error TS").Count` (36 expected); test_costume_pieces; check_no_duplicate_builder; node scripts/verify-glb-models.mjs. Do not run expo export. Add a short plain-language Task COSTUME-6C entry to CHANGELOG.md with a NOT TESTED list (phone, visual check). Commit and push.
 
 FINAL REPORT (max 15 lines): 0. DEVIATIONS first, then STATUS per part (C0 to C5). 1. Facts (a) to (e) confirmed or rejected with line numbers. 2. H1, H2, H3 with numbers. 3. Coverage table per gender: wig back quadrants %, top shoulder cap L and R %, upper back %, before and after. 4. Full failure list. 5. Raw pass/fail of each command. 6. Files changed; which data fields are new. 7. BLOCKED; NOT TESTED; NEXT STEP.
+
+
+## CONTINUATION 1
+
+TASK COSTUME-6C, CONTINUATION 1: verify C1 properly, then do C2 (evidence) and STOP. No fixes in this session. This message overrides docs/COSTUME6C_PROMPT.md where they differ.
+
+R0: append this ENTIRE message verbatim to docs/COSTUME6C_PROMPT.md under the heading "CONTINUATION 1", commit and push. Then read COSTUME6_PROGRESS.md. All other ENVIRONMENT, CONTEXT, RULES and NOT-ALLOWED text in the saved prompt still applies (Windows PowerShell, no grep/tail/head/sort/cat; Grep tool and short reads only; branch task/costume4c-clip-and-coverage; no merges; BOTH genders on every part; paste RAW command output, never "all match" without numbers; DEVIATIONS first; no shortcuts).
+
+ALREADY CONFIRMED BY THE PREVIOUS SESSION (re-confirm each with Grep and line numbers): (a) armYMax is never read; (b) clipTrianglesAtPlane keeps only whole triangles, no splitting (about lines 449-459); (c) selectTriangles filters by centroid label and centroid y band; (d) the data file has both yMin/yMax and clips; (e) selectTriangles has a wig face rule (about lines 363-367): `if (centroid.z < -0.05 && centroid.y < hairlineY) continue`. The -0.05 is an absolute world number, not relative to the head.
+
+OVERRIDE, FORWARD DIRECTION: the saved prompt says the body faces +Z. That was NEVER measured. Do not assume it. For each gender, from the contract bones, compute forward = (toe.L head z - foot.L head z) and the same for the right side; also print the head bone's head x, y, z. Print the sign and values per gender. Use this MEASURED sign for the words "front" and "back" everywhere in this task. If male and female differ, report it.
+
+PART 1: C1-VERIFY (small, mandatory)
+
+ a. Extract the C0 numbers (per gender and piece: triangle count, pre-offset bbox min/max x y z, hash of sorted selected triangle indices) from COSTUME6_PROGRESS.md into docs/costume6c_before.json, copying the exact values.
+
+ b. Write tools/compare_before.mjs. It must build each piece through the SAME exported function the app calls (selectPieceTriangles, then buildOffsetGeometry, exactly as buildCostumePiece does) and compare with docs/costume6c_before.json: counts equal, bbox within 1e-6, hash equal. Exit 1 on any mismatch. Paste the full raw output for both genders and all 5 pieces.
+
+ c. Delete tools/diag_baseline_c0.mjs (or make it call selectPieceTriangles; it must not contain a second pipeline).
+
+ d. Report: does the app read clips or yMin/yMax? Does tools/test_costume_pieces.mjs still read legacy yMin/yMax anywhere (it did in the bone probes)? Do not change either yet; just report with line numbers.
+
+ If compare_before.mjs fails, STOP after committing the script and report the mismatch. Do not go to Part 2.
+
+PART 2: C2 EVIDENCE (tools/diag_regions.mjs; it must use selectPieceTriangles; both genders)
+
+ WIG
+
+  - Region: body vertices with y >= head_top_y - 0.18. Split into four quadrants using the head bone's head position as the origin and the MEASURED forward sign (front/back by z, left/right by x).
+
+  - For each quadrant print: total vertices, vertices inside selected wig triangles, % covered.
+
+  - Face rule counters: how many triangles in the wig region does the face rule (lines 363-367) drop, split by front and back. Print the value of hairlineY, how it is computed (from which data field), and the head bone's head z, so the absolute -0.05 can be compared with it.
+
+  - For unselected vertices in each quadrant print counts by owner-bone label, the gap between nearest and second-nearest bone segment (flag ties < 1e-4), and the REASON dropped (label not in group / outside y band / face rule / closure / other). If the builder cannot report reasons, add a small read-only debug return; no behavior change.
+
+ TOP
+
+  - Shoulder cap: body vertices within 0.06 m of each upperarm bone head, left and right.
+
+  - Upper back: body vertices with y between shoulder_y - 0.15 and neck_y + 0.06 on the measured BACK side of the spine_03 bone head.
+
+  - For each region: total, inside selected top triangles, % covered; for unselected vertices, counts by label and by reason.
+
+ End with H1, H2, H3 as CONFIRMED or REJECTED, with the numbers:
+
+  H1: nearest-bone labeling gives back-of-skull vertices a label other than "head", so the wig drops them.
+
+  H2: the wig face rule removes the back (or the wrong side) of the head.
+
+  H3: the top's shoulder and upper-back holes are vertices labeled with bones that are not in the top's groups (clavicle, neck).
+
+ Commit and push. Then STOP. Do not edit selection code, data values or thresholds in this session.
+
+PART 3: VERIFY (raw output): `node --import tsx tools/test_costume_pieces.mjs`, `node tools/check_no_duplicate_builder.mjs`, `node tools/compare_before.mjs`. For tsc, run in the background with a long timeout or skip it and write NOT RUN; do not retry it more than once.
+
+FINAL REPORT (max 15 lines): 0. DEVIATIONS first, then STATUS per part. 1. Forward sign and values per gender. 2. compare_before raw result. 3. Facts (a) to (e) re-confirmed with line numbers; what the app and test read (clips vs yMin/yMax). 4. Wig table per gender and quadrant: total, covered, %; face-rule counts front vs back; hairlineY and how it is computed. 5. Top table per gender: shoulder cap L and R %, upper back %; labels and reasons for unselected vertices. 6. H1, H2, H3 with numbers. 7. Raw pass/fail of each command; files changed. 8. BLOCKED; NOT TESTED; NEXT STEP.
