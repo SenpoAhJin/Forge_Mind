@@ -124,3 +124,32 @@ PART 2: C2 EVIDENCE (tools/diag_regions.mjs; it must use selectPieceTriangles; b
 PART 3: VERIFY (raw output): `node --import tsx tools/test_costume_pieces.mjs`, `node tools/check_no_duplicate_builder.mjs`, `node tools/compare_before.mjs`. For tsc, run in the background with a long timeout or skip it and write NOT RUN; do not retry it more than once.
 
 FINAL REPORT (max 15 lines): 0. DEVIATIONS first, then STATUS per part. 1. Forward sign and values per gender. 2. compare_before raw result. 3. Facts (a) to (e) re-confirmed with line numbers; what the app and test read (clips vs yMin/yMax). 4. Wig table per gender and quadrant: total, covered, %; face-rule counts front vs back; hairlineY and how it is computed. 5. Top table per gender: shoulder cap L and R %, upper back %; labels and reasons for unselected vertices. 6. H1, H2, H3 with numbers. 7. Raw pass/fail of each command; files changed. 8. BLOCKED; NOT TESTED; NEXT STEP.
+
+
+## CONTINUATION 2
+
+TASK COSTUME-6C, CONTINUATION 2: reconcile C1 with proof, then run the C2 evidence. No behavior fixes in this session. This message overrides docs/COSTUME6C_PROMPT.md where they differ.
+
+R0: append this ENTIRE message verbatim to docs/COSTUME6C_PROMPT.md under the heading "CONTINUATION 2", commit and push. Then read COSTUME6_PROGRESS.md. All ENVIRONMENT, CONTEXT, RULES and NOT-ALLOWED text in the saved prompt and in CONTINUATION 1 still applies (Windows PowerShell, no grep/tail/head/sort/cat; Grep tool and short reads only; branch task/costume4c-clip-and-coverage; no merges; BOTH genders on every part; paste RAW command output with the actual numbers, never "mismatch" or "all match" alone; DEVIATIONS first, including anything you skip or only partly do).
+
+KNOWN FROM CONTINUATION 1 (do not redo): forward = +Z for both genders (measured). tools/compare_before.mjs fails for every piece. The report did not say why. Two explanations are open: (X) selectPieceTriangles behaves differently from the pipeline the app ran before C1; (Y) docs/costume6c_before.json was measured or transcribed with different definitions. Do NOT regenerate docs/costume6c_before.json from current code, do NOT change selection code, data values or thresholds, and do NOT edit compare_before.mjs to make it pass.
+
+PART 1: RECONCILE (decide X or Y with numbers)
+
+ a. Find the commit that introduced selectPieceTriangles (git log --oneline on src/utils/costumeBuilder.ts). Call its parent PRE_C1. Print both hashes and the one-line messages.
+
+ b. Print, as raw excerpts, the exact lines in COSTUME6_PROGRESS.md that the C0 numbers came from, and the exact code in tools/diag_baseline_c0.mjs that defines: what "count" counts (triangles before or after plane clipping), what the bbox is (pre-offset or post-offset), and what goes into the hash. Then print the same three definitions from tools/compare_before.mjs. State whether they are identical.
+
+ c. Write a temporary tools/reconcile_c1.mjs. Extract the builder as it was at PRE_C1 with `git show PRE_C1:src/utils/costumeBuilder.ts` into a temporary file tools/_old_builder.ts (it must never be committed; delete it before committing; if it fails to import because sibling files changed, report the exact error and use PRE_C1 copies of those siblings the same way). Run the OLD app path (the selection the old buildCostumePiece used) and the NEW selectPieceTriangles on the same GLBs, for both genders and all 5 pieces, through ONE shared metrics function defined once in this script: triangle count after clipping, pre-offset bbox, hash of sorted selected source-triangle indices. Print both sides raw, with all numbers.
+
+ d. For every piece where old and new differ: print how many triangles are only in old and only in new; for the first 5 of each print centroid x y z and owner-bone label. Print that piece's clips and yMin/yMax/armYMax from the data file, and state whether the new path ignores yMin/yMax when clips exist, and whether the clips reproduce the old yMin/yMax planes exactly.
+
+ e. Verdict per piece, with numbers: SAME PIPELINE (baseline was measured differently) / C1 CHANGED APP BEHAVIOR (name the cause and line numbers) / UNKNOWN. Delete tools/_old_builder.ts. Do not commit reconcile_c1.mjs unless it passes check_no_duplicate_builder.mjs; otherwise paste its output into COSTUME6_PROGRESS.md and delete it. Also delete tools/diag_baseline_c0.mjs now that the shared metrics replace it. Commit and push.
+
+ f. Re-confirm fact (b) properly: read the body of clipTrianglesAtPlane and say with line numbers whether it splits triangles or only keeps whole triangles, and why the previous session said lines 449-459 while this one says 523. Re-confirm the face rule's current line numbers.
+
+PART 2: C2 EVIDENCE. Do it exactly as written in CONTINUATION 1, PART 2 (wig four quadrants, face-rule counters front vs back, hairlineY and how it is computed, unselected vertices by label, nearest/second-nearest gap, reason dropped; top shoulder cap L and R, upper back; H1, H2, H3 CONFIRMED or REJECTED with numbers), with these changes: use forward = +Z (measured), so front is z > head bone z and back is z < head bone z; run it on the CURRENT selectPieceTriangles (what the app runs now) and label the output "CURRENT PIPELINE"; additionally print, for the wig, how many triangles with centroid z < -0.05 and y < hairlineY exist in the wig region and what share of the back-quadrant triangles that is. If Part 1 ends UNKNOWN for any piece, still do Part 2 but say so in the report.
+
+PART 3: VERIFY (raw output): `node --import tsx tools/test_costume_pieces.mjs`, `node tools/check_no_duplicate_builder.mjs`, `node --import tsx tools/compare_before.mjs`. tsc: NOT RUN is acceptable.
+
+FINAL REPORT (max 18 lines): 0. DEVIATIONS first, then STATUS per part. 1. PRE_C1 hash and the metric definitions side by side (old baseline vs compare_before). 2. Old vs new table per gender and piece (count, bbox, hash). 3. Verdict X or Y per piece, the cause, and what differs (only-old, only-new counts). 4. Fact (b) answer and line numbers. 5. Wig quadrant table per gender, face-rule counts front vs back, hairlineY and its source. 6. Top table per gender: shoulder cap L and R %, upper back %; labels and reasons. 7. H1, H2, H3 with numbers. 8. Raw pass/fail of each command; files changed. 9. BLOCKED; NOT TESTED; NEXT STEP.
