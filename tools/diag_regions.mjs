@@ -116,7 +116,14 @@ async function diagnose(gender, glbPath, contract) {
     }
   }
   
-  // Check coverage
+  // Check coverage (count UNIQUE covered vertices per quadrant)
+  const coveredSets = {
+    frontLeft: new Set(),
+    frontRight: new Set(),
+    backLeft: new Set(),
+    backRight: new Set(),
+  };
+  
   for (const triIdx of wigSelected) {
     for (let j = 0; j < 3; j++) {
       const vIdx = index.getX(triIdx * 3 + j);
@@ -127,21 +134,34 @@ async function diagnose(gender, glbPath, contract) {
       const z = position.getZ(vIdx);
       
       if (z >= headZ && x < headX && quadrants.frontLeft.vertices.includes(vIdx)) {
-        quadrants.frontLeft.covered++;
+        coveredSets.frontLeft.add(vIdx);
       } else if (z >= headZ && x >= headX && quadrants.frontRight.vertices.includes(vIdx)) {
-        quadrants.frontRight.covered++;
+        coveredSets.frontRight.add(vIdx);
       } else if (z < headZ && x < headX && quadrants.backLeft.vertices.includes(vIdx)) {
-        quadrants.backLeft.covered++;
+        coveredSets.backLeft.add(vIdx);
       } else if (z < headZ && x >= headX && quadrants.backRight.vertices.includes(vIdx)) {
-        quadrants.backRight.covered++;
+        coveredSets.backRight.add(vIdx);
       }
     }
   }
   
+  quadrants.frontLeft.covered = coveredSets.frontLeft.size;
+  quadrants.frontRight.covered = coveredSets.frontRight.size;
+  quadrants.backLeft.covered = coveredSets.backLeft.size;
+  quadrants.backRight.covered = coveredSets.backRight.size;
+  
   console.log(`\nQuadrant coverage:`);
   for (const [key, quad] of Object.entries(quadrants)) {
-    const pct = quad.vertices.length > 0 ? (quad.covered / quad.vertices.length * 100).toFixed(1) : '0.0';
-    console.log(`  ${quad.name}: ${quad.covered} / ${quad.vertices.length} vertices (${pct}%)`);
+    const total = quad.vertices.length;
+    const covered = quad.covered;
+    
+    // Assert: covered <= total
+    if (covered > total) {
+      throw new Error(`COVERAGE METRIC ERROR: ${quad.name} covered=${covered} > total=${total}`);
+    }
+    
+    const pct = total > 0 ? (covered / total * 100).toFixed(1) : '0.0';
+    console.log(`  ${quad.name}: ${covered} / ${total} (${pct}%)`);
   }
   
   // Back quadrant analysis
@@ -301,34 +321,45 @@ async function diagnose(gender, glbPath, contract) {
     }
   }
   
-  // Coverage
+  // Coverage (count UNIQUE covered vertices)
   function checkCoverage(vertices) {
-    let covered = 0;
+    const coveredSet = new Set();
     for (const triIdx of topSelected) {
       for (let j = 0; j < 3; j++) {
         const vIdx = index.getX(triIdx * 3 + j);
-        if (vertices.includes(vIdx)) covered++;
+        if (vertices.includes(vIdx)) coveredSet.add(vIdx);
       }
     }
-    return covered;
+    return coveredSet.size;
   }
   
   const shoulderLCovered = checkCoverage(shoulderCapL);
   const shoulderRCovered = checkCoverage(shoulderCapR);
   const upperBackCovered = checkCoverage(upperBack);
   
+  // Assert: covered <= total
+  if (shoulderLCovered > shoulderCapL.length) {
+    throw new Error(`COVERAGE METRIC ERROR: shoulderL covered=${shoulderLCovered} > total=${shoulderCapL.length}`);
+  }
+  if (shoulderRCovered > shoulderCapR.length) {
+    throw new Error(`COVERAGE METRIC ERROR: shoulderR covered=${shoulderRCovered} > total=${shoulderCapR.length}`);
+  }
+  if (upperBackCovered > upperBack.length) {
+    throw new Error(`COVERAGE METRIC ERROR: upperBack covered=${upperBackCovered} > total=${upperBack.length}`);
+  }
+  
   const shoulderLPct = shoulderCapL.length > 0 ? (shoulderLCovered / shoulderCapL.length * 100).toFixed(1) : '0.0';
   const shoulderRPct = shoulderCapR.length > 0 ? (shoulderRCovered / shoulderCapR.length * 100).toFixed(1) : '0.0';
   const upperBackPct = upperBack.length > 0 ? (upperBackCovered / upperBack.length * 100).toFixed(1) : '0.0';
   
   console.log(`Shoulder cap LEFT (within ${shoulderCapRadius}m of upperarm.L head):`);
-  console.log(`  ${shoulderLCovered} / ${shoulderCapL.length} vertices (${shoulderLPct}%)`);
+  console.log(`  ${shoulderLCovered} / ${shoulderCapL.length} (${shoulderLPct}%)`);
   
   console.log(`Shoulder cap RIGHT (within ${shoulderCapRadius}m of upperarm.R head):`);
-  console.log(`  ${shoulderRCovered} / ${shoulderCapR.length} vertices (${shoulderRPct}%)`);
+  console.log(`  ${shoulderRCovered} / ${shoulderCapR.length} (${shoulderRPct}%)`);
   
   console.log(`Upper back (y ∈ [${(shoulder_y - 0.15).toFixed(3)}, ${(neck_y + 0.06).toFixed(3)}], z < ${spine03Z.toFixed(3)}):`);
-  console.log(`  ${upperBackCovered} / ${upperBack.length} vertices (${upperBackPct}%)`);
+  console.log(`  ${upperBackCovered} / ${upperBack.length} (${upperBackPct}%)`);
   
   // Uncovered analysis
   const shoulderLUncovered = shoulderCapL.filter(vIdx => {
