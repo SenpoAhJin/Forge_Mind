@@ -3,6 +3,52 @@
 Branch: task/costume4c-clip-and-coverage
 Started: 2026-10-30
 
+## NEXT STEP: Step 3 - Evidence Collection
+
+Create tools/diag_regions.mjs to investigate:
+- Shoes region: y <= ankle_y + 0.05 
+- Wig region: head_top_y - 0.18 to head_top_y
+- Shoulders: body vertices within 0.06m of upperarm bone heads
+
+For each region, report:
+- Quadrant coverage (x/z signs) for region vertices inside selected triangles
+- For unselected vertices: bone label and gap between nearest/second-nearest bone
+
+Test hypotheses:
+1. Nearest-bone labeling drops vertices behind the bone line (heel, back of skull)
+2. Missing clavicle bones in top's torso group cause ragged shoulder tops
+
+Write CONFIRMED or REJECTED with numbers. Then delete tools/diag_coverage.mjs and remove its exemption from check_no_duplicate_builder.mjs.
+
+Commit and push.
+
+## Step 2: PER-GROUP CLIPS - COMPLETE
+
+Added "clips" field to costumePieces.json. Each clip has: groups, landmark, offset, keep ("above"/"below").
+
+Conversion from yMin/yMax:
+- top: 3 clips (hip_y+0.00 above, neck_y+0.06 below for all groups; hip_y+0.00 above for torso only = hem)
+- bottom: 2 clips (ankle_y+0.04 above, hip_y+0.05 below)
+- shoes: 2 clips (floor above, ankle_y+0.05 below)
+- gloves: 0 clips (no yMin/yMax)
+- wig: 2 clips (head_top_y-0.18 above, head_top_y+0.00 below)
+
+Schema normalized: all pieces now use groupDetails (removed plain "groups" field).
+
+Added ClipDef interface. Updated buildPieceForDisplay to read clips (prefers clips, falls back to yMin/yMax).
+
+Kept both yMin/yMax and clips fields for now (legacy support).
+
+**EQUIVALENCE CHECK PASSED:**
+```
+BEFORE: Male: top 5834, bottom 4967, shoes 2164, gloves 3286
+AFTER:  Male: top 5834, bottom 4967, shoes 2164, gloves 3286
+BEFORE failures: Male wig height 0.215 > 0.2, Female top 5 loops
+AFTER failures:  Male wig height 0.215 > 0.2, Female top 5 loops
+```
+
+Committed 11701a7 and pushed.
+
 ## Step 1B: HOUSEKEEPING - COMPLETE
 
 a. Checked e16f489 diff: contains 8 `export` keywords PLUS one unrelated fix (line 809: fixed space typo `let selected Triangles` → `let selectedTriangles` that existed before Step 1).
@@ -20,9 +66,7 @@ b. Modified test harness to collect ALL failures and run BOTH genders even when 
 
 c. TypeScript error count: 36 (was 72 at start of COSTUME-4A2)
 
-Committed: [pending]
-
-**NEXT STEP:** Step 2 - Per-group clips conversion. Read how costumeBuilder.ts applies yMin/yMax/armYMax. Convert to clips field. Record before/after counts and bbox. Add clip tests. Equivalence must match.
+Committed 4a359c0.
 
 ## Step 0: BASELINE - COMPLETE
 
@@ -83,7 +127,3 @@ node tools/check_no_duplicate_builder.mjs
 ```
 
 The test now fails honestly (wig height). This is expected - the tests import the real builder.
-
-## Step 2: PER-GROUP CLIPS - IN PROGRESS
-
-Next: Add "clips" schema to costumePieces.json
