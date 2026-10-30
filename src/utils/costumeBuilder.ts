@@ -19,14 +19,22 @@ export interface LandmarkDef {
   offset: number;
 }
 
+export interface ClipDef {
+  groups: string[]; // ["*"] means all groups
+  landmark: string;
+  offset: number;
+  keep: "above" | "below";
+}
+
 export interface PieceDefinition {
   id: string;
   slot: string;
   groups?: string[];
   groupDetails?: Record<string, string[]>;
-  yMin?: LandmarkDef;
-  yMax?: LandmarkDef;
-  armYMax?: LandmarkDef;
+  yMin?: LandmarkDef; // Legacy, superseded by clips
+  yMax?: LandmarkDef; // Legacy, superseded by clips
+  armYMax?: LandmarkDef; // Legacy, superseded by clips
+  clips?: ClipDef[];
   hairlineDrop?: number; // For wig: distance below head_top_y for front hairline
   offset_m: number;
   defaultColor: string;
@@ -796,12 +804,30 @@ export function buildCostumePiece(
     let yMax: number | undefined;
     let armYMax: number | undefined;
 
-    if (pieceDef.yMin) {
-      yMin = landmarks[pieceDef.yMin.landmark as keyof Landmarks] + pieceDef.yMin.offset;
+    // Support both legacy yMin/yMax and new clips format
+    if (pieceDef.clips && pieceDef.clips.length > 0) {
+      // Convert clips to yMin/yMax for backward compatibility
+      // Find clips that apply to all groups ("*")
+      for (const clip of pieceDef.clips) {
+        if (clip.groups.includes("*")) {
+          const clipY = landmarks[clip.landmark as keyof Landmarks] + clip.offset;
+          if (clip.keep === "above" && (yMin === undefined || clipY > yMin)) {
+            yMin = clipY;
+          } else if (clip.keep === "below" && (yMax === undefined || clipY < yMax)) {
+            yMax = clipY;
+          }
+        }
+      }
+    } else {
+      // Legacy path
+      if (pieceDef.yMin) {
+        yMin = landmarks[pieceDef.yMin.landmark as keyof Landmarks] + pieceDef.yMin.offset;
+      }
+      if (pieceDef.yMax) {
+        yMax = landmarks[pieceDef.yMax.landmark as keyof Landmarks] + pieceDef.yMax.offset;
+      }
     }
-    if (pieceDef.yMax) {
-      yMax = landmarks[pieceDef.yMax.landmark as keyof Landmarks] + pieceDef.yMax.offset;
-    }
+    
     if (pieceDef.armYMax) {
       armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
     }
@@ -818,13 +844,31 @@ export function buildCostumePiece(
     );
 
     // Special handling for top piece: clip at hem for straight edge
-    if (pieceId === 'top' && yMin !== undefined) {
-      selectedTriangles = clipTrianglesAtPlane(
-        selectedTriangles,
-        skinnedMesh.geometry,
-        yMin,
-        true // keep above hem
-      );
+    if (pieceId === 'top') {
+      // Check if there's a torso-specific clip (for hem)
+      let hemClipY: number | undefined;
+      if (pieceDef.clips) {
+        for (const clip of pieceDef.clips) {
+          if (clip.groups.includes("torso") && !clip.groups.includes("*") && clip.keep === "above") {
+            hemClipY = landmarks[clip.landmark as keyof Landmarks] + clip.offset;
+            break;
+          }
+        }
+      }
+      
+      // Fallback to legacy yMin
+      if (hemClipY === undefined && yMin !== undefined) {
+        hemClipY = yMin;
+      }
+      
+      if (hemClipY !== undefined) {
+        selectedTriangles = clipTrianglesAtPlane(
+          selectedTriangles,
+          skinnedMesh.geometry,
+          hemClipY,
+          true // keep above hem
+        );
+      }
     }
 
     if (selectedTriangles.length === 0) {

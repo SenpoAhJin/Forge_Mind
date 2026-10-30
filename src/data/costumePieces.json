@@ -18,7 +18,26 @@
       },
       "yMin": { "landmark": "hip_y", "offset": 0.00 },
       "yMax": { "landmark": "neck_y", "offset": 0.06 },
-      "armYMax": { "landmark": "wrist_y", "offset": 0.02 },
+      "clips": [
+        {
+          "groups": ["*"],
+          "landmark": "hip_y",
+          "offset": 0.00,
+          "keep": "above"
+        },
+        {
+          "groups": ["*"],
+          "landmark": "neck_y",
+          "offset": 0.06,
+          "keep": "below"
+        },
+        {
+          "groups": ["torso"],
+          "landmark": "hip_y",
+          "offset": 0.00,
+          "keep": "above"
+        }
+      ],
       "offset_m": 0.008,
       "defaultColor": "#3B82F6",
       "defaultEnabled": true
@@ -26,7 +45,6 @@
     {
       "id": "bottom",
       "slot": "legs",
-      "groups": ["torso_lower", "legL", "legR"],
       "groupDetails": {
         "torso_lower": ["pelvis"],
         "legL": ["thigh.L", "shin.L"],
@@ -34,6 +52,20 @@
       },
       "yMin": { "landmark": "ankle_y", "offset": 0.04 },
       "yMax": { "landmark": "hip_y", "offset": 0.05 },
+      "clips": [
+        {
+          "groups": ["*"],
+          "landmark": "ankle_y",
+          "offset": 0.04,
+          "keep": "above"
+        },
+        {
+          "groups": ["*"],
+          "landmark": "hip_y",
+          "offset": 0.05,
+          "keep": "below"
+        }
+      ],
       "offset_m": 0.005,
       "defaultColor": "#1E293B",
       "defaultEnabled": true
@@ -41,13 +73,26 @@
     {
       "id": "shoes",
       "slot": "feet",
-      "groups": ["legL_feet", "legR_feet"],
       "groupDetails": {
         "legL_feet": ["foot.L", "toe.L"],
         "legR_feet": ["foot.R", "toe.R"]
       },
       "yMin": { "landmark": "floor", "offset": 0 },
       "yMax": { "landmark": "ankle_y", "offset": 0.05 },
+      "clips": [
+        {
+          "groups": ["*"],
+          "landmark": "floor",
+          "offset": 0,
+          "keep": "above"
+        },
+        {
+          "groups": ["*"],
+          "landmark": "ankle_y",
+          "offset": 0.05,
+          "keep": "below"
+        }
+      ],
       "offset_m": 0.008,
       "defaultColor": "#0F172A",
       "defaultEnabled": true
@@ -55,11 +100,11 @@
     {
       "id": "gloves",
       "slot": "hands",
-      "groups": ["hand.L", "hand.R"],
       "groupDetails": {
         "hand.L": ["hand.L"],
         "hand.R": ["hand.R"]
       },
+      "clips": [],
       "offset_m": 0.005,
       "defaultColor": "#1E293B",
       "defaultEnabled": false
@@ -72,6 +117,20 @@
       },
       "yMin": { "landmark": "head_top_y", "offset": -0.18 },
       "yMax": { "landmark": "head_top_y", "offset": 0.00 },
+      "clips": [
+        {
+          "groups": ["*"],
+          "landmark": "head_top_y",
+          "offset": -0.18,
+          "keep": "above"
+        },
+        {
+          "groups": ["*"],
+          "landmark": "head_top_y",
+          "offset": 0.00,
+          "keep": "below"
+        }
+      ],
       "hairlineDrop": 0.02,
       "offset_m": 0.015,
       "defaultColor": "#4B5563",
