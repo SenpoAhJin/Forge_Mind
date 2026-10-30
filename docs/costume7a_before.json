@@ -1,0 +1,16 @@
+{
+  "male": {
+    "top": 5834,
+    "bottom": 4967,
+    "shoes": 2164,
+    "gloves": 3286,
+    "wig": 1115
+  },
+  "female": {
+    "top": 5962,
+    "bottom": 5206,
+    "shoes": 2161,
+    "gloves": 2734,
+    "wig": 1412
+  }
+}
