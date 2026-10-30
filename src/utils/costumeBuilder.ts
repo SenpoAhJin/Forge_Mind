@@ -23,12 +23,15 @@ export interface ClipDef {
   groups: string[]; // ["*"] means all groups
   landmark: string;
   offset: number;
+  slope_z?: number; // Optional slant: y(z) = landmark + offset + slope_z*(z - z_ref)
+  z_ref?: string; // "head_bone" etc, bone name whose head.z is the reference
   keep: "above" | "below";
 }
 
 export interface PieceDefinition {
   id: string;
   slot: string;
+  selection?: "band" | undefined; // "band" = all triangles in region, no bone labels/closure
   groups?: string[];
   groupDetails?: Record<string, string[]>;
   yMin?: LandmarkDef; // Legacy, superseded by clips
@@ -235,17 +238,23 @@ export function selectPieceTriangles(
     armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
   }
 
-  // Select triangles
-  let selectedTriangles = selectTriangles(
-    geometry,
-    boneSet,
-    boneSegments,
-    yMin,
-    yMax,
-    armYMax,
-    pieceDef.id === 'wig',
-    pieceDef.hairlineDrop ? landmarks.head_top_y - pieceDef.hairlineDrop : undefined
-  );
+  // Select triangles based on selection method
+  let selectedTriangles: number[];
+  
+  if (pieceDef.selection === 'band') {
+    // Band selection: all triangles in y-band, no bone labels, no closure
+    selectedTriangles = selectTrianglesInBand(geometry, yMin, yMax, landmarks, pieceDef, boneSegments);
+  } else {
+    // Default: bone-labeled selection with closure
+    selectedTriangles = selectTriangles(
+      geometry,
+      boneSet,
+      boneSegments,
+      yMin,
+      yMax,
+      armYMax
+    );
+  }
 
   // Special clipping for top piece hem
   if (pieceDef.id === 'top') {
@@ -365,6 +374,84 @@ export function labelVerticesByNearestBone(
 }
 
 /**
+ * Band selection: Select ALL triangles with centroids in the y-band.
+ * No bone labels, no closure. Used for wig and shoes.
+ * Applies slanted clips if defined in the piece.
+ */
+function selectTrianglesInBand(
+  geometry: THREE.BufferGeometry,
+  yMin: number | undefined,
+  yMax: number | undefined,
+  landmarks: Landmarks,
+  pieceDef: PieceDefinition,
+  boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>
+): number[] {
+  const position = geometry.attributes.position;
+  const index = geometry.index;
+  
+  if (!index) {
+    throw new Error('Geometry must have index');
+  }
+
+  const triangleCount = index.count / 3;
+  const centroid = new THREE.Vector3();
+  const v0 = new THREE.Vector3();
+  const v1 = new THREE.Vector3();
+  const v2 = new THREE.Vector3();
+  
+  const selected: number[] = [];
+  
+  for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
+    const i0 = index.getX(triIdx * 3);
+    const i1 = index.getX(triIdx * 3 + 1);
+    const i2 = index.getX(triIdx * 3 + 2);
+    
+    v0.set(position.getX(i0), position.getY(i0), position.getZ(i0));
+    v1.set(position.getX(i1), position.getY(i1), position.getZ(i1));
+    v2.set(position.getX(i2), position.getY(i2), position.getZ(i2));
+    
+    centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
+    
+    // Check y-band
+    if (yMin !== undefined && centroid.y < yMin) continue;
+    if (yMax !== undefined && centroid.y > yMax) continue;
+    
+    // Check slanted clips
+    if (pieceDef.clips) {
+      let clipsFailed = false;
+      for (const clip of pieceDef.clips) {
+        if (!clip.slope_z) continue; // Not a slanted clip
+        
+        // Get z_ref
+        let zRef = 0;
+        if (clip.z_ref === 'head_bone') {
+          // Find head bone
+          const headSeg = boneSegments.get('head');
+          if (headSeg) zRef = headSeg.head.z;
+        }
+        
+        // Slanted plane: y(z) = landmark + offset + slope_z * (z - zRef)
+        const landmarkY = landmarks[clip.landmark as keyof Landmarks];
+        const planeY = landmarkY + clip.offset + clip.slope_z * (centroid.z - zRef);
+        
+        if (clip.keep === 'above' && centroid.y < planeY) {
+          clipsFailed = true;
+          break;
+        } else if (clip.keep === 'below' && centroid.y > planeY) {
+          clipsFailed = true;
+          break;
+        }
+      }
+      if (clipsFailed) continue;
+    }
+    
+    selected.push(triIdx);
+  }
+  
+  return selected;
+}
+
+/**
  * Select triangles using nearest-bone-segment labeling with neighbor closure.
  * 1. Label each vertex with nearest bone segment
  * 2. Label each triangle by centroid's nearest bone
@@ -378,9 +465,7 @@ export function selectTriangles(
   boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
   yMin: number | undefined,
   yMax: number | undefined,
-  armYMax?: number | undefined,
-  isWig?: boolean,
-  hairlineY?: number
+  armYMax?: number | undefined
 ): number[] {
   const position = geometry.attributes.position;
   const index = geometry.index;
@@ -444,14 +529,6 @@ export function selectTriangles(
     // Check y-band
     if (yMin !== undefined && centroid.y < yMin) continue;
     if (yMax !== undefined && centroid.y > yMax) continue;
-    
-    // For wig: exclude face region (front = negative z, below hairline)
-    if (isWig && hairlineY !== undefined) {
-      // Face exclusion: triangles with z < -0.05 AND y < hairlineY
-      if (centroid.z < -0.05 && centroid.y < hairlineY) {
-        continue;
-      }
-    }
     
     initialSelection.add(triIdx);
   }
@@ -780,15 +857,12 @@ export function computePieceDebugInfo(
   }
 
   // Select triangles
-  const selectedTriangles = selectTriangles(
+  const selectedTriangles = selectPieceTriangles(
     geometry,
+    pieceDef,
     boneSet,
     boneSegments,
-    yMin,
-    yMax,
-    pieceDef.armYMax ? landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset : undefined,
-    pieceDef.id === 'wig',
-    pieceDef.hairlineDrop ? landmarks.head_top_y - pieceDef.hairlineDrop : undefined
+    landmarks
   );
 
   // Find covered vertices

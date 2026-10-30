@@ -112,6 +112,7 @@
     {
       "id": "wig",
       "slot": "head",
+      "selection": "band",
       "groupDetails": {
         "head_only": ["head"]
       },
@@ -129,6 +130,14 @@
           "landmark": "head_top_y",
           "offset": 0.00,
           "keep": "below"
+        },
+        {
+          "groups": ["*"],
+          "landmark": "head_top_y",
+          "offset": -0.11,
+          "slope_z": 0.15,
+          "z_ref": "head_bone",
+          "keep": "above"
         }
       ],
       "hairlineDrop": 0.02,

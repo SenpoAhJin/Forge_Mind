@@ -1,7 +1,7 @@
 {
   "male": {
     "top": {
-      "triangles": 5892,
+      "triangles": 5834,
       "covered": 2928,
       "eligible": 2928
     },
@@ -21,14 +21,14 @@
       "eligible": 1639
     },
     "wig": {
-      "triangles": 1115,
-      "covered": 562,
+      "triangles": 488,
+      "covered": 275,
       "eligible": 636
     }
   },
   "female": {
     "top": {
-      "triangles": 6017,
+      "triangles": 5962,
       "covered": 2995,
       "eligible": 2995
     },
@@ -48,8 +48,8 @@
       "eligible": 1366
     },
     "wig": {
-      "triangles": 1412,
-      "covered": 715,
+      "triangles": 521,
+      "covered": 300,
       "eligible": 840
     }
   }
