@@ -7,32 +7,14 @@ import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { Button } from '../components/buttons/Button';
 import { setActiveBodySet, getActiveBodySetId, type BodySetId } from '../config/bodyAssets';
 import CostumeViewer from '../components/CostumeViewer';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useOwnedAttire } from '../contexts/OwnedAttireContext';
 import { applyItemToOutfit, canMapItemToPiece, getUnmappedItemMessage } from '../utils/outfitHelpers';
 import type { OwnedAttire } from '../types/owned-attire';
+import { useOutfit } from '../hooks/useOutfit';
+import { getAvailableSlots } from '../utils/outfitStore';
 
 // Load costume pieces data
 const costumePiecesData = require('../data/costumePieces.json');
-
-// Storage keys
-const OUTFIT_STORAGE_KEY = 'v2_costume_outfit';
-
-// Outfit state structure
-interface OutfitState {
-  pieces: string[];
-  colors: Record<string, string>;
-}
-
-interface OutfitStorage {
-  male: OutfitState;
-  female: OutfitState;
-}
-
-const defaultOutfitState = (): OutfitState => ({
-  pieces: [],
-  colors: {},
-});
 
 /**
  * Preview3DTestScreen
@@ -61,10 +43,9 @@ export default function Preview3DTestScreen() {
   const [bodySet, setBodySet] = useState<BodySetId>(() => getActiveBodySetId());
   const scrollViewRef = React.useRef<any>(null);
   
-  // V2 Costume Demo state
+  // V2 Costume Demo state - using useOutfit hook
   const [costumeBodyType, setCostumeBodyType] = useState<BaseBodySelection>('male');
-  const [enabledPieces, setEnabledPieces] = useState<Set<string>>(new Set());
-  const [pieceColors, setPieceColors] = useState<Map<string, string>>(new Map());
+  const outfit = useOutfit(costumeBodyType);
   const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
   const [previousBodySet, setPreviousBodySet] = useState<BodySetId | null>(null);
   const [showCostumeDemo, setShowCostumeDemo] = useState(false);
@@ -76,55 +57,25 @@ export default function Preview3DTestScreen() {
   
   // Access owned items for integration demo
   const { items: ownedItems } = useOwnedAttire();
-
-  // Load outfit state from AsyncStorage on mount
-  useEffect(() => {
-    const loadOutfitState = async () => {
-      try {
-        const storedData = await AsyncStorage.getItem(OUTFIT_STORAGE_KEY);
-        if (storedData) {
-          const outfitStorage: OutfitStorage = JSON.parse(storedData);
-          const currentOutfit = outfitStorage[costumeBodyType] || defaultOutfitState();
-          
-          setEnabledPieces(new Set(currentOutfit.pieces));
-          setPieceColors(new Map(Object.entries(currentOutfit.colors)));
-        }
-      } catch (error) {
-        console.error('[Preview3DTestScreen] Failed to load outfit state:', error);
-      }
-    };
-
-    if (showCostumeDemo) {
-      loadOutfitState();
+  
+  // Convert outfit state to legacy format for CostumeViewer
+  const enabledPieces = React.useMemo(() => {
+    if (!outfit.outfit) return new Set<string>();
+    const enabled = new Set<string>();
+    for (const [slot, piece] of Object.entries(outfit.outfit.pieces)) {
+      if (piece.on) enabled.add(slot);
     }
-  }, [showCostumeDemo, costumeBodyType]);
-
-  // Save outfit state to AsyncStorage whenever it changes
-  useEffect(() => {
-    const saveOutfitState = async () => {
-      try {
-        // Load existing storage
-        const storedData = await AsyncStorage.getItem(OUTFIT_STORAGE_KEY);
-        const outfitStorage: OutfitStorage = storedData 
-          ? JSON.parse(storedData)
-          : { male: defaultOutfitState(), female: defaultOutfitState() };
-
-        // Update current body type outfit
-        outfitStorage[costumeBodyType] = {
-          pieces: Array.from(enabledPieces),
-          colors: Object.fromEntries(pieceColors),
-        };
-
-        await AsyncStorage.setItem(OUTFIT_STORAGE_KEY, JSON.stringify(outfitStorage));
-      } catch (error) {
-        console.error('[Preview3DTestScreen] Failed to save outfit state:', error);
-      }
-    };
-
-    if (showCostumeDemo) {
-      saveOutfitState();
+    return enabled;
+  }, [outfit.outfit]);
+  
+  const pieceColors = React.useMemo(() => {
+    if (!outfit.outfit) return new Map<string, string>();
+    const colors = new Map<string, string>();
+    for (const [slot, piece] of Object.entries(outfit.outfit.pieces)) {
+      colors.set(slot, piece.color);
     }
-  }, [enabledPieces, pieceColors, costumeBodyType, showCostumeDemo]);
+    return colors;
+  }, [outfit.outfit]);
 
   const handleBodySetChange = (newSet: BodySetId) => {
     if (__DEV__) {
@@ -152,44 +103,20 @@ export default function Preview3DTestScreen() {
   };
 
   const togglePiece = (pieceId: string) => {
-    setEnabledPieces((prev) => {
-      const next = new Set(prev);
-      if (next.has(pieceId)) {
-        next.delete(pieceId);
-      } else {
-        next.add(pieceId);
-        // Set default color if not set
-        if (!pieceColors.has(pieceId)) {
-          const piece = costumePiecesData.pieces.find((p: any) => p.id === pieceId);
-          if (piece) {
-            setPieceColors((colors) => new Map(colors).set(pieceId, piece.defaultColor));
-          }
-        }
-      }
-      return next;
-    });
+    const isOn = outfit.outfit?.pieces[pieceId]?.on || false;
+    outfit.togglePiece(pieceId, !isOn);
   };
 
   const setPieceColor = (pieceId: string, color: string) => {
-    setPieceColors((prev) => new Map(prev).set(pieceId, color));
+    outfit.setColor(pieceId, color);
   };
 
   const wearFullCostume = () => {
-    const allPieces = new Set<string>();
-    const allColors = new Map<string, string>();
-    
-    // Wear ALL pieces (including gloves, wig, belt)
-    for (const piece of costumePiecesData.pieces) {
-      allPieces.add(piece.id);
-      allColors.set(piece.id, piece.defaultColor);
-    }
-    
-    setEnabledPieces(allPieces);
-    setPieceColors(allColors);
+    outfit.wearFull();
   };
 
   const removeAllPieces = () => {
-    setEnabledPieces(new Set());
+    outfit.removeAll();
   };
 
   // COSTUME-2 Step 6: Handle owned item selection

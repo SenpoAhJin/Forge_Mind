@@ -29,3 +29,31 @@ All requirements met:
 - Unknown color -> slot default ✓
 - Wear full costume does not lock (can still toggle/change colors) ✓
 - Wrong version -> empty outfit ✓
+
+
+## Step 2: React Hook (useOutfit) and Switch V2CostumeDemo
+
+**Goal:** Create useOutfit hook with AsyncStorage adapter, switch V2CostumeDemo to use it.
+
+**Status:** Complete ✓
+
+**Files created:**
+- src/hooks/useOutfit.ts (React hook with AsyncStorage adapter)
+
+**Files modified:**
+- src/screens/Preview3DTestScreen.tsx (switched to useOutfit hook)
+
+**Test results:**
+```
+test_outfit_state.mjs:
+Total:  60
+Passed: 60
+Failed: 0
+ALL TESTS PASSED
+```
+
+Changes:
+- Preview3DTestScreen now uses useOutfit(costumeBodyType) hook
+- Removed local AsyncStorage outfit management
+- Converted outfit state to legacy Set/Map format for CostumeViewer compatibility
+- All existing tests pass
