@@ -3,6 +3,8 @@
 Branch: task/costume4c-clip-and-coverage
 Started: 2026-10-30
 
+**NEXT STEP (Step 2):** Add "clips" field to each piece in src/data/costumePieces.json. Convert existing yMin/yMax/armYMax to equivalent clips. Top: torso hem at hip_y-0.05 keep above, torso neck at neck_y+0.03 keep below, arms at wrist_y keep above. Wig: head group, yMin becomes a clip at head_top_y-0.18 keep above, yMax becomes a clip at head_top_y keep below. Bottom, shoes, gloves: convert their yMin/yMax. Belt: no clips (torus type). Do NOT change any numeric value. Normalize schema: every piece has same "groups"/"groupDetails" shape. Add test per clip: all pre-offset vertices of affected triangles on kept side within 1e-4. Run tests, paste full failure list before/after. Commit and push.
+
 ## Step 0: BASELINE - COMPLETE
 
 Git status:
