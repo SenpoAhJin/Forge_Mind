@@ -3,7 +3,26 @@
 Branch: task/costume4c-clip-and-coverage
 Started: 2026-10-30
 
-**NEXT STEP (Step 2):** Add "clips" field to each piece in src/data/costumePieces.json. Convert existing yMin/yMax/armYMax to equivalent clips. Top: torso hem at hip_y-0.05 keep above, torso neck at neck_y+0.03 keep below, arms at wrist_y keep above. Wig: head group, yMin becomes a clip at head_top_y-0.18 keep above, yMax becomes a clip at head_top_y keep below. Bottom, shoes, gloves: convert their yMin/yMax. Belt: no clips (torus type). Do NOT change any numeric value. Normalize schema: every piece has same "groups"/"groupDetails" shape. Add test per clip: all pre-offset vertices of affected triangles on kept side within 1e-4. Run tests, paste full failure list before/after. Commit and push.
+## Step 1B: HOUSEKEEPING - COMPLETE
+
+a. Checked e16f489 diff: contains 8 `export` keywords PLUS one unrelated fix (line 809: fixed space typo `let selected Triangles` → `let selectedTriangles` that existed before Step 1).
+
+b. Modified test harness to collect ALL failures and run BOTH genders even when male fails:
+   - Changed main() to wrap each testBody() in try-catch
+   - Collects failures into allFailures array
+   - Prints all failures at end
+
+   BASELINE FAILURES:
+   ```
+   Male: wig: height 0.215 > 0.2
+   Female: top: 5 boundary loops, expected 4
+   ```
+
+c. TypeScript error count: 36 (was 72 at start of COSTUME-4A2)
+
+Committed: [pending]
+
+**NEXT STEP:** Step 2 - Per-group clips conversion. Read how costumeBuilder.ts applies yMin/yMax/armYMax. Convert to clips field. Record before/after counts and bbox. Add clip tests. Equivalence must match.
 
 ## Step 0: BASELINE - COMPLETE
 

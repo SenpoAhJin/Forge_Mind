@@ -485,7 +485,7 @@ async function testBody(gender, glbPath, contract) {
 }
 
 async function main() {
-  console.log('COSTUME-4A2: Honest tests with original thresholds\n');
+  console.log('COSTUME-6 Step 1B: Tests collect all failures, both genders\n');
   
   // First, verify thresholds haven't been raised
   console.log('=== Threshold validation ===');
@@ -511,17 +511,32 @@ async function main() {
   
   console.log('All thresholds at spec values ✓\n');
 
+  const allFailures = [];
+  
+  // Test male
   try {
     await testBody('male', path.join(ROOT, 'assets/models/3D_Model_Male_V2_rigged.glb'), maleContract);
-    await testBody('female', path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'), femaleContract);
-    
-    console.log('\n=== All checks passed ===\n');
-    process.exit(0);
   } catch (error) {
-    console.error('\n=== FAIL ===');
-    console.error(error.message);
+    allFailures.push(`Male: ${error.message}`);
+  }
+  
+  // Test female (always run, even if male failed)
+  try {
+    await testBody('female', path.join(ROOT, 'assets/models/3D_Model_Female_V2_rigged.glb'), femaleContract);
+  } catch (error) {
+    allFailures.push(`Female: ${error.message}`);
+  }
+  
+  if (allFailures.length > 0) {
+    console.error('\n=== FAILURES ===');
+    for (const failure of allFailures) {
+      console.error(`  ${failure}`);
+    }
     process.exit(1);
   }
+  
+  console.log('\n=== All checks passed ===\n');
+  process.exit(0);
 }
 
 main();
