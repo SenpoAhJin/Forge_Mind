@@ -5,6 +5,46 @@
 
 ---
 
+## Session — Friday, October 30, 2026 (Task COSTUME-7C-2: Outfit Planning Screen V2 Upgrade)
+
+**Summary**
+
+Completed COSTUME-7C-2: ProjectPlanningScreen (Outfit Planning) now uses V2 body with CostumeViewer and shared OutfitControls. Tapping owned items switches matching costume slots on and sets colors. Unmapped items (fabric, material, other) shown separately as "Not shown in 3D yet."
+
+**What changed**
+
+- **OutfitControls component:** Extracted shared controls (toggles, color pickers, Wear full/Remove All) from dashboard into src/components/OutfitControls.tsx, used by both dashboard and planning screens
+- **ProjectPlanningScreen:** Replaced V1 Canvas/BodyModel/SelectedGarment with CostumeViewer and OutfitControls; Male/Female switch drives viewer; "Your Items" grid uses itemSlotMap (wig→wig, top→top, bottom→bottom, footwear→shoes, accessory→belt); tapping item calls togglePiece + setColor; unmapped items (fabric/material/other) shown in separate section
+- **Outfit scope:** ProjectPlanningScreen uses per-body scope (no projectId available); ProjectDashboardScreen uses per-project scope; useOutfit already supported both
+- **Test runner:** tools/test_costume_pieces.mjs continues through both genders, lists all failures (currently: Female top 5 loops vs 4 expected)
+
+**Baseline triangle counts vs reference (Debug panel)**
+
+Male: top 5834 (ref 5892, -58), bottom 4967 ✓, shoes 2164 ✓, gloves 3286 ✓, wig 488 (COSTUME-7A expected)
+Female: top 5962 (ref 6017, -55), bottom 5206 ✓, shoes 2161 ✓, gloves 2734 ✓, wig 521 (COSTUME-7A expected)
+
+**V1 3D screens remaining**
+
+- src/screens/Preview3DTestScreen.tsx (V1 test harness)
+- src/screens/cosplayer/MatchResultsScreen.tsx (AI matcher results with V1 preview)
+
+**NOT TESTED (phone UI only, not testable by agent)**
+
+- OutfitControls layout/interactions on phone width (~380px)
+- CostumeViewer touch gestures (drag to rotate, pinch to zoom)
+- Item grid tap behavior on ProjectPlanningScreen
+- Per-body vs per-project scope isolation (requires navigating between screens)
+
+**Files changed**
+
+- src/components/OutfitControls.tsx (new)
+- src/components/index.ts
+- src/screens/cosplayer/ProjectDashboardScreen.tsx
+- src/screens/cosplayer/ProjectPlanningScreen.tsx
+- tools/test_costume_pieces.mjs (already continues through genders)
+
+---
+
 ## Session — Friday, October 30, 2026 (Task COSTUME-7C-1: Project Dashboard V2 Costume)
 
 **Summary**
