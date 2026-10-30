@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * COSTUME-4A Step 3: Comprehensive costume piece tests.
+ * COSTUME-6 Step 1: Tests now import the REAL costumeBuilder.ts.
  *
- * Uses nearest-bone-segment labeling (matching costumeBuilder.ts).
  * Tests for each piece and gender:
  * - Mirror symmetry (x>0 vs x<0 triangle count within 5%)
  * - Bone probes (vertices near each bone midpoint are covered)
@@ -14,6 +13,7 @@
  * - Boundary loops: top=4, bottom=3, wig=1, gloves=2, shoes=2
  *
  * Exit 1 on any failure.
+ * Run with: node --import tsx tools/test_costume_pieces.mjs
  */
 
 import * as THREE from 'three';
@@ -21,6 +21,20 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// Import from the real builder
+import {
+  sanitizeBoneName,
+  findBodyMesh,
+  computeLandmarks,
+  resolveBoneSet,
+  distanceToSegment,
+  buildBoneSegments,
+  labelVerticesByNearestBone,
+  selectTriangles,
+  clipTrianglesAtPlane,
+  buildOffsetGeometry,
+} from '../src/utils/costumeBuilder.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,329 +76,12 @@ const femaleContract = JSON.parse(
   await fs.readFile(path.join(ROOT, 'assets/models/3D_Model_Female_V2_contract.json'), 'utf8')
 );
 
-function sanitizeBoneName(name) {
-  return THREE.PropertyBinding.sanitizeNodeName(name);
-}
-
 async function loadGLB(filepath) {
   const data = await fs.readFile(filepath);
   const loader = new GLTFLoader();
   return new Promise((resolve, reject) => {
     loader.parse(data.buffer, '', (gltf) => resolve(gltf), (err) => reject(err));
   });
-}
-
-function findBodyMesh(scene) {
-  let skinnedMesh = null;
-  scene.traverse((obj) => {
-    if (obj.isSkinnedMesh && !skinnedMesh) {
-      skinnedMesh = obj;
-    }
-  });
-  return skinnedMesh;
-}
-
-function computeLandmarks(contract, meshBounds) {
-  const bones = contract.bones;
-  function getBoneY(boneName) {
-    const bone = bones.find((b) => b.name === boneName);
-    if (!bone) throw new Error(`Bone ${boneName} not found`);
-    return bone.head[2];
-  }
-
-  return {
-    floor: 0,
-    hip_y: getBoneY('thigh.L'),
-    knee_y: getBoneY('shin.L'),
-    ankle_y: getBoneY('foot.L'),
-    shoulder_y: getBoneY('upperarm.L'),
-    elbow_y: getBoneY('forearm.L'),
-    wrist_y: getBoneY('hand.L'),
-    neck_y: getBoneY('neck'),
-    head_top_y: meshBounds.max.y,
-  };
-}
-
-function resolveBoneSet(pieceDef) {
-  const boneSet = new Set();
-  if (pieceDef.groupDetails) {
-    for (const group of Object.values(pieceDef.groupDetails)) {
-      for (const boneName of group) {
-        boneSet.add(sanitizeBoneName(boneName));
-      }
-    }
-  }
-  return boneSet;
-}
-
-function distanceToSegment(point, segmentStart, segmentEnd) {
-  const segment = new THREE.Vector3().subVectors(segmentEnd, segmentStart);
-  const toPoint = new THREE.Vector3().subVectors(point, segmentStart);
-  
-  const segmentLengthSq = segment.lengthSq();
-  if (segmentLengthSq === 0) {
-    return point.distanceTo(segmentStart);
-  }
-  
-  const t = Math.max(0, Math.min(1, toPoint.dot(segment) / segmentLengthSq));
-  const projection = new THREE.Vector3().copy(segmentStart).addScaledVector(segment, t);
-  
-  return point.distanceTo(projection);
-}
-
-function buildBoneSegments(contract) {
-  const bones = contract.bones;
-  const segments = new Map();
-  
-  for (const bone of bones) {
-    if (bone.name === 'root') continue;
-    const head = new THREE.Vector3(bone.head[0], bone.head[2], -bone.head[1]);
-    const tail = new THREE.Vector3(bone.tail[0], bone.tail[2], -bone.tail[1]);
-    segments.set(sanitizeBoneName(bone.name), { head, tail });
-  }
-  
-  return segments;
-}
-
-function labelVerticesByNearestBone(geometry, boneSegments) {
-  const position = geometry.attributes.position;
-  const vertexLabels = new Map();
-  const point = new THREE.Vector3();
-  
-  for (let i = 0; i < position.count; i++) {
-    point.set(position.getX(i), position.getY(i), position.getZ(i));
-    
-    let nearestBone = '';
-    let nearestDist = Infinity;
-    
-    for (const [boneName, segment] of boneSegments) {
-      const dist = distanceToSegment(point, segment.head, segment.tail);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestBone = boneName;
-      }
-    }
-    
-    if (nearestBone) {
-      vertexLabels.set(i, nearestBone);
-    }
-  }
-  
-  return vertexLabels;
-}
-
-function selectTriangles(geometry, boneSet, boneSegments, yMin, yMax, armYMax) {
-  const position = geometry.attributes.position;
-  const index = geometry.index;
-  if (!index) throw new Error('Geometry must have index');
-
-  const triangleCount = index.count / 3;
-  const centroid = new THREE.Vector3();
-  const v0 = new THREE.Vector3();
-  const v1 = new THREE.Vector3();
-  const v2 = new THREE.Vector3();
-  
-  const triangleLabels = new Map();
-  
-  for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
-    const i0 = index.getX(triIdx * 3);
-    const i1 = index.getX(triIdx * 3 + 1);
-    const i2 = index.getX(triIdx * 3 + 2);
-    
-    v0.set(position.getX(i0), position.getY(i0), position.getZ(i0));
-    v1.set(position.getX(i1), position.getY(i1), position.getZ(i1));
-    v2.set(position.getX(i2), position.getY(i2), position.getZ(i2));
-    
-    centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
-    
-    let nearestBone = '';
-    let nearestDist = Infinity;
-    
-    for (const [boneName, segment] of boneSegments) {
-      const dist = distanceToSegment(centroid, segment.head, segment.tail);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestBone = boneName;
-      }
-    }
-    
-    triangleLabels.set(triIdx, nearestBone);
-  }
-  
-  const initialSelection = new Set();
-  
-  for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
-    const label = triangleLabels.get(triIdx);
-    if (!label || !boneSet.has(label)) continue;
-    
-    const i0 = index.getX(triIdx * 3);
-    const i1 = index.getX(triIdx * 3 + 1);
-    const i2 = index.getX(triIdx * 3 + 2);
-    
-    v0.set(position.getX(i0), position.getY(i0), position.getZ(i0));
-    v1.set(position.getX(i1), position.getY(i1), position.getZ(i1));
-    v2.set(position.getX(i2), position.getY(i2), position.getZ(i2));
-    
-    centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
-    
-    if (yMin !== undefined && centroid.y < yMin) continue;
-    if (yMax !== undefined && centroid.y > yMax) continue;
-    
-    initialSelection.add(triIdx);
-  }
-  
-  const edgeKey = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
-  const edgeToTriangles = new Map();
-  
-  for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
-    const i0 = index.getX(triIdx * 3);
-    const i1 = index.getX(triIdx * 3 + 1);
-    const i2 = index.getX(triIdx * 3 + 2);
-    
-    const edges = [
-      edgeKey(i0, i1),
-      edgeKey(i1, i2),
-      edgeKey(i2, i0),
-    ];
-    
-    for (const edge of edges) {
-      if (!edgeToTriangles.has(edge)) {
-        edgeToTriangles.set(edge, []);
-      }
-      edgeToTriangles.get(edge).push(triIdx);
-    }
-  }
-  
-  const finalSelection = new Set(initialSelection);
-  let added = true;
-  
-  while (added) {
-    added = false;
-    
-    for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
-      if (finalSelection.has(triIdx)) continue;
-      
-      const i0 = index.getX(triIdx * 3);
-      const i1 = index.getX(triIdx * 3 + 1);
-      const i2 = index.getX(triIdx * 3 + 2);
-      
-      const edges = [
-        edgeKey(i0, i1),
-        edgeKey(i1, i2),
-        edgeKey(i2, i0),
-      ];
-      
-      let selectedNeighbors = 0;
-      for (const edge of edges) {
-        const neighbors = edgeToTriangles.get(edge) || [];
-        for (const neighborIdx of neighbors) {
-          if (neighborIdx !== triIdx && finalSelection.has(neighborIdx)) {
-            selectedNeighbors++;
-            break;
-          }
-        }
-      }
-      
-      if (selectedNeighbors >= 2) {
-        finalSelection.add(triIdx);
-        added = true;
-      }
-    }
-  }
-  
-  return Array.from(finalSelection);
-}
-
-function clipTrianglesAtPlane(selectedTriangles, geometry, clipY, keepAbove) {
-  const position = geometry.attributes.position;
-  const index = geometry.index;
-  const result = [];
-  const tolerance = 1e-4;
-  
-  for (const triIdx of selectedTriangles) {
-    const i0 = index.getX(triIdx * 3);
-    const i1 = index.getX(triIdx * 3 + 1);
-    const i2 = index.getX(triIdx * 3 + 2);
-    
-    const y0 = position.getY(i0);
-    const y1 = position.getY(i1);
-    const y2 = position.getY(i2);
-    
-    const minY = Math.min(y0, y1, y2);
-    const maxY = Math.max(y0, y1, y2);
-    
-    if (keepAbove) {
-      if (maxY >= clipY - tolerance) {
-        result.push(triIdx);
-      }
-    } else {
-      if (minY <= clipY + tolerance) {
-        result.push(triIdx);
-      }
-    }
-  }
-  
-  return result;
-}
-
-function buildOffsetGeometry(sourceGeometry, selectedTriangles, offset_m) {
-  if (selectedTriangles.length === 0) {
-    throw new Error('No triangles selected');
-  }
-
-  const sourcePosition = sourceGeometry.attributes.position;
-  const sourceIndex = sourceGeometry.index;
-  let sourceNormal = sourceGeometry.attributes.normal;
-
-  if (!sourceNormal) {
-    sourceGeometry.computeVertexNormals();
-    sourceNormal = sourceGeometry.attributes.normal;
-  }
-
-  const vertexCount = selectedTriangles.length * 3;
-  const positions = new Float32Array(vertexCount * 3);
-  const normals = new Float32Array(vertexCount * 3);
-  const indices = new Uint32Array(vertexCount);
-  const sourcePositions = new Float32Array(vertexCount * 3);
-
-  for (let i = 0; i < selectedTriangles.length; i++) {
-    const triIdx = selectedTriangles[i];
-
-    for (let j = 0; j < 3; j++) {
-      const srcIdx = sourceIndex.getX(triIdx * 3 + j);
-      const dstIdx = i * 3 + j;
-
-      const px = sourcePosition.getX(srcIdx);
-      const py = sourcePosition.getY(srcIdx);
-      const pz = sourcePosition.getZ(srcIdx);
-
-      const nx = sourceNormal.getX(srcIdx);
-      const ny = sourceNormal.getY(srcIdx);
-      const nz = sourceNormal.getZ(srcIdx);
-
-      sourcePositions[dstIdx * 3] = px;
-      sourcePositions[dstIdx * 3 + 1] = py;
-      sourcePositions[dstIdx * 3 + 2] = pz;
-
-      positions[dstIdx * 3] = px + nx * offset_m;
-      positions[dstIdx * 3 + 1] = py + ny * offset_m;
-      positions[dstIdx * 3 + 2] = pz + nz * offset_m;
-
-      normals[dstIdx * 3] = nx;
-      normals[dstIdx * 3 + 1] = ny;
-      normals[dstIdx * 3 + 2] = nz;
-
-      indices[dstIdx] = dstIdx;
-    }
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-  geometry.userData.sourcePositions = sourcePositions;
-
-  return geometry;
 }
 
 function countBoundaryLoops(geometry) {

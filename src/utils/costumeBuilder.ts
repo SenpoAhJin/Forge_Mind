@@ -71,7 +71,7 @@ const pieceCache = new Map<string, Map<string, CachedPiece>>();
  * Sanitize bone name to match three.js GLTFLoader behavior.
  * Dots are removed: "foot.L" becomes "footL"
  */
-function sanitizeBoneName(name: string): string {
+export function sanitizeBoneName(name: string): string {
   return THREE.PropertyBinding.sanitizeNodeName(name);
 }
 
@@ -162,7 +162,7 @@ export function buildVertexBoneMap(
 /**
  * Resolve bone groups into a Set of sanitized bone names.
  */
-function resolveBoneSet(
+export function resolveBoneSet(
   pieceDef: PieceDefinition,
   data: CostumePiecesData
 ): Set<string> {
@@ -182,7 +182,7 @@ function resolveBoneSet(
 /**
  * Compute distance from point to line segment.
  */
-function distanceToSegment(
+export function distanceToSegment(
   point: THREE.Vector3,
   segmentStart: THREE.Vector3,
   segmentEnd: THREE.Vector3
@@ -207,7 +207,7 @@ function distanceToSegment(
  * Build bone segment endpoints from contract.
  * Each bone becomes a segment from head to tail.
  */
-function buildBoneSegments(contract: any): Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }> {
+export function buildBoneSegments(contract: any): Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }> {
   const bones = contract.bones as Array<{ 
     name: string; 
     head: [number, number, number];
@@ -233,7 +233,7 @@ function buildBoneSegments(contract: any): Map<string, { head: THREE.Vector3; ta
  * Label each vertex with its nearest bone segment.
  * Returns a map from vertex index to sanitized bone name.
  */
-function labelVerticesByNearestBone(
+export function labelVerticesByNearestBone(
   geometry: THREE.BufferGeometry,
   boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>
 ): Map<number, string> {
@@ -275,7 +275,7 @@ function labelVerticesByNearestBone(
  * 4. Close gaps: include unselected triangles with >=2 selected edge neighbors
  * 5. For wig pieces: exclude front face region (z < -0.05, below hairline)
  */
-function selectTriangles(
+export function selectTriangles(
   geometry: THREE.BufferGeometry,
   boneSet: Set<string>,
   boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
@@ -423,7 +423,7 @@ function selectTriangles(
   return Array.from(finalSelection);
 }
 
-function clipTrianglesAtPlane(
+export function clipTrianglesAtPlane(
   selectedTriangles: number[],
   geometry: THREE.BufferGeometry,
   clipY: number,
@@ -466,7 +466,7 @@ function clipTrianglesAtPlane(
  * Build offset geometry from selected triangles.
  * Offsets each vertex along its normal by offset_m.
  */
-function buildOffsetGeometry(
+export function buildOffsetGeometry(
   sourceGeometry: THREE.BufferGeometry,
   selectedTriangles: number[],
   offset_m: number
@@ -806,7 +806,7 @@ export function buildCostumePiece(
       armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
     }
 
-    let selected Triangles = selectTriangles(
+    let selectedTriangles = selectTriangles(
       skinnedMesh.geometry,
       boneSet,
       boneSegments,
