@@ -111,9 +111,15 @@ export function applyItemToOutfit(
 
 /**
  * Helper to check if an item can be mapped to a 3D piece.
+ * 
+ * @param item - The owned item to check
+ * @param excludeSlots - Optional array of slots to exclude (e.g., ['belt'] for ProjectPlanningScreen)
  */
-export function canMapItemToPiece(item: OwnedAttire): boolean {
-  return mapItemToPieceSlot(item) !== null;
+export function canMapItemToPiece(item: OwnedAttire, excludeSlots?: string[]): boolean {
+  const slot = mapItemToPieceSlot(item);
+  if (slot === null) return false;
+  if (excludeSlots && excludeSlots.includes(slot)) return false;
+  return true;
 }
 
 /**

@@ -68,12 +68,13 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
   }, [outfit]);
   
   // Separate owned items into mapped and unmapped
+  // COSTUME-7C-3: Exclude belt slot (accessories) from mapping on this screen
   const { mappedItems, unmappedItems } = useMemo(() => {
     const mapped: OwnedAttire[] = [];
     const unmapped: OwnedAttire[] = [];
     
     for (const item of ownedItems) {
-      if (canMapItemToPiece(item)) {
+      if (canMapItemToPiece(item, ['belt'])) {
         mapped.push(item);
       } else {
         unmapped.push(item);
