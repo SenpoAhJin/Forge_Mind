@@ -748,6 +748,41 @@ async function testBody(gender, glbPath, contract) {
       crewNoneGeom.dispose();
       crewShortGeom.dispose();
       
+      // COSTUME-9B: Per-side removed AREA symmetry check for off_shoulder
+      const offShoulderSet = new Set(offShoulderLong);
+      const removedTris = crewLong.filter(tri => !offShoulderSet.has(tri));
+      
+      let leftRemovedArea = 0, rightRemovedArea = 0;
+      const ab = new THREE.Vector3(), ac = new THREE.Vector3(), cross = new THREE.Vector3();
+      const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+      
+      for (const triIdx of removedTris) {
+        const i0 = index.getX(triIdx * 3);
+        const i1 = index.getX(triIdx * 3 + 1);
+        const i2 = index.getX(triIdx * 3 + 2);
+        
+        vA.set(position.getX(i0), position.getY(i0), position.getZ(i0));
+        vB.set(position.getX(i1), position.getY(i1), position.getZ(i1));
+        vC.set(position.getX(i2), position.getY(i2), position.getZ(i2));
+        
+        ab.subVectors(vB, vA);
+        ac.subVectors(vC, vA);
+        cross.crossVectors(ab, ac);
+        const area = cross.length() * 0.5;
+        
+        const cx = (vA.x + vB.x + vC.x) / 3;
+        if (cx > 0) leftRemovedArea += area;
+        else if (cx < 0) rightRemovedArea += area;
+      }
+      
+      const areaDiff = Math.abs(leftRemovedArea - rightRemovedArea);
+      const areaSum = leftRemovedArea + rightRemovedArea;
+      const areaDiffPercent = areaSum > 0 ? (areaDiff / areaSum) * 100 : 0;
+      
+      if (areaDiffPercent > 10) {
+        failures.push(`top off_shoulder: removed area asymmetry ${areaDiffPercent.toFixed(1)}% > 10% (mesh is asymmetric, area balance required)`);
+      }
+      
       console.log(`top sleeve: long=${crewLong.length}, short=${crewShort.length}, none=${crewNone.length} tris ✓`);
       console.log(`top neckline: crew=${crewLong.length}, off_shoulder=${offShoulderLong.length} tris ✓`);
     }

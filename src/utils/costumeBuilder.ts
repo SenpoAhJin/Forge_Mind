@@ -363,19 +363,60 @@ function applyOffShoulderCut(
   
   if (!index) return selectedTriangles;
   
-  // Configuration
-  const shoulderCutoffY = config && config.offShoulderCutoffY 
+  // COSTUME-9B: Positional symmetric cut (replaces bone-name asymmetric cut)
+  // Cutoff Y (3cm below neck, tuned to keep removal ≤3% of top tris)
+  const cutoffY = config && config.offShoulderCutoffY 
     ? landmarks[config.offShoulderCutoffY.landmark as keyof Landmarks] + config.offShoulderCutoffY.offset
-    : landmarks.neck_y - 0.05; // Default: 5cm below neck
+    : landmarks.neck_y - 0.03;
   
-  const shoulderBones = config && config.offShoulderBones 
-    ? new Set(config.offShoulderBones.map((b: string) => sanitizeBoneName(b)))
-    : new Set([
-        sanitizeBoneName('clavicle.L'),
-        sanitizeBoneName('clavicle.R'),
-        // Upper arm top is debatable - include if wanted
-      ]);
+  // Compute true body midline X (average of all top vertices)
+  let sumX = 0;
+  let countX = 0;
+  const topVertexSet = new Set<number>();
   
+  for (const triIdx of selectedTriangles) {
+    for (let j = 0; j < 3; j++) {
+      const vIdx = index!.getX(triIdx * 3 + j);
+      if (!topVertexSet.has(vIdx)) {
+        topVertexSet.add(vIdx);
+        sumX += position.getX(vIdx);
+        countX++;
+      }
+    }
+  }
+  
+  const midlineX = countX > 0 ? sumX / countX : 0;
+  
+  // Compute lateral threshold from chest half-width at cutoff level
+  const yTolerance = 0.01; // 1cm tolerance for "at cutoff level"
+  const torsoBones = new Set([
+    sanitizeBoneName('pelvis'),
+    sanitizeBoneName('spine_01'),
+    sanitizeBoneName('spine_02'),
+    sanitizeBoneName('spine_03'),
+  ]);
+  
+  const vertexLabels = labelVerticesByNearestBone(geometry, boneSegments);
+  
+  let maxAbsX = 0;
+  for (let i = 0; i < position.count; i++) {
+    const y = position.getY(i);
+    if (Math.abs(y - cutoffY) > yTolerance) continue;
+    
+    const label = vertexLabels.get(i);
+    if (!label || !torsoBones.has(label)) continue;
+    
+    const x = position.getX(i);
+    maxAbsX = Math.max(maxAbsX, Math.abs(x - midlineX));
+  }
+  
+  const chestHalfWidth = maxAbsX;
+  const lateralThreshold = chestHalfWidth * 0.98; // 98% of chest half-width (tuned to keep removal ≤3% of top tris)
+  
+  // COSTUME-9B: Debug output for measurements (uncomment for diagnostics)
+  // console.log(`[applyOffShoulderCut] midlineX=${midlineX.toFixed(6)}, chestHalfWidth=${chestHalfWidth.toFixed(4)}, lateralThreshold=${lateralThreshold.toFixed(4)}, cutoffY=${cutoffY.toFixed(4)}`);
+  
+  // Filter triangles using positional cut
   const centroid = new THREE.Vector3();
   const v0 = new THREE.Vector3();
   const v1 = new THREE.Vector3();
@@ -394,21 +435,11 @@ function applyOffShoulderCut(
     
     centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
     
-    // Find nearest bone to centroid
-    let nearestBone = '';
-    let nearestDist = Infinity;
+    // Positional exclusion: above cutoff AND laterally offset beyond threshold
+    const lateralDistance = Math.abs(centroid.x - midlineX);
     
-    for (const [boneName, segment] of boneSegments) {
-      const dist = distanceToSegment(centroid, segment.head, segment.tail);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestBone = boneName;
-      }
-    }
-    
-    // Exclude if: labeled as shoulder bone AND above cutoff
-    if (shoulderBones.has(nearestBone) && centroid.y > shoulderCutoffY) {
-      continue; // Exclude this triangle (bare shoulder)
+    if (centroid.y > cutoffY && lateralDistance > lateralThreshold) {
+      continue; // Exclude (bare shoulder)
     }
     
     filtered.push(triIdx);
