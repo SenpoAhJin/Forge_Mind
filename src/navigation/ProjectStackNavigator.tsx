@@ -94,7 +94,7 @@ export const ProjectStackNavigator: React.FC = () => {
 
       <Stack.Screen name="PlanningBrief" options={{ title: 'Project Brief' }}>
         {({ route, navigation }) => (
-          <PlanningBriefScreen briefId={route.params?.briefId} onSaved={() => navigation.goBack()} />
+          <PlanningBriefScreen briefId={route.params?.briefId} onSaved={() => navigation.goBack()} onAnalyze={(briefId) => navigation.navigate('ReferenceReview', { briefId })} />
         )}
       </Stack.Screen>
 

@@ -14,9 +14,10 @@ import { borderRadius, spacing, typography } from '../../theme';
 interface Props {
   briefId?: string;
   onSaved: () => void;
+  onAnalyze?: (briefId: string) => void;
 }
 
-export function PlanningBriefScreen({ briefId, onSaved }: Props) {
+export function PlanningBriefScreen({ briefId, onSaved, onAnalyze }: Props) {
   const { user } = useUser();
   const { themeColors: c } = useTheme();
   const account = user?.email;
@@ -32,6 +33,7 @@ export function PlanningBriefScreen({ briefId, onSaved }: Props) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [savedBrief, setSavedBrief] = useState<PlanningBrief>();
   const today = getTodayLocal();
 
   useEffect(() => {
@@ -61,6 +63,7 @@ export function PlanningBriefScreen({ briefId, onSaved }: Props) {
   }, [account, briefId]);
 
   const applyBrief = (brief: PlanningBrief) => {
+    setSavedBrief(brief);
     setName(brief.character_name); setReference(brief.reference_image);
     setSkill(brief.skill_level); setBudget(String(brief.budget)); setDate(brief.target_date);
   };
@@ -144,6 +147,7 @@ export function PlanningBriefScreen({ briefId, onSaved }: Props) {
       <DateInput label="Target date" value={date} onChange={setDate} minDate={today} />
       {error ? <Text accessibilityRole="alert" style={[styles.body, { color: c.error }]}>{error}</Text> : null}
       <Button title="Save project brief" onPress={save} loading={busy} disabled={!account || account !== loadedAccount} fullWidth />
+      {onAnalyze ? <Button title="Analyze with AI →" disabled={busy || !savedBrief || !name.trim() || !reference || savedBrief.character_name !== name || savedBrief.reference_image !== reference || savedBrief.skill_level !== skill || String(savedBrief.budget) !== budget || savedBrief.target_date !== date} onPress={() => { if (savedBrief) onAnalyze(savedBrief.brief_id); }} fullWidth /> : null}
       <Text style={[styles.body, { color: c.textSecondary }]}>Saved on this device. Reference analysis and component review are the next planning stage.</Text>
     </ScrollView>
   );
