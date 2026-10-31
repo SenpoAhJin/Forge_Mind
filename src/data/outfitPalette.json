@@ -1,0 +1,33 @@
+{
+  "_comment": "Fixed color palette for outfit extraction. CIELAB-optimized for perceptual matching.",
+  "version": "1.0.0",
+  "colors": [
+    { "id": "white", "name": "White", "hex": "#FFFFFF" },
+    { "id": "black", "name": "Black", "hex": "#000000" },
+    { "id": "gray-light", "name": "Light Gray", "hex": "#D3D3D3" },
+    { "id": "gray", "name": "Gray", "hex": "#808080" },
+    { "id": "gray-dark", "name": "Dark Gray", "hex": "#404040" },
+    { "id": "red", "name": "Red", "hex": "#EF4444" },
+    { "id": "red-dark", "name": "Dark Red", "hex": "#991B1B" },
+    { "id": "orange", "name": "Orange", "hex": "#F97316" },
+    { "id": "yellow", "name": "Yellow", "hex": "#F59E0B" },
+    { "id": "yellow-light", "name": "Light Yellow", "hex": "#FDE68A" },
+    { "id": "green", "name": "Green", "hex": "#10B981" },
+    { "id": "green-dark", "name": "Dark Green", "hex": "#065F46" },
+    { "id": "teal", "name": "Teal", "hex": "#14B8A6" },
+    { "id": "cyan", "name": "Cyan", "hex": "#06B6D4" },
+    { "id": "blue", "name": "Blue", "hex": "#3B82F6" },
+    { "id": "blue-dark", "name": "Dark Blue", "hex": "#1E3A8A" },
+    { "id": "indigo", "name": "Indigo", "hex": "#6366F1" },
+    { "id": "purple", "name": "Purple", "hex": "#8B5CF6" },
+    { "id": "purple-dark", "name": "Dark Purple", "hex": "#581C87" },
+    { "id": "pink", "name": "Pink", "hex": "#EC4899" },
+    { "id": "pink-light", "name": "Light Pink", "hex": "#FBCFE8" },
+    { "id": "brown", "name": "Brown", "hex": "#92400E" },
+    { "id": "brown-light", "name": "Light Brown", "hex": "#D97706" },
+    { "id": "beige", "name": "Beige", "hex": "#F5F5DC" },
+    { "id": "tan", "name": "Tan", "hex": "#D2B48C" },
+    { "id": "gold", "name": "Gold", "hex": "#FFD700" },
+    { "id": "silver", "name": "Silver", "hex": "#C0C0C0" }
+  ]
+}
