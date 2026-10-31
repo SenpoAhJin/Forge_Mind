@@ -1054,6 +1054,98 @@ export function computePieceDebugInfo(
 }
 
 /**
+ * COSTUME-9A: Build procedural skirt geometry
+ * Flared truncated cone from waist to hem (determined by length style).
+ */
+function buildSkirtGeometry(
+  skinnedMesh: THREE.SkinnedMesh,
+  contract: any,
+  landmarks: Landmarks,
+  style: Record<string, string>
+): THREE.BufferGeometry {
+  const config = (costumeStyles as any).config;
+  
+  // Determine hem y based on length style
+  let hemY: number;
+  if (style.length === 'shorts') {
+    hemY = config && config.shortsHemY 
+      ? landmarks[config.shortsHemY.landmark as keyof Landmarks] + config.shortsHemY.offset
+      : landmarks.knee_y + 0.08;
+  } else if (style.length === 'knee') {
+    hemY = config && config.kneeHemY
+      ? landmarks[config.kneeHemY.landmark as keyof Landmarks] + config.kneeHemY.offset
+      : landmarks.knee_y + 0.02;
+  } else {
+    // ankle
+    hemY = landmarks.ankle_y + 0.04;
+  }
+  
+  // Waist y (top of skirt)
+  const waistY = landmarks.hip_y + 0.05;
+  
+  // Measure waist radius from body profile (SIMPLIFIED: use constant for now, real impl reads bodyProfile.generated.json)
+  // In production, interpolate torso slices to find radius at waistY
+  const waistRadius = 0.16; // Approximate from belt measurements ~0.32 width / 2
+  
+  // Hem radius from config
+  const hemRadiusFactor = config && config.skirtHemRadius ? config.skirtHemRadius : 1.8;
+  const hemRadius = waistRadius * hemRadiusFactor;
+  
+  // Radial segments
+  const radialSegments = config && config.skirtRadialSegments ? config.skirtRadialSegments : 24;
+  const heightSegments = 16; // Vertical subdivisions for smooth draping
+  
+  // Build truncated cone geometry
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+  
+  for (let h = 0; h <= heightSegments; h++) {
+    const t = h / heightSegments;
+    const y = waistY + t * (hemY - waistY);
+    const radius = waistRadius + t * (hemRadius - waistRadius);
+    
+    for (let r = 0; r <= radialSegments; r++) {
+      const theta = (r / radialSegments) * Math.PI * 2;
+      const x = Math.cos(theta) * radius;
+      const z = Math.sin(theta) * radius;
+      
+      positions.push(x, y, z);
+      
+      // Smooth outward-facing normals
+      const nx = Math.cos(theta);
+      const nz = Math.sin(theta);
+      normals.push(nx, 0, nz); // Simplified, could compute true cone normals
+    }
+  }
+  
+  // Build indices (two triangles per quad)
+  for (let h = 0; h < heightSegments; h++) {
+    for (let r = 0; r < radialSegments; r++) {
+      const i0 = h * (radialSegments + 1) + r;
+      const i1 = i0 + 1;
+      const i2 = i0 + (radialSegments + 1);
+      const i3 = i2 + 1;
+      
+      // Triangle 1
+      indices.push(i0, i2, i1);
+      // Triangle 2
+      indices.push(i1, i2, i3);
+    }
+  }
+  
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setIndex(indices);
+  
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  
+  return geometry;
+}
+
+/**
  * Build a costume piece mesh.
  * Returns a cached mesh if available, otherwise builds and caches it.
  */
@@ -1096,6 +1188,10 @@ export function buildCostumePiece(
     const landmarks = computeLandmarks(contract, new THREE.Box3().setFromObject(skinnedMesh));
     const yPos = landmarks[pieceDef.yPosition.landmark as keyof Landmarks] + pieceDef.yPosition.offset;
     geometry = buildBeltGeometry(skinnedMesh, contract, yPos, pieceDef.tubeRadius);
+  } else if (pieceDef.id === 'bottom' && pieceStyle?.style?.shape === 'skirt') {
+    // COSTUME-9A: Procedural skirt
+    const landmarks = computeLandmarks(contract, new THREE.Box3().setFromObject(skinnedMesh));
+    geometry = buildSkirtGeometry(skinnedMesh, contract, landmarks, pieceStyle.style);
   } else {
     // Derive piece using nearest-bone labeling with style support
     const meshBounds = new THREE.Box3().setFromObject(skinnedMesh);
