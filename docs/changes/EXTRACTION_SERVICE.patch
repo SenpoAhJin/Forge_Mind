@@ -1,0 +1,524 @@
+From bb7366cf3c1b5aa690691043459542db0e8e8ae2 Mon Sep 17 00:00:00 2001
+From: Kiro AI Agent <ai-agent@forgemind.local>
+Date: Sun, 1 Nov 2026 05:42:17 +0800
+Subject: [PATCH 1/4] Add local memory-only reference extraction service
+
+---
+ .gitignore                           |   4 +
+ requirements-extraction.txt          |   5 +
+ scripts/download_reference_models.py |  11 ++
+ src/reference_api.py                 |  49 ++++++++
+ src/reference_extraction.py          | 163 +++++++++++++++++++++++++++
+ tests/test_reference_extraction.py   |  49 ++++++++
+ 6 files changed, 281 insertions(+)
+ create mode 100644 requirements-extraction.txt
+ create mode 100644 scripts/download_reference_models.py
+ create mode 100644 src/reference_api.py
+ create mode 100644 src/reference_extraction.py
+ create mode 100644 tests/test_reference_extraction.py
+
+diff --git a/.gitignore b/.gitignore
+index 5f7c570..28a4b75 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -81,3 +81,7 @@ htmlcov/
+ # Temporary files
+ *.tmp
+ *.bak
++
++# Local reference model downloads (never commit weights)
++models/reference/
++
+diff --git a/requirements-extraction.txt b/requirements-extraction.txt
+new file mode 100644
+index 0000000..3175724
+--- /dev/null
++++ b/requirements-extraction.txt
+@@ -0,0 +1,5 @@
++-r requirements.txt
++Pillow==13.0.0
++mediapipe==1.2.0
++transformers==5.22.1
++torch==2.15.0
+diff --git a/scripts/download_reference_models.py b/scripts/download_reference_models.py
+new file mode 100644
+index 0000000..8c7e191
+--- /dev/null
++++ b/scripts/download_reference_models.py
+@@ -0,0 +1,11 @@
++"""Explicit setup only. Runtime never contacts a hosted inference service."""
++from pathlib import Path
++import urllib.request
++from huggingface_hub import snapshot_download
++
++target = Path(__file__).resolve().parents[1] / 'models/reference'
++target.mkdir(parents=True, exist_ok=True)
++urllib.request.urlretrieve('https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task', target / 'pose_landmarker_lite.task')
++snapshot_download('openai/clip-vit-base-patch32', local_dir=target / 'clip', allow_patterns=['*.json', '*.txt', '*.safetensors', 'pytorch_model.bin'])
++for file in target.rglob('*'):
++    if file.is_file(): print(f'{file.relative_to(target)}: {file.stat().st_size} bytes')
+diff --git a/src/reference_api.py b/src/reference_api.py
+new file mode 100644
+index 0000000..722b167
+--- /dev/null
++++ b/src/reference_api.py
+@@ -0,0 +1,49 @@
++"""Separate Flask entrypoint reusing the existing service environment and CORS."""
++from concurrent.futures import ThreadPoolExecutor, TimeoutError
++import threading
++import os
++from flask import Flask, request, jsonify
++from flask_cors import CORS
++from werkzeug.exceptions import RequestEntityTooLarge
++from reference_extraction import ReferencePipeline, ExtractionError, decode_image
++
++def create_app(pipeline=None, timeout=45):
++    app = Flask(__name__)
++    app.config['MAX_CONTENT_LENGTH'] = 1024*1024 + 64*1024
++    CORS(app)
++    pipeline = pipeline or ReferencePipeline()
++    worker = ThreadPoolExecutor(max_workers=1)
++    gate = threading.Lock()
++
++    @app.get('/api/health')
++    def health():
++        return jsonify(schema_version=1, **pipeline.health())
++
++    @app.errorhandler(RequestEntityTooLarge)
++    def too_large(_):
++        return jsonify(error={'code': 'image_too_large', 'message': 'Choose an image up to 1 MB.'}), 413
++
++    @app.post('/api/extract-reference')
++    def extract():
++        if 'image' not in request.files:
++            return jsonify(error={'code': 'missing_image', 'message': 'Upload an image field.'}), 400
++        try:
++            image = decode_image(request.files['image'].read(1024*1024+1))
++            if not gate.acquire(blocking=False):
++                raise ExtractionError('analysis_busy', 'Analysis is busy. Retry shortly.', 503)
++            def run():
++                try: return pipeline.extract(image, timeout=timeout)
++                finally: gate.release()
++            future = worker.submit(run)
++            try: return jsonify(future.result(timeout=timeout))
++            except TimeoutError:
++                raise ExtractionError('analysis_timeout', 'Analysis timed out. Retry or enter components manually.', 504)
++        except ExtractionError as error:
++            return jsonify(error={'code': error.code, 'message': error.message}), error.status
++        except Exception:
++            return jsonify(error={'code': 'analysis_failed', 'message': 'Analysis failed. Retry or enter components manually.'}), 500
++
++    return app
++
++if __name__ == '__main__':
++    create_app().run(host='0.0.0.0', port=int(os.environ.get('EXTRACTION_PORT', '5055')), debug=False)
+diff --git a/src/reference_extraction.py b/src/reference_extraction.py
+new file mode 100644
+index 0000000..95e0b6b
+--- /dev/null
++++ b/src/reference_extraction.py
+@@ -0,0 +1,163 @@
++"""Local, memory-only reference analysis. No image logging or persistence."""
++import io
++import json
++import os
++from pathlib import Path
++import time
++import numpy as np
++from PIL import Image, ImageOps
++
++ROOT = Path(__file__).resolve().parents[1]
++DATA = Path(os.environ.get('FORGEMIND_VOCAB_DIR', ROOT.parent / 'forgemind-mobile/src/data'))
++KEYWORDS = json.loads((DATA / 'outfitKeywords.json').read_text())['keywords']
++PALETTE = json.loads((DATA / 'outfitPalette.json').read_text())['colors']
++ZONES = {'wig': (.2, 0, .8, .2), 'top': (.18, .2, .82, .53),
++         'gloves': (0, .42, 1, .64), 'bottom': (.2, .5, .8, .85),
++         'shoes': (.15, .85, .85, 1), 'accessory': (.25, .06, .75, .22)}
++
++class ExtractionError(Exception):
++    def __init__(self, code, message, status=400):
++        self.code, self.message, self.status = code, message, status
++
++def decode_image(raw):
++    if len(raw) > 1024 * 1024:
++        raise ExtractionError('image_too_large', 'Choose an image up to 1 MB.', 413)
++    try:
++        with Image.open(io.BytesIO(raw)) as source:
++            if source.format not in ('JPEG', 'PNG', 'WEBP'):
++                raise ExtractionError('unsupported_image', 'Choose a JPEG, PNG or WebP image.')
++            if source.width * source.height > 20_000_000:
++                raise ExtractionError('image_dimensions', 'Image exceeds 20 million pixels.')
++            source.verify()
++        with Image.open(io.BytesIO(raw)) as source:
++            return ImageOps.exif_transpose(source).convert('RGB')
++    except ExtractionError:
++        raise
++    except Exception:
++        raise ExtractionError('unreadable_image', 'The file is not a readable JPEG, PNG or WebP image.') from None
++
++def lab(rgb):
++    rgb = np.asarray(rgb, dtype=float) / 255
++    linear = np.where(rgb <= .04045, rgb / 12.92, ((rgb + .055) / 1.055) ** 2.4)
++    xyz = linear @ np.array([[.4124564, .3575761, .1804375], [.2126729, .7151522, .0721750], [.0193339, .1191920, .9503041]]).T
++    xyz /= [.95047, 1, 1.08883]
++    f = np.where(xyz > .008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
++    return np.stack([116*f[..., 1]-16, 500*(f[..., 0]-f[..., 1]), 200*(f[..., 1]-f[..., 2])], axis=-1)
++
++PALETTE_LAB = lab([[int(c['hex'][i:i+2], 16) for i in (1, 3, 5)] for c in PALETTE])
++
++def colors(crop, mask=None, baseline=False):
++    pixels = np.asarray(crop).reshape(-1, 3)
++    if mask is not None:
++        pixels = pixels[mask.reshape(-1) > .5]
++        # Conservative RGB skin heuristic; imperfect, documented and only used with a person mask.
++        r, g, b = pixels.T if len(pixels) else ([], [], [])
++        if len(pixels):
++            skin = (r > 95) & (g > 40) & (b > 20) & (r > g) & (r > b) & ((r.astype(float)-g) > 15)
++            pixels = pixels[~skin]
++    if not len(pixels):
++        return []
++    values = lab(pixels)
++    if baseline:
++        groups = [np.arange(len(pixels))]
++    else:
++        bins = np.floor(values / [8, 12, 12]).astype(int)
++        _, inverse, counts = np.unique(bins, axis=0, return_inverse=True, return_counts=True)
++        groups = [np.flatnonzero(inverse == i) for i in np.argsort(-counts, kind='stable')[:3]]
++    result = []
++    for group in groups:
++        rgb = np.round(pixels[group].mean(axis=0)).astype(int)
++        target = lab(rgb)
++        idx = int(np.argmin(np.linalg.norm(PALETTE_LAB - target, axis=1)))
++        result.append({'hex': '#'+''.join(f'{v:02X}' for v in rgb), 'share': round(len(group)/len(pixels), 5), 'palette_id': PALETTE[idx]['id']})
++    return result
++
++def foreground_box(image):
++    """Heuristic extent, never described as a detected person."""
++    a = np.asarray(image)
++    edge = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
++    background = np.median(edge, axis=0)
++    ys, xs = np.where(np.linalg.norm(a.astype(float)-background, axis=2) > 35)
++    if len(xs) < a.shape[0]*a.shape[1]*.03:
++        return (0., 0., 1., 1.)
++    return (float(xs.min()/image.width), float(ys.min()/image.height), float((xs.max()+1)/image.width), float((ys.max()+1)/image.height))
++
++class ReferencePipeline:
++    def __init__(self, load_models=True):
++        self.pose = self.clip = self.processor = None
++        self.model_errors = []
++        if load_models:
++            try:
++                import mediapipe as mp
++                self.mp = mp
++                model = ROOT / 'models/reference/pose_landmarker_lite.task'
++                self.pose = mp.tasks.vision.PoseLandmarker.create_from_options(mp.tasks.vision.PoseLandmarkerOptions(
++                    base_options=mp.tasks.BaseOptions(model_asset_path=str(model)), num_poses=2,
++                    output_segmentation_masks=True, min_pose_detection_confidence=.6))
++            except Exception as error:
++                self.model_errors.append('pose unavailable: ' + type(error).__name__)
++            try:
++                from transformers import CLIPModel, CLIPProcessor
++                model = str(ROOT / 'models/reference/clip')
++                self.processor = CLIPProcessor.from_pretrained(model, local_files_only=True)
++                self.clip = CLIPModel.from_pretrained(model, local_files_only=True).eval()
++            except Exception as error:
++                self.model_errors.append('style unavailable: ' + type(error).__name__)
++
++    def health(self):
++        return {'pose_loaded': self.pose is not None, 'style_loaded': self.clip is not None, 'warnings': self.model_errors}
++
++    def extract(self, image, baseline=False, timeout=45):
++        deadline = time.monotonic() + timeout
++        def check():
++            if time.monotonic() > deadline:
++                raise ExtractionError('analysis_timeout', 'Analysis timed out. Retry or enter components manually.', 504)
++        image_size = {'width': image.width, 'height': image.height}
++        image = image.copy()
++        image.thumbnail((768, 1024))
++        method, mask, landmarks = 'fallback', None, None
++        box = foreground_box(image)
++        warnings = ['Fixed proportion zones; person detection was not established. Please check.']
++        if self.pose and not baseline:
++            check()
++            result = self.pose.detect(self.mp.Image(image_format=self.mp.ImageFormat.SRGB, data=np.asarray(image)))
++            if len(result.pose_landmarks) == 1:
++                points = result.pose_landmarks[0]
++                if all(points[i].visibility > .6 for i in (0, 11, 12, 15, 16, 23, 24, 27, 28)):
++                    method, landmarks, warnings = 'pose', points, []
++                    if result.segmentation_masks:
++                        mask = result.segmentation_masks[0].numpy_view()
++                        ys, xs = np.where(mask > .5)
++                        if len(xs): box = (float(xs.min()/image.width), float(ys.min()/image.height), float((xs.max()+1)/image.width), float((ys.max()+1)/image.height))
++        components = []
++        for slot, zone in ZONES.items():
++            check()
++            x0, y0, x1, y1 = box
++            z = [x0+zone[0]*(x1-x0), y0+zone[1]*(y1-y0), x0+zone[2]*(x1-x0), y0+zone[3]*(y1-y0)]
++            if landmarks and slot == 'gloves':
++                hands = [landmarks[i] for i in (15, 16, 19, 20)]
++                z = [min(p.x for p in hands)-.05, min(p.y for p in hands)-.05, max(p.x for p in hands)+.05, max(p.y for p in hands)+.05]
++            z = [float(max(0, min(1, v))) for v in z]
++            px = (int(z[0]*image.width), int(z[1]*image.height), max(int(z[0]*image.width)+1, int(z[2]*image.width)), max(int(z[1]*image.height)+1, int(z[3]*image.height)))
++            crop = image.crop(px)
++            local_warnings = list(warnings)
++            if slot == 'gloves': local_warnings.append('Hand regions can include skin or nearby clothing. Please check.')
++            candidates = []
++            labels = KEYWORDS.get(slot, [])
++            if self.clip and labels and not baseline:
++                import torch
++                with torch.inference_mode():
++                    inputs = self.processor(text=[f'a photo of {label.replace("-", " ")} {slot}' for label in labels], images=crop, return_tensors='pt', padding=True)
++                    scores = self.clip(**inputs).logits_per_image[0].tolist()
++                candidates = sorted([{'label': label, 'score': round(float(score), 5)} for label, score in zip(labels, scores)], key=lambda c: -c['score'])[:3]
++            else:
++                local_warnings.append('No style vocabulary for accessory.' if not labels else 'Style model unavailable.' if not baseline else 'Evaluation baseline has no style model.')
++            gap = candidates[0]['score']-candidates[1]['score'] if len(candidates)>1 else 0
++            band = 'high' if gap >= 4 else 'medium' if gap >= 2 else 'low'
++            if method == 'fallback' or not candidates: band = 'low'
++            crop_mask = mask[px[1]:px[3], px[0]:px[2]] if mask is not None else None
++            found_colors = colors(crop, crop_mask, baseline)
++            if not found_colors: local_warnings.append('No unmasked color pixels. Please check.')
++            components.append({'type': slot, 'zone': z, 'colors': found_colors, 'style': candidates[0]['label'] if candidates else None, 'candidates': candidates, 'band': band, 'warnings': local_warnings})
++        check()
++        return {'schema_version': 1, 'image': image_size, 'method': method, 'mode': 'baseline' if baseline else 'full', 'components': components, 'warnings': warnings}
+diff --git a/tests/test_reference_extraction.py b/tests/test_reference_extraction.py
+new file mode 100644
+index 0000000..0777614
+--- /dev/null
++++ b/tests/test_reference_extraction.py
+@@ -0,0 +1,49 @@
++import io
++import sys
++import time
++from pathlib import Path
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
++from PIL import Image
++from reference_extraction import ReferencePipeline, colors, decode_image, ExtractionError
++from reference_api import create_app
++import pytest
++
++def png():
++    buffer = io.BytesIO()
++    Image.new('RGB', (80, 200), '#EF4444').save(buffer, format='PNG')
++    return buffer.getvalue()
++
++def test_known_color_histogram_and_average():
++    for baseline in (False, True):
++        result = colors(Image.new('RGB', (30, 30), '#EF4444'), baseline=baseline)
++        assert result == [{'hex': '#EF4444', 'share': 1.0, 'palette_id': 'red'}]
++
++def test_fallback_all_six_low_and_normalized():
++    result = ReferencePipeline(False).extract(decode_image(png()))
++    assert result['method'] == 'fallback'
++    assert len(result['components']) == 6
++    for c in result['components']:
++        assert c['band'] == 'low' and c['warnings']
++        assert all(0 <= n <= 1 for n in c['zone'])
++
++@pytest.mark.parametrize('data', [b'not an image', b'\x89PNG\r\n\x1a\ncorrupt'])
++def test_corrupt_and_nonimage(data):
++    with pytest.raises(ExtractionError): decode_image(data)
++
++def test_api_upload_health_cors_and_oversize():
++    client = create_app(ReferencePipeline(False)).test_client()
++    response = client.post('/api/extract-reference', data={'image': (io.BytesIO(png()), 'wrong.exe')}, headers={'Origin': 'http://localhost:8091'})
++    assert response.status_code == 200
++    assert response.headers['Access-Control-Allow-Origin'] == 'http://localhost:8091'
++    assert client.get('/api/health').json['pose_loaded'] is False
++    response = client.post('/api/extract-reference', data={'image': (io.BytesIO(b'x'*(1024*1024+1)), 'big.png')})
++    assert response.status_code == 413
++    assert response.json['error']['code'] == 'image_too_large'
++
++def test_timeout():
++    class Slow(ReferencePipeline):
++        def extract(self, *args, **kwargs): time.sleep(.1); return {}
++    client = create_app(Slow(False), timeout=.01).test_client()
++    response = client.post('/api/extract-reference', data={'image': (io.BytesIO(png()), 'image.png')})
++    assert response.status_code == 504
++    assert response.json['error']['code'] == 'analysis_timeout'
+-- 
+2.55.0.windows.3
+
+
+From 494fbeebf492cdc9fcce9853bcb66d55ddce2d87 Mon Sep 17 00:00:00 2001
+From: Kiro AI Agent <ai-agent@forgemind.local>
+Date: Sun, 1 Nov 2026 05:52:14 +0800
+Subject: [PATCH 2/4] Keep reference uploads entirely in memory
+
+---
+ src/reference_api.py               | 9 ++++++++-
+ src/reference_extraction.py        | 3 ++-
+ tests/test_reference_extraction.py | 8 +++++++-
+ 3 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/src/reference_api.py b/src/reference_api.py
+index 722b167..90aebe5 100644
+--- a/src/reference_api.py
++++ b/src/reference_api.py
+@@ -2,13 +2,20 @@
+ from concurrent.futures import ThreadPoolExecutor, TimeoutError
+ import threading
+ import os
+-from flask import Flask, request, jsonify
++import io
++from flask import Flask, Request, request, jsonify
+ from flask_cors import CORS
+ from werkzeug.exceptions import RequestEntityTooLarge
+ from reference_extraction import ReferencePipeline, ExtractionError, decode_image
+ 
++class MemoryUploadRequest(Request):
++    def _get_file_stream(self, total_content_length, content_type, filename=None, content_length=None):
++        # Werkzeug's default spools uploads >500 KB to disk. Never do that here.
++        return io.BytesIO()
++
+ def create_app(pipeline=None, timeout=45):
+     app = Flask(__name__)
++    app.request_class = MemoryUploadRequest
+     app.config['MAX_CONTENT_LENGTH'] = 1024*1024 + 64*1024
+     CORS(app)
+     pipeline = pipeline or ReferencePipeline()
+diff --git a/src/reference_extraction.py b/src/reference_extraction.py
+index 95e0b6b..5d77214 100644
+--- a/src/reference_extraction.py
++++ b/src/reference_extraction.py
+@@ -105,7 +105,8 @@ class ReferencePipeline:
+                 self.model_errors.append('style unavailable: ' + type(error).__name__)
+ 
+     def health(self):
+-        return {'pose_loaded': self.pose is not None, 'style_loaded': self.clip is not None, 'warnings': self.model_errors}
++        return {'pose_loaded': self.pose is not None, 'style_loaded': self.clip is not None,
++                'models': {'pose': 'MediaPipe pose_landmarker_lite float16', 'style': 'openai/clip-vit-base-patch32'}, 'warnings': self.model_errors}
+ 
+     def extract(self, image, baseline=False, timeout=45):
+         deadline = time.monotonic() + timeout
+diff --git a/tests/test_reference_extraction.py b/tests/test_reference_extraction.py
+index 0777614..3aa2c5a 100644
+--- a/tests/test_reference_extraction.py
++++ b/tests/test_reference_extraction.py
+@@ -5,7 +5,7 @@ from pathlib import Path
+ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+ from PIL import Image
+ from reference_extraction import ReferencePipeline, colors, decode_image, ExtractionError
+-from reference_api import create_app
++from reference_api import create_app, MemoryUploadRequest
+ import pytest
+ 
+ def png():
+@@ -47,3 +47,9 @@ def test_timeout():
+     response = client.post('/api/extract-reference', data={'image': (io.BytesIO(png()), 'image.png')})
+     assert response.status_code == 504
+     assert response.json['error']['code'] == 'analysis_timeout'
++
++def test_large_upload_stream_never_spools_to_disk():
++    stream = MemoryUploadRequest({})._get_file_stream(900000, 'image/png')
++    assert isinstance(stream, io.BytesIO)
++    stream.write(b'x' * 900000)
++    assert stream.getbuffer().nbytes == 900000
+-- 
+2.55.0.windows.3
+
+
+From 9b3b96bc981111836b044c65afdd84e9197a2b05 Mon Sep 17 00:00:00 2001
+From: Kiro AI Agent <ai-agent@forgemind.local>
+Date: Sun, 1 Nov 2026 05:52:15 +0800
+Subject: [PATCH 3/4] Add labeled full-versus-baseline reference evaluation
+
+---
+ scripts/evaluate_reference.py | 53 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 53 insertions(+)
+ create mode 100644 scripts/evaluate_reference.py
+
+diff --git a/scripts/evaluate_reference.py b/scripts/evaluate_reference.py
+new file mode 100644
+index 0000000..1fd0288
+--- /dev/null
++++ b/scripts/evaluate_reference.py
+@@ -0,0 +1,53 @@
++"""Run: python scripts/evaluate_reference.py labeled-folder --output results.json
++
++labels.json: {"version":1,"images":[{"file":"image.jpg","slots":{"wig":{"color":"white","style":"spiky"}}}]}
++Omit unlabelled slots/fields. Style labels must be in the app vocabulary; accessory has none.
++"""
++import argparse
++import json
++from pathlib import Path
++import sys
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
++from reference_extraction import ReferencePipeline, decode_image, KEYWORDS, PALETTE, ZONES
++
++def evaluate(folder, pipeline):
++    labels = json.loads((folder / 'labels.json').read_text(encoding='utf-8-sig'))
++    if labels.get('version') != 1 or not isinstance(labels.get('images'), list): raise ValueError('Invalid label schema')
++    if not labels['images']: return {'status': 'NOT RUN', 'reason': 'No labeled images.', 'number_of_images': 0}
++    if not all(pipeline.health()[key] for key in ('pose_loaded', 'style_loaded')): raise RuntimeError('Full evaluation requires both models loaded.')
++    rows = []
++    counters = {mode: {slot: {metric: {'correct': 0, 'total': 0} for metric in ('color', 'style_top1')} for slot in ZONES} for mode in ('full', 'baseline')}
++    for entry in labels['images']:
++        path = (folder / entry['file']).resolve()
++        if not path.is_relative_to(folder.resolve()): raise ValueError('Image outside labeled folder')
++        for slot, values in entry['slots'].items():
++            if slot not in ZONES: raise ValueError('Unknown slot')
++            if 'color' in values and values['color'] not in [c['id'] for c in PALETTE]: raise ValueError('Unknown color')
++            if 'style' in values and values['style'] not in KEYWORDS.get(slot, []): raise ValueError('Unknown style')
++        image = decode_image(path.read_bytes())
++        row = {'file': entry['file']}
++        for mode in counters:
++            result = pipeline.extract(image, baseline=mode == 'baseline', timeout=120)
++            row[mode] = result
++            for component in result['components']:
++                slot = component['type']; truth = entry['slots'].get(slot, {})
++                predicted = {'color': component['colors'][0]['palette_id'] if component['colors'] else None, 'style_top1': component['style']}
++                for metric, field in (('color', 'color'), ('style_top1', 'style')):
++                    if field in truth:
++                        counter = counters[mode][slot][metric]; counter['total'] += 1
++                        counter['correct'] += int(predicted[metric] == truth[field])
++        rows.append(row)
++    for slots in counters.values():
++        for metrics in slots.values():
++            for counter in metrics.values(): counter['accuracy'] = counter['correct']/counter['total'] if counter['total'] else None
++    comparison = {slot: {metric: (counters['full'][slot][metric]['accuracy']-counters['baseline'][slot][metric]['accuracy']) if counters['full'][slot][metric]['total'] else None for metric in ('color', 'style_top1')} for slot in ZONES}
++    return {'status': 'RAN', 'number_of_images': len(rows), 'metrics': counters, 'full_minus_baseline': comparison, 'predictions': rows}
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser(); parser.add_argument('folder', type=Path); parser.add_argument('--output', required=True, type=Path)
++    args = parser.parse_args()
++    # Avoid loading models at all for an empty label template.
++    has_images = bool(json.loads((args.folder / 'labels.json').read_text(encoding='utf-8-sig')).get('images'))
++    result = evaluate(args.folder, ReferencePipeline(load_models=has_images))
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(result, indent=2), encoding='utf-8'); print(json.dumps({k:v for k,v in result.items() if k != 'predictions'}, indent=2))
+-- 
+2.55.0.windows.3
+
+
+From a667043abeef071ef724b57545c3ceb373dc4c51 Mon Sep 17 00:00:00 2001
+From: Kiro AI Agent <ai-agent@forgemind.local>
+Date: Sun, 1 Nov 2026 05:52:45 +0800
+Subject: [PATCH 4/4] Use honest fallback when pose inference fails
+
+---
+ src/reference_extraction.py | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/reference_extraction.py b/src/reference_extraction.py
+index 5d77214..14a5cf0 100644
+--- a/src/reference_extraction.py
++++ b/src/reference_extraction.py
+@@ -121,8 +121,12 @@ class ReferencePipeline:
+         warnings = ['Fixed proportion zones; person detection was not established. Please check.']
+         if self.pose and not baseline:
+             check()
+-            result = self.pose.detect(self.mp.Image(image_format=self.mp.ImageFormat.SRGB, data=np.asarray(image)))
+-            if len(result.pose_landmarks) == 1:
++            try:
++                result = self.pose.detect(self.mp.Image(image_format=self.mp.ImageFormat.SRGB, data=np.asarray(image)))
++            except Exception:
++                result = None
++                warnings.append('Pose analysis failed; fixed zones used. Please check.')
++            if result is not None and len(result.pose_landmarks) == 1:
+                 points = result.pose_landmarks[0]
+                 if all(points[i].visibility > .6 for i in (0, 11, 12, 15, 16, 23, 24, 27, 28)):
+                     method, landmarks, warnings = 'pose', points, []
+-- 
+2.55.0.windows.3
+

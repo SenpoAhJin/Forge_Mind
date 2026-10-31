@@ -57,3 +57,7 @@ logs/
 
 # Expo web build output
 .expo-output-web/
+
+# Extraction verification bundles stay local; retain small evidence files only.
+/docs/evidence/extraction/web-bundle/
+/docs/evidence/extraction/android-bundle/
