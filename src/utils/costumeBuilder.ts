@@ -269,10 +269,8 @@ export function selectPieceTriangles(
     
     // Neckline style
     if (style.neckline === 'off_shoulder') {
-      // Off-shoulder: raise yMax to drop shoulder region
-      if (config && config.offShoulderYOffset) {
-        yMax = (yMax ?? landmarks.neck_y) + config.offShoulderYOffset;
-      }
+      // Off-shoulder requires region-based exclusion after initial selection
+      // (implemented as post-processing below)
     }
   } else if (style && pieceDef.id === 'bottom') {
     // Length style affects the hem (yMin), not the waist (yMax)
@@ -332,9 +330,91 @@ export function selectPieceTriangles(
         true // keep above hem
       );
     }
+    
+    // Off-shoulder post-processing
+    if (style && style.neckline === 'off_shoulder') {
+      selectedTriangles = applyOffShoulderCut(
+        selectedTriangles,
+        geometry,
+        boneSegments,
+        landmarks,
+        config
+      );
+    }
   }
 
   return selectedTriangles;
+}
+
+/**
+ * COSTUME-9A: Off-shoulder cut
+ * Excludes shoulder cap and clavicle triangles above a cutoff,
+ * while keeping chest and arm sleeves below the cutoff.
+ */
+function applyOffShoulderCut(
+  selectedTriangles: number[],
+  geometry: THREE.BufferGeometry,
+  boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
+  landmarks: Landmarks,
+  config: any
+): number[] {
+  const position = geometry.attributes.position;
+  const index = geometry.index;
+  
+  if (!index) return selectedTriangles;
+  
+  // Configuration
+  const shoulderCutoffY = config && config.offShoulderCutoffY 
+    ? landmarks[config.offShoulderCutoffY.landmark as keyof Landmarks] + config.offShoulderCutoffY.offset
+    : landmarks.neck_y - 0.05; // Default: 5cm below neck
+  
+  const shoulderBones = config && config.offShoulderBones 
+    ? new Set(config.offShoulderBones.map((b: string) => sanitizeBoneName(b)))
+    : new Set([
+        sanitizeBoneName('clavicle.L'),
+        sanitizeBoneName('clavicle.R'),
+        // Upper arm top is debatable - include if wanted
+      ]);
+  
+  const centroid = new THREE.Vector3();
+  const v0 = new THREE.Vector3();
+  const v1 = new THREE.Vector3();
+  const v2 = new THREE.Vector3();
+  
+  const filtered: number[] = [];
+  
+  for (const triIdx of selectedTriangles) {
+    const i0 = index.getX(triIdx * 3);
+    const i1 = index.getX(triIdx * 3 + 1);
+    const i2 = index.getX(triIdx * 3 + 2);
+    
+    v0.set(position.getX(i0), position.getY(i0), position.getZ(i0));
+    v1.set(position.getX(i1), position.getY(i1), position.getZ(i1));
+    v2.set(position.getX(i2), position.getY(i2), position.getZ(i2));
+    
+    centroid.copy(v0).add(v1).add(v2).multiplyScalar(1 / 3);
+    
+    // Find nearest bone to centroid
+    let nearestBone = '';
+    let nearestDist = Infinity;
+    
+    for (const [boneName, segment] of boneSegments) {
+      const dist = distanceToSegment(centroid, segment.head, segment.tail);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestBone = boneName;
+      }
+    }
+    
+    // Exclude if: labeled as shoulder bone AND above cutoff
+    if (shoulderBones.has(nearestBone) && centroid.y > shoulderCutoffY) {
+      continue; // Exclude this triangle (bare shoulder)
+    }
+    
+    filtered.push(triIdx);
+  }
+  
+  return filtered;
 }
 
 /**

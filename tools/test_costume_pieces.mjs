@@ -561,6 +561,102 @@ async function testBody(gender, glbPath, contract) {
         failures.push(`top neckline: Off-shoulder (${offShoulderLong.length} tris) should be < Crew (${crewLong.length} tris)`);
       }
       
+      // Test 2b: Verify off-shoulder specifically excludes shoulder/clavicle triangles above cutoff
+      const offShoulderGeom = buildOffsetGeometry(geometry, offShoulderLong, topPiece.offset_m);
+      const offShoulderPos = offShoulderGeom.attributes.position;
+      const offShoulderIdx = offShoulderGeom.index;
+      
+      const shoulderCutoffY = landmarks.neck_y - 0.05; // Default from config
+      const clavicleSegs = [boneSegments.get('clavicle_l'), boneSegments.get('clavicle_r')].filter(Boolean);
+      
+      let shoulderTrianglesAbove = 0;
+      for (let triIdx = 0; triIdx < offShoulderIdx.count / 3; triIdx++) {
+        const i0 = offShoulderIdx.getX(triIdx * 3);
+        const i1 = offShoulderIdx.getX(triIdx * 3 + 1);
+        const i2 = offShoulderIdx.getX(triIdx * 3 + 2);
+        
+        const x0 = offShoulderPos.getX(i0);
+        const y0 = offShoulderPos.getY(i0);
+        const z0 = offShoulderPos.getZ(i0);
+        const x1 = offShoulderPos.getX(i1);
+        const y1 = offShoulderPos.getY(i1);
+        const z1 = offShoulderPos.getZ(i1);
+        const x2 = offShoulderPos.getX(i2);
+        const y2 = offShoulderPos.getY(i2);
+        const z2 = offShoulderPos.getZ(i2);
+        
+        const centroidX = (x0 + x1 + x2) / 3;
+        const centroidY = (y0 + y1 + y2) / 3;
+        const centroidZ = (z0 + z1 + z2) / 3;
+        
+        // Check if near clavicle and above cutoff
+        if (centroidY > shoulderCutoffY && Math.abs(centroidX) > 0.10) {
+          // Lateral position suggests shoulder region
+          shoulderTrianglesAbove++;
+        }
+      }
+      
+      // Allow some tolerance since boundary smoothing may leave a few
+      if (shoulderTrianglesAbove > offShoulderLong.length * 0.05) {
+        failures.push(`top off_shoulder: ${shoulderTrianglesAbove} shoulder triangles above cutoff (${(shoulderTrianglesAbove / offShoulderLong.length * 100).toFixed(1)}%)`);
+      }
+      
+      // Test 2c: Verify chest is still covered (central triangles above cutoff exist)
+      let chestTrianglesAbove = 0;
+      for (let triIdx = 0; triIdx < offShoulderIdx.count / 3; triIdx++) {
+        const i0 = offShoulderIdx.getX(triIdx * 3);
+        const i1 = offShoulderIdx.getX(triIdx * 3 + 1);
+        const i2 = offShoulderIdx.getX(triIdx * 3 + 2);
+        
+        const x0 = offShoulderPos.getX(i0);
+        const y0 = offShoulderPos.getY(i0);
+        const x1 = offShoulderPos.getX(i1);
+        const y1 = offShoulderPos.getY(i1);
+        const x2 = offShoulderPos.getX(i2);
+        const y2 = offShoulderPos.getY(i2);
+        
+        const centroidX = Math.abs((x0 + x1 + x2) / 3);
+        const centroidY = (y0 + y1 + y2) / 3;
+        
+        // Central (chest) position
+        if (centroidY > shoulderCutoffY && centroidX < 0.10) {
+          chestTrianglesAbove++;
+        }
+      }
+      
+      if (chestTrianglesAbove === 0) {
+        failures.push(`top off_shoulder: no chest triangles above cutoff (chest should be covered)`);
+      }
+      
+      // Test 2d: Verify arms below cutoff are covered (sleeve hangs from bare shoulder)
+      let armTrianglesBelowCutoff = 0;
+      for (let triIdx = 0; triIdx < offShoulderIdx.count / 3; triIdx++) {
+        const i0 = offShoulderIdx.getX(triIdx * 3);
+        const i1 = offShoulderIdx.getX(triIdx * 3 + 1);
+        const i2 = offShoulderIdx.getX(triIdx * 3 + 2);
+        
+        const x0 = offShoulderPos.getX(i0);
+        const y0 = offShoulderPos.getY(i0);
+        const x1 = offShoulderPos.getX(i1);
+        const y1 = offShoulderPos.getY(i1);
+        const x2 = offShoulderPos.getX(i2);
+        const y2 = offShoulderPos.getY(i2);
+        
+        const centroidX = Math.abs((x0 + x1 + x2) / 3);
+        const centroidY = (y0 + y1 + y2) / 3;
+        
+        // Arm position below cutoff
+        if (centroidY < shoulderCutoffY && centroidX > 0.15) {
+          armTrianglesBelowCutoff++;
+        }
+      }
+      
+      if (armTrianglesBelowCutoff === 0) {
+        failures.push(`top off_shoulder: no arm triangles below cutoff (sleeves should hang from bare shoulders)`);
+      }
+      
+      offShoulderGeom.dispose();
+      
       // Test 3: Verify sleeve none excludes arm bones
       const crewNoneGeom = buildOffsetGeometry(geometry, crewNone, topPiece.offset_m);
       const crewNonePos = crewNoneGeom.attributes.position;

@@ -48,7 +48,8 @@
     }
   },
   "config": {
-    "offShoulderYOffset": -0.08,
+    "offShoulderCutoffY": { "landmark": "neck_y", "offset": -0.05 },
+    "offShoulderBones": ["clavicle.L", "clavicle.R"],
     "shortsHemY": { "landmark": "knee_y", "offset": 0.08 },
     "kneeHemY": { "landmark": "knee_y", "offset": 0.02 },
     "skirtWaistRadius": 1.15,
