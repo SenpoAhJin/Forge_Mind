@@ -330,9 +330,15 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
       )}
       
       {/* Unmapped Items */}
-      {unmappedItems.length > 0 && (
+      {unmappedItems.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Not shown in 3D yet</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('About3DPreview' as never)}
+            style={styles.sectionTitleRow}
+          >
+            <Text style={styles.sectionTitle}>Not shown in 3D yet</Text>
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
           <View style={styles.itemsGrid}>
             {unmappedItems.map((item) => (
               <View key={item.attire_id} style={[styles.gridItem, styles.gridItemUnmapped]}>
@@ -357,13 +363,20 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
             ))}
           </View>
         </View>
-      )}
+      ) : null}
       
       {/* WEAR-2: Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           3D pieces are simple colored shapes, not exact replicas of your items.
         </Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('About3DPreview' as never)}
+          style={styles.footerLink}
+        >
+          <Text style={styles.footerLinkText}>About the 3D preview</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -480,6 +493,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
   sectionSubtitle: {
     ...typography.caption,
     color: colors.textSecondary,
@@ -574,11 +593,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    alignItems: 'center',
   },
   footerText: {
     ...typography.caption,
     color: colors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
+    marginBottom: spacing.sm,
+  },
+  footerLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.xs,
+  },
+  footerLinkText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

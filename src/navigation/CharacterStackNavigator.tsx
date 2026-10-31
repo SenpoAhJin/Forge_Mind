@@ -13,6 +13,7 @@ import {
 import ProjectPlanningScreen from '../screens/cosplayer/ProjectPlanningScreen'; // 3D view (future)
 import ProjectPlanning2DScreen from '../screens/cosplayer/ProjectPlanning2DScreen'; // 2D view (current)
 import CreateCharacterScreen from '../screens/cosplayer/CreateCharacterScreen'; // New: Add character
+import About3DPreviewScreen from '../screens/cosplayer/About3DPreviewScreen'; // WEAR-2: Explainer
 import { useSelection } from '../contexts/SelectionContext';
 import { getCharacterById } from '../data';
 import { typography } from '../theme';
@@ -24,6 +25,7 @@ export type CharacterStackParamList = {
   VariantList: { characterId: string };
   MatchResults: undefined;
   ProjectPlanning: { characterId?: string }; // Updated: optional character context
+  About3DPreview: undefined; // WEAR-2: Explainer
 };
 
 const Stack = createNativeStackNavigator<CharacterStackParamList>();
@@ -62,6 +64,12 @@ export const CharacterStackNavigator: React.FC = () => {
       <Stack.Screen name="ProjectPlanning" options={{ title: 'Outfit Planning' }}>
         {({ navigation, route }) => (
           <ProjectPlanningScreen navigation={navigation} route={route} />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="About3DPreview" options={{ title: 'About the 3D Preview' }}>
+        {({ navigation }) => (
+          <About3DPreviewScreen navigation={navigation} />
         )}
       </Stack.Screen>
 
