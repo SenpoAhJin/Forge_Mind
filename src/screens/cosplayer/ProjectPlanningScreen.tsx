@@ -7,9 +7,15 @@
  * - Male/Female selector drives the viewer
  * - Your Items grid: tap to switch matching V2 slot on and set color
  * - Outfit state uses per-body scope (no projectId available on this screen)
+ * 
+ * WEAR-2: Added variant selection with chips.
+ * - Variants come from variants.json filtered by character_id
+ * - Target colors come from variantTargetColors.json per selected variant
+ * - Selected variant persists per body type in AsyncStorage
+ * - Screen title shows "<Character> – <Variant>"
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,15 +26,19 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import { useUserCharacters } from '../../contexts/UserCharactersContext';
 import { useOutfit } from '../../hooks/useOutfit';
 import type { OwnedAttire } from '../../types/owned-attire';
+import type { Variant } from '../../types/catalog';
 import { BaseBodySelection } from '../../constants/bodyType';
 import CostumeViewer from '../../components/CostumeViewer';
 import { OutfitControls } from '../../components/OutfitControls';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { applyItemToOutfit, canMapItemToPiece, getUnmappedItemMessage } from '../../utils/outfitHelpers';
+import { getAllVariantColors } from '../../utils/variantColors';
+import variantsData from '../../data/variants.json';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -52,6 +62,78 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
   
   // State
   const [bodyType, setBodyType] = useState<BaseBodySelection>('female');
+  
+  // WEAR-2: Find character's catalog ID to load variants
+  // For user-created characters, we don't have catalog variants
+  // So we'll use a placeholder approach: check if character.series contains recognizable names
+  const catalogCharacterId = useMemo(() => {
+    if (!character) return null;
+    // Try to match by name (simple approach)
+    if (character.name.toLowerCase().includes('gojo')) return 'char-jujutsu-kaisen-gojo';
+    if (character.name.toLowerCase().includes('makima')) return 'char-chainsaw-man-makima';
+    if (character.name.toLowerCase().includes('zelda')) return 'char-zelda-botw-zelda';
+    if (character.name.toLowerCase().includes('veira') || character.name.toLowerCase().includes('veyra')) return 'char-original-veira';
+    return null;
+  }, [character]);
+  
+  // WEAR-2: Load variants for this character
+  const characterVariants = useMemo(() => {
+    if (!catalogCharacterId) return [];
+    return (variantsData as Variant[]).filter(v => v.character_id === catalogCharacterId);
+  }, [catalogCharacterId]);
+  
+  // WEAR-2: Selected variant state (persists per body type)
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  
+  // WEAR-2: Load saved variant selection on mount
+  useEffect(() => {
+    const loadVariantSelection = async () => {
+      if (characterVariants.length === 0) return;
+      
+      try {
+        const key = `@forgemind:wear-variant:${bodyType}`;
+        const saved = await AsyncStorage.getItem(key);
+        if (saved && characterVariants.some(v => v.variant_id === saved)) {
+          setSelectedVariantId(saved);
+        } else {
+          // Default to first variant
+          setSelectedVariantId(characterVariants[0].variant_id);
+        }
+      } catch (error) {
+        console.error('[ProjectPlanning] Failed to load variant selection:', error);
+        setSelectedVariantId(characterVariants[0]?.variant_id || null);
+      }
+    };
+    
+    loadVariantSelection();
+  }, [characterVariants, bodyType]);
+  
+  // WEAR-2: Save variant selection when it changes
+  const handleVariantSelect = useCallback(async (variantId: string) => {
+    setSelectedVariantId(variantId);
+    
+    try {
+      const key = `@forgemind:wear-variant:${bodyType}`;
+      await AsyncStorage.setItem(key, variantId);
+      console.log(`[ProjectPlanning] Saved variant selection: ${variantId}`);
+    } catch (error) {
+      console.error('[ProjectPlanning] Failed to save variant selection:', error);
+    }
+  }, [bodyType]);
+  
+  // WEAR-2: Get target colors from selected variant
+  const targetColors = useMemo(() => {
+    if (selectedVariantId) {
+      return getAllVariantColors(selectedVariantId);
+    }
+    // Fallback to character's targetColors
+    return character?.targetColors || [];
+  }, [selectedVariantId, character]);
+  
+  // WEAR-2: Get selected variant name for title
+  const selectedVariant = useMemo(() => {
+    return characterVariants.find(v => v.variant_id === selectedVariantId);
+  }, [characterVariants, selectedVariantId]);
   
   // COSTUME-7C-2: useOutfit with per-body scope (no projectId on this screen)
   const { outfit, isLoading: outfitLoading, togglePiece, setColor, setStyle, wearFull, removeAll } = useOutfit(bodyType);
@@ -114,17 +196,20 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
             <Text style={styles.characterAvatarText}>{character.name.charAt(0)}</Text>
           </View>
           <View style={styles.characterInfo}>
-            <Text style={styles.characterName}>{character.name}</Text>
+            {/* WEAR-2: Title shows "Character – Variant" */}
+            <Text style={styles.characterName}>
+              {character.name}{selectedVariant ? ` – ${selectedVariant.variant_name}` : ''}
+            </Text>
             <Text style={styles.characterSeries}>{character.series}</Text>
           </View>
         </View>
         
-        {/* Target Colors */}
-        {character.targetColors.length > 0 && (
+        {/* Target Colors (WEAR-2: now from variant) */}
+        {targetColors.length > 0 ? (
           <View style={styles.colorsRow}>
             <Text style={styles.colorsLabel}>Target Colors:</Text>
             <View style={styles.colorDots}>
-              {character.targetColors.map((color, i) => (
+              {targetColors.map((color, i) => (
                 <View
                   key={i}
                   style={[styles.colorDot, { backgroundColor: color }]}
@@ -132,7 +217,7 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
               ))}
             </View>
           </View>
-        )}
+        ) : null}
         
         {/* Style Tags */}
         {character.styleTags.length > 0 && (
@@ -181,7 +266,10 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
           setStyle={setStyle}
           wearFull={wearFull}
           removeAll={removeAll}
-          targetColorSwatches={character?.targetColors || []}
+          targetColorSwatches={targetColors}
+          variants={characterVariants}
+          selectedVariantId={selectedVariantId}
+          onVariantSelect={handleVariantSelect}
         />
       </View>
       
@@ -270,6 +358,13 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
           </View>
         </View>
       )}
+      
+      {/* WEAR-2: Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          3D pieces are simple colored shapes, not exact replicas of your items.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -469,6 +564,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
     fontSize: 10,
+    fontStyle: 'italic',
+  },
+  // WEAR-2: Footer
+  footer: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footerText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
     fontStyle: 'italic',
   },
 });

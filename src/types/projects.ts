@@ -29,6 +29,8 @@ export interface Project {
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
+  /** WEAR-2: Currently selected variant for wearing feature (defaults to variant_id) */
+  wear_variant_id?: string | null;
 }
 
 export interface Task {

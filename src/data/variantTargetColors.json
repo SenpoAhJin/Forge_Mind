@@ -1,0 +1,98 @@
+{
+  "var-gojo-s2-uniform": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-gojo-vol0-outfit": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-gojo-casual-streetwear": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-gojo-unsealed-past": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-makima-suit": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-makima-casual-business": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-makima-halloween": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-zelda-traveling-dress": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-zelda-totk-gown": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-zelda-royal-gown": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-veira-emerald-armor": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  },
+  "var-veira-scholar-robes": {
+    "placeholder": true,
+    "wig": ["#F5F5F5"],
+    "top": ["#808080"],
+    "bottom": ["#808080"],
+    "gloves": ["#808080"],
+    "shoes": ["#808080"]
+  }
+}

@@ -1,6 +1,8 @@
 /**
  * OutfitControls - Shared costume piece toggles and color pickers
  * Used by ProjectDashboardScreen and ProjectPlanningScreen
+ * 
+ * WEAR-2: Added variant chip selection
  */
 
 import React from 'react';
@@ -8,6 +10,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Button } from './buttons/Button';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import colorNames from '../data/colorNames.json';
+import type { Variant } from '../types/catalog';
 
 // Load costume pieces and styles data for defaults
 const costumePiecesData = require('../data/costumePieces.json');
@@ -37,6 +40,12 @@ interface OutfitControlsProps {
   removeAll: () => void;
   /** Optional target color swatches (character's targetColors) */
   targetColorSwatches?: string[];
+  /** WEAR-2: Character variants for chip selection */
+  variants?: Variant[];
+  /** WEAR-2: Currently selected variant ID */
+  selectedVariantId?: string | null;
+  /** WEAR-2: Callback when variant is selected */
+  onVariantSelect?: (variantId: string) => void;
 }
 
 export const OutfitControls: React.FC<OutfitControlsProps> = ({
@@ -49,9 +58,45 @@ export const OutfitControls: React.FC<OutfitControlsProps> = ({
   wearFull,
   removeAll,
   targetColorSwatches = [],
+  variants = [],
+  selectedVariantId = null,
+  onVariantSelect,
 }) => {
   return (
     <View style={styles.costumeControls}>
+      {/* WEAR-2: Variant chips */}
+      {variants.length > 0 && onVariantSelect ? (
+        <View style={styles.variantChipsContainer}>
+          <Text style={styles.variantChipsLabel}>Look variant:</Text>
+          <View style={styles.variantChipsBar}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.variantChipsScroll}
+              contentContainerStyle={styles.variantChipsContent}
+            >
+              {variants.map((variant) => {
+                const isSelected = variant.variant_id === selectedVariantId;
+                return (
+                  <TouchableOpacity
+                    key={variant.variant_id}
+                    style={[styles.variantChip, isSelected && styles.variantChipSelected]}
+                    onPress={() => onVariantSelect(variant.variant_id)}
+                  >
+                    <Text
+                      style={[styles.variantChipText, isSelected && styles.variantChipTextSelected]}
+                      numberOfLines={1}
+                    >
+                      {variant.variant_name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
+      
       {/* Piece toggles and color pickers */}
       <View style={styles.controlsGrid}>
         {['top', 'bottom', 'shoes', 'gloves', 'wig'].map((slot) => {
@@ -246,6 +291,51 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   styleChipTextActive: {
+    color: '#FFFFFF',
+  },
+  // WEAR-2: Variant chips styles
+  variantChipsContainer: {
+    marginBottom: spacing.md,
+  },
+  variantChipsLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    fontWeight: '600',
+  },
+  variantChipsBar: {
+    height: 56,
+    overflow: 'hidden',
+  },
+  variantChipsScroll: {
+    flex: 1,
+  },
+  variantChipsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingRight: spacing.md,
+  },
+  variantChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 120,
+  },
+  variantChipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  variantChipText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  variantChipTextSelected: {
     color: '#FFFFFF',
   },
 });
