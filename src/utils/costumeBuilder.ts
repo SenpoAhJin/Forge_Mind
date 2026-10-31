@@ -1054,6 +1054,54 @@ export function computePieceDebugInfo(
 }
 
 /**
+ * COSTUME-9A: Apply vertex color gradient for wig two-tone effect
+ * Interpolates from topColor (at highest y) to bottomColor (at lowest y).
+ */
+function applyVertexColorGradient(
+  geometry: THREE.BufferGeometry,
+  topColorHex: string,
+  bottomColorHex: string
+): void {
+  const position = geometry.attributes.position;
+  const vertexCount = position.count;
+  
+  // Find y range
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < vertexCount; i++) {
+    const y = position.getY(i);
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  
+  const yRange = maxY - minY;
+  if (yRange === 0) return; // Degenerate case
+  
+  // Parse colors
+  const topColor = new THREE.Color(topColorHex);
+  const bottomColor = new THREE.Color(bottomColorHex);
+  
+  // Create vertex color attribute
+  const colors = new Float32Array(vertexCount * 3);
+  
+  for (let i = 0; i < vertexCount; i++) {
+    const y = position.getY(i);
+    const t = (y - minY) / yRange; // 0 at bottom, 1 at top
+    
+    // Interpolate
+    const r = bottomColor.r + t * (topColor.r - bottomColor.r);
+    const g = bottomColor.g + t * (topColor.g - bottomColor.g);
+    const b = bottomColor.b + t * (topColor.b - bottomColor.b);
+    
+    colors[i * 3] = r;
+    colors[i * 3 + 1] = g;
+    colors[i * 3 + 2] = b;
+  }
+  
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+/**
  * COSTUME-9A: Build procedural skirt geometry
  * Flared truncated cone from waist to hem (determined by length style).
  */
@@ -1215,6 +1263,15 @@ export function buildCostumePiece(
 
     geometry = buildOffsetGeometry(skinnedMesh.geometry, selectedTriangles, pieceDef.offset_m);
   }
+  
+  // COSTUME-9A: Apply wig gradient if enabled
+  if (pieceDef.id === 'wig' && pieceStyle?.style?.gradient === 'two_tone' && pieceStyle.colorTip) {
+    applyVertexColorGradient(
+      geometry,
+      color || pieceDef.defaultColor,
+      pieceStyle.colorTip
+    );
+  }
 
   const material = new THREE.MeshStandardMaterial({
     color: color || pieceDef.defaultColor,
@@ -1222,6 +1279,7 @@ export function buildCostumePiece(
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
+    vertexColors: pieceDef.id === 'wig' && pieceStyle?.style?.gradient === 'two_tone',
   });
 
   const mesh = new THREE.Mesh(geometry, material);
