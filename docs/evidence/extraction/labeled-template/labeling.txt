@@ -1,0 +1,7 @@
+Copy your consented JPEG/PNG/WebP images (each <=1 MB) into this folder.
+Replace images: [] in labels.json with entries like:
+{"file":"your-image.jpg","slots":{"wig":{"color":"white","style":"spiky"},"top":{"color":"black","style":"jacket"}}}
+Use palette IDs and style labels from src/data/outfitPalette.json and outfitKeywords.json.
+Label only visible slots. Omit unknown color/style fields. Accessory has no style vocabulary.
+Do not use synthetic fixtures as thesis accuracy evidence. Do not commit private images.
+Run the command in EXTRACTION_CHANGELOG.txt to compare the full pipeline with baseline.

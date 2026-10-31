@@ -1,0 +1,32 @@
+(node:20636) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[outfitStore] Failed to save outfit: Error: Storage full
+    at Object.setItem (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:73)
+    at saveOutfit (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts:159:19)
+    at TestContext.<anonymous> (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ five data-defined slots; no accessory/belt is supported (2.5391ms)
+✔ new outfit and wear-full with empty inventory remain bare (0.4654ms)
+✔ white shirt, black pants, boots and silver wig all wear together (0.5097ms)
+✔ red wig replaces silver wig in exactly one slot (0.2448ms)
+✔ tapping same item removes only its slot (0.1963ms)
+✔ wear-full preserves assigned items/colors; toggles and colors stay editable (0.301ms)
+✔ remove-all leaves no visible piece (0.257ms)
+✔ names, silver, palette IDs and arbitrary hex colors normalize consistently (0.1465ms)
+✔ account/project keys differ; body switch uses the same wardrobe key (0.5286ms)
+✔ restart restores worn IDs, hidden flags, colors and styles only for the account/project (0.7211ms)
+✔ old unscoped data is not silently adopted by a new account (0.2041ms)
+✔ deleted/transferred items are no longer shown (0.2135ms)
+✔ read/write failures propagate; corrupt data is not overwritten (0.6436ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 136.9928

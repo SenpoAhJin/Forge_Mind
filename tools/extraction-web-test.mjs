@@ -104,17 +104,24 @@ try {
   await run('T9', async () => {
     await click('Open outfit preview and wardrobe'); await waitText('Confirmed reference components supply');
     await page.waitForSelector('[data-testid="costume-viewer"] canvas', { timeout: 60000 });
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading 3D body'), { timeout: 60000 });
     await waitText('Wear full costume');
     assert.ok(!(await text()).includes('No extracted reference data is available'));
     const stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? 'null'), outfitKey);
     if (stored) assert.ok(Object.values(stored.pieces).every(p => !p.on));
     await shot('confirmed-targets-bare');
+    const viewer = await page.$('[data-testid="costume-viewer"]'); await viewer.evaluate(e => e.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await viewer.screenshot({ path: `${out}/brief-preview-bare.png` });
   });
   await run('T10', async () => {
     await page.waitForSelector('[aria-label="Wear black wig"]'); await page.click('[aria-label="Wear black wig"]');
     await page.waitForFunction(key => JSON.parse(localStorage.getItem(key) ?? 'null')?.pieces.wig?.itemId === 'owned-black-wig', {}, outfitKey);
     assert.ok((await text()).includes('Black wig is now on your Wig slot')); await shot('owned-wig-worn');
     assert.ok((await text()).includes('Matches character color'));
+    const viewer = await page.$('[data-testid="costume-viewer"]'); await viewer.evaluate(e => e.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await viewer.screenshot({ path: `${out}/brief-preview-owned-wig.png` });
   });
   await run('T7-cached-account-isolation', async () => {
     await page.evaluate(image => {

@@ -1,0 +1,15 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:348
++ ... -tests.txt; git -C ../extraction-delivery-worktree commit -m 'Preserv ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1-ordered 84c18ef] Preserve working Step 1 project brief prerequisite
+ 9 files changed, 536 insertions(+), 2 deletions(-)
+ create mode 100644 scripts/test-planning-briefs.mjs
+ create mode 100644 src/components/projects/PlanningBriefsCard.tsx
+ create mode 100644 src/screens/cosplayer/PlanningBriefScreen.tsx
+ create mode 100644 src/services/PlanningBriefService.ts
+ create mode 100644 src/types/planningBrief.ts
+ create mode 100644 src/utils/planningBriefs.ts

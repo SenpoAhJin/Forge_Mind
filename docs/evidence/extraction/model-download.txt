@@ -1,0 +1,34 @@
+forgemind-ai/.venv/Scripts/python.exe :
+At line:2 char:1
++ forgemind-ai/.venv/Scripts/python.exe forgemind-ai/scripts/download_r ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Fetching 8 files:   0%|          | 0/8 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF
+Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+Fetching 8 files:  12%|#2        | 1/8 [00:00<00:03,  2.21it/s]
+Fetching 8 files:  75%|#######5  | 6/8 [00:00<00:00, 11.59it/s]
+Fetching 8 files: 100%|##########| 8/8 [00:11<00:00,  1.86s/it]
+Fetching 8 files: 100%|##########| 8/8 [00:11<00:00,  1.43s/it]
+pose_landmarker_lite.task: 5777746 bytes
+clip\config.json: 4186 bytes
+clip\merges.txt: 524657 bytes
+clip\preprocessor_config.json: 316 bytes
+clip\pytorch_model.bin: 605247071 bytes
+clip\special_tokens_map.json: 389 bytes
+clip\tokenizer.json: 2224041 bytes
+clip\tokenizer_config.json: 592 bytes
+clip\vocab.json: 862328 bytes
+clip\.cache\huggingface\.gitignore: 1 bytes
+clip\.cache\huggingface\CACHEDIR.TAG: 195 bytes
+clip\.cache\huggingface\download\config.json.metadata: 104 bytes
+clip\.cache\huggingface\download\merges.txt.metadata: 104 bytes
+clip\.cache\huggingface\download\preprocessor_config.json.metadata: 104 bytes
+clip\.cache\huggingface\download\pytorch_model.bin.metadata: 128 bytes
+clip\.cache\huggingface\download\special_tokens_map.json.metadata: 103 bytes
+clip\.cache\huggingface\download\tokenizer.json.metadata: 104 bytes
+clip\.cache\huggingface\download\tokenizer_config.json.metadata: 103 bytes
+clip\.cache\huggingface\download\vocab.json.metadata: 103 bytes
+clip\.cache\huggingface\trees\3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268.json: 1926 bytes

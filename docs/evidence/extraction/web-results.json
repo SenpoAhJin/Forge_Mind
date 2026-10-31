@@ -1,0 +1,101 @@
+{
+  "fixture": "Synthetic full-body diagram; cached test account/inventory. Real local service unless a test explicitly intercepts it.",
+  "results": [
+    {
+      "id": "T2",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T3",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T1-synthetic-and-T4",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T5",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T6",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T8",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T7-local-restart",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T9",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T10",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T7-cached-account-isolation",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T11-browser-http-errors",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    },
+    {
+      "id": "T11-corrupt-image-ui",
+      "status": "RAN PASS",
+      "platform": "Expo web / PhoneFrame"
+    }
+  ],
+  "pageErrors": [],
+  "stages": [
+    "Sending image",
+    "Analyzing…",
+    "Done"
+  ],
+  "uploadErrors": [
+    {
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "unreadable_image",
+          "message": "The file is not a readable JPEG, PNG or WebP image."
+        }
+      }
+    },
+    {
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "unreadable_image",
+          "message": "The file is not a readable JPEG, PNG or WebP image."
+        }
+      }
+    },
+    {
+      "status": 413,
+      "body": {
+        "error": {
+          "code": "image_too_large",
+          "message": "Choose an image up to 1 MB."
+        }
+      }
+    }
+  ],
+  "cancelRequestAborted": true
+}

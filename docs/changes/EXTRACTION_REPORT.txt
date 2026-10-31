@@ -1,0 +1,398 @@
+ForgeMind — reference extraction delivery
+Sunday, November 1, 2026, 06:01 PHT (Asia/Manila)
+Verification closed: Sunday, November 1, 2026, 06:04 PHT.
+Branch: task/extract1. No force push or reset used.
+
+PHASE VERDICTS
+1 RAN: local MediaPipe + CLIP loaded, real HTTP extraction of a declared synthetic
+  figure, byte validation, LAB histogram, vocabulary mapping, raw style scores,
+  low-band fallback and warnings. Nine service tests PASS. health.json,
+  service-smoke.json, service-tests.txt. Real-photo pose accuracy NOT RUN.
+2 RAN / OBSERVED: actual exported Expo app inside PhoneFrame, real service, twelve
+  browser acceptance checks PASS; original AI retained, manual save, cancel,
+  review/edit/delete/add/confirm, local restart/account isolation/write failures.
+  web-results.json and named screenshots. Real phone: NOT RUN.
+3 RAN / OBSERVED: confirmed targets supply preview hints/suggestions, bare model
+  before wearing, owned black wig worn via existing store, capitalized message.
+  confirmed-targets-bare.png, owned-wig-worn.png. Real phone: NOT RUN.
+4 RAN: empty-template harness entrypoint. Actual labeled-image evaluation: NOT RUN,
+  because no per-image/per-slot labeled folder was found. evaluation.json explicitly
+  records zero images and NOT RUN; no accuracy figures. labeled-template ships
+  labels.json and labeling.txt. Full versus baseline code is supplied, not claimed
+  as validated thesis accuracy.
+
+TESTS T1–T14 (all evidence paths below are docs/evidence/extraction/)
+T1 WEB: RAN PASS on the saved declared synthetic figure, real models/service;
+   sending/analyzing/done observed and six rows. Clear real-person full-body photo
+   acceptance: NOT RUN. PHONE: NOT RUN.
+T2 WEB: RAN PASS, held actual request then Cancel; browser request aborted, review
+   absent and saved brief unchanged. cancel-unchanged.png, web-results.json.
+   PHONE: NOT RUN.
+T3 WEB: RAN PASS, service requests intentionally blocked by browser harness;
+   clear unreachable message, Retry, empty manual entry and actual manual-component
+   save. unreachable.png, manual-component-saved.png. Service 504 is tested by
+   injected slow worker; 50-second browser timeout UI was NOT RUN separately.
+   PHONE: NOT RUN.
+T4 WEB: RAN PASS for declared stylized synthetic diagram, real pipeline produced
+   fallback and Low/Please check for all six. six-components-real-service.png.
+   Anime/multiview user-image acceptance: NOT RUN. Injected multiple-person unit
+   test also PASS; that is not a real-photo detector observation. PHONE: NOT RUN.
+T5 WEB: RAN PASS, wig target color, curly style and Own it saved; originalAI and
+   userCorrections asserted in actual storage. edited-wig.png. PHONE: NOT RUN.
+T6 WEB: RAN PASS, gloves deleted and missed component added; six rows restored,
+   deletion retained in audit history. web-results.json. PHONE: NOT RUN.
+T7 WEB: RAN PASS for new JS runtime with same storage; confirmed list restored.
+   Cached identities A then B used same brief ID; B had no A confirmation/review.
+   restored-confirmed.png, account-b-isolated.png. Utility tests cover account and
+   brief isolation. Live two-account login NOT RUN. PHONE: NOT RUN.
+T8 WEB: RAN PASS, actual Storage.setItem failure injected only for reference-review
+   writes; visible error, previous storage unchanged, no false confirmation, retry
+   succeeded. write-failure.png. Utility tests also reject corrupt data without
+   replacement. PHONE: NOT RUN.
+T9 WEB: RAN PASS, confirmed targets replaced no-data text; bare model and no worn
+   IDs before user action. Color hint observed when owned matching wig was worn.
+   confirmed-targets-bare.png, owned-wig-worn.png. PHONE: NOT RUN.
+T10 WEB: RAN PASS, actual inventory-backed owned wig wear persisted in existing
+    brief-keyed outfit record; confirmation began "Black wig". Wearing store
+    regression: 13 PASS. Full previous eleven-test wearing suite was NOT rerun.
+    PHONE: NOT RUN.
+T11 WEB: RAN PASS, real browser HTTP corrupt/non-image/oversize uploads returned
+    400/400/413 and clear codes/messages. Corrupt saved-reference UI displayed the
+    service error. corrupt-image-error.png, uploadErrors in web-results.json.
+    Server file extension ignored, valid PNG named wrong.exe accepted in tests.
+    PHONE: NOT RUN.
+T12 HOST: RAN PASS, 9 service tests and all 9 unchanged Step 1 tests. Additional
+    5 review-store tests and 13 wearing-store tests PASS (36 total).
+    service-tests.txt, brief-tests-before.txt, brief-tests-after.txt,
+    brief-prerequisite-tests.txt, review-tests.txt, wearing-store-tests.txt.
+    These are host tests, not phone tests.
+T13 HOST: RAN empty-template invocation, actual labeled evaluation NOT RUN.
+    evaluation.json and labeled-template/labeling.txt. No fabricated metrics.
+T14 HOST: RAN, TypeScript BEFORE 23 / AFTER 23 errors; no new diagnostics.
+    typecheck-before.txt, typecheck-after.txt. NOT build-clean.
+
+OTHER CHECKS
+RAN PASS: Expo web export and Android/Hermes export (web-export.txt,
+android-export.txt). Android export proves bundling only, not device rendering.
+RAN PASS: exact-path Step 1 staging reviewed before separate commit 84c18ef;
+only nine brief prerequisites were included, no diagnostics/evidence/leftovers.
+The original and ordered integrated Step 1 source matched before merge.
+RAN PASS: cached-account browser tests had no unhandled page errors.
+RAN PASS: final staged evidence/source diff whitespace check after normalizing
+captured PowerShell text to UTF-8/LF. Body-only and owned-wig preview captures:
+brief-preview-bare.png and brief-preview-owned-wig.png. AI service was stopped
+after verification; use the start command below for your next session.
+Early selector/layout/harness failures were corrected; final web-results.json
+is the verdict. Local failure-*.png captures are not staged as final evidence.
+
+UNFINISHED / LIMITS
+- All physical-phone runtime tests NOT RUN: no controllable phone connection;
+  adb not found. Browser PhoneFrame is explicitly web, not a real phone.
+- Clear real-person full-body photo, anime/multiview image and live two-account
+  authentication acceptance remain NOT RUN. Synthetic cached fixtures do not
+  establish real-world recognition accuracy or live inventory ownership.
+- Pose masks are exercised by injected unit inputs; model loading and real
+  fallback inference were observed. Real-person pose performance is unverified.
+- Confidence bands use documented uncalibrated logit-gap thresholds; no confidence
+  percentages. No accessory style vocabulary exists, so style stays unset/warned.
+- Fallback bounding extent is a background-color heuristic, not person detection.
+  Hand boxes may include clothing; skin masking can remove warm-colored fabric.
+- No labeled accuracy dataset exists. Label your consented images before thesis
+  evaluation. No weights/images are stored by the server; setup downloads models.
+- Existing 23 TypeScript diagnostics remain outside this extraction change.
+- AI REPOSITORY HAS NO REMOTE AND IS NOT BACKED UP AS A REPOSITORY ANYWHERE ELSE.
+  Local commits are inside forgemind-ai; EXTRACTION_SERVICE.patch is the supplied
+  source transfer copy, also committed in mobile. That patch is not a backup of
+  the AI repository, datasets, weights or its unrelated uncommitted changes.
+
+WINDOWS POWERSHELL — SETUP / START
+From workspace root, terminal 1:
+Set-Location forgemind-ai
+.\.venv\Scripts\python.exe -m pip install -r requirements-extraction.txt
+.\.venv\Scripts\python.exe scripts\download_reference_models.py
+.\.venv\Scripts\python.exe src\reference_api.py
+
+From workspace root, terminal 2:
+Set-Location forgemind-mobile
+ipconfig
+# Use YOUR computer's Wi-Fi IPv4, not phone localhost:
+$env:EXPO_PUBLIC_EXTRACTION_URL='http://192.168.254.168:5055'
+npx.cmd expo start --lan --clear
+On the same Wi-Fi, open http://YOUR-PC-IP:5055/api/health on the phone, check both
+models loaded, then scan Expo's QR in compatible Expo Go. Allow Python on the
+private network if Windows prompts. Restart Expo after changing the URL.
+For web, press w; the existing app supplies PhoneFrame.
+
+To run the evaluation from forgemind-mobile after labeling:
+..\forgemind-ai\.venv\Scripts\python.exe ..\forgemind-ai\scripts\evaluate_reference.py docs/evidence/extraction/labeled-template --output docs/evidence/extraction/evaluation.json
+To replay the service commits into a compatible AI checkout, from forgemind-ai:
+git am ..\forgemind-mobile\docs\changes\EXTRACTION_SERVICE.patch
+DO NOT replay that patch into this workspace: its commits already exist locally.
+
+PHONE ACCEPTANCE STEPS
+T1 Save a brief with your full-body reference, reopen it, tap Analyze with AI;
+   observe real stage text, result boxes and six rows. Record the actual method.
+T2 During sending/analyzing, Cancel; reopen and verify saved brief unchanged.
+T3 Stop Python with Ctrl+C; Analyze, Retry, Enter components manually; add/save a
+   component. Restart Python. For timeout, hold the request in a LAN proxy >50 s.
+T4 Repeat with your anime/multiview image; inspect fallback/Low/Please check. If
+   it reports pose/high incorrectly, retain that failure as evaluation evidence.
+T5 Edit wig color/style/plan, Save. Inspect originalAI/userCorrections with React
+   Native DevTools at ReferenceReviewRepository.save; originalAI must stay intact.
+T6 Delete gloves; add missed gloves; check numbering and saved rows.
+T7 Confirm, close/reopen Expo Go, reopen same brief; sign in as another account
+   and verify no A review/wardrobe. Return to A and check restoration.
+T8 In RN DevTools, set a breakpoint before storage.setItem in
+   ReferenceReviewRepository.save and inject a rejected write in a development
+   session; confirm error/no success and previous saved record. Remove injection
+   and retry. Do not claim this check without observing the failure on the phone.
+T9 Open preview from confirmed review; targets/hints present, model initially bare.
+T10 Tap an owned wig; verify model position, message, rotate/pinch, restart outfit.
+T11 Use corrupt/non-image/oversize image data through the upload client; inspect
+    the error and Retry/manual options. The OS picker may filter invalid files;
+    browser HTTP tests alone do not establish the phone error path.
+T12–T14 Run host commands in EXTRACTION_CHANGELOG.txt; report them as host checks.
+
+GIT OUTPUT
+Actual terminal transcripts are appended below and also retained as git-*.txt
+under docs/evidence/extraction. Step 1 ordered history was merged, preserving the
+already-pushed extraction history. No force push, reset or unrelated-file staging.
+
+--- git-step1-status.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1
++ git -C ../extraction-delivery-worktree status --short *> docs/evidenc ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+M  package.json
+A  scripts/test-planning-briefs.mjs
+A  src/components/projects/PlanningBriefsCard.tsx
+M  src/navigation/ProjectStackNavigator.tsx
+A  src/screens/cosplayer/PlanningBriefScreen.tsx
+M  src/screens/cosplayer/ProjectsScreen.tsx
+A  src/services/PlanningBriefService.ts
+A  src/types/planningBrief.ts
+A  src/utils/planningBriefs.ts
+
+--- git-step1-stat.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:105
++ ... status.txt; git -C ../extraction-delivery-worktree diff --cached --st ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+ package.json                                   |   1 +
+ scripts/test-planning-briefs.mjs               | 126 +++++++++++++++++++
+ src/components/projects/PlanningBriefsCard.tsx |  66 ++++++++++
+ src/navigation/ProjectStackNavigator.tsx       |  11 +-
+ src/screens/cosplayer/PlanningBriefScreen.tsx  | 164 +++++++++++++++++++++++++
+ src/screens/cosplayer/ProjectsScreen.tsx       |   7 +-
+ src/services/PlanningBriefService.ts           |   4 +
+ src/types/planningBrief.ts                     |  17 +++
+ src/utils/planningBriefs.ts                    | 142 +++++++++++++++++++++
+ 9 files changed, 536 insertions(+), 2 deletions(-)
+
+--- git-step1-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:348
++ ... -tests.txt; git -C ../extraction-delivery-worktree commit -m 'Preserv ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1-ordered 84c18ef] Preserve working Step 1 project brief prerequisite
+ 9 files changed, 536 insertions(+), 2 deletions(-)
+ create mode 100644 scripts/test-planning-briefs.mjs
+ create mode 100644 src/components/projects/PlanningBriefsCard.tsx
+ create mode 100644 src/screens/cosplayer/PlanningBriefScreen.tsx
+ create mode 100644 src/services/PlanningBriefService.ts
+ create mode 100644 src/types/planningBrief.ts
+ create mode 100644 src/utils/planningBriefs.ts
+
+--- git-step1-push.txt (actual captured output) ---
+git : remote:
+At line:2 char:1
++ git push --set-upstream origin task/extract1-ordered *> docs/evidence ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (remote: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+remote: Create a pull request for 'task/extract1-ordered' on GitHub by visiting:
+remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/extract1-ordered
+remote:
+To https://github.com/SenpoAhJin/Forge_Mind.git
+ * [new branch]      task/extract1-ordered -> task/extract1-ordered
+branch 'task/extract1-ordered' set up to track 'origin/task/extract1-ordered'.
+
+--- git-ordered-push.txt (actual captured output) ---
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git push origin task/extract1-ordered *> docs/evidence/extraction/git ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   84c18ef..73372a7  task/extract1-ordered -> task/extract1-ordered
+
+--- git-ordered-merge.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:255
++ ... ed --check; git commit -m 'Integrate approved Step 1 prerequisite and ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 2c29abc] Integrate approved Step 1 prerequisite and ordered extraction delivery
+
+--- git-integrated-push.txt (actual captured output) ---
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git push origin task/extract1 *> docs/evidence/extraction/git-integra ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   d9834a9..2c29abc  task/extract1 -> task/extract1
+
+--- git-phase1-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1
++ git commit -m 'Document local extraction service and setup' --only -- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: in the working copy of 'docs/changes/EXTRACTION_CHANGELOG.txt', LF will be replaced by CRLF the next time Git
+touches it
+warning: in the working copy of 'docs/changes/EXTRACTION_SERVICE.patch', LF will be replaced by CRLF the next time Git
+touches it
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+[task/extract1 3bc3195] Document local extraction service and setup
+ 4 files changed, 676 insertions(+)
+ create mode 100644 docs/changes/EXTRACTION_CHANGELOG.txt
+ create mode 100644 docs/changes/EXTRACTION_SERVICE.patch
+
+--- git-phase1-push.txt (actual captured output) ---
+git : remote:
+At line:2 char:1
++ git push --set-upstream origin task/extract1 *> docs/evidence/extract ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (remote: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+remote: Create a pull request for 'task/extract1' on GitHub by visiting:
+remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/extract1
+remote:
+To https://github.com/SenpoAhJin/Forge_Mind.git
+ * [new branch]      task/extract1 -> task/extract1
+branch 'task/extract1' set up to track 'origin/task/extract1'.
+
+--- git-phase2-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:369
++ ... s/*.patch'; git commit -m 'Add analysis review editing and account-sc ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 7e84306] Add analysis review editing and account-scoped confirmation
+ 7 files changed, 408 insertions(+)
+ create mode 100644 docs/changes/EXTRACTION_BRIEF_ENTRY.patch
+ create mode 100644 scripts/test-reference-reviews.mjs
+ create mode 100644 src/screens/cosplayer/ReferenceReviewScreen.tsx
+ create mode 100644 src/services/ReferenceExtractionService.ts
+ create mode 100644 src/types/referenceExtraction.ts
+ create mode 100644 src/utils/referenceReviews.ts
+
+--- git-phase2-push.txt (actual captured output) ---
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git push *> docs/evidence/extraction/git-phase2-push.txt; Get-Content ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   3bc3195..7e84306  task/extract1 -> task/extract1
+
+--- git-phase3-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:98
++ ... ed --check; git commit -m 'Connect confirmed brief targets to invento ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 d9834a9] Connect confirmed brief targets to inventory-backed wearing
+ 2 files changed, 9 insertions(+), 6 deletions(-)
+
+--- git-phase3-push.txt (actual captured output) ---
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:148
++ ... d-push.txt; git push origin task/extract1 *> docs/evidence/extraction ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   7e84306..d9834a9  task/extract1 -> task/extract1
+
+--- git-phase4-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:251
++ ... s/*.patch'; git commit -m 'Finish reference evaluation tooling and in ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 6a93e19] Finish reference evaluation tooling and integrity checks
+ 6 files changed, 259 insertions(+), 11 deletions(-)
+ create mode 100644 tools/extraction-serve.mjs
+ create mode 100644 tools/extraction-web-test.mjs
+
+--- git-phase4-push.txt (actual captured output) ---
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git push origin task/extract1 *> docs/evidence/extraction/git-phase4- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   2c29abc..6a93e19  task/extract1 -> task/extract1
+
+--- git-ai-log.txt (actual captured output) ---
+7030f21 Verify pose mask handling and multiple-person fallback
+19bfa0f Require in-frame landmarks before pose-derived zones
+a667043 Use honest fallback when pose inference fails
+9b3b96b Add labeled full-versus-baseline reference evaluation
+494fbee Keep reference uploads entirely in memory
+bb7366c Add local memory-only reference extraction service
+e2ac811 feat: add photo categorization Flask endpoint (STEP 4)
+
+--- git-ai-status.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:107
++ ... ai-log.txt; git -c safe.directory='*' -C ../forgemind-ai status --sho ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M ai_config.json
+ M src/api.py
+?? src/transcriber.py
+
+--- git-ai-push.txt (actual captured output) ---
+git : fatal: 'origin' does not appear to be a git repository
+At line:2 char:214
++ ... status.txt; git -c safe.directory='*' -C ../forgemind-ai push --set-u ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (fatal: 'origin'... git repository:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.

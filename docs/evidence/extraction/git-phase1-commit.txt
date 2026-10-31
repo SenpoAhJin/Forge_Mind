@@ -1,0 +1,16 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1
++ git commit -m 'Document local extraction service and setup' --only -- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: in the working copy of 'docs/changes/EXTRACTION_CHANGELOG.txt', LF will be replaced by CRLF the next time Git
+touches it
+warning: in the working copy of 'docs/changes/EXTRACTION_SERVICE.patch', LF will be replaced by CRLF the next time Git
+touches it
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+[task/extract1 3bc3195] Document local extraction service and setup
+ 4 files changed, 676 insertions(+)
+ create mode 100644 docs/changes/EXTRACTION_CHANGELOG.txt
+ create mode 100644 docs/changes/EXTRACTION_SERVICE.patch

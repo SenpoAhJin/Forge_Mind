@@ -1,0 +1,9 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:98
++ ... ed --check; git commit -m 'Connect confirmed brief targets to invento ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 d9834a9] Connect confirmed brief targets to inventory-backed wearing
+ 2 files changed, 9 insertions(+), 6 deletions(-)

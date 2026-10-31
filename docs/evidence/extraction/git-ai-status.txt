@@ -1,0 +1,11 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:107
++ ... ai-log.txt; git -c safe.directory='*' -C ../forgemind-ai status --sho ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M ai_config.json
+ M src/api.py
+?? src/transcriber.py

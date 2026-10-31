@@ -1,0 +1,21 @@
+(node:13956) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/extraction-delivery-worktree/src/utils/planningBriefs.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\extraction-delivery-worktree\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ budget accepts zero and centavos and rejects partial or invalid numbers (1.3028ms)
+✔ brief requires all five inputs and a real date that has not passed (4.3467ms)
+✔ brief and reference survive reopening; records are isolated by account (2.1272ms)
+✔ updating a brief preserves identity and creation date without duplicates (0.8367ms)
+✔ concurrent saves do not overwrite each other (12.7163ms)
+✔ corrupt or unknown saved data fails visibly and is not overwritten (0.7241ms)
+✔ failed storage writes report failure and allow a subsequent retry (0.4509ms)
+✔ expired briefs remain readable but need a new target date before saving (0.3452ms)
+✔ references use separate bounded entries and a failed list commit preserves the old brief (0.6695ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 183.01

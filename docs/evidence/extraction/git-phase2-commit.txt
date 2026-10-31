@@ -1,0 +1,15 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:369
++ ... s/*.patch'; git commit -m 'Add analysis review editing and account-sc ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 7e84306] Add analysis review editing and account-scoped confirmation
+ 7 files changed, 408 insertions(+)
+ create mode 100644 docs/changes/EXTRACTION_BRIEF_ENTRY.patch
+ create mode 100644 scripts/test-reference-reviews.mjs
+ create mode 100644 src/screens/cosplayer/ReferenceReviewScreen.tsx
+ create mode 100644 src/services/ReferenceExtractionService.ts
+ create mode 100644 src/types/referenceExtraction.ts
+ create mode 100644 src/utils/referenceReviews.ts

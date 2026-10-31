@@ -1,0 +1,11 @@
+git : fatal: 'origin' does not appear to be a git repository
+At line:2 char:214
++ ... status.txt; git -c safe.directory='*' -C ../forgemind-ai push --set-u ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (fatal: 'origin'... git repository:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.

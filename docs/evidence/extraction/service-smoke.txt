@@ -1,0 +1,1 @@
+RAN PASS: HTTP full pipeline, both models loaded; synthetic figure fallback, six low-band components and real CLIP scores.

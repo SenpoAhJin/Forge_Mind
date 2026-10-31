@@ -1,0 +1,17 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1
++ git -C ../extraction-delivery-worktree status --short *> docs/evidenc ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+M  package.json
+A  scripts/test-planning-briefs.mjs
+A  src/components/projects/PlanningBriefsCard.tsx
+M  src/navigation/ProjectStackNavigator.tsx
+A  src/screens/cosplayer/PlanningBriefScreen.tsx
+M  src/screens/cosplayer/ProjectsScreen.tsx
+A  src/services/PlanningBriefService.ts
+A  src/types/planningBrief.ts
+A  src/utils/planningBriefs.ts

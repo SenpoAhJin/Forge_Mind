@@ -1,0 +1,35 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:338
++ ... -smoke.txt; git status --short *> docs/evidence/extraction/git-status ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ D tools/diag_offshoulder.mjs
+?? docs/changes/DIAG1_REPORT.md
+?? docs/changes/DIAG2_REPORT.md
+?? docs/changes/EXTRACTION_REPORT.txt
+?? docs/changes/PROJECT_PLANNING_BRIEF_TYPECHECK.txt
+?? docs/evidence/
+?? symmetry_new.txt
+?? test_output.txt
+?? tools/analyze_offshoulder_symmetry.mjs
+?? tools/check_mesh_symmetry.mjs
+?? tools/check_true_mirror_symmetry.mjs
+?? tools/diag1/
+?? tools/diag2/
+?? tools/reconcile_upperarm_labels.mjs
+?? tools/sensitivity_analysis.mjs
+?? tools/tune_offshoulder_params.mjs
+?? wearing-evidence/after-gestures.png
+?? wearing-evidence/android-bundle/
+?? wearing-evidence/before-gestures.png
+?? wearing-evidence/dashboard-bare.png
+?? wearing-evidence/dashboard-initial.png
+?? wearing-evidence/failure-10.png
+?? wearing-evidence/failure-planning-screen.png
+?? wearing-evidence/failure.png
+?? wearing-evidence/four-owned-items.png
+?? wearing-evidence/remove-all-bare.png
+?? wearing-evidence/web-bundle/

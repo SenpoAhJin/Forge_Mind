@@ -1,0 +1,17 @@
+(node:12432) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/referenceReviews.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ confirmed components survive restart and remain isolated by account and brief (1.9653ms)
+✔ edits retain immutable AI values and every prior user value (1.2513ms)
+✔ failed writes preserve previous data; corrupt data cannot be silently replaced (0.8289ms)
+✔ only confirmed values become targets; plans never assign owned item IDs (1.1683ms)
+✔ deletion retains original component in audit history and removes its targets (0.3736ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 133.8581

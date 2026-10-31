@@ -1,0 +1,17 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:105
++ ... status.txt; git -C ../extraction-delivery-worktree diff --cached --st ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+ package.json                                   |   1 +
+ scripts/test-planning-briefs.mjs               | 126 +++++++++++++++++++
+ src/components/projects/PlanningBriefsCard.tsx |  66 ++++++++++
+ src/navigation/ProjectStackNavigator.tsx       |  11 +-
+ src/screens/cosplayer/PlanningBriefScreen.tsx  | 164 +++++++++++++++++++++++++
+ src/screens/cosplayer/ProjectsScreen.tsx       |   7 +-
+ src/services/PlanningBriefService.ts           |   4 +
+ src/types/planningBrief.ts                     |  17 +++
+ src/utils/planningBriefs.ts                    | 142 +++++++++++++++++++++
+ 9 files changed, 536 insertions(+), 2 deletions(-)

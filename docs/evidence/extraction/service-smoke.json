@@ -1,0 +1,253 @@
+{
+  "components": [
+    {
+      "band": "low",
+      "candidates": [
+        {
+          "label": "center-part",
+          "score": 24.25212
+        },
+        {
+          "label": "styled",
+          "score": 24.22446
+        },
+        {
+          "label": "side-part",
+          "score": 24.17846
+        }
+      ],
+      "colors": [
+        {
+          "hex": "#C0C0C0",
+          "palette_id": "silver",
+          "share": 0.54104
+        },
+        {
+          "hex": "#FFFFFF",
+          "palette_id": "white",
+          "share": 0.24274
+        },
+        {
+          "hex": "#EF4444",
+          "palette_id": "red",
+          "share": 0.21622
+        }
+      ],
+      "style": "center-part",
+      "type": "wig",
+      "warnings": [
+        "Fixed proportion zones; person detection was not established. Please check."
+      ],
+      "zone": [
+        0.366,
+        0.03,
+        0.639,
+        0.217
+      ]
+    },
+    {
+      "band": "low",
+      "candidates": [
+        {
+          "label": "crop-top",
+          "score": 21.78677
+        },
+        {
+          "label": "tank-top",
+          "score": 21.75737
+        },
+        {
+          "label": "sleeveless",
+          "score": 21.6594
+        }
+      ],
+      "colors": [
+        {
+          "hex": "#EF4444",
+          "palette_id": "red",
+          "share": 1.0
+        }
+      ],
+      "style": "crop-top",
+      "type": "top",
+      "warnings": [
+        "Fixed proportion zones; person detection was not established. Please check."
+      ],
+      "zone": [
+        0.3569,
+        0.217,
+        0.6480999999999999,
+        0.52555
+      ]
+    },
+    {
+      "band": "low",
+      "candidates": [
+        {
+          "label": "elbow-length",
+          "score": 22.28327
+        },
+        {
+          "label": "wrist-length",
+          "score": 21.9841
+        },
+        {
+          "label": "fingerless",
+          "score": 21.77149
+        }
+      ],
+      "colors": [
+        {
+          "hex": "#EF4444",
+          "palette_id": "red",
+          "share": 0.50268
+        },
+        {
+          "hex": "#000000",
+          "palette_id": "black",
+          "share": 0.39011
+        },
+        {
+          "hex": "#FFFFFF",
+          "palette_id": "white",
+          "share": 0.10721
+        }
+      ],
+      "style": "elbow-length",
+      "type": "gloves",
+      "warnings": [
+        "Fixed proportion zones; person detection was not established. Please check.",
+        "Hand regions can include skin or nearby clothing. Please check."
+      ],
+      "zone": [
+        0.275,
+        0.42269999999999996,
+        0.73,
+        0.6284
+      ]
+    },
+    {
+      "band": "low",
+      "candidates": [
+        {
+          "label": "dress",
+          "score": 26.80824
+        },
+        {
+          "label": "trousers",
+          "score": 26.31675
+        },
+        {
+          "label": "leggings",
+          "score": 26.10343
+        }
+      ],
+      "colors": [
+        {
+          "hex": "#000000",
+          "palette_id": "black",
+          "share": 0.9084
+        },
+        {
+          "hex": "#EF4444",
+          "palette_id": "red",
+          "share": 0.0916
+        }
+      ],
+      "style": "dress",
+      "type": "bottom",
+      "warnings": [
+        "Fixed proportion zones; person detection was not established. Please check."
+      ],
+      "zone": [
+        0.366,
+        0.49749999999999994,
+        0.639,
+        0.82475
+      ]
+    },
+    {
+      "band": "low",
+      "candidates": [
+        {
+          "label": "platform",
+          "score": 21.57109
+        },
+        {
+          "label": "knee-high",
+          "score": 20.81887
+        },
+        {
+          "label": "flats",
+          "score": 20.64018
+        }
+      ],
+      "colors": [
+        {
+          "hex": "#3B82F6",
+          "palette_id": "blue",
+          "share": 0.80702
+        },
+        {
+          "hex": "#000000",
+          "palette_id": "black",
+          "share": 0.19298
+        }
+      ],
+      "style": "platform",
+      "type": "shoes",
+      "warnings": [
+        "Fixed proportion zones; person detection was not established. Please check."
+      ],
+      "zone": [
+        0.34325,
+        0.82475,
+        0.6617500000000001,
+        0.965
+      ]
+    },
+    {
+      "band": "low",
+      "candidates": [],
+      "colors": [
+        {
+          "hex": "#C0C0C0",
+          "palette_id": "silver",
+          "share": 0.46051
+        },
+        {
+          "hex": "#EF4444",
+          "palette_id": "red",
+          "share": 0.4
+        },
+        {
+          "hex": "#FFFFFF",
+          "palette_id": "white",
+          "share": 0.13949
+        }
+      ],
+      "style": null,
+      "type": "accessory",
+      "warnings": [
+        "Fixed proportion zones; person detection was not established. Please check.",
+        "No style vocabulary for accessory."
+      ],
+      "zone": [
+        0.38875000000000004,
+        0.0861,
+        0.61625,
+        0.2357
+      ]
+    }
+  ],
+  "image": {
+    "height": 400,
+    "width": 200
+  },
+  "method": "fallback",
+  "mode": "full",
+  "schema_version": 1,
+  "warnings": [
+    "Fixed proportion zones; person detection was not established. Please check."
+  ]
+}

@@ -1,0 +1,7 @@
+7030f21 Verify pose mask handling and multiple-person fallback
+19bfa0f Require in-frame landmarks before pose-derived zones
+a667043 Use honest fallback when pose inference fails
+9b3b96b Add labeled full-versus-baseline reference evaluation
+494fbee Keep reference uploads entirely in memory
+bb7366c Add local memory-only reference extraction service
+e2ac811 feat: add photo categorization Flask endpoint (STEP 4)

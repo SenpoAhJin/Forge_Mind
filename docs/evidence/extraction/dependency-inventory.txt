@@ -1,0 +1,104 @@
+[
+  {
+    "name": "Flask",
+    "version": "3.1.3",
+    "installed_bytes": 878553,
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "flask-cors",
+    "version": "6.0.5",
+    "installed_bytes": 88539,
+    "license": "MIT"
+  },
+  {
+    "name": "Pillow",
+    "version": "13.0.0",
+    "installed_bytes": 16504972,
+    "license": "MIT-CMU"
+  },
+  {
+    "name": "numpy",
+    "version": "2.5.3",
+    "installed_bytes": 54487204,
+    "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0"
+  },
+  {
+    "name": "mediapipe",
+    "version": "1.2.0",
+    "installed_bytes": 73823830,
+    "license": "Apache 2.0"
+  },
+  {
+    "name": "transformers",
+    "version": "5.22.1",
+    "installed_bytes": 115753221,
+    "license": "Apache 2.0 License"
+  },
+  {
+    "name": "torch",
+    "version": "2.15.0",
+    "installed_bytes": 552671841,
+    "license": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND ISC AND MIT AND Zlib"
+  },
+  {
+    "name": "huggingface-hub",
+    "version": "2.4.0",
+    "installed_bytes": 7526438,
+    "license": "Apache-2.0"
+  },
+  {
+    "name": "pytest",
+    "version": "9.1.1",
+    "installed_bytes": 3515174,
+    "license": "MIT"
+  },
+  {
+    "name": "requests",
+    "version": "2.34.2",
+    "installed_bytes": 518933,
+    "license": "Apache-2.0"
+  },
+  {
+    "name": "expo",
+    "version": "58.0.17",
+    "installed_bytes": 6445836,
+    "license": "MIT"
+  },
+  {
+    "name": "react",
+    "version": "19.3.0",
+    "installed_bytes": 178663,
+    "license": "MIT"
+  },
+  {
+    "name": "react-native",
+    "version": "0.88.0",
+    "installed_bytes": 22981396,
+    "license": "MIT"
+  },
+  {
+    "name": "@react-navigation/native-stack",
+    "version": "7.19.0",
+    "installed_bytes": 262037,
+    "license": "MIT"
+  },
+  {
+    "name": "@react-native-async-storage/async-storage",
+    "version": "2.2.0",
+    "installed_bytes": 380789,
+    "license": "MIT"
+  },
+  {
+    "name": "puppeteer-core",
+    "version": "25.16.0",
+    "installed_bytes": 6276740,
+    "license": "Apache-2.0"
+  },
+  {
+    "name": "typescript",
+    "version": "6.0.3",
+    "installed_bytes": 24346827,
+    "license": "Apache-2.0"
+  }
+]

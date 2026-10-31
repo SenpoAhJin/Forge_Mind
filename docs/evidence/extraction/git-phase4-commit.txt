@@ -1,0 +1,11 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:251
++ ... s/*.patch'; git commit -m 'Finish reference evaluation tooling and in ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 6a93e19] Finish reference evaluation tooling and integrity checks
+ 6 files changed, 259 insertions(+), 11 deletions(-)
+ create mode 100644 tools/extraction-serve.mjs
+ create mode 100644 tools/extraction-web-test.mjs

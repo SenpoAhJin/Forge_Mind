@@ -1,0 +1,13 @@
+git : remote:
+At line:2 char:1
++ git push --set-upstream origin task/extract1-ordered *> docs/evidence ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (remote: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+remote: Create a pull request for 'task/extract1-ordered' on GitHub by visiting:
+remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/extract1-ordered
+remote:
+To https://github.com/SenpoAhJin/Forge_Mind.git
+ * [new branch]      task/extract1-ordered -> task/extract1-ordered
+branch 'task/extract1-ordered' set up to track 'origin/task/extract1-ordered'.

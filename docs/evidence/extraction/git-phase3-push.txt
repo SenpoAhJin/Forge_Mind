@@ -1,0 +1,8 @@
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:148
++ ... d-push.txt; git push origin task/extract1 *> docs/evidence/extraction ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   7e84306..d9834a9  task/extract1 -> task/extract1

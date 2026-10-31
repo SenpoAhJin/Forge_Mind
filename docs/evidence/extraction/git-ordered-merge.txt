@@ -1,0 +1,8 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:255
++ ... ed --check; git commit -m 'Integrate approved Step 1 prerequisite and ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/extract1 2c29abc] Integrate approved Step 1 prerequisite and ordered extraction delivery

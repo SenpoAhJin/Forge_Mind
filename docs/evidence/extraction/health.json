@@ -1,0 +1,10 @@
+{
+  "models": {
+    "pose": "MediaPipe pose_landmarker_lite float16",
+    "style": "openai/clip-vit-base-patch32"
+  },
+  "pose_loaded": true,
+  "schema_version": 1,
+  "style_loaded": true,
+  "warnings": []
+}

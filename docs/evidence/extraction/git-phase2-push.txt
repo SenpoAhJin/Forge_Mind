@@ -1,0 +1,8 @@
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git push *> docs/evidence/extraction/git-phase2-push.txt; Get-Content ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   3bc3195..7e84306  task/extract1 -> task/extract1
