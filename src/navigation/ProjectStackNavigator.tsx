@@ -9,6 +9,7 @@ import { ProjectsScreen } from '../screens/cosplayer/ProjectsScreen';
 import { ProjectDashboardScreen } from '../screens/cosplayer/ProjectDashboardScreen';
 import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
 import { PlanningBriefScreen } from '../screens/cosplayer/PlanningBriefScreen';
+import { ReferenceReviewScreen } from '../screens/cosplayer/ReferenceReviewScreen';
 import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
 import { CalendarBrowseScreen } from '../screens/cosplayer/CalendarBrowseScreen';
 import { EventMeetupsScreen } from '../screens/cosplayer/EventMeetupsScreen';
@@ -25,6 +26,7 @@ export type ProjectStackParamList = {
   ProjectDashboard: { projectId: string };
   CreateProject: undefined;
   PlanningBrief: { briefId?: string } | undefined;
+  ReferenceReview: { briefId: string };
   ContestsList: undefined;
   CalendarBrowse: undefined;
   EventMeetups: { eventId: string };
@@ -94,6 +96,10 @@ export const ProjectStackNavigator: React.FC = () => {
         {({ route, navigation }) => (
           <PlanningBriefScreen briefId={route.params?.briefId} onSaved={() => navigation.goBack()} />
         )}
+      </Stack.Screen>
+
+      <Stack.Screen name="ReferenceReview" options={{ title: 'Reference components' }}>
+        {({ route, navigation }) => <ReferenceReviewScreen briefId={route.params.briefId} onCancel={() => navigation.goBack()} />}
       </Stack.Screen>
 
       <Stack.Screen name="CreateProject" options={{ title: 'New Project' }}>
