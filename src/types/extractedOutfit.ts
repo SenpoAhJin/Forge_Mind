@@ -141,7 +141,7 @@ export function loadAndValidateOutfit(
   if (!Array.isArray(paletteJson.colors)) {
     throw new Error('paletteJson.colors must be an array');
   }
-  const paletteIds = new Set(paletteJson.colors.map((c: any) => c.id));
+  const paletteIds = new Set<string>(paletteJson.colors.map((c: any) => c.id as string));
   
   // Build keywords by slot
   if (typeof keywordsJson.keywords !== 'object') {
@@ -152,7 +152,7 @@ export function loadAndValidateOutfit(
     if (!Array.isArray(keywordsJson.keywords[slot])) {
       throw new Error(`keywordsJson.keywords.${slot} must be an array`);
     }
-    keywordsBySlot.set(slot, new Set(keywordsJson.keywords[slot]));
+    keywordsBySlot.set(slot, new Set(keywordsJson.keywords[slot] as string[]));
   }
   
   return validateExtractedOutfit(outfit, paletteIds, keywordsBySlot);

@@ -4,5 +4,10 @@
     "strict": true,
     "resolveJsonModule": true
   },
-  "exclude": ["node_modules", "scripts"]
+  "exclude": [
+    "node_modules",
+    "scripts",
+    "src/utils/exifOrientation.ts",
+    "src/utils/imageProcessing.ts"
+  ]
 }
