@@ -135,8 +135,14 @@ export async function loadOutfit(
       for (const [slot, piece] of Object.entries(data.pieces)) {
         const oldPiece = piece as { on: boolean; color: string; itemId?: string; source: string };
         migratedPieces[slot] = {
-          ...oldPiece,
-          style: getSlotDefaultStyles(slot)
+          on: oldPiece.on,
+          color: oldPiece.color,
+          colorTip: oldPiece.color, // Default colorTip to piece color
+          style: getSlotDefaultStyles(slot),
+          itemId: oldPiece.itemId,
+          source: (oldPiece.source === 'user' || oldPiece.source === 'item' || oldPiece.source === 'suggestion') 
+            ? oldPiece.source 
+            : 'user', // Default to 'user' for unknown sources
         };
       }
       return {
