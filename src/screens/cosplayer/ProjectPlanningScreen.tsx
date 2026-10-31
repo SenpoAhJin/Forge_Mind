@@ -54,7 +54,7 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
   const [bodyType, setBodyType] = useState<BaseBodySelection>('female');
   
   // COSTUME-7C-2: useOutfit with per-body scope (no projectId on this screen)
-  const { outfit, isLoading: outfitLoading, togglePiece, setColor, wearFull, removeAll } = useOutfit(bodyType);
+  const { outfit, isLoading: outfitLoading, togglePiece, setColor, setStyle, wearFull, removeAll } = useOutfit(bodyType);
   
   // Convert outfit to Sets/Maps for CostumeViewer
   const enabledPieces = useMemo(() => {
@@ -65,6 +65,11 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
   const pieceColors = useMemo(() => {
     if (!outfit) return new Map<string, string>();
     return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.color]));
+  }, [outfit]);
+  
+  const pieceStyles = useMemo(() => {
+    if (!outfit) return new Map<string, Record<string, string>>();
+    return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.style || {}]));
   }, [outfit]);
   
   // Separate owned items into mapped and unmapped
@@ -170,8 +175,10 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
         <OutfitControls
           enabledPieces={enabledPieces}
           pieceColors={pieceColors}
+          pieceStyles={pieceStyles}
           togglePiece={togglePiece}
           setColor={setColor}
+          setStyle={setStyle}
           wearFull={wearFull}
           removeAll={removeAll}
           targetColorSwatches={character?.targetColors || []}
@@ -186,6 +193,7 @@ export default function ProjectPlanningScreen({ navigation, route }: ProjectPlan
             bodyType={bodyType}
             enabledPieces={enabledPieces}
             pieceColors={pieceColors}
+            pieceStyles={pieceStyles}
           />
         </View>
       </View>
