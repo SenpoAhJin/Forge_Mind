@@ -1,7 +1,7 @@
 From bb7366cf3c1b5aa690691043459542db0e8e8ae2 Mon Sep 17 00:00:00 2001
 From: Kiro AI Agent <ai-agent@forgemind.local>
 Date: Sun, 1 Nov 2026 05:42:17 +0800
-Subject: [PATCH 1/4] Add local memory-only reference extraction service
+Subject: [PATCH 1/6] Add local memory-only reference extraction service
 
 ---
  .gitignore                           |   4 +
@@ -343,7 +343,7 @@ index 0000000..0777614
 From 494fbeebf492cdc9fcce9853bcb66d55ddce2d87 Mon Sep 17 00:00:00 2001
 From: Kiro AI Agent <ai-agent@forgemind.local>
 Date: Sun, 1 Nov 2026 05:52:14 +0800
-Subject: [PATCH 2/4] Keep reference uploads entirely in memory
+Subject: [PATCH 2/6] Keep reference uploads entirely in memory
 
 ---
  src/reference_api.py               | 9 ++++++++-
@@ -421,7 +421,7 @@ index 0777614..3aa2c5a 100644
 From 9b3b96bc981111836b044c65afdd84e9197a2b05 Mon Sep 17 00:00:00 2001
 From: Kiro AI Agent <ai-agent@forgemind.local>
 Date: Sun, 1 Nov 2026 05:52:15 +0800
-Subject: [PATCH 3/4] Add labeled full-versus-baseline reference evaluation
+Subject: [PATCH 3/6] Add labeled full-versus-baseline reference evaluation
 
 ---
  scripts/evaluate_reference.py | 53 +++++++++++++++++++++++++++++++++++
@@ -494,7 +494,7 @@ index 0000000..1fd0288
 From a667043abeef071ef724b57545c3ceb373dc4c51 Mon Sep 17 00:00:00 2001
 From: Kiro AI Agent <ai-agent@forgemind.local>
 Date: Sun, 1 Nov 2026 05:52:45 +0800
-Subject: [PATCH 4/4] Use honest fallback when pose inference fails
+Subject: [PATCH 4/6] Use honest fallback when pose inference fails
 
 ---
  src/reference_extraction.py | 8 ++++++--
@@ -519,6 +519,73 @@ index 5d77214..14a5cf0 100644
                  points = result.pose_landmarks[0]
                  if all(points[i].visibility > .6 for i in (0, 11, 12, 15, 16, 23, 24, 27, 28)):
                      method, landmarks, warnings = 'pose', points, []
+-- 
+2.55.0.windows.3
+
+
+From 19bfa0fac8b1c28940dcd59c9d37cf3924b11b9f Mon Sep 17 00:00:00 2001
+From: Kiro AI Agent <ai-agent@forgemind.local>
+Date: Sun, 1 Nov 2026 05:58:45 +0800
+Subject: [PATCH 5/6] Require in-frame landmarks before pose-derived zones
+
+---
+ src/reference_extraction.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/reference_extraction.py b/src/reference_extraction.py
+index 14a5cf0..3cb913b 100644
+--- a/src/reference_extraction.py
++++ b/src/reference_extraction.py
+@@ -128,7 +128,7 @@ class ReferencePipeline:
+                 warnings.append('Pose analysis failed; fixed zones used. Please check.')
+             if result is not None and len(result.pose_landmarks) == 1:
+                 points = result.pose_landmarks[0]
+-                if all(points[i].visibility > .6 for i in (0, 11, 12, 15, 16, 23, 24, 27, 28)):
++                if all(points[i].visibility > .6 and 0 <= points[i].x <= 1 and 0 <= points[i].y <= 1 for i in (0, 11, 12, 15, 16, 23, 24, 27, 28)):
+                     method, landmarks, warnings = 'pose', points, []
+                     if result.segmentation_masks:
+                         mask = result.segmentation_masks[0].numpy_view()
+-- 
+2.55.0.windows.3
+
+
+From 7030f218806e63959b4616e224aa261351313aae Mon Sep 17 00:00:00 2001
+From: Kiro AI Agent <ai-agent@forgemind.local>
+Date: Sun, 1 Nov 2026 05:59:11 +0800
+Subject: [PATCH 6/6] Verify pose mask handling and multiple-person fallback
+
+---
+ tests/test_reference_extraction.py | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/tests/test_reference_extraction.py b/tests/test_reference_extraction.py
+index 3aa2c5a..76ae068 100644
+--- a/tests/test_reference_extraction.py
++++ b/tests/test_reference_extraction.py
+@@ -7,6 +7,7 @@ from PIL import Image
+ from reference_extraction import ReferencePipeline, colors, decode_image, ExtractionError
+ from reference_api import create_app, MemoryUploadRequest
+ import pytest
++from types import SimpleNamespace
+ 
+ def png():
+     buffer = io.BytesIO()
+@@ -53,3 +54,15 @@ def test_large_upload_stream_never_spools_to_disk():
+     assert isinstance(stream, io.BytesIO)
+     stream.write(b'x' * 900000)
+     assert stream.getbuffer().nbytes == 900000
++
++@pytest.mark.parametrize('count,expected', [(1, 'pose'), (2, 'fallback')])
++def test_single_pose_mask_and_multiple_pose_fallback(count, expected):
++    pipeline = ReferencePipeline(False)
++    points = [SimpleNamespace(x=.5, y=.5, visibility=.99) for _ in range(33)]
++    pipeline.mp = SimpleNamespace(Image=lambda **kwargs: None, ImageFormat=SimpleNamespace(SRGB=0))
++    import numpy as np
++    result = SimpleNamespace(pose_landmarks=[points]*count, segmentation_masks=[SimpleNamespace(numpy_view=lambda: np.ones((200,80)))])
++    pipeline.pose = SimpleNamespace(detect=lambda _: result)
++    response = pipeline.extract(decode_image(png()))
++    assert response['method'] == expected
++    if expected == 'fallback': assert all(c['band'] == 'low' and c['warnings'] for c in response['components'])
 -- 
 2.55.0.windows.3
 

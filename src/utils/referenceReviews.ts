@@ -44,7 +44,13 @@ export function validateReview(review: ReferenceReview, briefId: string): void {
   for (const c of [...review.components, ...review.deletedComponents]) {
     if (!c || typeof c.id !== 'string' || ids.has(c.id) || !['auto', 'user'].includes(c.source) || !Array.isArray(c.userCorrections)) throw new Error('Saved components could not be read.');
     ids.add(c.id); validateValue(c.value);
-    for (const edit of c.userCorrections) { validateValue(edit.previous); validateValue(edit.value); }
+    if (c.source === 'auto' && !c.originalAI || c.originalAI && (!review.result || !review.result.components.some(ai => JSON.stringify(ai) === JSON.stringify(c.originalAI)))) {
+      throw new Error('Original analysis values could not be read.');
+    }
+    for (const edit of c.userCorrections) {
+      if (typeof edit.at !== 'string' || !Number.isFinite(Date.parse(edit.at))) throw new Error('Component edit history could not be read.');
+      validateValue(edit.previous); validateValue(edit.value);
+    }
   }
 }
 interface Storage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> }

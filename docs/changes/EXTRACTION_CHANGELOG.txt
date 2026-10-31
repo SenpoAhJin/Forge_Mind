@@ -86,11 +86,18 @@ Mobile started at task/wear1 7f3cd74 (report), parent d07b3d0 (implementation).
 AI started at feature/ai-core e2ac811. Both now have local task/extract1 branches.
 AI has NO REMOTE. Actual push attempt failed; service commits are also supplied
 as docs/changes/EXTRACTION_SERVICE.patch for review/transfer (git am).
-Step 1 is pre-existing UNCOMMITTED work. It is not staged as extraction work.
-The modified Step 1 brief entry and callback are supplied as a small source patch
-in EXTRACTION_BRIEF_ENTRY.patch. The patch is already applied in this workspace;
-do not apply it a second time here. A fresh checkout requires the user's Step 1
-work and that patch. This is a delivery limitation, not a clean standalone branch.
+User subsequently authorized a separate Step 1 prerequisite commit. Exact-path
+staging was shown before commit: 84c18ef contains only its nine prerequisites;
+all nine brief tests passed. It was pushed on task/extract1-ordered, then extraction
+commits were replayed above it. Merge 2c29abc integrated that ordered history into
+task/extract1 without rewriting already-pushed commits. The temporary brief-entry
+patch was applied as source and removed. Fresh checkout now includes Step 1.
+An exact-path stash retained the original local Step 1 snapshot during integration;
+all nine resulting files were compared with the pre-integration source and matched.
+It remains as an extra local recovery copy; no diagnostic leftovers were stashed.
+AI repository itself has NO remote backup. Its local commits and source patch
+are the only delivery copies; the patch is included in the mobile branch backup,
+not a backup of AI Git history, datasets, uncommitted work or model downloads.
 No other Markdown files created. Existing CHANGELOG.md updated.
 
 WINDOWS POWERSHELL SETUP (from workspace root; no activation needed)

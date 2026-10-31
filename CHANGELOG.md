@@ -8,7 +8,7 @@ inventory-backed preview. Uploads stay in memory; fallback results warn and use
 Low bands. Web acceptance checks and Android export ran. Real-phone runtime and
 labeled-image accuracy evaluation are NOT RUN. TypeScript remains at 23 errors.
 See docs/changes/EXTRACTION_CHANGELOG.txt and EXTRACTION_REPORT.txt for setup,
-evidence and the uncommitted Step 1 / AI-repository delivery limitations.
+evidence, the separately committed Step 1 prerequisite and AI-repository backup limits.
 
 **Last updated:** Saturday, October 31, 2026, 22:48 PHT (Asia/Manila) — inventory-backed multi-slot wearing
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
