@@ -1,0 +1,38 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:2705
++ ... ed --check; git -c safe.directory='*' commit -m 'Link project target  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/target-look 84a4c1c] Link project target references and verify shared previews on web
+ 34 files changed, 613 insertions(+), 4 deletions(-)
+ create mode 100644 docs/evidence/target-look/account-b-bare.png
+ create mode 100644 docs/evidence/target-look/all-owned-worn.png
+ create mode 100644 docs/evidence/target-look/browser-followup-output.txt
+ create mode 100644 docs/evidence/target-look/browser-output.txt
+ create mode 100644 docs/evidence/target-look/browser-test.mjs
+ create mode 100644 docs/evidence/target-look/corrupt-review.png
+ create mode 100644 docs/evidence/target-look/dashboard-preview.png
+ create mode 100644 docs/evidence/target-look/empty-state-analyze.png
+ create mode 100644 docs/evidence/target-look/extracted-outfit-tests.txt
+ create mode 100644 docs/evidence/target-look/extractor-tests.txt
+ create mode 100644 docs/evidence/target-look/five-ghosts.png
+ create mode 100644 docs/evidence/target-look/followup-results.json
+ create mode 100644 docs/evidence/target-look/git-phase1-commit.txt
+ create mode 100644 docs/evidence/target-look/git-phase1-push-retry.txt
+ create mode 100644 docs/evidence/target-look/git-phase1-push.txt
+ create mode 100644 docs/evidence/target-look/git-phase1-status.txt
+ create mode 100644 docs/evidence/target-look/owned-wig.png
+ create mode 100644 docs/evidence/target-look/planning-preview.png
+ create mode 100644 docs/evidence/target-look/regression-final.txt
+ create mode 100644 docs/evidence/target-look/restored-preview.png
+ create mode 100644 docs/evidence/target-look/second-wig-head.png
+ create mode 100644 docs/evidence/target-look/serve.mjs
+ create mode 100644 docs/evidence/target-look/service-tests.txt
+ create mode 100644 docs/evidence/target-look/target-look-tests.mjs
+ create mode 100644 docs/evidence/target-look/target-look-tests.txt
+ create mode 100644 docs/evidence/target-look/typecheck-before.txt
+ create mode 100644 docs/evidence/target-look/typecheck-delivery.txt
+ create mode 100644 docs/evidence/target-look/web-export-delivery.txt
+ create mode 100644 docs/evidence/target-look/web-results.json

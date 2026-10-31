@@ -1,13 +1,13 @@
-git : remote: 
+git : remote:
 At line:2 char:1
 + git -c safe.directory='*' push --set-upstream origin task/target-look ...
 + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (remote: :String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
- 
-remote: Create a pull request for 'task/target-look' on GitHub by visiting:        
-remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/target-look        
-remote: 
+
+remote: Create a pull request for 'task/target-look' on GitHub by visiting:
+remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/target-look
+remote:
 To https://github.com/SenpoAhJin/Forge_Mind.git
  * [new branch]      task/target-look -> task/target-look
 branch 'task/target-look' set up to track 'origin/task/target-look'.

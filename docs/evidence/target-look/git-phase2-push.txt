@@ -1,0 +1,8 @@
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git -c safe.directory='*' push origin task/target-look *> docs/eviden ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   0894291..84a4c1c  task/target-look -> task/target-look

@@ -1,0 +1,317 @@
+ForgeMind Target Look delivery
+Sunday, November 1, 2026, 07:31 PHT (Asia/Manila)
+Branch: task/target-look, based on task/extract1 at 28c568b. That branch already
+contained the requested 6a93e19 plus its subsequent extraction evidence commit.
+
+PHASES
+1 RAN: confirmed-reference display descriptors feed the existing V2 piece builders.
+  Ghost material opacity is 0.42; owned worn slots use opacity 1 and hide ghosts.
+  Controls and persistence still receive only the existing owned outfit map.
+  No target inventory, budget, readiness or worn record is created.
+  Existing builder styles are used where supported. Other reviewed styles show
+  a default-shape note, including curly wigs (the existing wig is a head cap).
+  Toggle, confidence bands, fallback warning, unsupported accessory checklist,
+  Marketplace navigation and sourcing-only Make it action are implemented.
+  Projects can select an existing confirmed brief under the shared preview.
+  Only reference_brief_id is stored on the existing project. The review remains
+  in its original account-scoped repository, read again on screen focus.
+  Step 1 brief code/tests and all AI repository files are unchanged.
+2 RAN / OBSERVED: actual exported Expo app in Chrome with software WebGL and
+  PhoneFrame. All 15 full-suite checks and two focused checks passed. Screenshots
+  show the body, translucent target pieces, and owned wig on the head. This does
+  not establish the cause of the previous unreproduced wig-on-shoulder issue.
+  All browser checks used http://127.0.0.1:8092 (port 8092), same origin throughout.
+  Synthetic reference, synthetic saved review and cached identities/inventory are
+  explicitly declared fixtures. No image analysis is claimed by these fixtures.
+3 NOT RUN: the request contains [PASTE HERE] for real-photo paths/results and no
+  real photos were supplied. No thresholds were changed. Real-photo Low slots,
+  recognition accuracy and real labeled accuracy remain unverified.
+
+T1 RAN PASS / OBSERVED: six-row fixture review, five target cards and translucent
+  pieces; accessory Not shown in 3D yet; Low and fallback warnings visible.
+  five-ghosts.png, web-results.json.
+T2 RAN PASS / OBSERVED: black owned wig hides its ghost; four others remain.
+  owned-wig.png. Fixture inventory contains black and white wigs; the white wig
+  is used in T4. This is cached inventory, not a live ownership verification.
+T3 RAN PASS: Remove all restores five ghosts; focused per-slot Show Wig toggle
+  also restores the wig ghost. followup-results.json.
+T4 RAN PASS / OBSERVED: white wig replaces black wig in the same saved slot;
+  four ghosts remain. second-wig-head.png shows the cap on the head.
+T5 RAN PASS: Male, Side, Back, Female, Front controls exercised; four ghost cards
+  and the worn wig ID persist, with no unhandled page errors. Existing simple
+  piece shapes are retained. No image-similarity or anatomical accuracy score.
+T6 RAN PASS: unlock review, edit wig color, save and confirm; target updates to
+  #000000. Confirmed review is still the only target source. web-results.json.
+T7 RAN PASS: Target look off removes ghost cards only; on restores them. Remove
+  all clears worn flags while all five target ghosts remain. web-results.json.
+T8 RAN PASS: Make it changes sourcing and adds the existing correction audit;
+  originalAI and other component values remain intact; inventory unchanged and
+  no target is worn. Marketplace opens the existing registration/marketplace
+  screen with review and worn storage unchanged. web-results.json.
+T9 RAN PASS: full page reload restores confirmed targets and worn black wig.
+  A second cached account has no A target or worn items (account-b-bare.png).
+  Live two-account authentication NOT RUN. restored-preview.png, web-results.json.
+T10 RAN PASS / OBSERVED: no review gives a bare body and clear message; Back to
+  Analyze opens a new brief safely when no saved brief exists. Corrupt linked
+  review gives a visible error, hides ghosts and leaves corrupt bytes unchanged.
+  corrupt-review.png, account-b-bare.png, empty-state-analyze.png,
+  followup-results.json. Corrupt review does not remove legitimate owned wear.
+T11 RAN PASS / OBSERVED: dashboard and planning viewers show body, owned black
+  wig and four ghosts using the same linked review. Linking stores only its ID.
+  dashboard-preview.png, planning-preview.png. All five owned slots worn was
+  also exercised: zero ghosts and no errors; Remove all returns five ghosts.
+  all-owned-worn.png, web-results.json.
+T12 RAN PASS: 9 brief + 5 review-store + 13 wearing-store tests (27), 11 extracted
+  outfit validation checks, 9 backend extractor checks, 9 service tests and
+  2 Target Look invariant tests. Service tests use Flask's in-process test client;
+  no running LAN service or real models/photos are implied by those tests.
+  TypeScript BEFORE 23 / AFTER 23 diagnostics, no new diagnostics; NOT build-clean.
+  Expo web export PASS. Files: regression-final.txt, extracted-outfit-tests.txt,
+  extractor-tests.txt, service-tests.txt, target-look-tests.txt,
+  typecheck-before.txt, typecheck-delivery.txt, web-export-delivery.txt.
+
+Evidence directory: docs/evidence/target-look/ (all filenames above relative to it).
+Initial harness checks FAILED due to button/tab selectors; corrected selectors
+were rerun successfully. The initial direct-node Target Look test invocation
+FAILED on extensionless TypeScript imports; the existing TSX runner passed both
+tests. Final web-results.json and followup-results.json are the final verdicts.
+No application failure was hidden or counted as a phone pass.
+
+REPLAY (Windows PowerShell, from forgemind-mobile)
+node node_modules/expo/bin/cli export --platform web --output-dir docs/evidence/target-look/web-bundle
+node docs/evidence/target-look/serve.mjs
+# In another terminal, same directory:
+node docs/evidence/target-look/browser-test.mjs
+$env:TARGET_FOLLOWUP='1'
+node docs/evidence/target-look/browser-test.mjs
+Remove-Item Env:TARGET_FOLLOWUP
+node --test scripts/test-planning-briefs.mjs scripts/test-reference-reviews.mjs tools/test_outfit_store.mjs
+node tools/test_extracted_outfit.mjs
+node node_modules/tsx/dist/cli.mjs --test docs/evidence/target-look/target-look-tests.mjs
+node node_modules/typescript/bin/tsc --noEmit
+# Backend directory: node node_modules/tsx/dist/cli.mjs tests/test_outfit_extractor.mts
+# AI directory: .\.venv\Scripts\python.exe -m pytest tests/test_reference_extraction.py -q
+The generated web-bundle is not staged. Regenerate it before serving a new checkout.
+
+PHONE ACCEPTANCE: ALL NOT RUN
+1 Start the existing local analysis service using EXTRACTION_REPORT.txt setup.
+  Set EXPO_PUBLIC_EXTRACTION_URL=http://YOUR-PC-WIFI-IP:5055 in the mobile terminal;
+  run npx.cmd expo start --lan --clear. Open the printed QR using compatible Expo
+  Go on the same Wi-Fi. Phone service health URL is
+  http://YOUR-PC-WIFI-IP:5055/api/health; substitute your actual IPv4 address.
+2 Save a real reference in a brief, Analyze, inspect warnings/bands, edit and
+  Confirm. Open outfit preview: five available target slots should be ghosts;
+  accessories stay labelled Not shown in 3D yet. Record actual Low slots/method.
+3 Wear an actually owned wig: opaque wig on HEAD, four remaining ghosts. Switch
+  Show Wig off and on; replace with a second owned wig. Rotate/pinch and check
+  Male/Female and Front/Side/Back without losing target or worn state.
+4 Toggle Target look off/on. Remove all: ghosts remain. Wear all five owned
+  slots: no ghosts. Inspect an unsupported style's default-shape note.
+5 Mark as make it: check sourcing only and unchanged inventory/readiness/budget.
+  Find in Marketplace should navigate only. Edit a color in review, confirm
+  again, and verify the new target color.
+6 Open a project's dashboard and select Use reference: <confirmed brief name>.
+  Open the same project's planning view. Both should show that saved review.
+  Close/reopen the app, repeat, then sign into another real account and verify
+  isolation. Do not label a cached account check as live authentication.
+7 In a development session, use RN DevTools to corrupt ONLY a disposable test
+  review storage value; reopen and verify visible error/no overwrite. Restore
+  the test bytes afterward. A project without a linked review should show the
+  bare model/message; Back to Analyze should open a usable brief screen.
+
+UNFINISHED / LIMITS
+- All physical-phone runtime checks NOT RUN. Android/device rendering unverified.
+- No real photos, labels or real-photo results supplied. Phase 3 and real labeled
+  accuracy NOT RUN; no fabricated confidence percentages or recognition metrics.
+- Live login, live inventory ownership and live Marketplace transactions NOT RUN.
+- 23 existing TypeScript diagnostics remain. No AI repo backup/remote work is
+  included. Previously reported AI repository backup limits still apply.
+- Shapes remain simple body-derived regions; unsupported styles use an explicit
+  default shape. No accessory, prop, belt, blindfold or ear cuff geometry added.
+- Existing unrelated deleted/untracked diagnostic files remain unstaged.
+
+GIT OUTPUT: actual phase transcripts appended below; final report commit/push is
+also reported to the user after it completes. No main/master push, reset or force.
+
+Delivery close: Sunday, 2026-11-01 07:32:49 PHT (Asia/Manila).
+Terminal transcripts below normalize encoding, line endings and trailing spaces only.
+
+--- git-phase1-status.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1017
++ ... t'),$note); git -c safe.directory='*' status --short *> docs/evidence ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M CHANGELOG.md
+ M src/components/CostumeViewer.tsx
+ M src/components/OwnedOutfitPanel.tsx
+ M src/components/V2CostumeDemo.tsx
+ M src/screens/cosplayer/ReferenceReviewScreen.tsx
+ D tools/diag_offshoulder.mjs
+?? docs/changes/DIAG1_REPORT.md
+?? docs/changes/DIAG2_REPORT.md
+?? docs/changes/PROJECT_PLANNING_BRIEF_TYPECHECK.txt
+?? docs/changes/TARGET_LOOK_CHANGELOG.txt
+?? docs/evidence/extraction/failure-T11-browser-http-errors.png
+?? docs/evidence/extraction/failure-T2.png
+?? docs/evidence/extraction/failure-T3.png
+?? docs/evidence/extraction/failure-T9.png
+?? docs/evidence/target-look/
+?? src/utils/targetLook.ts
+?? symmetry_new.txt
+?? test_output.txt
+?? tools/analyze_offshoulder_symmetry.mjs
+?? tools/check_mesh_symmetry.mjs
+?? tools/check_true_mirror_symmetry.mjs
+?? tools/diag1/
+?? tools/diag2/
+?? tools/reconcile_upperarm_labels.mjs
+?? tools/sensitivity_analysis.mjs
+?? tools/tune_offshoulder_params.mjs
+?? wearing-evidence/after-gestures.png
+?? wearing-evidence/android-bundle/
+?? wearing-evidence/before-gestures.png
+?? wearing-evidence/dashboard-bare.png
+?? wearing-evidence/dashboard-initial.png
+?? wearing-evidence/failure-10.png
+?? wearing-evidence/failure-planning-screen.png
+?? wearing-evidence/failure.png
+?? wearing-evidence/four-owned-items.png
+?? wearing-evidence/remove-all-bare.png
+?? wearing-evidence/web-bundle/
+
+--- git-phase1-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1419
++ ... ed --check; git -c safe.directory='*' commit -m 'Show confirmed refer ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/target-look 0894291] Show confirmed reference targets as translucent display pieces
+ 7 files changed, 111 insertions(+), 6 deletions(-)
+ create mode 100644 docs/changes/TARGET_LOOK_CHANGELOG.txt
+ create mode 100644 src/utils/targetLook.ts
+
+--- git-phase1-push.txt (actual captured output) ---
+git : fatal: unable to access 'https://github.com/SenpoAhJin/Forge_Mind.git/': Failed to connect to github.com:443
+after 23 ms: Could not connect to server
+At line:2 char:1572
++ ... commit.txt; git -c safe.directory='*' push --set-upstream origin task ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (fatal: unable t...nnect to server:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+--- git-phase1-push-retry.txt (actual captured output) ---
+git : remote:
+At line:2 char:1
++ git -c safe.directory='*' push --set-upstream origin task/target-look ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (remote: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+remote: Create a pull request for 'task/target-look' on GitHub by visiting:
+remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/target-look
+remote:
+To https://github.com/SenpoAhJin/Forge_Mind.git
+ * [new branch]      task/target-look -> task/target-look
+branch 'task/target-look' set up to track 'origin/task/target-look'.
+
+--- git-phase2-status.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1616
++ ... `n",$enc)}; git -c safe.directory='*' status --short *> docs/evidence ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M CHANGELOG.md
+ M docs/changes/TARGET_LOOK_CHANGELOG.txt
+ M src/components/OwnedOutfitPanel.tsx
+ M src/contexts/ProjectsContext.tsx
+ M src/types/projects.ts
+ D tools/diag_offshoulder.mjs
+?? docs/changes/DIAG1_REPORT.md
+?? docs/changes/DIAG2_REPORT.md
+?? docs/changes/PROJECT_PLANNING_BRIEF_TYPECHECK.txt
+?? docs/changes/TARGET_LOOK_REPORT.txt
+?? docs/evidence/extraction/failure-T11-browser-http-errors.png
+?? docs/evidence/extraction/failure-T2.png
+?? docs/evidence/extraction/failure-T3.png
+?? docs/evidence/extraction/failure-T9.png
+?? docs/evidence/target-look/
+?? symmetry_new.txt
+?? test_output.txt
+?? tools/analyze_offshoulder_symmetry.mjs
+?? tools/check_mesh_symmetry.mjs
+?? tools/check_true_mirror_symmetry.mjs
+?? tools/diag1/
+?? tools/diag2/
+?? tools/reconcile_upperarm_labels.mjs
+?? tools/sensitivity_analysis.mjs
+?? tools/tune_offshoulder_params.mjs
+?? wearing-evidence/after-gestures.png
+?? wearing-evidence/android-bundle/
+?? wearing-evidence/before-gestures.png
+?? wearing-evidence/dashboard-bare.png
+?? wearing-evidence/dashboard-initial.png
+?? wearing-evidence/failure-10.png
+?? wearing-evidence/failure-planning-screen.png
+?? wearing-evidence/failure.png
+?? wearing-evidence/four-owned-items.png
+?? wearing-evidence/remove-all-bare.png
+?? wearing-evidence/web-bundle/
+
+--- git-phase2-commit.txt (actual captured output) ---
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:2705
++ ... ed --check; git -c safe.directory='*' commit -m 'Link project target  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[task/target-look 84a4c1c] Link project target references and verify shared previews on web
+ 34 files changed, 613 insertions(+), 4 deletions(-)
+ create mode 100644 docs/evidence/target-look/account-b-bare.png
+ create mode 100644 docs/evidence/target-look/all-owned-worn.png
+ create mode 100644 docs/evidence/target-look/browser-followup-output.txt
+ create mode 100644 docs/evidence/target-look/browser-output.txt
+ create mode 100644 docs/evidence/target-look/browser-test.mjs
+ create mode 100644 docs/evidence/target-look/corrupt-review.png
+ create mode 100644 docs/evidence/target-look/dashboard-preview.png
+ create mode 100644 docs/evidence/target-look/empty-state-analyze.png
+ create mode 100644 docs/evidence/target-look/extracted-outfit-tests.txt
+ create mode 100644 docs/evidence/target-look/extractor-tests.txt
+ create mode 100644 docs/evidence/target-look/five-ghosts.png
+ create mode 100644 docs/evidence/target-look/followup-results.json
+ create mode 100644 docs/evidence/target-look/git-phase1-commit.txt
+ create mode 100644 docs/evidence/target-look/git-phase1-push-retry.txt
+ create mode 100644 docs/evidence/target-look/git-phase1-push.txt
+ create mode 100644 docs/evidence/target-look/git-phase1-status.txt
+ create mode 100644 docs/evidence/target-look/owned-wig.png
+ create mode 100644 docs/evidence/target-look/planning-preview.png
+ create mode 100644 docs/evidence/target-look/regression-final.txt
+ create mode 100644 docs/evidence/target-look/restored-preview.png
+ create mode 100644 docs/evidence/target-look/second-wig-head.png
+ create mode 100644 docs/evidence/target-look/serve.mjs
+ create mode 100644 docs/evidence/target-look/service-tests.txt
+ create mode 100644 docs/evidence/target-look/target-look-tests.mjs
+ create mode 100644 docs/evidence/target-look/target-look-tests.txt
+ create mode 100644 docs/evidence/target-look/typecheck-before.txt
+ create mode 100644 docs/evidence/target-look/typecheck-delivery.txt
+ create mode 100644 docs/evidence/target-look/web-export-delivery.txt
+ create mode 100644 docs/evidence/target-look/web-results.json
+
+--- git-phase2-push.txt (actual captured output) ---
+git : To https://github.com/SenpoAhJin/Forge_Mind.git
+At line:2 char:1
++ git -c safe.directory='*' push origin task/target-look *> docs/eviden ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith.../Forge_Mind.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   0894291..84a4c1c  task/target-look -> task/target-look

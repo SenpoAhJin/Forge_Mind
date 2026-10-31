@@ -4,7 +4,7 @@ At line:2 char:1017
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
- 
+
 warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
  M CHANGELOG.md
  M src/components/CostumeViewer.tsx
