@@ -1,0 +1,138 @@
+ForgeMind reference extraction — delivery and verification
+Sunday, November 1, 2026, 06:00 PHT (Asia/Manila). Final close time recorded in report.
+
+PHASE 1 — RAN: local memory-only Flask service on port 5055, byte-validated
+JPEG/PNG/WebP uploads <=1 MB, bounded image dimensions, CORS, timeout/busy errors.
+Separate entrypoint src/reference_api.py preserves the existing modified api.py,
+matcher, color matcher and datasets. The existing matcher uses HSV, so its color
+distance is not substituted for the requested LAB histogram. No K-Means added.
+Werkzeug upload streams explicitly use BytesIO (default disk spooling disabled).
+No uploaded image bytes, filenames or request bodies are logged or persisted.
+
+MediaPipe PoseLandmarker Lite: a single sufficiently visible full-body pose uses
+its segmentation extent and foreground mask; multi/no/incomplete pose uses a
+border-background extent heuristic and fixed proportions, never called detection.
+All fallback components are Low even when CLIP has a large score gap. Glove zones
+span both wrist/hand neighborhoods; warn that nearby skin/clothes may be included.
+Skin exclusion is a conservative RGB heuristic only with a person mask; it is not
+a learned skin model and can exclude warm clothing. Accessory crop is head/face.
+Style labels reuse outfitKeywords.json via FORGEMIND_VOCAB_DIR or sibling mobile
+directory. That vocabulary has no accessory style labels; accessory style is null
+with a warning. No invented accessory vocabulary or calibrated percentages.
+LAB bins: L/8, a/12, b/12; top three occupied bins, mean RGB hex and pixel shares.
+Palette assignment: nearest existing palette entry in LAB. Shares are fractions
+of all retained pixels, so the top three need not sum to one.
+Band thresholds use raw CLIP logit top-two gap: <2 Low, >=2 Medium, >=4 High.
+These are uncalibrated heuristics, not probabilities. No calibration file exists.
+Baseline is evaluation-only: fixed zones, average RGB, no pose or style scoring.
+
+PHASE 2 — RAN on Expo web/PhoneFrame with declared cached fixtures:
+saved-brief analysis entry, true sending/analyzing/done states, abort, real boxes,
+unreachable/retry/manual entry, review/edit/delete/add, plan metadata, confirmation,
+versioned account/brief persistence, originalAI and userCorrections history,
+deleted-component history, visible write errors. Native uses a modal; web editor
+stays inside PhoneFrame. No fake progress or detection sequence.
+
+PHASE 3 — RAN on Expo web/PhoneFrame: confirmed values feed existing color hints
+and suggestions; all confirmed target colors supplied per slot; deleted targets
+stay absent; brief_id keys the existing outfit store. Targets never add inventory
+or item assignments. Existing V2 renderer/wardrobe reused. Accessory remains a
+checklist entry. Wearing confirmation capitalizes the first letter of item name.
+
+PHASE 4 — RAN empty-template harness; actual accuracy evaluation NOT RUN:
+no per-image per-slot labeled folder found. Empty template and labeling directions
+are under docs/evidence/extraction/labeled-template. No accuracy numbers invented.
+The harness outputs per-slot color and style top-1 correct/total/accuracy, image
+count, individual predictions and full-minus-baseline deltas. Unlabeled fields
+are excluded, zero-denominator accuracy is null. Full evaluation requires models.
+
+DIRECT RUNTIME / VERIFICATION LIBRARIES (measured installed bytes, not downloads)
+Exact version, installed_bytes and license for each reused/new direct dependency:
+docs/evidence/extraction/dependency-inventory.json (generated from installed metadata).
+New runtime pins: mediapipe 1.2.0 (73,823,830 bytes, Apache-2.0),
+transformers 5.22.1 (115,753,221 bytes, Apache-2.0), torch 2.15.0
+(552,671,841 bytes, composite Apache/BSD/MIT/etc; exact expression in inventory).
+Reused Pillow 13.0.0 (16,504,972 bytes, MIT-CMU), NumPy 2.5.3 (54,487,204
+bytes, composite BSD/MIT/etc), Flask 3.1.3 (878,553 bytes, BSD-3-Clause),
+flask-cors 6.0.5 (88,539 bytes, MIT). Hugging Face Hub 2.4.0
+(7,526,438 bytes, Apache-2.0) is setup-only. No hosted inference or paid service.
+Models: pose_landmarker_lite float16 official latest artifact, 5,777,746 bytes,
+Apache-2.0; CLIP openai/clip-vit-base-patch32, repository revision
+3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268, pytorch_model.bin 605,247,071 bytes,
+MIT (OpenAI CLIP). Model card cautions zero-shot results need evaluation.
+Weights ignored in AI .gitignore; never staged. Download metadata and sizes:
+docs/evidence/extraction/model-download.txt. Runtime uses local_files_only=True.
+
+CURRENT OFFICIAL DOCS CONSULTED
+https://docs.expo.dev/versions/v57.0.0/ (repository AGENTS.md requirement)
+Installed project is Expo 58.0.17; also checked installed-version docs:
+https://docs.expo.dev/versions/v58.0.0/sdk/imagepicker/
+https://docs.expo.dev/versions/v58.0.0/sdk/async-storage/
+https://reactnative.dev/docs/network (0.88), https://react.dev/reference/react
+https://reactnavigation.org/docs/native-stack-navigator/
+https://flask.palletsprojects.com/en/stable/
+https://flask-cors.readthedocs.io/en/latest/
+https://pillow.readthedocs.io/en/stable/
+https://numpy.org/doc/stable/reference/generated/numpy.histogramdd.html
+https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker/python
+https://huggingface.co/docs/transformers/en/model_doc/clip
+https://huggingface.co/openai/clip-vit-base-patch32
+https://docs.pytorch.org/get-started/locally/
+Guide read: ../docs/ForgeMind_Complete_Guide.extracted.txt Part 2 and 4.3.2;
+the task's explicit real-progress and confidence-band rules supersede deck mockups.
+
+DELIVERY CONSTRAINTS
+Mobile started at task/wear1 7f3cd74 (report), parent d07b3d0 (implementation).
+AI started at feature/ai-core e2ac811. Both now have local task/extract1 branches.
+AI has NO REMOTE. Actual push attempt failed; service commits are also supplied
+as docs/changes/EXTRACTION_SERVICE.patch for review/transfer (git am).
+Step 1 is pre-existing UNCOMMITTED work. It is not staged as extraction work.
+The modified Step 1 brief entry and callback are supplied as a small source patch
+in EXTRACTION_BRIEF_ENTRY.patch. The patch is already applied in this workspace;
+do not apply it a second time here. A fresh checkout requires the user's Step 1
+work and that patch. This is a delivery limitation, not a clean standalone branch.
+No other Markdown files created. Existing CHANGELOG.md updated.
+
+WINDOWS POWERSHELL SETUP (from workspace root; no activation needed)
+Set-Location forgemind-ai
+.\.venv\Scripts\python.exe -m pip install -r requirements-extraction.txt
+.\.venv\Scripts\python.exe scripts\download_reference_models.py
+.\.venv\Scripts\python.exe src\reference_api.py
+
+In a SECOND PowerShell terminal, from workspace root:
+Set-Location forgemind-mobile
+# Replace address with the IPv4 of your computer's Wi-Fi from ipconfig.
+$env:EXPO_PUBLIC_EXTRACTION_URL='http://192.168.254.168:5055'
+npx.cmd expo start --lan --clear
+# Same Wi-Fi on phone/computer; open Expo Go and scan the terminal QR.
+# Open http://YOUR-PC-IP:5055/api/health from the phone browser first.
+# If Windows asks, allow Python on the private LAN. Do not use phone localhost.
+# Restart Expo after changing this env variable; it is embedded at bundle time.
+
+VERIFICATION COMMANDS (from forgemind-mobile)
+node --test scripts/test-planning-briefs.mjs
+node --test scripts/test-reference-reviews.mjs
+node --test tools/test_outfit_store.mjs
+..\forgemind-ai\.venv\Scripts\python.exe -m pytest ..\forgemind-ai\tests\test_reference_extraction.py -q
+node node_modules/typescript/bin/tsc --noEmit
+npx.cmd expo export --platform web --output-dir docs/evidence/extraction/web-bundle
+node tools/extraction-serve.mjs
+# In another terminal, same directory, with service running:
+node tools/extraction-web-test.mjs
+npx.cmd expo export --platform android --output-dir docs/evidence/extraction/android-bundle
+..\forgemind-ai\.venv\Scripts\python.exe ..\forgemind-ai\scripts\evaluate_reference.py docs/evidence/extraction/labeled-template --output docs/evidence/extraction/evaluation.json
+
+REAL PHONE — ALL RUNTIME CHECKS NOT RUN; no controllable connection, adb unavailable.
+Phone steps: save a brief with your own full-body photo, reopen, Analyze; observe
+sending/analyzing/done and six rows (T1). Cancel during request, reopen unchanged
+brief (T2). Stop Python, analyze, Retry, manual Add (T3). Analyze anime/multi-view,
+inspect fallback Low/Please check (T4). Edit wig color/style/plan and Save (T5).
+Delete/add a component (T6). Confirm, fully close Expo Go, reopen; sign into a
+different account and verify isolation (T7). Use a full-storage test device or
+inject a failing AsyncStorage adapter; verify visible error/no saved state (T8).
+Open preview; check targets/color hints, no automatic ownership/wearing (T9).
+Tap an owned wig, rotate/pinch, confirm model position and message (T10).
+Try oversize/corrupt/non-image uploads against the local service (T11).
+T12 service/brief tests, T13 evaluation and T14 TypeScript are host checks;
+they are not presented as real-phone evidence. See EXTRACTION_REPORT.txt for
+per-test verdicts, limitations and actual git output.
