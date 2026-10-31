@@ -378,7 +378,7 @@ export function applyItem(
   return {
     outfit: newOutfit,
     action: wasWearing ? 'replaced' : 'worn',
-    message: `${itemName} is now on your ${getSlotDefinitions().find(piece => piece.id === slot)?.label ?? slot} slot`
+    message: `${itemName.charAt(0).toUpperCase() + itemName.slice(1)} is now on your ${getSlotDefinitions().find(piece => piece.id === slot)?.label ?? slot} slot`
   };
 }
 
