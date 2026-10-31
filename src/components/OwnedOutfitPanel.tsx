@@ -23,6 +23,8 @@ interface Props {
   initialBody?: BaseBodySelection;
   targetColors?: string[];
   extractedOutfit?: ExtractedOutfit;
+  confirmedTargetColors?: Partial<Record<OutfitSlot, string[]>>;
+  referenceConfirmed?: boolean;
   onInteractionChange?: (active: boolean) => void;
 }
 
@@ -30,7 +32,7 @@ export function OwnedOutfitPanel(props: Props) {
   return <OwnedOutfitContent key={`${props.accountId}:${props.projectId}`} {...props} />;
 }
 
-function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offline, initialBody = 'female', targetColors = [], extractedOutfit, onInteractionChange }: Props) {
+function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offline, initialBody = 'female', targetColors = [], extractedOutfit, confirmedTargetColors, referenceConfirmed, onInteractionChange }: Props) {
   const { themeColors: c } = useTheme();
   const [body, setBody] = useState(initialBody);
   const [filter, setFilter] = useState('all');
@@ -44,8 +46,8 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
   const stylesBySlot = useMemo(() => new Map(Object.entries(pieces).map(([id, p]) => [id, p.style ?? {}])), [wearing.outfit]);
   const targets = useMemo(() => Object.fromEntries(getSlotDefinitions().map(slot => {
     const extracted = extractedOutfit?.slots[slot.id as OutfitSlot];
-    return [slot.id, extracted?.present && extracted.color ? [getColorFromName(extracted.color) ?? extracted.color] : targetColors];
-  })), [extractedOutfit, targetColors]);
+    return [slot.id, confirmedTargetColors ? confirmedTargetColors[slot.id as OutfitSlot] ?? [] : extracted?.present && extracted.color ? [getColorFromName(extracted.color) ?? extracted.color] : targetColors];
+  })), [extractedOutfit, targetColors, confirmedTargetColors]);
   const unsupported = items.filter(item => !getSlotForItem(item));
   const run = async (action: () => Promise<unknown>, success?: string) => {
     setBusy(true); setMessage(''); setActionError('');
@@ -87,7 +89,7 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
       const reference = extractedOutfit?.slots[slot.id as OutfitSlot];
       return <View key={slot.id} style={styles.group}>
         <Text style={[styles.heading, { color: c.text }]}>{slot.label}</Text>
-        {reference ? <Text style={{ color: c.textSecondary }}>Reference: {reference.color ?? 'no color'} · {reference.keywords.join(', ') || 'no style'} · {reference.confidence} confidence (deterministic baseline)</Text> : null}
+        {reference ? <Text style={{ color: c.textSecondary }}>Reference: {reference.color ?? 'no color'} · {reference.keywords.join(', ') || 'no style'} · {reference.confidence} band</Text> : null}
         {group.length === 0 ? <Text style={{ color: c.textSecondary }}>No owned item for this slot.</Text> : null}
         {group.map(item => {
           const worn = pieces[slot.id]?.on && pieces[slot.id]?.itemId === item.attire_id;
@@ -100,7 +102,8 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
         })}
       </View>;
     })}
-    <Text style={{ color: c.textSecondary }}>{extractedOutfit ? 'Reference targets use supplied deterministic extractor output. No new image analysis was run.' : 'No extracted reference data is available. Only supplied character colors are suggested.'}</Text>
+    <Text style={{ color: c.textSecondary }}>{referenceConfirmed ? 'Confirmed reference components supply your target colors and styles.' : extractedOutfit ? 'Reference targets use supplied extractor output.' : 'No extracted reference data is available. Only supplied character colors are suggested.'}</Text>
+    {referenceConfirmed ? extractedOutfit?.unmapped.map((name, index) => <Text key={`${name}:${index}`} style={{ color: c.textSecondary }}>{name} — Not shown in 3D yet</Text>) : null}
     <Text style={[styles.heading, { color: c.text }]}>Not shown in 3D yet</Text>
     <Text style={{ color: c.textSecondary }}>{NOT_SHOWN_YET_SLOTS.join(', ')}. These remain in the checklist and budget.</Text>
     {unsupported.map(item => <Text key={item.attire_id} style={{ color: c.textSecondary }}>{item.original_input_text || item.auto_categorized_type} — Not shown in 3D yet</Text>)}
