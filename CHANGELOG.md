@@ -1,7 +1,59 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Wednesday, October 28, 2026 (Task GARMENT-2d: Fixed follow test removing stale L0 reference)
+**Last updated:** Saturday, October 31, 2026 (Task COSTUME-9A: Style options for 3D outfit preview - Stage 1 complete)
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 31, 2026 (Task COSTUME-9A: Style Options Stage 1)
+
+**Summary**
+
+Added style customization to 3D outfit preview. Users can now tap chips to change sleeve length (none/short/long), neckline (crew/off-shoulder), bottom length (shorts/knee/ankle), bottom shape (fitted/skirt), and wig gradient (none/two-tone with color tip). All options work in real-time on both male and female bodies, persist across sessions, and have been tested with comprehensive unit tests. Skirt is a procedural flared cone; off-shoulder correctly exposes shoulder caps while keeping chest and sleeves covered; wig gradient interpolates vertex colors by height.
+
+**What was done**
+
+**Step 1: Wire ProjectPlanningScreen**  
+Added pieceStyles and setStyle props to ProjectPlanningScreen (same pattern as ProjectDashboardScreen). Style chips now render on both dashboard and planning screens.
+
+**Step 2: Fix and Test Style Logic**  
+- Fixed armYMax filter in selectTriangles to exclude arm triangles below elbow (short sleeves)
+- Fixed bottom length logic: modify yMin (hem) not yMax (waist)
+- Updated config names: shortsHemY, kneeHemY with correct offsets (shorts=knee+0.08, knee=knee+0.02)
+- Added comprehensive style tests to test_costume_pieces.mjs (sleeve progression, neckline, length progression, symmetry)
+- Results: Male long=5834>short=4524>none=2096; Female long=5962>short=4782>none=2332
+- Bottom: Male ankle=4967>knee=2906>shorts=2504; Female ankle=5206>knee=3028>shorts=2650
+
+**Step 2b: Implement Correct Off-Shoulder**  
+Replaced incorrect y-band lowering with region-based exclusion using applyOffShoulderCut function. Excludes shoulder/clavicle triangles above cutoff (neck_y - 0.05), keeping chest triangles (central) and arm triangles below cutoff (sleeves hang from bare shoulders). Results: Male crew=5834 vs off_shoulder=5821 (13 tris removed); Female crew=5962 vs off_shoulder=5953 (9 tris removed).
+
+**Step 3: Procedural Skirt Geometry**  
+Added buildSkirtGeometry function creating flared truncated cone from waist to hem. Waist radius 0.16m, hem radius = waist × 1.8 (config.skirtHemRadius). 24 radial segments × 16 height segments for smooth draping. Hem y determined by length style (shorts/knee/ankle). Triggered when bottom piece has style.shape='skirt'.
+
+**Step 4: Wig Two-Tone Gradient**  
+Added applyVertexColorGradient function interpolating from topColor to colorTip by vertex y-coordinate. Applied to wig geometry when style.gradient='two_tone' and colorTip is set. Material vertexColors enabled conditionally. Gradient none leaves geometry unchanged.
+
+**Step 5: Acceptance Tests**  
+Created tools/test_stage1_styles.mjs testing style combinations, geometry validation (no NaN, reasonable bounds), wig gradient color attribute presence, and unknown style ID fallback. Storage persistence tests skipped (require React Native AsyncStorage). All tests pass for both male and female bodies.
+
+**Step 6: Verification**  
+- ✅ test_costume_pieces.mjs: PASS (both genders, all style tests)
+- ✅ test_stage1_styles.mjs: PASS (geometry validation, fallback)
+- ✅ check_no_duplicate_builder.mjs: PASS
+- ✅ tsc --noEmit: 56 total errors (40 src/, 16 scripts-backup/), 0 NEW in touched files
+- Fixed outfitStore v1 migration TypeScript error (source type narrowing)
+
+**Commits:**
+- fa04c46: Step 1 - Wire ProjectPlanningScreen
+- f50af3c: Step 2 - Fix and test style logic
+- 1e04bc9: Step 2b - Correct off-shoulder cut
+- c7e07ae: Step 3 - Procedural skirt geometry
+- 934415c: Step 4 - Wig two-tone gradient
+- a95bde5: Step 5 - Acceptance tests
+- e4fe9e8, fbaf763, 94d95e3: Step 6 verification and docs
+
+**NOT TESTED (requires phone):**  
+Touch interaction, visual appearance of skirt/gradient, persistence across app restart, phone layout.
 
 ---
 
