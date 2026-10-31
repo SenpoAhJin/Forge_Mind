@@ -1,0 +1,325 @@
+ForgeMind Wearing — final verification and delivery report
+Verification closed: Saturday, October 31, 2026, 22:48 PHT (Asia/Manila)
+Implementation commit: d07b3d0aabbe4064ef76e05c08d712b9619a3fd0
+Branch: task/wear1; implementation pushed to origin/task/wear1.
+
+Implementation details: docs/changes/WEARING_CHANGELOG.txt.
+Existing CHANGELOG.md was updated. No other Markdown file was created.
+The Step 1 project-brief files and tests were not changed or included in the commit.
+
+TEST CONDITIONS
+The web suite ran the actual Expo web export on localhost:8090 inside the
+application's PhoneFrame, through its normal navigation and context providers.
+It used isolated, clearly named cached account/inventory fixtures. Backend URLs
+were blocked in that browser. This verifies rendering and local behavior, not
+live authentication, server inventory ownership, or real reference-image analysis.
+No screenshots or results from an emulator are presented as real-phone evidence.
+
+KNOWN BUGS A–C (platforms reported separately)
+
+A. Wig on the shoulder
+WEB — RAN / OBSERVED: the red owned wig replaced the silver wig on the head.
+Final framebuffer test found 124 red pixels at screen rows 62–71 in a 330-pixel
+canvas; all are above the shoulder region. See wearing-evidence/red-wig-head.png
+and web-results.json. Actual GLB probes put the male wig at y=1.773..1.915,
+female y=1.760..1.915, above shoulder y=1.51989 / 1.52443 respectively.
+The BEFORE probe already put the V2 wig on the head with identity root/mesh
+transforms. The original shoulder patch was NOT reproduced in that probe, so
+its precise origin/anchor cause is unconfirmed. No guessed head-offset fix was
+introduced. Reachable wearing screens now use the measured V2 body-region path.
+REAL PHONE — NOT RUN: no controllable real-phone connection was available.
+
+B. Attire too small, misplaced, or failing to cover the body
+WEB — RAN / OBSERVED: all five pieces generated on both actual V2 bodies;
+front/side/back screenshots retained. Shoulder coverage was expanded to include
+clavicles. A waist probe found 157/440 male and 168/445 female body triangles
+uncovered between garment region definitions. The top now includes upper-thigh
+regions within its existing hip boundary. Final waist coverage is 440/440 male
+and 445/445 female, asserted by tools/wearing-geometry.mjs. Final top counts:
+6664 male and 7090 female triangles. See wearing-coverage-before.json,
+wearing-geometry-after.json and the six body/angle screenshots.
+This is a simple body-derived colored-shape preview, as the task requires.
+REAL PHONE — NOT RUN: coverage and interaction still need device observation.
+
+C. Project Dashboard shows only a floor/black box
+WEB — RAN / OBSERVED: the actual dashboard displayed its body and owned pieces,
+with no unhandled page errors. See phoneframe-dashboard.png and
+dashboard-body-and-owned-items.png. Source inspection found that the old costume
+renderer defaulted to V1, then returned before mounting the body when the V2
+contract was absent. The new costume path explicitly pairs V2 assets/contracts,
+mounts the body independently, resolves asset URIs and clones the skeleton.
+The original blank state was not recorded in a before-change browser session;
+the after-change dashboard rendering was actually run and observed.
+REAL PHONE — NOT RUN: Android export passed, but it is not a device render test.
+
+ACCEPTANCE TESTS 1–11
+
+# | Expo web, including PhoneFrame | Real phone / Expo Go
+
+1 | RAN PASS: white shirt, black pants, black boots and silver wig worn together;
+  | corresponding owned IDs and colors verified; four-owned-item render checked.
+  | NOT RUN on a real phone.
+
+2 | RAN PASS: red wig replaced silver, others unchanged; framebuffer head-position
+  | check and red-wig-head.png.
+  | NOT RUN on a real phone.
+
+3 | RAN PASS: tapping red wig again removed just the wig; top and shoes stayed on.
+  | NOT RUN on a real phone.
+
+4 | RAN PASS: full costume, then top off, then shoes recolored white; shoes stayed
+  | on and top remained off.
+  | NOT RUN on a real phone.
+
+5 | RAN PASS: Remove all left all five visible flags off; body stayed rendered.
+  | NOT RUN on a real phone.
+
+6 | RAN PASS: Male/Female and all Front/Side/Back combinations preserved the outfit
+  | record. Six screenshots retained. Separate drag and two-touch pinch tests
+  | changed the rendered view; geometry coverage checks passed on both bodies.
+  | NOT RUN on a real phone.
+
+7 | RAN PASS: top white showed Matches character color; custom #123456 updated
+  | the model/state and removed that label because it was not a target color.
+  | NOT RUN on a real phone.
+
+8 | RAN PASS for local restart/isolation: closed/reopened the page (new JavaScript
+  | providers, same browser storage), restored item IDs/colors, switched cached
+  | account identities A -> B -> A, confirmed B had no A outfit or wardrobe and
+  | restored A's saved appearance. Live login with two real accounts NOT RUN.
+  | NOT RUN on a real phone.
+
+9 | RAN PASS / OBSERVED: actual Project Dashboard rendered the body and worn items;
+  | no unhandled browser page errors. Full PhoneFrame screenshot retained.
+  | NOT RUN on a real phone.
+
+10| RAN PASS: empty inventory displayed a bare model and a clear message; full
+  | costume could not invent items. See empty-inventory.png.
+  | NOT RUN on a real phone.
+
+11| RAN: TypeScript BEFORE 28 errors, AFTER 23 errors. Exact output retained in
+  | wearing-typecheck-before.txt / wearing-typecheck-after.txt. No new diagnostics
+  | were reported for the new wearing implementation. The remaining errors are
+  | in existing chat/theme/listing/photo/share code and backup diagnostic tools.
+  | This shared source check includes the native adapter; it was not run on a
+  | phone. The application is NOT build-clean.
+
+ADDITIONAL VERIFICATION
+RAN PASS — additional production planning screen: selected the character through
+Characters, removed and re-wore its shirt, and verified the same project's state
+was shared with the dashboard. See character-planning-owned-shirt.png.
+RAN PASS — storage failure injection: a failed outfit write showed an error,
+preserved the previous stored/visible outfit and did not show success; retry
+restored operation.
+RAN PASS — 13 production outfit-store tests: wearing-store-after.txt.
+RAN PASS — 11 existing extractor schema/vocabulary tests:
+wearing-extractor-validation.txt. Confidence remained low/medium/high.
+RAN PASS — actual asset geometry assertions, including zero uncovered waist
+triangles, both bodies: wearing-geometry-after.json.
+RAN PASS — Expo web export: wearing-evidence/web-export.txt.
+RAN PASS — Android/Hermes export: wearing-evidence/android-export.txt.
+RAN PASS — git diff --cached --check before the implementation commit.
+
+Final browser terminal output:
+Web 1: RAN PASS
+Web 2: RAN PASS
+Web 3: RAN PASS
+Web 4: RAN PASS
+Web 5: RAN PASS
+Web 6: RAN PASS
+Web 7: RAN PASS
+Web drag-and-pinch: RAN PASS
+Web save-failure: RAN PASS
+Web 8: RAN PASS
+Web 9: RAN PASS
+Web planning-screen: RAN PASS
+Web 10: RAN PASS
+
+WHAT REMAINS UNFINISHED / UNVERIFIED
+- All real-phone Expo Go runtime checks are NOT RUN. No real-phone automation
+  connection was available, and "adb devices" failed because adb was not found.
+  Android bundling proves compilation only; it does not prove device rendering,
+  pinch behavior, persistence, or coverage.
+- Live two-account authentication and live server inventory acceptance were NOT
+  RUN; the web suite used controlled account/inventory cache fixtures.
+- The exact historical cause of the reported shoulder-position wig remains
+  unconfirmed because the V2 asset probe did not reproduce it.
+- The API-dependent legacy match-results route was connected to the shared panel
+  and bundled, but its positive live-matcher UI route was NOT RUN separately.
+- Production reference analysis was deliberately NOT RUN and was not built.
+  No populated production ExtractedOutfit record was found in the catalog;
+  the existing-schema consumption path was verified with declared fixtures.
+- The pre-existing 23 TypeScript errors remain outside this task's wearing fixes.
+- Earlier development-server reload timeouts and selector failures were resolved
+  in the final exported-app test setup. Final web-results.json records 13 PASS
+  results; early failure screenshots left locally are not the final verdict.
+
+GIT DELIVERY — ACTUAL TERMINAL OUTPUT
+The transcript below is for the implementation commit. This report is added in
+a follow-up documentation commit so it can include real completed Git output.
+No force push, reset, or unrelated-file staging was used.
+
+$ git status --short   (before staging wearing changes)
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M CHANGELOG.md
+ M package.json
+ M src/components/BodyModel.tsx
+ M src/components/CostumeViewer.tsx
+ M src/components/GarmentLayer.tsx
+ M src/components/OutfitControls.tsx
+ M src/components/Preview3D.tsx
+ M src/components/SelectedGarment.tsx
+ M src/components/TintableGarment.tsx
+ M src/components/V2CostumeDemo.tsx
+ M src/config/bodyAssets.ts
+ M src/constants/slots.ts
+ M src/contexts/OwnedAttireContext.tsx
+ M src/contexts/ProjectsContext.tsx
+ M src/data/costumePieces.json
+ M src/data/itemSlotMap.json
+ M src/hooks/useOutfit.ts
+ M src/navigation/CharacterStackNavigator.tsx
+ M src/navigation/ProjectStackNavigator.tsx
+ M src/screens/Preview3DTestScreen.tsx
+ M src/screens/cosplayer/MatchResultsScreen.tsx
+ M src/screens/cosplayer/ProjectDashboardScreen.tsx
+ M src/screens/cosplayer/ProjectPlanning2DScreen.tsx
+ M src/screens/cosplayer/ProjectPlanningScreen.tsx
+ M src/screens/cosplayer/ProjectsScreen.tsx
+ M src/types/catalog.ts
+ M src/types/projects.ts
+ M src/types/user-character.ts
+ M src/utils/costumeBuilder.ts
+ M src/utils/outfitHelpers.ts
+ M src/utils/outfitStore.ts
+ D tools/diag_offshoulder.mjs
+ M tools/test_outfit_state.mjs
+ M tools/test_outfit_store.mjs
+?? docs/changes/DIAG1_REPORT.md
+?? docs/changes/DIAG2_REPORT.md
+?? docs/changes/PROJECT_PLANNING_BRIEF_TYPECHECK.txt
+?? docs/changes/WEARING_CHANGELOG.txt
+?? scripts/test-planning-briefs.mjs
+?? src/components/OwnedOutfitPanel.tsx
+?? src/components/projects/
+?? src/components/threeRuntime.native.ts
+?? src/components/threeRuntime.ts
+?? src/screens/cosplayer/PlanningBriefScreen.tsx
+?? src/services/PlanningBriefService.ts
+?? src/types/planningBrief.ts
+?? src/utils/planningBriefs.ts
+?? symmetry_new.txt
+?? test_output.txt
+?? tools/analyze_offshoulder_symmetry.mjs
+?? tools/check_mesh_symmetry.mjs
+?? tools/check_true_mirror_symmetry.mjs
+?? tools/diag1/
+?? tools/diag2/
+?? tools/reconcile_upperarm_labels.mjs
+?? tools/sensitivity_analysis.mjs
+?? tools/tune_offshoulder_params.mjs
+?? tools/wearing-geometry.mjs
+?? tools/wearing-serve.mjs
+?? tools/wearing-web-test.mjs
+?? wearing-coverage-before.json
+?? wearing-evidence/
+?? wearing-extractor-validation.txt
+?? wearing-geometry-after.json
+?? wearing-geometry-before.json
+?? wearing-store-after.txt
+?? wearing-store-before.txt
+?? wearing-typecheck-after.txt
+?? wearing-typecheck-before.txt
+
+
+$ git commit -m "Implement inventory-backed multi-slot outfit wearing"
+[task/wear1 d07b3d0] Implement inventory-backed multi-slot outfit wearing
+ 61 files changed, 2839 insertions(+), 3096 deletions(-)
+ create mode 100644 docs/changes/WEARING_CHANGELOG.txt
+ create mode 100644 src/components/OwnedOutfitPanel.tsx
+ create mode 100644 src/components/threeRuntime.native.ts
+ create mode 100644 src/components/threeRuntime.ts
+ create mode 100644 tools/wearing-geometry.mjs
+ create mode 100644 tools/wearing-serve.mjs
+ create mode 100644 tools/wearing-web-test.mjs
+ create mode 100644 wearing-coverage-before.json
+ create mode 100644 wearing-evidence/Female-Back.png
+ create mode 100644 wearing-evidence/Female-Front.png
+ create mode 100644 wearing-evidence/Female-Side.png
+ create mode 100644 wearing-evidence/Male-Back.png
+ create mode 100644 wearing-evidence/Male-Front.png
+ create mode 100644 wearing-evidence/Male-Side.png
+ create mode 100644 wearing-evidence/android-export.txt
+ create mode 100644 wearing-evidence/character-planning-owned-shirt.png
+ create mode 100644 wearing-evidence/dashboard-body-and-owned-items.png
+ create mode 100644 wearing-evidence/empty-inventory.png
+ create mode 100644 wearing-evidence/phoneframe-dashboard.png
+ create mode 100644 wearing-evidence/red-wig-head.png
+ create mode 100644 wearing-evidence/web-export.txt
+ create mode 100644 wearing-evidence/web-results.json
+ create mode 100644 wearing-evidence/web-terminal.txt
+ create mode 100644 wearing-extractor-validation.txt
+ create mode 100644 wearing-geometry-after.json
+ create mode 100644 wearing-geometry-before.json
+ create mode 100644 wearing-store-after.txt
+ create mode 100644 wearing-store-before.txt
+ create mode 100644 wearing-typecheck-after.txt
+ create mode 100644 wearing-typecheck-before.txt
+
+
+$ git push --set-upstream origin task/wear1
+remote: 
+remote: Create a pull request for 'task/wear1' on GitHub by visiting:        
+remote:      https://github.com/SenpoAhJin/Forge_Mind/pull/new/task/wear1        
+remote: 
+To https://github.com/SenpoAhJin/Forge_Mind.git
+ * [new branch]      task/wear1 -> task/wear1
+branch 'task/wear1' set up to track 'origin/task/wear1'.
+
+
+$ git status --short
+$ git rev-parse HEAD   (after implementation commit/push)
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M package.json
+ M src/navigation/ProjectStackNavigator.tsx
+ M src/screens/cosplayer/ProjectsScreen.tsx
+ D tools/diag_offshoulder.mjs
+?? docs/changes/DIAG1_REPORT.md
+?? docs/changes/DIAG2_REPORT.md
+?? docs/changes/PROJECT_PLANNING_BRIEF_TYPECHECK.txt
+?? scripts/test-planning-briefs.mjs
+?? src/components/projects/
+?? src/screens/cosplayer/PlanningBriefScreen.tsx
+?? src/services/PlanningBriefService.ts
+?? src/types/planningBrief.ts
+?? src/utils/planningBriefs.ts
+?? symmetry_new.txt
+?? test_output.txt
+?? tools/analyze_offshoulder_symmetry.mjs
+?? tools/check_mesh_symmetry.mjs
+?? tools/check_true_mirror_symmetry.mjs
+?? tools/diag1/
+?? tools/diag2/
+?? tools/reconcile_upperarm_labels.mjs
+?? tools/sensitivity_analysis.mjs
+?? tools/tune_offshoulder_params.mjs
+?? wearing-evidence/after-gestures.png
+?? wearing-evidence/android-bundle/
+?? wearing-evidence/before-gestures.png
+?? wearing-evidence/dashboard-bare.png
+?? wearing-evidence/dashboard-initial.png
+?? wearing-evidence/failure-10.png
+?? wearing-evidence/failure-planning-screen.png
+?? wearing-evidence/failure.png
+?? wearing-evidence/four-owned-items.png
+?? wearing-evidence/remove-all-bare.png
+?? wearing-evidence/web-bundle/
+d07b3d0aabbe4064ef76e05c08d712b9619a3fd0
+
+
+The remaining working-tree entries are the earlier project-brief work,
+pre-existing diagnostic changes, and local export/screenshot artifacts. They
+were intentionally not folded into the wearing implementation commit.
+
