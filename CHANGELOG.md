@@ -11208,3 +11208,12 @@ Unsupported shapes retain existing builder defaults with explicit notes. No inve
 RAN: TypeScript before 23 / after 23 diagnostics (includes existing untracked diagnostic source).
 RAN: 27 brief/review/wearing tests, 11 extracted-outfit validation checks, 9 backend extractor checks, 9 service tests passed.
 Browser acceptance pending Phase 2. Physical phone NOT RUN. Real photo not supplied.
+
+Target look - Phase 2 verification
+Sunday, 2026-11-01 07:32:10 PHT (Asia/Manila).
+RAN PASS: 15 Chrome fixture checks plus two focused checks at http://127.0.0.1:8092.
+OBSERVED: translucent target pieces, owned wig on head, dashboard/planning previews; all-owned/worn state has no ghosts.
+Projects link a confirmed brief by ID in the existing project record; no target data is copied.
+RAN PASS: existing host regressions and two target invariants. TypeScript before 23 / delivery 23; no new diagnostics. Expo web export passed.
+Initial harness selectors and direct-node TypeScript import invocation FAILED; corrected invocations passed.
+Phone and real-photo checks NOT RUN. See TARGET_LOOK_REPORT.txt.

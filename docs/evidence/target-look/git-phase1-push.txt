@@ -1,0 +1,7 @@
+git : fatal: unable to access 'https://github.com/SenpoAhJin/Forge_Mind.git/': Failed to connect to github.com:443 
+after 23 ms: Could not connect to server
+At line:2 char:1572
++ ... commit.txt; git -c safe.directory='*' push --set-upstream origin task ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (fatal: unable t...nnect to server:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError

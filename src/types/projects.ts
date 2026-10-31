@@ -16,6 +16,8 @@ export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'skipped';
 
 export interface Project {
+  /** Reference only; confirmed components stay in the account-scoped review repository. */
+  reference_brief_id?: string;
   /** Supplied baseline result only; wearing does not run reference analysis. */
   extracted_outfit?: ExtractedOutfit;
   project_id: string;

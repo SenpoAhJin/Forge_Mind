@@ -1,0 +1,15 @@
+{
+  "url": "http://127.0.0.1:8092",
+  "fixture": "Declared synthetic review and cached inventory/account; no image analysis claimed.",
+  "results": [
+    {
+      "id": "per-slot-wig-removal",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "empty-state-analyze-navigation",
+      "status": "RAN PASS"
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,11 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1419
++ ... ed --check; git -c safe.directory='*' commit -m 'Show confirmed refer ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[task/target-look 0894291] Show confirmed reference targets as translucent display pieces
+ 7 files changed, 111 insertions(+), 6 deletions(-)
+ create mode 100644 docs/changes/TARGET_LOOK_CHANGELOG.txt
+ create mode 100644 src/utils/targetLook.ts

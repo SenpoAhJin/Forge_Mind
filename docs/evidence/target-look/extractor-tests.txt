@@ -1,0 +1,17 @@
+=== Extractor Determinism (run twice, byte-identical JSON) ===
+  Extracted outfit: {"version":"1.0.0","slots":{"top":{"present":true,"color":"gold","keywords":[],"confidence":"high"},"bottom":{"present":true,"color":"purple","keywords":[],"confidence":"high"},"shoes":{"present":true...
+=== Validation ===
+=== Known Weak Cases (documented limits) ===
+✓ Determinism: solid red 512x512
+✓ Determinism: outfit bands 512x512
+✓ Determinism: non-square 1920x1080
+✓ Extracted outfit passes validation
+✓ Extracted outfit has exactly 5 slots
+✓ Color IDs are from palette
+✓ Confidence is low/medium/high
+✓ Small image (64x64) still deterministic
+✓ Cropped image (missing regions)
+=== Summary ===
+Passed: 9
+Failed: 0
+ALL TESTS PASSED

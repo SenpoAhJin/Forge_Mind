@@ -1,0 +1,33 @@
+node : (node:8720) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/Sch
+ool/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/types/extractedOutfit.ts 
+is not specified and it doesn't parse as CommonJS.
+At line:2 char:160
++ ... -tests.txt; node tools/test_extracted_outfit.mjs *> docs/evidence/tar ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:8720) [MO...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED 
+COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+=== Valid Outfit ===
+✓ Valid empty outfit
+✓ Valid outfit with detected slots
+=== Invalid Structure ===
+✓ Missing version
+✓ Missing slot (wig)
+✓ Extra slot
+=== Out of Vocabulary ===
+✓ Invalid color id
+✓ Invalid keyword for top
+✓ Invalid confidence
+=== Determinism (deep equal on repeated validation) ===
+✓ Same input, same output
+=== Malformed Input ===
+✓ Null outfit
+✓ Non-array keywords
+=== Summary ===
+Passed: 11
+Failed: 0
+ALL TESTS PASSED

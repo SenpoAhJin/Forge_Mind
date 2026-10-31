@@ -1,0 +1,10 @@
+✔ unconfirmed reviews never supply display pieces; confirmed descriptors leave the saved review intact (3.0252ms)
+✔ supported sleeve and skirt styles map to existing builders; unsupported wig shapes are disclosed (0.7987ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 532.8293

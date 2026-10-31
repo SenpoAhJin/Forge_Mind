@@ -1,0 +1,67 @@
+{
+  "url": "http://127.0.0.1:8092",
+  "fixture": "Declared synthetic review and cached inventory/account; no image analysis claimed.",
+  "results": [
+    {
+      "id": "T1",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T2",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T3",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T4",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T5",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T7",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T8",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T6",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T9-restart",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T11",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "planning-view",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "all-worn-empty-ghosts",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "marketplace-navigation",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T10-no-review-and-corrupt",
+      "status": "RAN PASS"
+    },
+    {
+      "id": "T9-cached-account",
+      "status": "RAN PASS"
+    }
+  ],
+  "errors": []
+}

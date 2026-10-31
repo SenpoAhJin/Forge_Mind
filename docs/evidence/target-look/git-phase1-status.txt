@@ -1,0 +1,45 @@
+git : warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+At line:2 char:1017
++ ... t'),$note); git -c safe.directory='*' status --short *> docs/evidence ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unable...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: unable to access 'C:\Users\Alord/.config/git/ignore': Permission denied
+ M CHANGELOG.md
+ M src/components/CostumeViewer.tsx
+ M src/components/OwnedOutfitPanel.tsx
+ M src/components/V2CostumeDemo.tsx
+ M src/screens/cosplayer/ReferenceReviewScreen.tsx
+ D tools/diag_offshoulder.mjs
+?? docs/changes/DIAG1_REPORT.md
+?? docs/changes/DIAG2_REPORT.md
+?? docs/changes/PROJECT_PLANNING_BRIEF_TYPECHECK.txt
+?? docs/changes/TARGET_LOOK_CHANGELOG.txt
+?? docs/evidence/extraction/failure-T11-browser-http-errors.png
+?? docs/evidence/extraction/failure-T2.png
+?? docs/evidence/extraction/failure-T3.png
+?? docs/evidence/extraction/failure-T9.png
+?? docs/evidence/target-look/
+?? src/utils/targetLook.ts
+?? symmetry_new.txt
+?? test_output.txt
+?? tools/analyze_offshoulder_symmetry.mjs
+?? tools/check_mesh_symmetry.mjs
+?? tools/check_true_mirror_symmetry.mjs
+?? tools/diag1/
+?? tools/diag2/
+?? tools/reconcile_upperarm_labels.mjs
+?? tools/sensitivity_analysis.mjs
+?? tools/tune_offshoulder_params.mjs
+?? wearing-evidence/after-gestures.png
+?? wearing-evidence/android-bundle/
+?? wearing-evidence/before-gestures.png
+?? wearing-evidence/dashboard-bare.png
+?? wearing-evidence/dashboard-initial.png
+?? wearing-evidence/failure-10.png
+?? wearing-evidence/failure-planning-screen.png
+?? wearing-evidence/failure.png
+?? wearing-evidence/four-owned-items.png
+?? wearing-evidence/remove-all-bare.png
+?? wearing-evidence/web-bundle/

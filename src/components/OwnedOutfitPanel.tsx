@@ -5,6 +5,8 @@ import { referenceReviews } from '../services/ReferenceExtractionService';
 import { correctComponent } from '../utils/referenceReviews';
 import { targetLook } from '../utils/targetLook';
 import type { ReferenceReview } from '../types/referenceExtraction';
+import { useProjects } from '../contexts/ProjectsContext';
+import { planningBriefs } from '../services/PlanningBriefService';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BodyTypeSelector } from './BodyTypeSelector';
 import CostumeViewer from './CostumeViewer';
@@ -42,17 +44,28 @@ export function OwnedOutfitPanel(props: Props) {
 function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offline, initialBody = 'female', targetColors = [], extractedOutfit, confirmedTargetColors, referenceConfirmed, confirmedReview, onReviewChange, onInteractionChange }: Props) {
   const { themeColors: c } = useTheme();
   const navigation = useNavigation<any>();
+  const projectState = useProjects();
+  const project = projectState.projects.find(p => p.project_id === projectId && p.user_id === accountId);
+  const referenceId = project?.reference_brief_id ?? projectId;
+  const [availableReferences, setAvailableReferences] = useState<{ id: string; name: string }[]>([]);
   const [savedReview, setSavedReview] = useState<ReferenceReview | null>(null);
   const [reviewError, setReviewError] = useState('');
   const [targetOn, setTargetOn] = useState(true);
   useFocusEffect(useCallback(() => {
     let active = true;
     setSavedReview(null); setReviewError('');
-    if (accountId) void referenceReviews.load(accountId, projectId).then(value => {
+    if (accountId) void referenceReviews.load(accountId, referenceId).then(value => {
       if (active) setSavedReview(value);
     }).catch(error => { if (active) setReviewError(`Saved reference could not be read. ${error.message}`); });
+    if (accountId && project) void planningBriefs.list(accountId).then(async briefs => {
+      const candidates = await Promise.all(briefs.map(async brief => {
+        try { return (await referenceReviews.load(accountId, brief.brief_id))?.confirmed ? { id: brief.brief_id, name: brief.character_name } : null; }
+        catch { return null; }
+      }));
+      if (active) setAvailableReferences(candidates.filter((value): value is { id: string; name: string } => value !== null));
+    }).catch(() => { if (active) setAvailableReferences([]); });
     return () => { active = false; };
-  }, [accountId, projectId, confirmedReview]));
+  }, [accountId, referenceId, confirmedReview, !!project]));
   const review = reviewError ? null : confirmedReview ?? savedReview;
   const targetPieces = useMemo(() => targetLook(review), [review]);
   const [body, setBody] = useState(initialBody);
@@ -102,7 +115,7 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
         <Button title="Find in Marketplace" variant="secondary" onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} />
         <Button title={piece.plan === 'make' ? 'Make it selected' : 'Mark as make it'} disabled={busy || piece.plan === 'make'} onPress={() => { void run(async () => {
           if (!accountId) throw new Error('Sign in to update sourcing.');
-          const latest = await referenceReviews.load(accountId, projectId);
+          const latest = await referenceReviews.load(accountId, referenceId);
           if (!latest?.confirmed) throw new Error('Confirm the reference first.');
           const next = { ...latest, components: latest.components.map(component => component.id === piece.componentId ? correctComponent(component, { ...component.value, plan: 'make' }) : component) };
           await referenceReviews.save(accountId, next); setSavedReview(next); onReviewChange?.(next);
@@ -111,8 +124,17 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
       {review.components.filter(component => component.value.type === 'accessory').map(component => <Text key={component.id} style={{ color: c.textSecondary }}>{component.value.name} - Not shown in 3D yet</Text>)}
     </> : <>
       <Text style={{ color: c.textSecondary }}>No confirmed reference for this project. Confirm components to show a target look.</Text>
-      <Button title="Back to Analyze" variant="secondary" onPress={() => navigation.navigate('Projects', { screen: 'PlanningBrief', params: { briefId: projectId } })} />
+      <Button title="Back to Analyze" variant="secondary" onPress={() => { void run(async () => {
+        if (!accountId) throw new Error('Sign in to analyze a saved brief.');
+        const exists = (await planningBriefs.list(accountId)).some(brief => brief.brief_id === referenceId);
+        navigation.navigate('Projects', { screen: 'PlanningBrief', params: exists ? { briefId: referenceId } : undefined });
+      }); }} />
     </>}
+    {project && availableReferences.length ? <View style={styles.group}>
+      <Text style={{ color: c.text }}>Confirmed reference for this project</Text>
+      {availableReferences.map(reference => <Button key={reference.id} title={`Use reference: ${reference.name}`} variant="secondary" disabled={reference.id === project.reference_brief_id} onPress={() => projectState.setReferenceBrief(projectId, reference.id)} />)}
+      {projectState.storageError ? <Text accessibilityRole="alert" style={{ color: c.error }}>{projectState.storageError}</Text> : null}
+    </View> : null}
     <Text style={{ color: c.textSecondary }}>Drag to rotate. Pinch to zoom.</Text>
     {wearing.isLoading || !inventoryLoaded ? <ActivityIndicator color={c.primary} /> : null}
     {wearing.error || actionError ? <>

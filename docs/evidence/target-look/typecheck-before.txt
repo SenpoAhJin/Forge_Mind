@@ -1,0 +1,50 @@
+scripts-backup/scripts/check_add_item.ts(9,29): error TS2307: Cannot find module '../src/types/owned-attire' or its corresponding type declarations.
+scripts-backup/scripts/check_add_item.ts(112,57): error TS7006: Parameter 'u' implicitly has an 'any' type.
+scripts-backup/scripts/check_add_item.ts(126,59): error TS7006: Parameter 'u' implicitly has an 'any' type.
+scripts-backup/scripts/check_garment_mapping.ts(9,40): error TS2307: Cannot find module '../src/utils/wearing' or its corresponding type declarations.
+scripts-backup/scripts/check_garment_mapping.ts(10,34): error TS2307: Cannot find module '../src/types/owned-attire' or its corresponding type declarations.
+scripts-backup/scripts/print_flask_body.ts(4,44): error TS2307: Cannot find module '../src/utils/mockCatalog' or its corresponding type declarations.
+scripts-backup/scripts/test_before_after.ts(5,44): error TS2307: Cannot find module '../src/utils/mockCatalog' or its corresponding type declarations.
+scripts-backup/scripts/test_real_data_scoring.ts(12,44): error TS2307: Cannot find module '../src/utils/mockCatalog' or its corresponding type declarations.
+src/contexts/ChatContext.tsx(89,46): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(initialValue: AppStateStatus): RefObject<AppStateStatus>', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'AppStateStatus'.
+      Type 'undefined' is not assignable to type 'AppStateStatus'.
+  Overload 2 of 3, '(initialValue: AppStateStatus | null): RefObject<AppStateStatus | null>', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'AppStateStatus | null'.
+      Type 'undefined' is not assignable to type 'AppStateStatus | null'.
+  Overload 3 of 3, '(initialValue: AppStateStatus | undefined): RefObject<AppStateStatus | undefined>', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'AppStateStatus | undefined'.
+      Type 'null' is not assignable to type 'AppStateStatus | undefined'.
+src/contexts/ThemeContext.tsx(107,23): error TS2345: Argument of type '{ readonly background: "#14122B"; readonly text: "#FFFFFF"; readonly textSecondary: "#B4B0D2"; readonly card: "#1F1C3D"; readonly border: "#3D3868"; readonly borderStrong: "#4A4580"; ... 49 more ...; readonly error: "#FF6B7A"; } | { ...; }' is not assignable to parameter of type '{ readonly background: "#14122B"; readonly text: "#FFFFFF"; readonly textSecondary: "#B4B0D2"; readonly card: "#1F1C3D"; readonly border: "#3D3868"; readonly borderStrong: "#4A4580"; ... 49 more ...; readonly error: "#FF6B7A"; }'.
+  Type '{ readonly background: "#FBFAFF"; readonly text: "#1B1836"; readonly textSecondary: "#5A5675"; readonly card: "#F1EFFA"; readonly border: "#DCD8EE"; readonly borderStrong: "#C5BFDC"; ... 49 more ...; readonly error: "#C62839"; }' is not assignable to type '{ readonly background: "#14122B"; readonly text: "#FFFFFF"; readonly textSecondary: "#B4B0D2"; readonly card: "#1F1C3D"; readonly border: "#3D3868"; readonly borderStrong: "#4A4580"; ... 49 more ...; readonly error: "#FF6B7A"; }'.
+    Types of property 'background' are incompatible.
+      Type '"#FBFAFF"' is not assignable to type '"#14122B"'.
+src/screens/cosplayer/ChatThreadScreen.tsx(119,32): error TS2339: Property 'scrollToEnd' does not exist on type '((props: Omit<ScrollViewProps, "ref"> & { ref?: Ref<ScrollViewInstance> | undefined; }) => ReactNode) & Readonly<{ Context: Context<...>; }>'.
+src/screens/cosplayer/ChatThreadScreen.tsx(272,9): error TS2322: Type 'RefObject<(((props: Omit<ScrollViewProps, "ref"> & { ref?: Ref<ScrollViewInstance> | undefined; }) => ReactNode) & Readonly<...>) | null>' is not assignable to type 'Ref<ScrollViewInstance> | undefined'.
+  Type 'RefObject<(((props: Omit<ScrollViewProps, "ref"> & { ref?: Ref<ScrollViewInstance> | undefined; }) => ReactNode) & Readonly<...>) | null>' is not assignable to type 'RefObject<ScrollViewInstance | null>'.
+    Type '(((props: Omit<ScrollViewProps, "ref"> & { ref?: Ref<ScrollViewInstance> | undefined; }) => ReactNode) & Readonly<{ ...; }>) | null' is not assignable to type 'ScrollViewInstance | null'.
+      Type '((props: Omit<ScrollViewProps, "ref"> & { ref?: Ref<ScrollViewInstance> | undefined; }) => ReactNode) & Readonly<{ Context: Context<...>; }>' is not assignable to type 'ScrollViewInstance | null'.
+src/screens/cosplayer/CreateListingScreen.tsx(463,21): error TS2367: This comparison appears to be unintentional because the types '"" | TransactionType' and '"commission"' have no overlap.
+src/screens/cosplayer/CreateListingScreen.tsx(466,40): error TS2345: Argument of type '"commission"' is not assignable to parameter of type 'SetStateAction<"" | TransactionType>'.
+src/screens/cosplayer/CreateListingScreen.tsx(474,28): error TS2367: This comparison appears to be unintentional because the types '"" | TransactionType' and '"commission"' have no overlap.
+src/screens/cosplayer/CreateListingScreen.tsx(478,21): error TS2367: This comparison appears to be unintentional because the types '"" | TransactionType' and '"commission"' have no overlap.
+src/screens/cosplayer/CreateListingScreen.tsx(484,21): error TS2367: This comparison appears to be unintentional because the types '"" | TransactionType' and '"commission"' have no overlap.
+src/screens/cosplayer/OwnedItemDetail.tsx(186,9): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/screens/shared/ShareableCardScreen.tsx(112,36): error TS2345: Argument of type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to parameter of type 'CaptureTarget'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<HostElement | Component<{}, {}, any> | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'HostElement | Component<{}, {}, any> | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'HostElement | Component<{}, {}, any> | null'.
+src/screens/shared/ShareableCardScreen.tsx(144,36): error TS2345: Argument of type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to parameter of type 'CaptureTarget'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<HostElement | Component<{}, {}, any> | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'HostElement | Component<{}, {}, any> | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'HostElement | Component<{}, {}, any> | null'.
+src/screens/shared/ShareableCardScreen.tsx(230,15): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/theme/colors.ts(244,5): error TS2322: Type '{ readonly background: "#FBFAFF"; readonly text: "#1B1836"; readonly textSecondary: "#5A5675"; readonly card: "#F1EFFA"; readonly border: "#DCD8EE"; readonly borderStrong: "#C5BFDC"; ... 49 more ...; readonly error: "#C62839"; }' is not assignable to type '{ readonly background: "#14122B"; readonly text: "#FFFFFF"; readonly textSecondary: "#B4B0D2"; readonly card: "#1F1C3D"; readonly border: "#3D3868"; readonly borderStrong: "#4A4580"; ... 49 more ...; readonly error: "#FF6B7A"; }'.
+  Types of property 'background' are incompatible.
+    Type '"#FBFAFF"' is not assignable to type '"#14122B"'.
+tools/diag1/saved/costumeBuilder.CURRENT.ts(13,27): error TS2307: Cannot find module '../data/costumeStyles.json' or its corresponding type declarations.

@@ -39,6 +39,7 @@ interface ProjectsContextValue {
   budgetItems: BudgetLineItem[];
   milestones: ProjectMilestone[];
   addProject: (input: NewProjectInput) => Project;
+  setReferenceBrief: (projectId: string, briefId: string) => void;
   addTask: (projectId: string, description: string) => void;
   setTaskStatus: (taskId: string, status: TaskStatus) => void;
   addBudgetItem: (projectId: string, input: NewBudgetInput) => void;
@@ -262,6 +263,7 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
         budgetItems,
         milestones,
         addProject,
+        setReferenceBrief: (projectId, briefId) => setProjects(previous => previous.map(project => project.project_id === projectId && project.user_id === user?.email ? { ...project, reference_brief_id: briefId, updated_at: nowIso() } : project)),
         addTask,
         setTaskStatus,
         addBudgetItem,
