@@ -8,6 +8,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StandardCard, Button, StatusBadge } from '../../components';
+import { PlanningBriefsCard } from '../../components/projects/PlanningBriefsCard';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useSelection } from '../../contexts/SelectionContext';
@@ -27,6 +28,7 @@ interface ProjectsScreenProps {
   onOpenCalendar: () => void;
   onOpenMeetups: (eventId: string) => void;
   onOpenInviteMeetups?: () => void;
+  onOpenPlanningBrief?: (briefId?: string) => void;
 }
 
 const badgeStatusFor = (status: ProjectStatus): 'pending' | 'active' | 'completed' | 'cancelled' => {
@@ -52,6 +54,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
   onOpenCalendar,
   onOpenMeetups,
   onOpenInviteMeetups,
+  onOpenPlanningBrief,
 }) => {
   const { user } = useUser();
   const { selection } = useSelection();
@@ -209,6 +212,8 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
           </StandardCard>
         </TouchableOpacity>
       )}
+
+      {onOpenPlanningBrief ? <PlanningBriefsCard onOpen={onOpenPlanningBrief} /> : null}
 
       {selection ? (
         <StandardCard style={styles.startCard}>
