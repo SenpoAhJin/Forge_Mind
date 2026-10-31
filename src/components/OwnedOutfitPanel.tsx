@@ -1,5 +1,10 @@
 /** Shared by planning and dashboard; inventory and project records remain the source. */
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { referenceReviews } from '../services/ReferenceExtractionService';
+import { correctComponent } from '../utils/referenceReviews';
+import { targetLook } from '../utils/targetLook';
+import type { ReferenceReview } from '../types/referenceExtraction';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BodyTypeSelector } from './BodyTypeSelector';
 import CostumeViewer from './CostumeViewer';
@@ -25,6 +30,8 @@ interface Props {
   extractedOutfit?: ExtractedOutfit;
   confirmedTargetColors?: Partial<Record<OutfitSlot, string[]>>;
   referenceConfirmed?: boolean;
+  confirmedReview?: ReferenceReview;
+  onReviewChange?: (review: ReferenceReview) => void;
   onInteractionChange?: (active: boolean) => void;
 }
 
@@ -32,8 +39,22 @@ export function OwnedOutfitPanel(props: Props) {
   return <OwnedOutfitContent key={`${props.accountId}:${props.projectId}`} {...props} />;
 }
 
-function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offline, initialBody = 'female', targetColors = [], extractedOutfit, confirmedTargetColors, referenceConfirmed, onInteractionChange }: Props) {
+function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offline, initialBody = 'female', targetColors = [], extractedOutfit, confirmedTargetColors, referenceConfirmed, confirmedReview, onReviewChange, onInteractionChange }: Props) {
   const { themeColors: c } = useTheme();
+  const navigation = useNavigation<any>();
+  const [savedReview, setSavedReview] = useState<ReferenceReview | null>(null);
+  const [reviewError, setReviewError] = useState('');
+  const [targetOn, setTargetOn] = useState(true);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setSavedReview(null); setReviewError('');
+    if (accountId) void referenceReviews.load(accountId, projectId).then(value => {
+      if (active) setSavedReview(value);
+    }).catch(error => { if (active) setReviewError(`Saved reference could not be read. ${error.message}`); });
+    return () => { active = false; };
+  }, [accountId, projectId, confirmedReview]));
+  const review = reviewError ? null : confirmedReview ?? savedReview;
+  const targetPieces = useMemo(() => targetLook(review), [review]);
   const [body, setBody] = useState(initialBody);
   const [filter, setFilter] = useState('all');
   const [message, setMessage] = useState('');
@@ -44,6 +65,10 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
   const enabled = useMemo(() => new Set(Object.entries(pieces).filter(([, p]) => p.on && !!p.itemId).map(([id]) => id)), [wearing.outfit]);
   const colors = useMemo(() => new Map(Object.entries(pieces).map(([id, p]) => [id, p.color])), [wearing.outfit]);
   const stylesBySlot = useMemo(() => new Map(Object.entries(pieces).map(([id, p]) => [id, p.style ?? {}])), [wearing.outfit]);
+  const ghosts = useMemo(() => new Set(targetOn ? targetPieces.filter(p => !enabled.has(p.id)).map(p => p.id) : []), [targetOn, targetPieces, enabled]);
+  const displayEnabled = useMemo(() => new Set([...enabled, ...ghosts]), [enabled, ghosts]);
+  const displayColors = useMemo(() => new Map([...colors, ...targetPieces.filter(p => ghosts.has(p.id)).map(p => [p.id, p.color] as [string, string])]), [colors, targetPieces, ghosts]);
+  const displayStyles = useMemo(() => new Map([...stylesBySlot, ...targetPieces.filter(p => ghosts.has(p.id)).map(p => [p.id, p.style] as [string, Record<string, string>])]), [stylesBySlot, targetPieces, ghosts]);
   const targets = useMemo(() => Object.fromEntries(getSlotDefinitions().map(slot => {
     const extracted = extractedOutfit?.slots[slot.id as OutfitSlot];
     return [slot.id, confirmedTargetColors ? confirmedTargetColors[slot.id as OutfitSlot] ?? [] : extracted?.present && extracted.color ? [getColorFromName(extracted.color) ?? extracted.color] : targetColors];
@@ -61,8 +86,33 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
   return <View style={[styles.panel, { backgroundColor: c.background }]}>
     <BodyTypeSelector value={body} onChange={setBody} showCaption={false} />
     <View style={styles.viewer}>
-      <CostumeViewer bodyType={body} enabledPieces={enabled} pieceColors={colors} pieceStyles={stylesBySlot} onInteractionChange={onInteractionChange} />
+      <CostumeViewer bodyType={body} enabledPieces={displayEnabled} pieceColors={displayColors} pieceStyles={displayStyles} ghostPieces={ghosts} onInteractionChange={onInteractionChange} />
     </View>
+    <TouchableOpacity accessibilityRole="switch" accessibilityLabel="Target look" accessibilityState={{ checked: !!review?.confirmed && targetOn, disabled: !review?.confirmed }} disabled={!review?.confirmed} onPress={() => setTargetOn(value => !value)}><Text style={{ color: c.text }}>Target look: {review?.confirmed && targetOn ? 'On' : 'Off'}</Text></TouchableOpacity>
+    {reviewError ? <Text accessibilityRole="alert" style={{ color: c.error }}>{reviewError}</Text> : null}
+    {review?.confirmed ? <>
+      <Text style={{ color: c.text }}>Target look from your reference – not owned</Text>
+      {targetPieces.some(p => p.band === 'low') ? <Text style={{ color: c.textSecondary }}>Low confidence - please check</Text> : null}
+      {review.result?.method === 'fallback' ? <Text style={{ color: c.textSecondary }}>Fallback analysis - please check</Text> : null}
+      {review.result?.warnings.map((warning, i) => <Text key={i} style={{ color: c.textSecondary }}>{warning}</Text>)}
+      {targetPieces.filter(p => ghosts.has(p.id)).map(piece => <View key={piece.id} testID={`target-card-${piece.id}`} style={styles.group}>
+        <Text style={{ color: c.text }}>{piece.label} - {piece.description} - Not owned</Text>
+        <Text style={{ color: c.textSecondary }}>Band: {piece.band[0].toUpperCase() + piece.band.slice(1)}</Text>
+        {piece.note ? <Text style={{ color: c.textSecondary }}>{piece.note}</Text> : null}
+        <Button title="Find in Marketplace" variant="secondary" onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} />
+        <Button title={piece.plan === 'make' ? 'Make it selected' : 'Mark as make it'} disabled={busy || piece.plan === 'make'} onPress={() => { void run(async () => {
+          if (!accountId) throw new Error('Sign in to update sourcing.');
+          const latest = await referenceReviews.load(accountId, projectId);
+          if (!latest?.confirmed) throw new Error('Confirm the reference first.');
+          const next = { ...latest, components: latest.components.map(component => component.id === piece.componentId ? correctComponent(component, { ...component.value, plan: 'make' }) : component) };
+          await referenceReviews.save(accountId, next); setSavedReview(next); onReviewChange?.(next);
+        }, 'Sourcing set to Make it.'); }} />
+      </View>)}
+      {review.components.filter(component => component.value.type === 'accessory').map(component => <Text key={component.id} style={{ color: c.textSecondary }}>{component.value.name} - Not shown in 3D yet</Text>)}
+    </> : <>
+      <Text style={{ color: c.textSecondary }}>No confirmed reference for this project. Confirm components to show a target look.</Text>
+      <Button title="Back to Analyze" variant="secondary" onPress={() => navigation.navigate('Projects', { screen: 'PlanningBrief', params: { briefId: projectId } })} />
+    </>}
     <Text style={{ color: c.textSecondary }}>Drag to rotate. Pinch to zoom.</Text>
     {wearing.isLoading || !inventoryLoaded ? <ActivityIndicator color={c.primary} /> : null}
     {wearing.error || actionError ? <>
@@ -71,7 +121,7 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
     </> : null}
     {message ? <Text accessibilityLiveRegion="polite" style={{ color: c.success }}>{message}</Text> : null}
     {offline ? <Text style={{ color: c.textSecondary }}>Showing your cached inventory.</Text> : null}
-    {inventoryLoaded && items.length === 0 ? <Text style={{ color: c.text }}>Your inventory is empty. Add your own items to start wearing them. Empty slots stay bare.</Text> : null}
+    {inventoryLoaded && items.length === 0 ? <Text style={{ color: c.text }}>Your inventory is empty. Add your own items to start wearing them.</Text> : null}
     <OutfitControls enabledPieces={enabled} pieceColors={colors} pieceStyles={stylesBySlot}
       assignedItems={Object.fromEntries(Object.entries(pieces).map(([id, p]) => [id, p.itemId]))}
       togglePiece={(slot, on) => { void run(() => wearing.togglePiece(slot, on)); }}

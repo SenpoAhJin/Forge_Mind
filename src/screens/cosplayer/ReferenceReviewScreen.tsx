@@ -106,7 +106,7 @@ function ReviewContent({ account, briefId, onCancel }: { account?: string; brief
         <Button title="Open outfit preview and wardrobe" onPress={() => setPreview(true)} />
         <Button title="Edit confirmed components" variant="secondary" disabled={busy} onPress={() => { setPreview(false); void save({ ...review, confirmed: false }, 'Component list unlocked for review.'); }} />
       </>}
-      {preview && review.confirmed ? <OwnedOutfitPanel accountId={account} projectId={briefId} items={inventory.items} inventoryLoaded={inventory.isLoaded} offline={inventory.isOffline} extractedOutfit={reviewTargets(review)} confirmedTargetColors={targetColorsBySlot(review)} referenceConfirmed /> : null}
+      {preview && review.confirmed ? <OwnedOutfitPanel accountId={account} projectId={briefId} items={inventory.items} inventoryLoaded={inventory.isLoaded} offline={inventory.isOffline} extractedOutfit={reviewTargets(review)} confirmedTargetColors={targetColorsBySlot(review)} referenceConfirmed confirmedReview={review} onReviewChange={setReview} /> : null}
     </> : null}
     <EditSheet visible={!!editing} onClose={() => { if (!busy) setEditing(undefined); }}>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={{ padding: 24, gap: 16 }} keyboardShouldPersistTaps="handled">

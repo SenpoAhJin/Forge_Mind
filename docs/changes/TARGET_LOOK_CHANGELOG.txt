@@ -1,0 +1,9 @@
+
+Target look - Phase 1
+Sunday, 2026-11-01 07:13:53 PHT (Asia/Manila).
+RAN: added transient confirmed-review ghosts to the shared V2 renderer and wardrobe panel.
+Owned worn slots suppress ghosts. Target cards edit sourcing through the existing review repository.
+Unsupported shapes retain existing builder defaults with explicit notes. No inventory or worn records are created for targets.
+RAN: TypeScript before 23 / after 23 diagnostics (includes existing untracked diagnostic source).
+RAN: 27 brief/review/wearing tests, 11 extracted-outfit validation checks, 9 backend extractor checks, 9 service tests passed.
+Browser acceptance pending Phase 2. Physical phone NOT RUN. Real photo not supplied.

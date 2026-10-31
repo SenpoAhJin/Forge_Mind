@@ -11199,3 +11199,12 @@ This feature transforms the app from **inventory management** to **visual outfit
 ## GARMENT-2c Update (October 28, 2026)
 
 **GARMENT-2c**: Corrected GARMENT-2/2b reports. The earlier "60/60 PASS" used a custom GLB parser, not real GLTFLoader.parse. Rewrote attachToBone.ts to match spec exactly: offset in MODEL-SPACE axes (not bone-local), ignoring bone bind-pose tilt. Test with real THREE.js GLTFLoader.parse: 79/89 PASS, 10/10 FAIL (follow matrix invariant). Position/rotation/scale offset tests PASS (30/30). Position follow tests PASS (10/10), proving accessory correctly follows bone. Matrix invariant test FAILS: expects `accessory.matrixWorld = bone.matrixWorld * L0` preserved after bone rotation, but decompose/recompose with matrixAutoUpdate=true loses precision (maxDiff 0.08-1.6). **BLOCKED**: Spec says matrixAutoUpdate=true and apply via decompose, but this contradicts matrix preservation requirement.
+
+Target look - Phase 1
+Sunday, 2026-11-01 07:13:53 PHT (Asia/Manila).
+RAN: added transient confirmed-review ghosts to the shared V2 renderer and wardrobe panel.
+Owned worn slots suppress ghosts. Target cards edit sourcing through the existing review repository.
+Unsupported shapes retain existing builder defaults with explicit notes. No inventory or worn records are created for targets.
+RAN: TypeScript before 23 / after 23 diagnostics (includes existing untracked diagnostic source).
+RAN: 27 brief/review/wearing tests, 11 extracted-outfit validation checks, 9 backend extractor checks, 9 service tests passed.
+Browser acceptance pending Phase 2. Physical phone NOT RUN. Real photo not supplied.

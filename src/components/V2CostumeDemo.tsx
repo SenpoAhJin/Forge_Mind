@@ -33,6 +33,7 @@ interface V2CostumeDemoProps {
   enabledPieces: Set<string>;
   pieceColors: Map<string, string>;
   pieceStyles?: Map<string, Record<string, string>>;
+  ghostPieces?: Set<string>;
   debugMode?: boolean;
   onDebugInfo?: (info: Map<string, PieceDebugInfo>) => void;
   onReady?: () => void;
@@ -56,6 +57,7 @@ export default function V2CostumeDemo({
   enabledPieces,
   pieceColors,
   pieceStyles = new Map(),
+  ghostPieces,
   debugMode = false,
   onDebugInfo,
   onReady,
@@ -167,6 +169,10 @@ export default function V2CostumeDemo({
           );
           
           // Add to body scene (same transform as body)
+          const ghost = ghostPieces?.has(pieceDef.id) ?? false;
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          materials.forEach(material => { material.transparent = ghost; material.opacity = ghost ? 0.42 : 1; material.depthWrite = !ghost; material.needsUpdate = true; });
+          mesh.userData.targetGhost = ghost;
           bodyScene.add(mesh);
           pieceMeshesRef.current.set(pieceDef.id, mesh);
         } catch (error) {
@@ -201,7 +207,7 @@ export default function V2CostumeDemo({
       });
       debugPointsRef.current.clear();
     };
-  }, [bodyType, enabledPieces, pieceColors, pieceStyles, debugMode, contract, bodyScene, scene, onDebugInfo, onReady]);
+  }, [bodyType, ghostPieces, enabledPieces, pieceColors, pieceStyles, debugMode, contract, bodyScene, scene, onDebugInfo, onReady]);
 
   // Update colors without rebuilding geometry (skip in debug mode)
   useEffect(() => {
