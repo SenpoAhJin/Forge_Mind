@@ -53,6 +53,7 @@ export interface CostumeViewerProps {
   bodyType: BaseBodySelection;
   enabledPieces: Set<string>;
   pieceColors: Map<string, string>;
+  pieceStyles?: Map<string, Record<string, string>>;
   debugMode?: boolean;
   showCameraControls?: boolean;
   onDebugInfo?: (info: Map<string, any>) => void;
@@ -68,6 +69,7 @@ export default function CostumeViewer({
   bodyType,
   enabledPieces,
   pieceColors,
+  pieceStyles = new Map(),
   debugMode = false,
   showCameraControls = true,
   onDebugInfo,
@@ -126,6 +128,7 @@ export default function CostumeViewer({
               bodyType={bodyType}
               enabledPieces={enabledPieces}
               pieceColors={pieceColors}
+              pieceStyles={pieceStyles}
               debugMode={debugMode}
               onDebugInfo={onDebugInfo}
             />

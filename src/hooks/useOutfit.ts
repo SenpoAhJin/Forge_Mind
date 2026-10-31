@@ -16,6 +16,7 @@ import {
   saveOutfit,
   togglePiece,
   setPieceColor,
+  setPieceStyle,
   applyItem,
   wearFullCostume,
   removeAllPieces
@@ -39,6 +40,7 @@ export interface UseOutfitResult {
   isLoading: boolean;
   togglePiece: (slot: string, on: boolean) => Promise<void>;
   setColor: (slot: string, color: string) => Promise<void>;
+  setStyle: (slot: string, styleKey: string, styleValue: string) => Promise<void>;
   applyItem: (itemId: string, category: string, colorName: string | undefined, itemName: string) => Promise<{
     action: 'worn' | 'removed' | 'replaced' | 'no-slot';
     message: string;
@@ -107,6 +109,13 @@ export function useOutfit(
     await save(newOutfit);
   }, [outfit, save]);
   
+  // Set style
+  const handleSetStyle = useCallback(async (slot: string, styleKey: string, styleValue: string) => {
+    if (!outfit) return;
+    const newOutfit = setPieceStyle(outfit, slot, styleKey, styleValue);
+    await save(newOutfit);
+  }, [outfit, save]);
+  
   // Apply item
   const handleApplyItem = useCallback(async (
     itemId: string,
@@ -146,6 +155,7 @@ export function useOutfit(
     isLoading,
     togglePiece: handleTogglePiece,
     setColor: handleSetColor,
+    setStyle: handleSetStyle,
     applyItem: handleApplyItem,
     wearFull: handleWearFull,
     removeAll: handleRemoveAll,

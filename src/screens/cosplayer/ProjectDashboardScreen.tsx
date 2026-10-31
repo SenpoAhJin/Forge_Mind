@@ -100,7 +100,7 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   );
   
   // COSTUME-7C: V2 costume outfit state per project
-  const { outfit, isLoading: outfitLoading, togglePiece, setColor, wearFull, removeAll } = useOutfit(bodyType, `project:${projectId}`);
+  const { outfit, isLoading: outfitLoading, togglePiece, setColor, setStyle, wearFull, removeAll } = useOutfit(bodyType, `project:${projectId}`);
   
   // Convert outfit to Sets/Maps for CostumeViewer
   const enabledPieces = useMemo(() => {
@@ -111,6 +111,11 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   const pieceColors = useMemo(() => {
     if (!outfit) return new Map<string, string>();
     return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.color]));
+  }, [outfit]);
+  
+  const pieceStyles = useMemo(() => {
+    if (!outfit) return new Map<string, Record<string, string>>();
+    return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.style || {}]));
   }, [outfit]);
   
   // Event linking state
@@ -391,8 +396,10 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
         <OutfitControls
           enabledPieces={enabledPieces}
           pieceColors={pieceColors}
+          pieceStyles={pieceStyles}
           togglePiece={togglePiece}
           setColor={setColor}
+          setStyle={setStyle}
           wearFull={wearFull}
           removeAll={removeAll}
           targetColorSwatches={[]}
@@ -411,6 +418,7 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
             bodyType={bodyType}
             enabledPieces={enabledPieces}
             pieceColors={pieceColors}
+            pieceStyles={pieceStyles}
           />
         </View>
 

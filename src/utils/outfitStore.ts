@@ -8,6 +8,7 @@
 import costumePiecesData from '../data/costumePieces.json' with { type: 'json' };
 import itemSlotMap from '../data/itemSlotMap.json' with { type: 'json' };
 import colorNames from '../data/colorNames.json' with { type: 'json' };
+import costumeStyles from '../data/costumeStyles.json' with { type: 'json' };
 
 // Storage adapter interface for dependency injection
 export interface StorageAdapter {
@@ -16,13 +17,15 @@ export interface StorageAdapter {
   removeItem(key: string): Promise<void>;
 }
 
-// Outfit state structure (version 1)
+// Outfit state structure (version 2)
 export interface OutfitState {
   version: number;
   pieces: {
     [slot: string]: {
       on: boolean;
       color: string;
+      colorTip?: string; // For gradient styles
+      style?: Record<string, string>; // e.g., { sleeve: 'short', neckline: 'crew' }
       itemId?: string;
       source: 'user' | 'item' | 'suggestion';
     };
@@ -68,6 +71,27 @@ export function getSlotDefaultColor(slot: string): string {
 }
 
 /**
+ * Get default styles for a slot
+ */
+export function getSlotDefaultStyles(slot: string): Record<string, string> {
+  const styles: Record<string, string> = {};
+  const slotStyles = (costumeStyles as any)[slot];
+  
+  if (slotStyles) {
+    for (const [styleKey, styleDef] of Object.entries(slotStyles)) {
+      if (styleKey !== 'config' && typeof styleDef === 'object' && styleDef !== null) {
+        const def = styleDef as { default?: string };
+        if (def.default) {
+          styles[styleKey] = def.default;
+        }
+      }
+    }
+  }
+  
+  return styles;
+}
+
+/**
  * Create empty outfit with all pieces off
  */
 export function createEmptyOutfit(): OutfitState {
@@ -77,12 +101,13 @@ export function createEmptyOutfit(): OutfitState {
     pieces[slot] = {
       on: false,
       color: getSlotDefaultColor(slot),
+      style: getSlotDefaultStyles(slot),
       source: 'user'
     };
   }
   
   return {
-    version: 1,
+    version: 2,
     pieces
   };
 }
@@ -104,8 +129,24 @@ export async function loadOutfit(
     
     const data = JSON.parse(json);
     
+    // Migrate from version 1 to version 2
+    if (data.version === 1) {
+      const migratedPieces: OutfitState['pieces'] = {};
+      for (const [slot, piece] of Object.entries(data.pieces)) {
+        const oldPiece = piece as { on: boolean; color: string; itemId?: string; source: string };
+        migratedPieces[slot] = {
+          ...oldPiece,
+          style: getSlotDefaultStyles(slot)
+        };
+      }
+      return {
+        version: 2,
+        pieces: migratedPieces
+      };
+    }
+    
     // Check version
-    if (data.version !== 1) {
+    if (data.version !== 2) {
       console.warn('[outfitStore] Unknown version, returning empty outfit');
       return createEmptyOutfit();
     }
@@ -115,7 +156,24 @@ export async function loadOutfit(
       return createEmptyOutfit();
     }
     
-    return data as OutfitState;
+    // Fill missing styles with defaults
+    const validatedPieces: OutfitState['pieces'] = {};
+    for (const [slot, piece] of Object.entries(data.pieces)) {
+      const p = piece as any;
+      validatedPieces[slot] = {
+        on: p.on ?? false,
+        color: p.color ?? getSlotDefaultColor(slot),
+        colorTip: p.colorTip,
+        style: p.style ?? getSlotDefaultStyles(slot),
+        itemId: p.itemId,
+        source: p.source ?? 'user'
+      };
+    }
+    
+    return {
+      version: 2,
+      pieces: validatedPieces
+    };
   } catch (error) {
     console.error('[outfitStore] Failed to load outfit:', error);
     return createEmptyOutfit();
@@ -184,6 +242,60 @@ export function setPieceColor(
       [slot]: {
         ...outfit.pieces[slot],
         color,
+        source: 'user'
+      }
+    }
+  };
+}
+
+/**
+ * Set piece style option
+ */
+export function setPieceStyle(
+  outfit: OutfitState,
+  slot: string,
+  styleKey: string,
+  styleValue: string
+): OutfitState {
+  if (!outfit.pieces[slot]) {
+    return outfit;
+  }
+  
+  return {
+    ...outfit,
+    pieces: {
+      ...outfit.pieces,
+      [slot]: {
+        ...outfit.pieces[slot],
+        style: {
+          ...outfit.pieces[slot].style,
+          [styleKey]: styleValue
+        },
+        source: 'user'
+      }
+    }
+  };
+}
+
+/**
+ * Set piece colorTip (for gradients)
+ */
+export function setPieceColorTip(
+  outfit: OutfitState,
+  slot: string,
+  colorTip: string
+): OutfitState {
+  if (!outfit.pieces[slot]) {
+    return outfit;
+  }
+  
+  return {
+    ...outfit,
+    pieces: {
+      ...outfit.pieces,
+      [slot]: {
+        ...outfit.pieces[slot],
+        colorTip,
         source: 'user'
       }
     }

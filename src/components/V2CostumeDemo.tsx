@@ -30,6 +30,7 @@ interface V2CostumeDemoProps {
   bodyType: BaseBodySelection;
   enabledPieces: Set<string>;
   pieceColors: Map<string, string>;
+  pieceStyles?: Map<string, Record<string, string>>;
   debugMode?: boolean;
   onDebugInfo?: (info: Map<string, PieceDebugInfo>) => void;
 }
@@ -51,6 +52,7 @@ export default function V2CostumeDemo({
   bodyType,
   enabledPieces,
   pieceColors,
+  pieceStyles = new Map(),
   debugMode = false,
   onDebugInfo,
 }: V2CostumeDemoProps) {
@@ -148,13 +150,15 @@ export default function V2CostumeDemo({
 
           // Use debug color or user color
           const color = debugMode ? DEBUG_COLORS[pieceIdx % DEBUG_COLORS.length] : pieceColors.get(pieceDef.id);
+          const style = pieceStyles.get(pieceDef.id);
           
           const mesh = buildCostumePiece(
             bodyScene,
             contract,
             pieceDef,
             costumePiecesData,
-            color
+            color,
+            style ? { style } : undefined
           );
           
           // Add to body scene (same transform as body)
@@ -194,7 +198,7 @@ export default function V2CostumeDemo({
       });
       debugPointsRef.current.clear();
     };
-  }, [bodyType, enabledPieces, pieceColors, debugMode, contract, bodyScene, scene, onDebugInfo]);
+  }, [bodyType, enabledPieces, pieceColors, pieceStyles, debugMode, contract, bodyScene, scene, onDebugInfo]);
 
   // Update colors without rebuilding geometry (skip in debug mode)
   useEffect(() => {

@@ -1,0 +1,59 @@
+{
+  "top": {
+    "sleeve": {
+      "label": "Sleeve",
+      "options": [
+        { "id": "none", "label": "None" },
+        { "id": "short", "label": "Short" },
+        { "id": "long", "label": "Long" }
+      ],
+      "default": "long"
+    },
+    "neckline": {
+      "label": "Neckline",
+      "options": [
+        { "id": "crew", "label": "Crew" },
+        { "id": "off_shoulder", "label": "Off-shoulder" }
+      ],
+      "default": "crew"
+    }
+  },
+  "bottom": {
+    "length": {
+      "label": "Length",
+      "options": [
+        { "id": "shorts", "label": "Shorts" },
+        { "id": "knee", "label": "Knee" },
+        { "id": "ankle", "label": "Ankle" }
+      ],
+      "default": "ankle"
+    },
+    "shape": {
+      "label": "Shape",
+      "options": [
+        { "id": "fitted", "label": "Fitted" },
+        { "id": "skirt", "label": "Skirt" }
+      ],
+      "default": "fitted"
+    }
+  },
+  "wig": {
+    "gradient": {
+      "label": "Gradient",
+      "options": [
+        { "id": "none", "label": "None" },
+        { "id": "two_tone", "label": "Two-tone" }
+      ],
+      "default": "none"
+    }
+  },
+  "config": {
+    "offShoulderYOffset": -0.08,
+    "shortsYMax": { "landmark": "knee_y", "offset": -0.05 },
+    "kneeYMax": { "landmark": "knee_y", "offset": 0.05 },
+    "skirtWaistRadius": 1.15,
+    "skirtHemRadius": 1.8,
+    "skirtRadialSegments": 24,
+    "wigGradientSplitRatio": 0.5
+  }
+}

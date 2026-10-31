@@ -10,6 +10,7 @@
  */
 
 import * as THREE from 'three';
+import costumeStyles from '../data/costumeStyles.json' with { type: 'json' };
 
 // Tolerances
 const OFFSET_TOLERANCE = 1e-6; // metres
@@ -75,8 +76,21 @@ interface CachedPiece {
   material: THREE.MeshStandardMaterial;
 }
 
-// Memoization cache: bodyUUID -> pieceId -> CachedPiece
+export interface PieceStyle {
+  style?: Record<string, string>;
+  colorTip?: string;
+}
+
+// Memoization cache: bodyUUID -> cacheKey -> CachedPiece
+// cacheKey = pieceId + JSON.stringify(style)
 const pieceCache = new Map<string, Map<string, CachedPiece>>();
+
+function getCacheKey(pieceId: string, style?: Record<string, string>): string {
+  if (!style || Object.keys(style).length === 0) {
+    return pieceId;
+  }
+  return `${pieceId}:${JSON.stringify(style)}`;
+}
 
 /**
  * Sanitize bone name to match three.js GLTFLoader behavior.
@@ -196,16 +210,18 @@ export function resolveBoneSet(
  * 
  * Steps:
  * 1. Convert clips to yMin/yMax (or use legacy yMin/yMax)
- * 2. selectTriangles with bone labels and y-band filtering
- * 3. clipTrianglesAtPlane for specific pieces (e.g., top hem)
- * 4. Return selected triangle indices
+ * 2. Apply style modifications (sleeve length, neckline, bottom length/shape)
+ * 3. selectTriangles with bone labels and y-band filtering
+ * 4. clipTrianglesAtPlane for specific pieces (e.g., top hem)
+ * 5. Return selected triangle indices
  */
 export function selectPieceTriangles(
   geometry: THREE.BufferGeometry,
   pieceDef: PieceDefinition,
   boneSet: Set<string>,
   boneSegments: Map<string, { head: THREE.Vector3; tail: THREE.Vector3 }>,
-  landmarks: Landmarks
+  landmarks: Landmarks,
+  style?: Record<string, string>
 ): number[] {
   let yMin: number | undefined;
   let yMax: number | undefined;
@@ -236,6 +252,42 @@ export function selectPieceTriangles(
   
   if (pieceDef.armYMax) {
     armYMax = landmarks[pieceDef.armYMax.landmark as keyof Landmarks] + pieceDef.armYMax.offset;
+  }
+
+  // Apply style modifications
+  const config = (costumeStyles as any).config;
+  if (style && pieceDef.id === 'top') {
+    // Sleeve style
+    if (style.sleeve === 'none') {
+      // No sleeves: remove arm bones from selection
+      boneSet = new Set(Array.from(boneSet).filter(b => !b.includes('arm')));
+    } else if (style.sleeve === 'short') {
+      // Short sleeves: limit arm yMax to elbow
+      armYMax = landmarks.elbow_y + 0.02;
+    }
+    // sleeve === 'long' is default, no change
+    
+    // Neckline style
+    if (style.neckline === 'off_shoulder') {
+      // Off-shoulder: raise yMax to drop shoulder region
+      if (config && config.offShoulderYOffset) {
+        yMax = (yMax ?? landmarks.neck_y) + config.offShoulderYOffset;
+      }
+    }
+  } else if (style && pieceDef.id === 'bottom') {
+    // Length style
+    if (style.length === 'shorts') {
+      yMax = config && config.shortsYMax 
+        ? landmarks[config.shortsYMax.landmark as keyof Landmarks] + config.shortsYMax.offset
+        : landmarks.knee_y - 0.05;
+    } else if (style.length === 'knee') {
+      yMax = config && config.kneeYMax
+        ? landmarks[config.kneeYMax.landmark as keyof Landmarks] + config.kneeYMax.offset
+        : landmarks.knee_y + 0.05;
+    }
+    // length === 'ankle' is default
+    
+    // Shape handled separately (skirt requires procedural geometry, not implemented yet)
   }
 
   // Select triangles based on selection method
@@ -924,7 +976,8 @@ export function buildCostumePiece(
   contract: any,
   pieceDef: PieceDefinition,
   data: CostumePiecesData,
-  color?: string
+  color?: string,
+  pieceStyle?: PieceStyle
 ): THREE.Mesh {
   const skinnedMesh = findBodyMesh(bodyScene);
   if (!skinnedMesh) {
@@ -933,6 +986,7 @@ export function buildCostumePiece(
 
   const bodyUUID = skinnedMesh.uuid;
   const pieceId = pieceDef.id;
+  const cacheKey = getCacheKey(pieceId, pieceStyle?.style);
 
   // Check cache
   if (!pieceCache.has(bodyUUID)) {
@@ -940,8 +994,8 @@ export function buildCostumePiece(
   }
   const bodyCache = pieceCache.get(bodyUUID)!;
 
-  if (bodyCache.has(pieceId)) {
-    const cached = bodyCache.get(pieceId)!;
+  if (bodyCache.has(cacheKey)) {
+    const cached = bodyCache.get(cacheKey)!;
     if (color) {
       cached.material.color.set(color);
     }
@@ -957,19 +1011,20 @@ export function buildCostumePiece(
     const yPos = landmarks[pieceDef.yPosition.landmark as keyof Landmarks] + pieceDef.yPosition.offset;
     geometry = buildBeltGeometry(skinnedMesh, contract, yPos, pieceDef.tubeRadius);
   } else {
-    // Derive piece using nearest-bone labeling
+    // Derive piece using nearest-bone labeling with style support
     const meshBounds = new THREE.Box3().setFromObject(skinnedMesh);
     const landmarks = computeLandmarks(contract, meshBounds);
     const boneSet = resolveBoneSet(pieceDef, data);
     const boneSegments = buildBoneSegments(contract);
 
-    // Use unified pipeline
+    // Use unified pipeline with style
     const selectedTriangles = selectPieceTriangles(
       skinnedMesh.geometry,
       pieceDef,
       boneSet,
       boneSegments,
-      landmarks
+      landmarks,
+      pieceStyle?.style
     );
 
     if (selectedTriangles.length === 0) {
@@ -992,7 +1047,7 @@ export function buildCostumePiece(
   mesh.receiveShadow = true;
 
   // Cache
-  bodyCache.set(pieceId, { mesh, geometry, material });
+  bodyCache.set(cacheKey, { mesh, geometry, material });
 
   return mesh;
 }
