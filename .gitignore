@@ -54,3 +54,6 @@ src/utils/*.js
 
 # development server logs
 logs/
+
+# Expo web build output
+.expo-output-web/
