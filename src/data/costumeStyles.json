@@ -49,8 +49,8 @@
   },
   "config": {
     "offShoulderYOffset": -0.08,
-    "shortsYMax": { "landmark": "knee_y", "offset": -0.05 },
-    "kneeYMax": { "landmark": "knee_y", "offset": 0.05 },
+    "shortsHemY": { "landmark": "knee_y", "offset": 0.08 },
+    "kneeHemY": { "landmark": "knee_y", "offset": 0.02 },
     "skirtWaistRadius": 1.15,
     "skirtHemRadius": 1.8,
     "skirtRadialSegments": 24,

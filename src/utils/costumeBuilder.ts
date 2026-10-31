@@ -275,17 +275,17 @@ export function selectPieceTriangles(
       }
     }
   } else if (style && pieceDef.id === 'bottom') {
-    // Length style
+    // Length style affects the hem (yMin), not the waist (yMax)
     if (style.length === 'shorts') {
-      yMax = config && config.shortsYMax 
-        ? landmarks[config.shortsYMax.landmark as keyof Landmarks] + config.shortsYMax.offset
-        : landmarks.knee_y - 0.05;
+      yMin = config && config.shortsHemY 
+        ? landmarks[config.shortsHemY.landmark as keyof Landmarks] + config.shortsHemY.offset
+        : landmarks.knee_y + 0.08; // Above knee
     } else if (style.length === 'knee') {
-      yMax = config && config.kneeYMax
-        ? landmarks[config.kneeYMax.landmark as keyof Landmarks] + config.kneeYMax.offset
-        : landmarks.knee_y + 0.05;
+      yMin = config && config.kneeHemY
+        ? landmarks[config.kneeHemY.landmark as keyof Landmarks] + config.kneeHemY.offset
+        : landmarks.knee_y + 0.02; // At knee
     }
-    // length === 'ankle' is default
+    // length === 'ankle' is default (uses pieceDef.yMin)
     
     // Shape handled separately (skirt requires procedural geometry, not implemented yet)
   }
@@ -581,6 +581,12 @@ export function selectTriangles(
     // Check y-band
     if (yMin !== undefined && centroid.y < yMin) continue;
     if (yMax !== undefined && centroid.y > yMax) continue;
+    
+    // COSTUME-9A: Apply armYMax for arm bones (short sleeves)
+    // armYMax is the LOWEST point (hem) for arm bones, so exclude triangles BELOW it
+    if (armYMax !== undefined && label.includes('arm') && centroid.y < armYMax) {
+      continue;
+    }
     
     initialSelection.add(triIdx);
   }
