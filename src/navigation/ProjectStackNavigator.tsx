@@ -7,6 +7,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProjectsScreen } from '../screens/cosplayer/ProjectsScreen';
 import { ProjectDashboardScreen } from '../screens/cosplayer/ProjectDashboardScreen';
+import { ReferenceReviewScreen } from '../screens/cosplayer/ReferenceReviewScreen';
 import { CreateProjectScreen } from '../screens/cosplayer/CreateProjectScreen';
 import { ContestsListScreen } from '../screens/cosplayer/ContestsListScreen';
 import { CalendarBrowseScreen } from '../screens/cosplayer/CalendarBrowseScreen';
@@ -23,6 +24,7 @@ export type ProjectStackParamList = {
   ProjectsList: undefined;
   ProjectDashboard: { projectId: string };
   CreateProject: undefined;
+  ReferenceReview: { briefId: string };
   ContestsList: undefined;
   CalendarBrowse: undefined;
   EventMeetups: { eventId: string };
@@ -85,6 +87,10 @@ export const ProjectStackNavigator: React.FC = () => {
 
       <Stack.Screen name="EventMeetups" options={{ title: 'Meetups' }}>
         {({ route }) => <EventMeetupsScreen eventId={route.params.eventId} />}
+      </Stack.Screen>
+
+      <Stack.Screen name="ReferenceReview" options={{ title: 'Reference components' }}>
+        {({ route, navigation }) => <ReferenceReviewScreen briefId={route.params.briefId} onCancel={() => navigation.goBack()} />}
       </Stack.Screen>
 
       <Stack.Screen name="CreateProject" options={{ title: 'New Project' }}>
