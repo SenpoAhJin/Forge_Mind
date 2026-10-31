@@ -6,10 +6,11 @@
  */
 
 /** Slots shown in 3D rendering */
-export const SHOWN_IN_3D_SLOTS = ['Wig', 'Top', 'Bottom', 'Gloves', 'Shoes'] as const;
+import definitions from '../data/costumePieces.json';
+export const SHOWN_IN_3D_SLOTS = definitions.pieces.filter(piece => !('supported' in piece) || piece.supported !== false).map(piece => piece.label ?? piece.id);
 
 /** Slots not shown in 3D yet */
-export const NOT_SHOWN_YET_SLOTS = ['Blindfold', 'Ear cuff', 'Prop accessory', 'Belt'] as const;
+export const NOT_SHOWN_YET_SLOTS = definitions.notShownYet;
 
 /** All slots (for completeness checks) */
 export const ALL_SLOTS = [...SHOWN_IN_3D_SLOTS, ...NOT_SHOWN_YET_SLOTS] as const;

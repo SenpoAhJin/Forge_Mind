@@ -7,10 +7,10 @@
  * COSTUME-2 Step 5: One shared viewer for all consumers.
  */
 
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import React, { useCallback, useRef, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { Canvas, OrbitControls } from './threeRuntime';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Suspense } from 'react';
 import V2CostumeDemo from './V2CostumeDemo';
 import { BaseBodySelection } from '../constants/bodyType';
@@ -57,6 +57,7 @@ export interface CostumeViewerProps {
   debugMode?: boolean;
   showCameraControls?: boolean;
   onDebugInfo?: (info: Map<string, any>) => void;
+  onInteractionChange?: (active: boolean) => void;
 }
 
 /**
@@ -73,9 +74,12 @@ export default function CostumeViewer({
   debugMode = false,
   showCameraControls = true,
   onDebugInfo,
+  onInteractionChange,
 }: CostumeViewerProps) {
   const orbitControlsRef = useRef<OrbitControlsImpl>(null);
   const [cameraPosition, setCameraPosition] = useState<'front' | 'side' | 'back'>('front');
+  const [loadedBody, setLoadedBody] = useState<string | null>(null);
+  const onBodyReady = useCallback(() => setLoadedBody(bodyType), [bodyType]);
 
   const handleCameraPositionChange = (position: 'front' | 'side' | 'back') => {
     setCameraPosition(position);
@@ -96,7 +100,8 @@ export default function CostumeViewer({
   return (
     <View style={styles.container}>
       {/* 3D Canvas */}
-      <View style={styles.canvasContainer}>
+      <View style={styles.canvasContainer} testID="costume-viewer" onTouchStart={() => onInteractionChange?.(true)} onTouchEnd={() => onInteractionChange?.(false)} onTouchCancel={() => onInteractionChange?.(false)}>
+        <ErrorBoundary key={bodyType} label="3D preview">
         <Canvas
           camera={{ 
             position: CAMERA_POSITIONS[cameraPosition], 
@@ -109,6 +114,7 @@ export default function CostumeViewer({
             alpha: false,
           }}
         >
+          <color attach="background" args={['#ECF0F1']} />
           <ambientLight intensity={1.0} />
           <directionalLight position={[0, 5, 10]} intensity={2.0} />
           <directionalLight position={[0, 5, -10]} intensity={1.5} />
@@ -121,6 +127,7 @@ export default function CostumeViewer({
             dampingFactor={0.25}
             minDistance={2.0}
             maxDistance={6.0}
+            enablePan={false}
           />
 
           <Suspense fallback={null}>
@@ -131,14 +138,17 @@ export default function CostumeViewer({
               pieceStyles={pieceStyles}
               debugMode={debugMode}
               onDebugInfo={onDebugInfo}
+              onReady={onBodyReady}
             />
           </Suspense>
 
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.025, 0]}>
             <planeGeometry args={[10, 10]} />
             <meshStandardMaterial color="#95a5a6" opacity={0.3} transparent />
           </mesh>
         </Canvas>
+        </ErrorBoundary>
+        {loadedBody !== bodyType ? <View pointerEvents="none" style={styles.loading}><ActivityIndicator /><Text>Loading 3D body…</Text></View> : null}
       </View>
 
       {/* Camera Controls */}
@@ -199,11 +209,13 @@ export default function CostumeViewer({
 }
 
 const styles = StyleSheet.create({
+  loading: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', gap: 8 },
   container: {
     flex: 1,
   },
   canvasContainer: {
     flex: 1,
+    minHeight: 300,
     backgroundColor: '#ecf0f1',
   },
   cameraControls: {

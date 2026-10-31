@@ -12,8 +12,8 @@ import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 import { useUser } from '../../contexts/UserContext';
 import { matchAttire, type MatchResult, type MatchedItem } from '../../services/AiMatcherService';
 import { getMatcherSlug } from '../../data/matcherSlugs';
-import { buildWornGarments } from '../../utils/wearing';
-import Preview3D from '../../components/Preview3D';
+import { useProjects } from '../../contexts/ProjectsContext';
+import { OwnedOutfitPanel } from '../../components/OwnedOutfitPanel';
 
 interface MatchResultsScreenProps {
   onBackToBrowse: () => void;
@@ -24,6 +24,8 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
   const { selection } = useSelection();
   const { items: ownedAttire, isLoaded: attireLoaded } = useOwnedAttire();
   const { user } = useUser();
+  const { projects } = useProjects();
+  const [interacting, setInteracting] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
@@ -106,7 +108,7 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
   if (error) {
     const isNoData = error === 'no_data';
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView scrollEnabled={!interacting} style={styles.container} contentContainerStyle={styles.content}>
         <StandardCard style={styles.selectionCard}>
           <Text style={styles.selectionLabel}>SELECTED VARIANT</Text>
           <Text style={styles.characterName}>{character.character_name}</Text>
@@ -141,14 +143,10 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
     const suggestedItems = Object.entries(matchResult.suggested_outfit);
     const hasMissingItems = matchResult.missing_items.length > 0;
     
-    // Build worn garments for 3D preview
-    const bodyType = user?.base_body_selection || 'male';
-    const wornGarments = buildWornGarments(matchResult, ownedAttire, bodyType);
-    const filledSlots = wornGarments.filter(g => g.itemId !== null).length;
-    const totalSlots = wornGarments.length;
+    const project = projects.find(project => project.user_id === user?.email && project.variant_id === variant.variant_id);
 
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView scrollEnabled={!interacting} style={styles.container} contentContainerStyle={styles.content}>
         <StandardCard style={styles.selectionCard}>
           <Text style={styles.selectionLabel}>SELECTED VARIANT</Text>
           <Text style={styles.characterName}>{character.character_name}</Text>
@@ -181,7 +179,7 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
             <View>
               <Text style={styles.previewTitle}>3D Body Preview</Text>
               <Text style={styles.previewSubtitle}>
-                {filledSlots}/{totalSlots} slots filled
+                Choose the inventory items you want to wear
               </Text>
             </View>
             <Button
@@ -191,34 +189,11 @@ export const MatchResultsScreen: React.FC<MatchResultsScreenProps> = ({ onBackTo
             />
           </View>
           
-          {show3DPreview && (
-            <View style={styles.previewContainer}>
-              <Preview3D
-                bodyType={bodyType}
-                wornGarments={wornGarments}
-              />
-              
-              <Text style={styles.previewNote}>
-                ℹ️ Only items with a 3D garment are shown (right now: white wig)
-              </Text>
-              
-              {/* Slot indicators */}
-              <View style={styles.slotIndicators}>
-                {wornGarments.map((garment) => (
-                  <View key={garment.slot} style={styles.slotRow}>
-                    <Text style={styles.slotLabel}>
-                      {garment.slot.charAt(0).toUpperCase() + garment.slot.slice(1)}:
-                    </Text>
-                    {garment.itemId ? (
-                      <Text style={styles.slotFilled}>✓ Matched</Text>
-                    ) : (
-                      <Text style={styles.slotMissing}>○ Missing</Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          {show3DPreview ? <OwnedOutfitPanel accountId={user?.email}
+            projectId={project?.project_id ?? `variant:${variant.variant_id}`}
+            items={ownedAttire} inventoryLoaded={attireLoaded} initialBody={user?.base_body_selection}
+            extractedOutfit={project?.extracted_outfit ?? variant.extracted_outfit}
+            onInteractionChange={setInteracting} /> : null}
         </StandardCard>
 
         {suggestedItems.length > 0 ? (

@@ -19,6 +19,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { Button } from './buttons';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   BaseBodySelection,
   BODY_TYPE_OPTIONS,
@@ -46,11 +47,12 @@ export const BodyTypeSelector: React.FC<BodyTypeSelectorProps> = ({
   showCaption = true,
   onCommit,
 }) => {
+  const { themeColors } = useTheme();
   const selected = value ?? DEFAULT_BASE_BODY;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
 
       <View style={styles.toggleRow}>
         {BODY_TYPE_OPTIONS.map((option) => (
@@ -69,7 +71,7 @@ export const BodyTypeSelector: React.FC<BodyTypeSelectorProps> = ({
         ))}
       </View>
 
-      {showCaption && <Text style={styles.caption}>{BODY_TYPE_SELECTOR_CAPTION}</Text>}
+      {showCaption ? <Text style={[styles.caption, { color: themeColors.textSecondary, backgroundColor: themeColors.card }]}>{BODY_TYPE_SELECTOR_CAPTION}</Text> : null}
     </View>
   );
 };

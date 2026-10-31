@@ -6,33 +6,11 @@ import BodyTypeSelector from '../components/BodyTypeSelector';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { Button } from '../components/buttons/Button';
 import { setActiveBodySet, getActiveBodySetId, type BodySetId } from '../config/bodyAssets';
-import CostumeViewer from '../components/CostumeViewer';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OwnedOutfitPanel } from '../components/OwnedOutfitPanel';
+import { useUser } from '../contexts/UserContext';
 import { useOwnedAttire } from '../contexts/OwnedAttireContext';
 import { applyItemToOutfit, canMapItemToPiece, getUnmappedItemMessage } from '../utils/outfitHelpers';
 import type { OwnedAttire } from '../types/owned-attire';
-
-// Load costume pieces data
-const costumePiecesData = require('../data/costumePieces.json');
-
-// Storage keys
-const OUTFIT_STORAGE_KEY = 'v2_costume_outfit';
-
-// Outfit state structure
-interface OutfitState {
-  pieces: string[];
-  colors: Record<string, string>;
-}
-
-interface OutfitStorage {
-  male: OutfitState;
-  female: OutfitState;
-}
-
-const defaultOutfitState = (): OutfitState => ({
-  pieces: [],
-  colors: {},
-});
 
 /**
  * Preview3DTestScreen
@@ -61,166 +39,16 @@ export default function Preview3DTestScreen() {
   const [bodySet, setBodySet] = useState<BodySetId>(() => getActiveBodySetId());
   const scrollViewRef = React.useRef<any>(null);
   
-  // V2 Costume Demo state
-  const [costumeBodyType, setCostumeBodyType] = useState<BaseBodySelection>('male');
-  const [enabledPieces, setEnabledPieces] = useState<Set<string>>(new Set());
-  const [pieceColors, setPieceColors] = useState<Map<string, string>>(new Map());
-  const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
-  const [previousBodySet, setPreviousBodySet] = useState<BodySetId | null>(null);
-  const [showCostumeDemo, setShowCostumeDemo] = useState(false);
-  const [debugMode, setDebugMode] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<Map<string, any>>(new Map());
-  const [cameraPosition, setCameraPosition] = useState<'front' | 'side' | 'back'>('front');
-  const [showItemSelector, setShowItemSelector] = useState(false);
-  const [itemMessage, setItemMessage] = useState<string | null>(null);
-  
-  // Access owned items for integration demo
-  const { items: ownedItems } = useOwnedAttire();
-
-  // Load outfit state from AsyncStorage on mount
-  useEffect(() => {
-    const loadOutfitState = async () => {
-      try {
-        const storedData = await AsyncStorage.getItem(OUTFIT_STORAGE_KEY);
-        if (storedData) {
-          const outfitStorage: OutfitStorage = JSON.parse(storedData);
-          const currentOutfit = outfitStorage[costumeBodyType] || defaultOutfitState();
-          
-          setEnabledPieces(new Set(currentOutfit.pieces));
-          setPieceColors(new Map(Object.entries(currentOutfit.colors)));
-        }
-      } catch (error) {
-        console.error('[Preview3DTestScreen] Failed to load outfit state:', error);
-      }
-    };
-
-    if (showCostumeDemo) {
-      loadOutfitState();
-    }
-  }, [showCostumeDemo, costumeBodyType]);
-
-  // Save outfit state to AsyncStorage whenever it changes
-  useEffect(() => {
-    const saveOutfitState = async () => {
-      try {
-        // Load existing storage
-        const storedData = await AsyncStorage.getItem(OUTFIT_STORAGE_KEY);
-        const outfitStorage: OutfitStorage = storedData 
-          ? JSON.parse(storedData)
-          : { male: defaultOutfitState(), female: defaultOutfitState() };
-
-        // Update current body type outfit
-        outfitStorage[costumeBodyType] = {
-          pieces: Array.from(enabledPieces),
-          colors: Object.fromEntries(pieceColors),
-        };
-
-        await AsyncStorage.setItem(OUTFIT_STORAGE_KEY, JSON.stringify(outfitStorage));
-      } catch (error) {
-        console.error('[Preview3DTestScreen] Failed to save outfit state:', error);
-      }
-    };
-
-    if (showCostumeDemo) {
-      saveOutfitState();
-    }
-  }, [enabledPieces, pieceColors, costumeBodyType, showCostumeDemo]);
-
+  const { user } = useUser();
+  const inventory = useOwnedAttire();
+  const [interacting, setInteracting] = useState(false);
   const handleBodySetChange = (newSet: BodySetId) => {
-    if (__DEV__) {
-      setActiveBodySet(newSet);
-      setBodySet(newSet);
-    }
-  };
-
-  const handleEnterCostumeDemo = () => {
-    if (__DEV__) {
-      setPreviousBodySet(getActiveBodySetId());
-      setActiveBodySet('v2');
-      setBodySet('v2');
-      setShowCostumeDemo(true);
-    }
-  };
-
-  const handleExitCostumeDemo = () => {
-    if (__DEV__ && previousBodySet) {
-      setActiveBodySet(previousBodySet);
-      setBodySet(previousBodySet);
-      setShowCostumeDemo(false);
-      setPreviousBodySet(null);
-    }
-  };
-
-  const togglePiece = (pieceId: string) => {
-    setEnabledPieces((prev) => {
-      const next = new Set(prev);
-      if (next.has(pieceId)) {
-        next.delete(pieceId);
-      } else {
-        next.add(pieceId);
-        // Set default color if not set
-        if (!pieceColors.has(pieceId)) {
-          const piece = costumePiecesData.pieces.find((p: any) => p.id === pieceId);
-          if (piece) {
-            setPieceColors((colors) => new Map(colors).set(pieceId, piece.defaultColor));
-          }
-        }
-      }
-      return next;
-    });
-  };
-
-  const setPieceColor = (pieceId: string, color: string) => {
-    setPieceColors((prev) => new Map(prev).set(pieceId, color));
-  };
-
-  const wearFullCostume = () => {
-    const allPieces = new Set<string>();
-    const allColors = new Map<string, string>();
-    
-    // Wear ALL pieces (including gloves, wig, belt)
-    for (const piece of costumePiecesData.pieces) {
-      allPieces.add(piece.id);
-      allColors.set(piece.id, piece.defaultColor);
-    }
-    
-    setEnabledPieces(allPieces);
-    setPieceColors(allColors);
-  };
-
-  const removeAllPieces = () => {
-    setEnabledPieces(new Set());
-  };
-
-  // COSTUME-2 Step 6: Handle owned item selection
-  const handleItemSelect = (item: OwnedAttire) => {
-    // Try to map item to a costume piece
-    const suggestion = applyItemToOutfit(item);
-    
-    if (!suggestion) {
-      // No 3D piece for this item type
-      setItemMessage(getUnmappedItemMessage(item));
-      return;
-    }
-    
-    // Apply the piece
-    const updatedPieces = new Set(enabledPieces);
-    updatedPieces.add(suggestion.slot);
-    setEnabledPieces(updatedPieces);
-    
-    // Apply the color
-    setPieceColor(suggestion.slot, suggestion.color);
-    
-    // Show success message
-    setItemMessage(`Applied ${item.auto_categorized_type} to ${suggestion.slot} slot`);
-    
-    // Clear message after 3 seconds
-    setTimeout(() => setItemMessage(null), 3000);
+    if (__DEV__) { setActiveBodySet(newSet); setBodySet(newSet); }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent}>
+      <ScrollView scrollEnabled={!interacting} ref={scrollViewRef} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>3D Preview Test</Text>
@@ -338,201 +166,12 @@ export default function Preview3DTestScreen() {
           </Text>
         </View>
 
-        {/* V2 Costume Demo Section */}
-        {__DEV__ && !showCostumeDemo && (
-          <View style={styles.costumeDemoSection}>
-            <Text style={styles.costumeDemoTitle}>V2 Costume Demo</Text>
-            <Text style={styles.costumeDemoSubtitle}>
-              Runtime-derived garment pieces from V2 body mesh
-            </Text>
-            <Button
-              title="Enter V2 Costume Demo"
-              onPress={handleEnterCostumeDemo}
-              variant="primary"
-            />
-          </View>
-        )}
-
-        {__DEV__ && showCostumeDemo && (
-          <View style={styles.costumeDemoActive}>
-            <View style={styles.costumeDemoHeader}>
-              <Text style={styles.costumeDemoTitle}>V2 Costume Demo</Text>
-              <Button
-                title="Exit Demo"
-                onPress={handleExitCostumeDemo}
-                variant="secondary"
-              />
-            </View>
-
-            {/* Costume 3D Preview */}
-            <View 
-              style={styles.costumePreviewContainer}
-              onTouchStart={() => {
-                scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
-              }}
-              onTouchEnd={() => {
-                scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
-              }}
-            >
-              <CostumeViewer
-                bodyType={costumeBodyType}
-                enabledPieces={enabledPieces}
-                pieceColors={pieceColors}
-                debugMode={debugMode}
-                showCameraControls={true}
-                onDebugInfo={setDebugInfo}
-              />
-            </View>
-
-            {/* Body Type Selector */}
-            <View style={styles.costumeControls}>
-              {/* Debug Toggle */}
-              <View style={styles.debugToggleRow}>
-                <Text style={styles.sectionLabel}>Debug Mode:</Text>
-                <TouchableOpacity
-                  style={[styles.debugToggle, debugMode && styles.debugToggleActive]}
-                  onPress={() => setDebugMode(!debugMode)}
-                >
-                  <Text style={[styles.debugToggleText, debugMode && styles.debugToggleTextActive]}>
-                    {debugMode ? 'ON' : 'OFF'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {debugMode && debugInfo.size > 0 && (
-                <View style={styles.debugPanel}>
-                  <Text style={styles.debugTitle}>Debug Info:</Text>
-                  {Array.from(debugInfo.entries()).map(([pieceId, info]) => (
-                    <Text key={pieceId} style={styles.debugText}>
-                      {pieceId}: {info.triangleCount} tris, coverage {(info.vertexCoverage * 100).toFixed(1)}% 
-                      ({info.coveredVertexCount}/{info.eligibleVertexCount} verts)
-                    </Text>
-                  ))}
-                </View>
-              )}
-
-              <BodyTypeSelector
-                value={costumeBodyType}
-                onChange={setCostumeBodyType}
-                label="Body type"
-              />
-
-              {/* Quick Actions */}
-              <View style={styles.quickActions}>
-                <Button
-                  title="Wear Full Costume"
-                  onPress={wearFullCostume}
-                  variant="primary"
-                />
-                <Button
-                  title="Remove All"
-                  onPress={removeAllPieces}
-                  variant="secondary"
-                />
-              </View>
-
-              {/* Piece Toggles */}
-              <Text style={styles.sectionLabel}>Pieces:</Text>
-              <View style={styles.pieceToggles}>
-                {costumePiecesData.pieces.map((piece: any) => (
-                  <TouchableOpacity
-                    key={piece.id}
-                    style={[
-                      styles.pieceToggle,
-                      enabledPieces.has(piece.id) && styles.pieceToggleActive,
-                    ]}
-                    onPress={() => {
-                      togglePiece(piece.id);
-                      setSelectedPiece(piece.id);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.pieceToggleText,
-                        enabledPieces.has(piece.id) && styles.pieceToggleTextActive,
-                      ]}
-                    >
-                      {piece.id}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Color Picker for Selected Piece */}
-              {selectedPiece && enabledPieces.has(selectedPiece) && (
-                <>
-                  <Text style={styles.sectionLabel}>
-                    Color for {selectedPiece}:
-                  </Text>
-                  <View style={styles.colorRow}>
-                    {costumePiecesData.colorPresets.map((color: string) => (
-                      <TouchableOpacity
-                        key={color}
-                        style={[
-                          styles.colorSwatch,
-                          { backgroundColor: color },
-                          pieceColors.get(selectedPiece) === color && styles.colorSwatchActive,
-                        ]}
-                        onPress={() => setPieceColor(selectedPiece, color)}
-                      />
-                    ))}
-                  </View>
-                </>
-              )}
-
-              {/* COSTUME-2 Step 6: Owned Items Integration */}
-              <TouchableOpacity
-                style={styles.itemSelectorToggle}
-                onPress={() => setShowItemSelector(!showItemSelector)}
-              >
-                <Text style={styles.sectionLabel}>
-                  Owned Items {showItemSelector ? '▼' : '▶'}
-                </Text>
-                <Text style={styles.itemSelectorHint}>
-                  Apply owned items to costume pieces
-                </Text>
-              </TouchableOpacity>
-
-              {showItemSelector && ownedItems.length > 0 && (
-                <View style={styles.itemSelector}>
-                  {ownedItems.slice(0, 10).map((item) => {
-                    const canMap = canMapItemToPiece(item);
-                    return (
-                      <TouchableOpacity
-                        key={item.attire_id}
-                        style={[
-                          styles.itemCard,
-                          !canMap && styles.itemCardDisabled,
-                        ]}
-                        onPress={() => handleItemSelect(item)}
-                        disabled={!canMap}
-                      >
-                        <Text style={styles.itemName} numberOfLines={1}>
-                          {item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`}
-                        </Text>
-                        <Text style={styles.itemCategory}>
-                          {item.auto_categorized_type}
-                        </Text>
-                        {!canMap && (
-                          <Text style={styles.itemNoMapping}>No 3D piece</Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                  {ownedItems.length === 0 && (
-                    <Text style={styles.noItemsText}>No owned items yet</Text>
-                  )}
-                </View>
-              )}
-
-              {itemMessage && (
-                <View style={styles.itemMessage}>
-                  <Text style={styles.itemMessageText}>{itemMessage}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
+        {__DEV__ ? <View style={styles.costumeDemoSection}>
+          <Text style={styles.costumeDemoTitle}>Inventory wearing preview</Text>
+          <OwnedOutfitPanel accountId={user?.email} projectId="preview-test"
+            items={inventory.items} inventoryLoaded={inventory.isLoaded} offline={inventory.isOffline}
+            initialBody={bodyType} onInteractionChange={setInteracting} />
+        </View> : null}
       </ScrollView>
     </SafeAreaView>
   );

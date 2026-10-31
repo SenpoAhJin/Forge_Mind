@@ -1,0 +1,92 @@
+{
+  "console": [
+    "[outfitStore] Failed to save outfit: Error: Test storage failure"
+  ],
+  "errors": [],
+  "results": [
+    {
+      "number": 1,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 2,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 3,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 4,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 5,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 6,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 7,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": "drag-and-pinch",
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": "save-failure",
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 8,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 9,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": "planning-screen",
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    },
+    {
+      "number": 10,
+      "platform": "Expo web / PhoneFrame",
+      "status": "RAN",
+      "result": "PASS"
+    }
+  ],
+  "redWigPixels": {
+    "count": 124,
+    "minY": 62,
+    "maxY": 71,
+    "height": 330
+  }
+}

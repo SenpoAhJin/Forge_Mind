@@ -10,9 +10,13 @@
   "pieces": [
     {
       "id": "top",
+      "label": "Top",
+      "categories": ["top", "shirt", "clothing"],
+      "defaultAsset": "body-region",
+      "recolor": true,
       "slot": "torso",
       "groupDetails": {
-        "torso": ["pelvis", "spine_01", "spine_02", "spine_03"],
+        "torso": ["pelvis", "spine_01", "spine_02", "spine_03", "clavicle.L", "clavicle.R", "thigh.L", "thigh.R"],
         "armL": ["upperarm.L", "forearm.L", "hand.L"],
         "armR": ["upperarm.R", "forearm.R", "hand.R"]
       },
@@ -44,6 +48,10 @@
     },
     {
       "id": "bottom",
+      "label": "Bottom",
+      "categories": ["bottom", "pants", "skirt"],
+      "defaultAsset": "body-region",
+      "recolor": true,
       "slot": "legs",
       "groupDetails": {
         "torso_lower": ["pelvis"],
@@ -72,6 +80,10 @@
     },
     {
       "id": "shoes",
+      "label": "Shoes",
+      "categories": ["footwear", "shoes", "boots"],
+      "defaultAsset": "body-region",
+      "recolor": true,
       "slot": "feet",
       "groupDetails": {
         "legL_feet": ["foot.L", "toe.L"],
@@ -99,6 +111,12 @@
     },
     {
       "id": "gloves",
+      "label": "Gloves",
+      "categories": ["gloves"],
+      "itemKeywords": ["glove", "gloves", "gauntlet", "gauntlets"],
+      "keywordCategories": ["accessory", "other"],
+      "defaultAsset": "body-region",
+      "recolor": true,
       "slot": "hands",
       "groupDetails": {
         "hand.L": ["hand.L"],
@@ -111,6 +129,10 @@
     },
     {
       "id": "wig",
+      "label": "Wig",
+      "categories": ["wig"],
+      "defaultAsset": "body-region",
+      "recolor": true,
       "slot": "head",
       "selection": "band",
       "groupDetails": {
@@ -147,6 +169,7 @@
     },
     {
       "id": "belt",
+      "supported": false,
       "slot": "accessory",
       "type": "torus",
       "yPosition": { "landmark": "hip_y", "offset": 0.10 },
@@ -155,6 +178,7 @@
       "defaultEnabled": false
     }
   ],
+  "notShownYet": ["Accessory", "Blindfold", "Ear cuff", "Prop accessory", "Belt"],
   "colorPresets": [
     "#FFFFFF",
     "#000000",

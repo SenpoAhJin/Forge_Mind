@@ -5,6 +5,7 @@
  * can be swapped in without renaming.
  */
 
+import type { ExtractedOutfit } from './extractedOutfit';
 export type MediaType = 'anime' | 'manga' | 'game' | 'movie' | 'original' | 'other';
 
 export type OriginTag = 'canon' | 'fan-art-inspired' | 'user-original';
@@ -22,6 +23,7 @@ export interface Character {
 }
 
 export interface Variant {
+  extracted_outfit?: ExtractedOutfit;
   variant_id: string;
   character_id: string;
   variant_name: string;

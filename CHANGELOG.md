@@ -1,7 +1,46 @@
 # ForgeMind — Plain-Language Changelog
 
-**Last updated:** Saturday, October 31, 2026 (Task COSTUME-9A: Style options for 3D outfit preview - Stage 1 complete)
+**Last updated:** Saturday, October 31, 2026, 22:48 PHT (Asia/Manila) — inventory-backed multi-slot wearing
 **What this is:** A simple, everyday-language record of everything built so far, every change we made along the way, and what the app currently contains — so anyone (even without a technical background) can understand the state of the project.
+
+---
+
+## Session — Saturday, October 31, 2026, 22:48 PHT — Dynamic multi-slot wearing
+
+Planning, project dashboards, match-results previews and the development wearing
+preview now use the same inventory-backed wearing panel and outfit store. The
+former 2D planning entry delegates to that screen. A slot stays empty until an
+owned item is selected; selecting another item replaces just that slot. Full
+costume uses available inventory, and hide/show, recoloring and removal remain
+editable. Accessories stay in the checklist and are labelled unsupported in 3D.
+
+The five supported slots, body regions, default geometry source and recoloring
+support come from costumePieces.json. Outfit saves are scoped to account and
+project and remain the same across body/angle changes. Failed writes show an
+error and retain the last saved appearance. Projects now hydrate from their own
+account-scoped local cache; inventory fallback no longer inserts demo items or
+overwrites another account's cache during hydration.
+
+The costume viewer now explicitly pairs V2 bodies with V2 contracts, mounts the
+body independently of garment selection, clones skeletons correctly and selects
+the native renderer on mobile. Top coverage includes both clavicle regions. A
+waist coverage probe exposed triangles assigned to thigh regions above the
+trousers; including those regions within the top's hip boundary closed all
+measured gaps (male 440/440, female 445/445 waist triangles covered).
+Actual V2 asset measurements put the wig above the shoulders before and after
+the changes; the reported shoulder patch was not reproduced in that probe, so
+an incorrect wig origin is not claimed as the confirmed cause.
+
+RAN: the ten requested web scenarios in PhoneFrame, plus drag/pinch and failed
+storage-write checks; 13 production-store tests and 11 extractor-schema tests;
+geometry assertions on both bodies; Expo web export and Android/Hermes export.
+TypeScript checking remains nonzero; before/after logs are retained. Real-phone
+Expo Go testing and live two-account authentication were NOT RUN. Web tests use
+clearly isolated inventory/session fixtures and do not mutate the backend.
+
+Detailed changes and evidence: docs/changes/WEARING_CHANGELOG.txt. The Step 1
+project-brief implementation and its tests were not changed. Proposed variants,
+voice commands, ghost pieces, comparison and saved looks were not added.
 
 ---
 

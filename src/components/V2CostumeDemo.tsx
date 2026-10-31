@@ -10,8 +10,10 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useGLTF } from '@react-three/drei';
-import { getActiveBodyAsset } from '../config/bodyAssets';
+import { useGLTF } from './threeRuntime';
+import { Asset } from 'expo-asset';
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { getCostumeBodyAsset } from '../config/bodyAssets';
 import { BaseBodySelection } from '../constants/bodyType';
 import {
   buildCostumePiece,
@@ -33,6 +35,7 @@ interface V2CostumeDemoProps {
   pieceStyles?: Map<string, Record<string, string>>;
   debugMode?: boolean;
   onDebugInfo?: (info: Map<string, PieceDebugInfo>) => void;
+  onReady?: () => void;
 }
 
 /**
@@ -55,9 +58,11 @@ export default function V2CostumeDemo({
   pieceStyles = new Map(),
   debugMode = false,
   onDebugInfo,
+  onReady,
 }: V2CostumeDemoProps) {
-  const bodyAsset = getActiveBodyAsset(bodyType);
-  const gltf = useGLTF(bodyAsset.glb as any) as any;
+  const bodyAsset = getCostumeBodyAsset(bodyType);
+  const uri = Asset.fromModule(bodyAsset.glb).uri;
+  const gltf = useGLTF(uri) as any;
   const contract = bodyAsset.contract;
 
   const scene = useThree((state) => state.scene);
@@ -66,7 +71,7 @@ export default function V2CostumeDemo({
 
   // Find body scene root
   const bodyScene = useMemo(() => {
-    return gltf?.scene?.clone(true) || new THREE.Scene();
+    return clone(gltf.scene);
   }, [gltf]);
 
   useEffect(() => {
@@ -99,7 +104,7 @@ export default function V2CostumeDemo({
     for (let pieceIdx = 0; pieceIdx < costumePiecesData.pieces.length; pieceIdx++) {
       const pieceDef = costumePiecesData.pieces[pieceIdx];
       
-      if (enabledPieces.has(pieceDef.id)) {
+      if (pieceDef.supported !== false && enabledPieces.has(pieceDef.id)) {
         try {
           // Compute debug info before building
           const info = computePieceDebugInfo(bodyScene, contract, pieceDef, costumePiecesData);
@@ -180,11 +185,9 @@ export default function V2CostumeDemo({
       onDebugInfo(debugInfo);
     }
 
-    // Add body scene to main scene
-    scene.add(bodyScene);
+    onReady?.();
 
     return () => {
-      scene.remove(bodyScene);
       disposeCachedPieces(bodyScene);
       
       // Clean up debug points
@@ -198,7 +201,7 @@ export default function V2CostumeDemo({
       });
       debugPointsRef.current.clear();
     };
-  }, [bodyType, enabledPieces, pieceColors, pieceStyles, debugMode, contract, bodyScene, scene, onDebugInfo]);
+  }, [bodyType, enabledPieces, pieceColors, pieceStyles, debugMode, contract, bodyScene, scene, onDebugInfo, onReady]);
 
   // Update colors without rebuilding geometry (skip in debug mode)
   useEffect(() => {
@@ -211,5 +214,5 @@ export default function V2CostumeDemo({
     }
   }, [pieceColors, enabledPieces, bodyScene, debugMode]);
 
-  return null; // No JSX, renders directly to three.js scene
+  return <primitive object={bodyScene} dispose={null} />;
 }

@@ -7,17 +7,14 @@
  */
 
 import type { OwnedAttire } from '../types/owned-attire';
-import itemSlotMap from '../data/itemSlotMap.json';
+import { getSlotForItem, getColorFromName } from './outfitStore';
 
 /**
  * Maps an item's category to a costume piece slot.
  * Returns null if the item type has no 3D piece representation yet.
  */
 export function mapItemToPieceSlot(item: OwnedAttire): string | null {
-  const category = item.auto_categorized_type;
-  const mapping = itemSlotMap as Record<string, string | null>;
-  
-  return mapping[category] ?? null;
+  return getSlotForItem(item);
 }
 
 /**
@@ -32,24 +29,7 @@ export function getItemColor(item: OwnedAttire, defaultColor: string = '#808080'
     return defaultColor;
   }
   
-  // Try to convert common color names to hex
-  const colorMap: Record<string, string> = {
-    white: '#FFFFFF',
-    black: '#000000',
-    red: '#EF4444',
-    blue: '#3B82F6',
-    green: '#10B981',
-    yellow: '#F59E0B',
-    purple: '#8B5CF6',
-    pink: '#EC4899',
-    orange: '#F97316',
-    brown: '#92400E',
-    gray: '#6B7280',
-    grey: '#6B7280',
-  };
-  
-  const colorLower = color.toLowerCase();
-  return colorMap[colorLower] || defaultColor;
+  return getColorFromName(color) ?? defaultColor;
 }
 
 /**
@@ -127,5 +107,5 @@ export function canMapItemToPiece(item: OwnedAttire, excludeSlots?: string[]): b
  */
 export function getUnmappedItemMessage(item: OwnedAttire): string {
   const category = item.auto_categorized_type;
-  return `No 3D piece for ${category} items yet`;
+  return `Not shown in 3D yet (${category})`;
 }

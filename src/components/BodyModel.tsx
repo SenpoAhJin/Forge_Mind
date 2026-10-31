@@ -1,6 +1,6 @@
 import React from 'react';
 import { Asset } from 'expo-asset';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF } from './threeRuntime';
 
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
 import { getActiveBodyAsset } from '../config/bodyAssets';

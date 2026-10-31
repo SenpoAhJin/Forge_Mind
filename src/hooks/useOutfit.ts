@@ -1,164 +1,84 @@
-/**
- * useOutfit Hook
- * 
- * COSTUME-4D-1: React hook over outfitStore with AsyncStorage adapter.
- * Provides outfit state management for screens.
- */
-
-import { useState, useEffect, useCallback } from 'react';
+/** One account/project outfit, independent of the selected body and camera. */
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { BaseBodySelection } from '../constants/bodyType';
+import type { OwnedAttire } from '../types/owned-attire';
 import {
-  type StorageAdapter,
-  type OutfitState,
-  type OutfitScope,
-  loadOutfit,
-  saveOutfit,
-  togglePiece,
-  setPieceColor,
-  setPieceStyle,
-  applyItem,
-  wearFullCostume,
-  removeAllPieces
+  type OutfitState, type OutfitScope, getStorageKey, loadOutfit, saveOutfit,
+  togglePiece, setPieceColor, setPieceStyle, applyItem, wearFullCostume,
+  removeAllPieces, reconcileInventory, getSlotForItem,
 } from '../utils/outfitStore';
 
-// AsyncStorage adapter
-const asyncStorageAdapter: StorageAdapter = {
-  async getItem(key: string): Promise<string | null> {
-    return await AsyncStorage.getItem(key);
-  },
-  async setItem(key: string, value: string): Promise<void> {
-    await AsyncStorage.setItem(key, value);
-  },
-  async removeItem(key: string): Promise<void> {
-    await AsyncStorage.removeItem(key);
-  }
-};
+const queues = new Map<string, Promise<unknown>>();
+const listeners = new Map<string, Set<(outfit: OutfitState) => void>>();
 
-export interface UseOutfitResult {
-  outfit: OutfitState | null;
-  isLoading: boolean;
-  togglePiece: (slot: string, on: boolean) => Promise<void>;
-  setColor: (slot: string, color: string) => Promise<void>;
-  setStyle: (slot: string, styleKey: string, styleValue: string) => Promise<void>;
-  applyItem: (itemId: string, category: string, colorName: string | undefined, itemName: string) => Promise<{
-    action: 'worn' | 'removed' | 'replaced' | 'no-slot';
-    message: string;
-  }>;
-  wearFull: () => Promise<void>;
-  removeAll: () => Promise<void>;
-  reload: () => Promise<void>;
-}
+export function useOutfit(bodyType: BaseBodySelection, projectId?: string, accountId?: string, inventory: OwnedAttire[] = []) {
+  const scope = useMemo<OutfitScope>(() => projectId
+    ? { type: 'project', projectId, accountId }
+    : { type: 'body', bodyType, accountId }, [projectId, accountId]);
+  const key = accountId ? getStorageKey(scope) : '';
+  const [state, setState] = useState<{ key: string; outfit: OutfitState | null }>({ key: '', outfit: null });
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [errorState, setError] = useState<{ key: string; message: string } | null>(null);
+  const [revision, setRevision] = useState(0);
 
-/**
- * Hook for outfit management
- * @param bodyType - Current body type (for scope)
- * @param projectId - Optional project ID (for project-specific outfits)
- */
-export function useOutfit(
-  bodyType: BaseBodySelection,
-  projectId?: string
-): UseOutfitResult {
-  const [outfit, setOutfit] = useState<OutfitState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Determine scope
-  const scope: OutfitScope = projectId
-    ? { type: 'project', projectId }
-    : { type: 'body', bodyType };
-  
-  // Load outfit from storage
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const loaded = await loadOutfit(asyncStorageAdapter, scope);
-      setOutfit(loaded);
-    } catch (error) {
-      console.error('[useOutfit] Failed to load:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [scope.type, projectId, bodyType]);
-  
-  // Save outfit to storage
-  const save = useCallback(async (newOutfit: OutfitState) => {
-    try {
-      await saveOutfit(asyncStorageAdapter, scope, newOutfit);
-      setOutfit(newOutfit);
-    } catch (error) {
-      console.error('[useOutfit] Failed to save:', error);
-    }
-  }, [scope.type, projectId, bodyType]);
-  
-  // Load on mount and when scope changes
   useEffect(() => {
-    load();
-  }, [load]);
-  
-  // Toggle piece
-  const handleTogglePiece = useCallback(async (slot: string, on: boolean) => {
-    if (!outfit) return;
-    const newOutfit = togglePiece(outfit, slot, on);
-    await save(newOutfit);
-  }, [outfit, save]);
-  
-  // Set color
-  const handleSetColor = useCallback(async (slot: string, color: string) => {
-    if (!outfit) return;
-    const newOutfit = setPieceColor(outfit, slot, color);
-    await save(newOutfit);
-  }, [outfit, save]);
-  
-  // Set style
-  const handleSetStyle = useCallback(async (slot: string, styleKey: string, styleValue: string) => {
-    if (!outfit) return;
-    const newOutfit = setPieceStyle(outfit, slot, styleKey, styleValue);
-    await save(newOutfit);
-  }, [outfit, save]);
-  
-  // Apply item
-  const handleApplyItem = useCallback(async (
-    itemId: string,
-    category: string,
-    colorName: string | undefined,
-    itemName: string
-  ) => {
-    if (!outfit) {
-      return { action: 'no-slot' as const, message: 'Outfit not loaded' };
-    }
-    
-    const result = applyItem(outfit, itemId, category, colorName, itemName);
-    await save(result.outfit);
-    
-    return {
-      action: result.action,
-      message: result.message
-    };
-  }, [outfit, save]);
-  
-  // Wear full costume
-  const handleWearFull = useCallback(async () => {
-    if (!outfit) return;
-    const newOutfit = wearFullCostume(outfit);
-    await save(newOutfit);
-  }, [outfit, save]);
-  
-  // Remove all pieces
-  const handleRemoveAll = useCallback(async () => {
-    if (!outfit) return;
-    const newOutfit = removeAllPieces(outfit);
-    await save(newOutfit);
-  }, [outfit, save]);
-  
+    let active = true;
+    if (!key) return;
+    setLoadingKey(key);
+    setError(null);
+    const subscribers = listeners.get(key) ?? new Set();
+    const receive = (outfit: OutfitState) => { if (active) setState({ key, outfit }); };
+    subscribers.add(receive); listeners.set(key, subscribers);
+    (async () => {
+      try {
+        await queues.get(key)?.catch(() => undefined);
+        const outfit = await loadOutfit(AsyncStorage, scope);
+        receive(outfit);
+      } catch (error) {
+        if (active) setError({ key, message: `Could not load outfit. ${(error as Error).message}` });
+      } finally {
+        if (active) setLoadingKey(null);
+      }
+    })();
+    return () => { active = false; subscribers.delete(receive); if (!subscribers.size) listeners.delete(key); };
+  }, [key, revision, scope]);
+
+  const update = useCallback(async <T,>(change: (outfit: OutfitState) => { outfit: OutfitState; value: T }): Promise<T> => {
+    if (!key) throw new Error('Sign in to wear your inventory items.');
+    const operation = (queues.get(key) ?? Promise.resolve()).catch(() => undefined).then(async () => {
+      const current = reconcileInventory(await loadOutfit(AsyncStorage, scope), inventory);
+      const next = change(current);
+      await saveOutfit(AsyncStorage, scope, next.outfit);
+      listeners.get(key)?.forEach(receive => receive(next.outfit));
+      setError(null);
+      return next.value;
+    });
+    queues.set(key, operation);
+    try { return await operation; }
+    catch (error) {
+      setError({ key, message: `Could not save outfit. ${(error as Error).message}` });
+      throw error;
+    } finally { if (queues.get(key) === operation) queues.delete(key); }
+  }, [key, scope, inventory]);
+
+  const transform = (change: (outfit: OutfitState) => OutfitState) => update(outfit => ({ outfit: change(outfit), value: undefined }));
+  const outfit = state.key === key && state.outfit ? reconcileInventory(state.outfit, inventory) : null;
   return {
     outfit,
-    isLoading,
-    togglePiece: handleTogglePiece,
-    setColor: handleSetColor,
-    setStyle: handleSetStyle,
-    applyItem: handleApplyItem,
-    wearFull: handleWearFull,
-    removeAll: handleRemoveAll,
-    reload: load
+    isLoading: !!key && (loadingKey === key || state.key !== key) && errorState?.key !== key,
+    error: errorState?.key === key ? errorState.message : null,
+    togglePiece: (slot: string, on: boolean) => transform(outfit => togglePiece(outfit, slot, on)),
+    setColor: (slot: string, color: string) => transform(outfit => setPieceColor(outfit, slot, color)),
+    setStyle: (slot: string, name: string, value: string) => transform(outfit => setPieceStyle(outfit, slot, name, value)),
+    wearItem: (item: OwnedAttire) => update(outfit => {
+      if (!inventory.some(owned => owned.attire_id === item.attire_id)) throw new Error('This item is no longer in your inventory.');
+      const result = applyItem(outfit, item.attire_id, getSlotForItem(item) ?? item.auto_categorized_type, item.auto_categorized_color,
+        item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`);
+      return { outfit: result.outfit, value: result.message };
+    }),
+    wearFull: () => transform(outfit => wearFullCostume(outfit, inventory)),
+    removeAll: () => transform(removeAllPieces),
+    reload: () => setRevision(value => value + 1),
   };
 }

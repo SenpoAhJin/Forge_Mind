@@ -118,3 +118,8 @@ export function setActiveBodySet(setId: BodySetId): void {
 export function getActiveBodyAsset(bodyType: BaseBodySelection): BodyAsset {
   return getActiveBodySet()[bodyType];
 }
+
+/** Costume geometry and its contract must always come from the same V2 set. */
+export function getCostumeBodyAsset(bodyType: BaseBodySelection): BodyAsset {
+  return BODY_ASSET_SETS.v2[bodyType];
+}

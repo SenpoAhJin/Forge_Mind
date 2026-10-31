@@ -24,7 +24,7 @@ export type CharacterStackParamList = {
   CreateCharacter: undefined; // New: Add character form
   VariantList: { characterId: string };
   MatchResults: undefined;
-  ProjectPlanning: { characterId?: string }; // Updated: optional character context
+  ProjectPlanning: { characterId?: string; projectId?: string };
   About3DPreview: undefined; // WEAR-2: Explainer
 };
 

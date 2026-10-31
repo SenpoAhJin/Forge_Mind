@@ -1,7 +1,8 @@
 import React, { Suspense, useRef, ErrorInfo, Component, useState, useMemo } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Box } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { Canvas, OrbitControls } from './threeRuntime';
+import { Box } from '@react-three/drei';
 import BodyModel from './BodyModel';
 import GarmentLayer from './GarmentLayer';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../constants/bodyType';
@@ -219,27 +220,6 @@ export default function Preview3D({
             <Suspense fallback={null}>
               <BodyModel bodyType={bodyType} />
               
-              {/* Worn Garments Mode: Render runtime garments from matcher */}
-              {useWornMode ? (
-                wornGarments!.map((wornGarment, index) => (
-                  <GarmentLayer
-                    key={`worn-${index}`}
-                    runtimeGarment={wornGarment}
-                    bodyType={bodyType}
-                    visible={true}
-                  />
-                ))
-              ) : (
-                /* Registry Mode: Render toggleable garments from registry */
-                availableGarments.map((garment) => (
-                  <GarmentLayer
-                    key={garment.id}
-                    garment={garment}
-                    bodyType={bodyType}
-                    visible={visibleGarments.has(garment.id)}
-                  />
-                ))
-              )}
             </Suspense>
           )}
 
@@ -250,38 +230,6 @@ export default function Preview3D({
           </mesh>
         </Canvas>
 
-        {/* Garment Controls: Toggle visibility of each garment (registry mode only) */}
-        {!showTestCubes && !useWornMode && availableGarments.length > 0 && (
-          <View style={styles.garmentControls}>
-            <Text style={styles.garmentControlsTitle}>Garments:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.garmentList}>
-              {availableGarments.map((garment) => {
-                const isVisible = visibleGarments.has(garment.id);
-                return (
-                  <TouchableOpacity
-                    key={garment.id}
-                    style={[
-                      styles.garmentButton,
-                      isVisible && styles.garmentButtonActive,
-                    ]}
-                    onPress={() => toggleGarment(garment.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.garmentButtonText,
-                        isVisible && styles.garmentButtonTextActive,
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {garment.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
       </View>
     </Canvas3DErrorBoundary>
   );

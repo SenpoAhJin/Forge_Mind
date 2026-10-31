@@ -6,9 +6,10 @@
  */
 
 import costumePiecesData from '../data/costumePieces.json' with { type: 'json' };
-import itemSlotMap from '../data/itemSlotMap.json' with { type: 'json' };
 import colorNames from '../data/colorNames.json' with { type: 'json' };
 import costumeStyles from '../data/costumeStyles.json' with { type: 'json' };
+import palette from '../data/outfitPalette.json' with { type: 'json' };
+import type { OwnedAttire } from '../types/owned-attire';
 
 // Storage adapter interface for dependency injection
 export interface StorageAdapter {
@@ -34,15 +35,15 @@ export interface OutfitState {
 
 // Scope types
 export type OutfitScope = 
-  | { type: 'body'; bodyType: 'male' | 'female' }
-  | { type: 'project'; projectId: string };
+  | { type: 'body'; bodyType: 'male' | 'female'; accountId?: string }
+  | { type: 'project'; projectId: string; accountId?: string };
 
 /**
  * Generate storage key from scope
  */
 export function getScopeKey(scope: OutfitScope): string {
   if (scope.type === 'body') {
-    return `body:${scope.bodyType}`;
+    return 'wardrobe'; // A body change must not change the worn outfit.
   } else {
     return `project:${scope.projectId}`;
   }
@@ -52,14 +53,19 @@ export function getScopeKey(scope: OutfitScope): string {
  * Generate full storage key
  */
 export function getStorageKey(scope: OutfitScope): string {
-  return `@forgemind:outfit:${getScopeKey(scope)}`;
+  if (!scope.accountId?.trim()) throw new Error('Sign in to save a worn outfit.');
+  return `@forgemind:outfit:v3:${encodeURIComponent(scope.accountId.trim().toLowerCase())}:${getScopeKey(scope)}`;
 }
 
 /**
  * Get all available slots from costumePieces.json
  */
 export function getAvailableSlots(): string[] {
-  return costumePiecesData.pieces.map(p => p.id);
+  return getSlotDefinitions().map(p => p.id);
+}
+
+export function getSlotDefinitions() {
+  return costumePiecesData.pieces.filter(p => !('supported' in p) || p.supported !== false);
 }
 
 /**
@@ -107,7 +113,7 @@ export function createEmptyOutfit(): OutfitState {
   }
   
   return {
-    version: 2,
+    version: 3,
     pieces
   };
 }
@@ -119,71 +125,24 @@ export async function loadOutfit(
   storage: StorageAdapter,
   scope: OutfitScope
 ): Promise<OutfitState> {
-  try {
-    const key = getStorageKey(scope);
-    const json = await storage.getItem(key);
-    
-    if (!json) {
-      return createEmptyOutfit();
-    }
-    
-    const data = JSON.parse(json);
-    
-    // Migrate from version 1 to version 2
-    if (data.version === 1) {
-      const migratedPieces: OutfitState['pieces'] = {};
-      for (const [slot, piece] of Object.entries(data.pieces)) {
-        const oldPiece = piece as { on: boolean; color: string; itemId?: string; source: string };
-        migratedPieces[slot] = {
-          on: oldPiece.on,
-          color: oldPiece.color,
-          colorTip: oldPiece.color, // Default colorTip to piece color
-          style: getSlotDefaultStyles(slot),
-          itemId: oldPiece.itemId,
-          source: (oldPiece.source === 'user' || oldPiece.source === 'item' || oldPiece.source === 'suggestion') 
-            ? oldPiece.source 
-            : 'user', // Default to 'user' for unknown sources
-        };
-      }
-      return {
-        version: 2,
-        pieces: migratedPieces
-      };
-    }
-    
-    // Check version
-    if (data.version !== 2) {
-      console.warn('[outfitStore] Unknown version, returning empty outfit');
-      return createEmptyOutfit();
-    }
-    
-    // Validate structure
-    if (!data.pieces || typeof data.pieces !== 'object') {
-      return createEmptyOutfit();
-    }
-    
-    // Fill missing styles with defaults
-    const validatedPieces: OutfitState['pieces'] = {};
-    for (const [slot, piece] of Object.entries(data.pieces)) {
-      const p = piece as any;
-      validatedPieces[slot] = {
-        on: p.on ?? false,
-        color: p.color ?? getSlotDefaultColor(slot),
-        colorTip: p.colorTip,
-        style: p.style ?? getSlotDefaultStyles(slot),
-        itemId: p.itemId,
-        source: p.source ?? 'user'
-      };
-    }
-    
-    return {
-      version: 2,
-      pieces: validatedPieces
-    };
-  } catch (error) {
-    console.error('[outfitStore] Failed to load outfit:', error);
-    return createEmptyOutfit();
+  // Old unscoped keys cannot be attributed to an account and are not imported.
+  const json = await storage.getItem(getStorageKey(scope));
+  if (!json) return createEmptyOutfit();
+  const data = JSON.parse(json);
+  if (data?.version !== 3 || !data.pieces || typeof data.pieces !== 'object') {
+    throw new Error('Saved outfit has an unsupported format. It has not been overwritten.');
   }
+  const outfit = createEmptyOutfit();
+  for (const slot of getAvailableSlots()) {
+    const p = data.pieces[slot];
+    if (!p) continue;
+    if (typeof p.on !== 'boolean' || !getColorFromName(p.color) ||
+        (p.itemId !== undefined && typeof p.itemId !== 'string')) {
+      throw new Error('Saved outfit could not be read. It has not been overwritten.');
+    }
+    outfit.pieces[slot] = { ...outfit.pieces[slot], ...p, on: p.on && !!p.itemId };
+  }
+  return outfit;
 }
 
 /**
@@ -212,7 +171,7 @@ export function togglePiece(
   slot: string,
   on: boolean
 ): OutfitState {
-  if (!outfit.pieces[slot]) {
+  if (!outfit.pieces[slot] || (on && !outfit.pieces[slot].itemId)) {
     return outfit;
   }
   
@@ -237,7 +196,8 @@ export function setPieceColor(
   slot: string,
   color: string
 ): OutfitState {
-  if (!outfit.pieces[slot]) {
+  const hex = getColorFromName(color);
+  if (!outfit.pieces[slot] || !hex) {
     return outfit;
   }
   
@@ -247,7 +207,7 @@ export function setPieceColor(
       ...outfit.pieces,
       [slot]: {
         ...outfit.pieces[slot],
-        color,
+        color: hex,
         source: 'user'
       }
     }
@@ -312,8 +272,17 @@ export function setPieceColorTip(
  * Get slot for an item category
  */
 export function getSlotForCategory(category: string): string | null {
-  const slotMap = itemSlotMap as Record<string, string | null>;
-  return slotMap[category] || null;
+  const normalized = category.trim().toLowerCase();
+  return getSlotDefinitions().find(piece => piece.categories?.includes(normalized))?.id ?? null;
+}
+
+export function getSlotForItem(item: Pick<OwnedAttire, 'auto_categorized_type' | 'original_input_text' | 'auto_categorized_style'>): string | null {
+  const category = item.auto_categorized_type.toLowerCase();
+  const words = `${item.original_input_text} ${item.auto_categorized_style}`.toLowerCase().split(/[^a-z0-9]+/);
+  const specific = getSlotDefinitions().find(piece =>
+    'keywordCategories' in piece && piece.keywordCategories?.includes(category) &&
+    'itemKeywords' in piece && piece.itemKeywords?.some(keyword => words.includes(keyword)));
+  return specific?.id ?? getSlotForCategory(category);
 }
 
 /**
@@ -323,8 +292,10 @@ export function getColorFromName(colorName: string | undefined): string | null {
   if (!colorName) return null;
   
   const colorMap = colorNames as Record<string, string | null>;
-  const normalized = colorName.toLowerCase();
-  return colorMap[normalized] || null;
+  const normalized = colorName.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) return normalized.toUpperCase();
+  if (/^#[0-9a-f]{3}$/i.test(normalized)) return `#${normalized.slice(1).split('').map(c => c + c).join('')}`.toUpperCase();
+  return palette.colors.find(color => color.id === normalized || color.name.toLowerCase() === normalized)?.hex.toUpperCase() ?? colorMap[normalized] ?? null;
 }
 
 /**
@@ -339,13 +310,13 @@ export function applyItem(
   itemName: string
 ): { outfit: OutfitState; action: 'worn' | 'removed' | 'replaced' | 'no-slot'; message: string } {
   // Check if category has a slot
-  const slot = getSlotForCategory(category);
+  const slot = getSlotForItem({ auto_categorized_type: category as OwnedAttire['auto_categorized_type'], original_input_text: itemName, auto_categorized_style: '' });
   
   if (!slot) {
     return {
       outfit,
       action: 'no-slot',
-      message: 'No 3D piece for this item yet'
+      message: 'Not shown in 3D yet'
     };
   }
   
@@ -394,6 +365,8 @@ export function applyItem(
     pieces: {
       ...outfit.pieces,
       [slot]: {
+        ...currentPiece,
+        style: getSlotDefaultStyles(slot),
         on: true,
         color,
         itemId,
@@ -405,30 +378,37 @@ export function applyItem(
   return {
     outfit: newOutfit,
     action: wasWearing ? 'replaced' : 'worn',
-    message: wasWearing ? `Replaced ${itemName}` : `Wearing ${itemName}`
+    message: `${itemName} is now on your ${getSlotDefinitions().find(piece => piece.id === slot)?.label ?? slot} slot`
   };
 }
 
 /**
  * Wear full costume (all pieces on with default colors)
  */
-export function wearFullCostume(outfit: OutfitState): OutfitState {
-  const pieces = { ...outfit.pieces };
-  
+export function wearFullCostume(outfit: OutfitState, inventory: OwnedAttire[] = []): OutfitState {
+  let result = reconcileInventory(outfit, inventory);
   for (const slot of getAvailableSlots()) {
-    if (pieces[slot]) {
-      pieces[slot] = {
-        on: true,
-        color: getSlotDefaultColor(slot),
-        source: 'user'
-      };
+    const assigned = result.pieces[slot];
+    const item = inventory.find(candidate => candidate.attire_id === assigned.itemId) ??
+      inventory.find(candidate => getSlotForItem(candidate) === slot);
+    if (!item) continue;
+    result = assigned.itemId === item.attire_id
+      ? togglePiece(result, slot, true)
+      : applyItem(result, item.attire_id, item.auto_categorized_type, item.auto_categorized_color,
+          `${item.original_input_text} ${item.auto_categorized_style}`.trim()).outfit;
+  }
+  return result;
+}
+
+export function reconcileInventory(outfit: OutfitState, inventory: OwnedAttire[]): OutfitState {
+  const pieces = { ...outfit.pieces };
+  for (const slot of getAvailableSlots()) {
+    const piece = pieces[slot];
+    if (!inventory.some(item => item.attire_id === piece.itemId && getSlotForItem(item) === slot)) {
+      pieces[slot] = { ...piece, on: false, itemId: undefined };
     }
   }
-  
-  return {
-    ...outfit,
-    pieces
-  };
+  return { ...outfit, pieces };
 }
 
 /**

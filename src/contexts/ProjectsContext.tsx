@@ -1,10 +1,11 @@
 /**
  * ForgeMind - Projects Context
- * Mock/local project state seeded from src/data (fresh on reload, like the FE-3 selection store).
+ * Account-scoped local project state, hydrated before it can be written.
  * Mutations: create project, add task, change task status, add budget line item.
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Project, Task, BudgetLineItem, ProjectStatus, TaskStatus, BudgetCategory } from '../types/projects';
 import { ProjectMilestone } from '../types/milestones';
 import { projects as seedProjects, tasks as seedTasks, budgetItems as seedBudgetItems } from '../data';
@@ -12,6 +13,7 @@ import { useEvents } from './EventsContext';
 import { useUser } from './UserContext';
 
 interface NewProjectInput {
+  extracted_outfit?: Project['extracted_outfit'];
   character_id: string;
   variant_id: string;
   project_name: string;
@@ -30,6 +32,8 @@ interface NewBudgetInput {
 }
 
 interface ProjectsContextValue {
+  isLoaded: boolean;
+  storageError: string | null;
   projects: Project[];
   tasks: Task[];
   budgetItems: BudgetLineItem[];
@@ -56,23 +60,52 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [tasks, setTasks] = useState<Task[]>(seedTasks);
   const [budgetItems, setBudgetItems] = useState<BudgetLineItem[]>(seedBudgetItems);
   const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
+  const storageKey = user?.email ? `@forgemind:projects:v1:${encodeURIComponent(user.email.toLowerCase())}` : null;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const writes = useRef(Promise.resolve());
   
   const { getEventById } = useEvents();
 
   useEffect(() => {
-    setProjects(
-      user
-        ? seedProjects.map(project => ({ ...project, user_id: user.email }))
-        : []
-    );
-    setTasks(seedTasks);
-    setBudgetItems(seedBudgetItems);
-    setMilestones([]);
-  }, [user?.email]);
+    let active = true;
+    setLoadedKey(null); setStorageError(null);
+    setProjects([]); setTasks([]); setBudgetItems([]); setMilestones([]);
+    if (!storageKey || !user) return;
+    const account = user.email;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(storageKey);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved && (saved.version !== 1 || !Array.isArray(saved.projects) || !Array.isArray(saved.tasks) || !Array.isArray(saved.budgetItems) || !Array.isArray(saved.milestones))) {
+          throw new Error('Saved project data has an unsupported format.');
+        }
+        if (!active) return;
+        setProjects(saved ? saved.projects.filter((p: Project) => p.user_id === account) : seedProjects.map(p => ({ ...p, user_id: account })));
+        setTasks(saved?.tasks ?? seedTasks);
+        setBudgetItems(saved?.budgetItems ?? seedBudgetItems);
+        setMilestones(saved?.milestones ?? []);
+        setLoadedKey(storageKey);
+      } catch (error) { if (active) setStorageError(`Could not load projects. ${(error as Error).message}`); }
+    })();
+    return () => { active = false; };
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || loadedKey !== storageKey) return;
+    let active = true;
+    const snapshot = JSON.stringify({ version: 1, projects, tasks, budgetItems, milestones });
+    writes.current = writes.current.catch(() => undefined).then(() => AsyncStorage.setItem(storageKey, snapshot));
+    writes.current.then(() => { if (active) setStorageError(null); })
+      .catch(error => { if (active) setStorageError(`Could not save projects. ${error.message}`); });
+    return () => { active = false; };
+  }, [storageKey, loadedKey, projects, tasks, budgetItems, milestones]);
 
   const addProject = (input: NewProjectInput): Project => {
+    if (!user || loadedKey !== storageKey) throw new Error('Wait for your projects to load before creating one.');
     const project: Project = {
       project_id: `proj-${Date.now()}`,
+      extracted_outfit: input.extracted_outfit,
       user_id: user?.email ?? 'demo-user-1',
       character_id: input.character_id,
       variant_id: input.variant_id,
@@ -222,7 +255,9 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
   return (
     <ProjectsContext.Provider
       value={{
-        projects,
+        isLoaded: !!storageKey && loadedKey === storageKey,
+        storageError,
+        projects: loadedKey === storageKey ? projects : [],
         tasks,
         budgetItems,
         milestones,

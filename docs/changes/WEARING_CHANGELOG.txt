@@ -1,0 +1,92 @@
+ForgeMind Wearing — implementation changelog
+Saturday, October 31, 2026, 22:48 PHT (Asia/Manila)
+
+Scope: Wearing deck Steps 2, 3, 5, 8 and 10. No project-brief files or tests changed.
+
+CHANGES
+1. Extended the existing costumePieces.json definitions with labels, categories,
+   optional category/keyword matching, body-region geometry source and recolor
+   support. The supported flag excludes belt. Shown/not-shown labels derive from
+   this data. Adding a supported body-region slot requires data, not another UI.
+2. Kept the existing outfitStore pieces map, with one owned item ID per slot.
+   Wearing replaces only that slot, a repeated tap removes it, and bare slots
+   cannot be enabled without an assigned item. Full costume uses real inventory
+   and preserves existing choices and colors. Unknown/deleted items are hidden.
+3. Reworked useOutfit storage updates to serialize by account/project key, read
+   the latest state before mutation, publish only after successful persistence,
+   synchronize mounted consumers, and expose load/save errors. Body and camera
+   selection never change the outfit storage key. Old unscoped keys are left
+   intact and not imported because their account ownership is unknown.
+4. Shared OwnedOutfitPanel across ProjectPlanningScreen, ProjectDashboardScreen,
+   MatchResultsScreen and the development wearing preview. Removed the parallel
+   2D state model in favor of a compatibility export to the shared screen. The
+   legacy base-body diagnostic no longer renders generic registry costumes.
+5. Added grouped wardrobe lists, five filter chips, instant item actions, visible
+   save results, eight swatches per shown slot, target colors first, and custom
+   hex input. Exact normalized target-color equality controls the match label.
+   Existing garment style controls remain available after full-costume selection.
+   The panel background and body-selector text follow the active theme so labels
+   stay readable when embedded in older screens with static theme styles.
+6. Added optional typed ExtractedOutfit fields on existing project/character/
+   variant records. Supplied baseline results expose their actual color IDs,
+   keywords and low/medium/high confidence labels. No percentages are fabricated.
+   No analysis request is made. No production extracted reference was found in
+   the inspected catalog; absent data is labelled, and placeholder target-color
+   tables are not presented as measured results.
+7. Fixed the costume body's dependence on the development V1/V2 switch. It now
+   uses V2 plus its matching contract, resolves bundled asset URIs, and clones
+   bone hierarchies with SkeletonUtils. The body mounts independently of piece
+   creation. Added loading/error UI, an explicit background, native Canvas/drei
+   exports, shared angle controls and touch handling through React state.
+8. Added clavicle and upper-thigh regions to the top's bounded coverage. Male top
+   triangles 5834 -> 6664; female 5962 -> 7090. A separate waist-region probe
+   found 157/440 male and 168/445 female triangles uncovered after the initial
+   shoulder correction: nearest-bone classification placed those torso-adjacent
+   triangles in the thigh region above the bottom's upper boundary. Including
+   thigh regions in the top while retaining its hip hem fixed that gap. Final
+   measured waist coverage: 440/440 male and 445/445 female. The geometry test
+   asserts zero uncovered waist triangles. No fixed garment scale or guessed
+   head offset was introduced.
+9. Persisted the existing ProjectsContext records locally per account so a new
+   project remains reachable after restart. It waits for hydration before writes
+   and exposes storage errors. This is local persistence, not server sync.
+10. Removed mock inventory injection from offline/empty-inventory paths and guarded
+    cache writes against a previous account's hydration state. Server inventory
+    operations remain the existing inventory service.
+
+AUDIT AND TEST EVIDENCE
+RAN — tools/wearing-geometry.mjs against both actual V2 GLBs/contracts. Before and
+after JSON retained at wearing-geometry-before.json / wearing-geometry-after.json.
+Male wig y=1.773..1.915; shoulder y=1.51989. Female wig y=1.760..1.915; shoulder
+y=1.52443. Root and source mesh transforms were identity in the before probe.
+The reported shoulder-position wig was not reproduced in the asset probe; an
+origin/anchor defect remains unconfirmed. No speculative origin correction made.
+
+RAN — 13 production outfit-store tests, all passing; tools/test_outfit_state.mjs
+now runs the actual production suite instead of reimplementing the store.
+RAN — 11 existing extracted-outfit schema tests, all passing.
+RAN — web acceptance through the actual exported app and PhoneFrame using an
+isolated browser, account/session caches and OwnedAttire fixtures. No real backend
+records were written. Results and screenshots: wearing-evidence/.
+RAN — Expo web export and Android/Hermes export. Exported bundles remain local
+artifacts, separate from source changes.
+RAN — TypeScript before/after checking; see wearing-typecheck-before.txt and
+wearing-typecheck-after.txt. The app is NOT described as build-clean.
+
+NOT RUN — real-phone Expo Go acceptance checks: no real-phone control connection
+was available; adb was not installed/found. A native bundle is not phone testing.
+NOT RUN — live login as two real accounts. Browser identity-isolation testing used
+explicit account fixtures and full provider restart, not backend authentication.
+NOT RUN — real image analysis, per the task's exclusion of the analysis step.
+
+Initial development-server reloads timed out in browser automation. The final
+suite uses a locally served Expo web export, preserving the actual PhoneFrame,
+navigation, providers, inventory and wearing components. Early obsolete store
+tests failed 4 assertions expecting version 1. The replacement suite tests the
+current account-scoped, inventory-only contract and failure behavior directly.
+
+No voice, variant picker, ghost pieces, comparison, saved looks, paid try-on or
+new server synchronization was implemented.
+
+The complete per-bug / per-test matrix and real git terminal output are written
+to docs/changes/WEARING_REPORT.txt after the final git operations.

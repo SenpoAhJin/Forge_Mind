@@ -8,6 +8,7 @@
  * ProjectReadiness mirrors the computed ProjectReadiness entry (not a static table) in the same doc.
  */
 
+import type { ExtractedOutfit } from './extractedOutfit';
 export type ProjectStatus = 'planning' | 'in-progress' | 'completed' | 'abandoned';
 
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
@@ -15,6 +16,8 @@ export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'skipped';
 
 export interface Project {
+  /** Supplied baseline result only; wearing does not run reference analysis. */
+  extracted_outfit?: ExtractedOutfit;
   project_id: string;
   user_id: string;
   character_id: string;

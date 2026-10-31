@@ -5,12 +5,14 @@
  * Users create their own characters instead of using hardcoded database.
  */
 
+import type { ExtractedOutfit } from './extractedOutfit';
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 
 /**
  * Character created by user for cosplay planning
  */
 export interface UserCharacter {
+  extracted_outfit?: ExtractedOutfit;
   /** Unique identifier */
   id: string;
   

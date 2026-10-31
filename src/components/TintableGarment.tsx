@@ -17,7 +17,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { useGLTF } from '@react-three/drei/native';
+import { useGLTF } from './threeRuntime';
 import { Asset } from 'expo-asset';
 import * as THREE from 'three';
 import type { TintableRegion } from '../data/garmentCatalog';

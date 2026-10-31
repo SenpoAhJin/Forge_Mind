@@ -24,7 +24,6 @@ import {
   UpdateOwnedAttireInput,
   AvailabilityStatus,
 } from '../types/owned-attire';
-import { ownedAttireSeed } from '../data/owned-attire-seed';
 import { InventoryService } from '../services/InventoryService';
 import { isNetworkError } from '../services/http';
 import { hasUsablePhoto } from '../utils/photoUtils';
@@ -52,18 +51,10 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [items, setItems] = useState<OwnedAttire[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [loadedAccount, setLoadedAccount] = useState<string | undefined>();
 
   const storageKey = user?.email ? `${STORAGE_KEY_PREFIX}${user.email}` : null;
   const migrationFlagKey = user?.email ? `${MIGRATION_FLAG_PREFIX}${user.email}` : null;
-
-  const seedForUser = useCallback(
-    () =>
-      ownedAttireSeed.map((seed) => ({
-        ...seed,
-        user_id: user?.email ?? seed.user_id,
-      })),
-    [user?.email]
-  );
 
   /**
    * Load from server, fallback to cache on failure.
@@ -71,12 +62,15 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
    */
   useEffect(() => {
     let cancelled = false;
+    setIsLoaded(false);
+    setItems([]);
 
     const load = async () => {
       if (!storageKey || !user?.email) {
         // Not logged in: use seed
         if (!cancelled) {
-          setItems(seedForUser());
+          setItems([]);
+          setLoadedAccount(user?.email);
           setIsLoaded(true);
           setIsOffline(false);
         }
@@ -191,6 +185,7 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
           console.log(`[OwnedAttire] Saving ${serverItems.length} items to cache`);
           await AsyncStorage.setItem(storageKey, JSON.stringify(serverItems));
           setIsOffline(false);
+          setLoadedAccount(user?.email);
           setIsLoaded(true);
         }
       } catch (error) {
@@ -202,16 +197,17 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
             const cachedRaw = await AsyncStorage.getItem(storageKey);
             if (cachedRaw) {
               const cached = JSON.parse(cachedRaw) as OwnedAttire[];
-              setItems(cached.length === 0 ? seedForUser() : cached);
+              setItems(cached);
             } else {
-              setItems(seedForUser());
-              await AsyncStorage.setItem(storageKey, JSON.stringify(seedForUser()));
+              setItems([]);
+              await AsyncStorage.setItem(storageKey, JSON.stringify([]));
             }
             setIsOffline(true);
           } catch (cacheError) {
-            setItems(seedForUser());
+            setItems([]);
             setIsOffline(true);
           }
+          setLoadedAccount(user?.email);
           setIsLoaded(true);
         }
       }
@@ -221,11 +217,11 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
     return () => {
       cancelled = true;
     };
-  }, [user?.email, storageKey, migrationFlagKey, seedForUser]);
+  }, [user?.email, storageKey, migrationFlagKey]);
 
   // Sync to cache after changes (cache is READ-ONLY offline fallback)
   useEffect(() => {
-    if (!isLoaded || !storageKey || isOffline) return;
+    if (!isLoaded || !storageKey || isOffline || loadedAccount !== user?.email) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(items)).catch(() => {
       // local storage best-effort; failures are non-fatal
     });
@@ -397,8 +393,8 @@ export const OwnedAttireProvider: React.FC<{ children: ReactNode }> = ({ childre
   return (
     <OwnedAttireContext.Provider
       value={{
-        items,
-        isLoaded,
+        items: loadedAccount === user?.email ? items : [],
+        isLoaded: loadedAccount === user?.email && isLoaded,
         isOffline,
         addItem,
         updateItem,

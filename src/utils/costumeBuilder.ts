@@ -31,6 +31,13 @@ export interface ClipDef {
 
 export interface PieceDefinition {
   id: string;
+  label?: string;
+  categories?: string[];
+  itemKeywords?: string[];
+  keywordCategories?: string[];
+  defaultAsset?: string;
+  recolor?: boolean;
+  supported?: boolean;
   slot: string;
   selection?: "band" | undefined; // "band" = all triangles in region, no bone labels/closure
   groups?: string[];

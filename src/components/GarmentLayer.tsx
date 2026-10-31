@@ -15,7 +15,7 @@
  */
 
 import React, { Suspense, useMemo, useRef } from 'react';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF } from './threeRuntime';
 import { Asset } from 'expo-asset';
 import { GarmentEntry, BodyType } from '../data/garmentRegistry';
 import type { GarmentCatalogEntry } from '../data/garmentCatalog';

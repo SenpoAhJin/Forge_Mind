@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StandardCard, Button, Tag, TextInputField, StatusBadge, BodyTypeSelector, OutfitControls } from '../../components';
+import { StandardCard, Button, Tag, TextInputField, StatusBadge } from '../../components';
 import { DateInput } from '../../components/inputs/DateInput';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { BaseBodySelection, DEFAULT_BASE_BODY } from '../../constants/bodyType';
@@ -19,8 +19,8 @@ import { getCharacterById, getVariantById } from '../../data';
 import { computeReadiness } from '../../utils/readiness';
 import { Project, Task, TaskStatus, BudgetCategory } from '../../types/projects';
 import { getTodayLocal } from '../../utils/dateHelpers';
-import { useOutfit } from '../../hooks/useOutfit';
-import CostumeViewer from '../../components/CostumeViewer';
+import { OwnedOutfitPanel } from '../../components/OwnedOutfitPanel';
+import { useOwnedAttire } from '../../contexts/OwnedAttireContext';
 
 interface ProjectDashboardScreenProps {
   projectId: string;
@@ -78,45 +78,19 @@ const formatPeso = (value: number) => {
 };
 
 export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId, onOpenMeetups }) => {
-  const { projects, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
+  const { projects, isLoaded: projectsLoaded, storageError, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
   const { events, getEventById } = useEvents();
-  const { user, updateBodyType } = useUser();
+  const { user } = useUser();
+  const inventory = useOwnedAttire();
+  const [interacting, setInteracting] = useState(false);
 
-  const project = projects.find((p) => p.project_id === projectId);
+  const project = projects.find((p) => p.project_id === projectId && p.user_id === user?.email);
 
   const [newTaskText, setNewTaskText] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [newPlanned, setNewPlanned] = useState('');
   const [newActual, setNewActual] = useState('');
   const [newCategory, setNewCategory] = useState<BudgetCategory>('material');
-  
-  // FE-3D Milestone 1c: 3D preview body type. Seeded from the persisted profile
-  // value so the choice follows the user across every project they open, and falls
-  // back to a technical default (not a silent hardcoded assumption in the JSX) so a
-  // brand-new user still sees a body immediately. The selector next to the preview
-  // is always visible, so an unset preference is a one-tap fix.
-  const [bodyType, setBodyType] = useState<BaseBodySelection>(
-    user?.base_body_selection ?? DEFAULT_BASE_BODY
-  );
-  
-  // COSTUME-7C: V2 costume outfit state per project
-  const { outfit, isLoading: outfitLoading, togglePiece, setColor, setStyle, wearFull, removeAll } = useOutfit(bodyType, `project:${projectId}`);
-  
-  // Convert outfit to Sets/Maps for CostumeViewer
-  const enabledPieces = useMemo(() => {
-    if (!outfit) return new Set<string>();
-    return new Set(Object.entries(outfit.pieces).filter(([_, p]) => p.on).map(([slot]) => slot));
-  }, [outfit]);
-  
-  const pieceColors = useMemo(() => {
-    if (!outfit) return new Map<string, string>();
-    return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.color]));
-  }, [outfit]);
-  
-  const pieceStyles = useMemo(() => {
-    if (!outfit) return new Map<string, Record<string, string>>();
-    return new Map(Object.entries(outfit.pieces).map(([slot, p]) => [slot, p.style || {}]));
-  }, [outfit]);
   
   // Event linking state
   const [showEventPicker, setShowEventPicker] = useState(false);
@@ -156,8 +130,8 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
   if (!project) {
     return (
       <View style={styles.container}>
-        <Text style={styles.emptyTitle}>Project not found</Text>
-        <Text style={styles.emptyBody}>This project is not in the local dataset.</Text>
+        <Text style={styles.emptyTitle}>{projectsLoaded ? 'Project not found' : 'Loading project'}</Text>
+        <Text style={styles.emptyBody}>{storageError ?? 'This project is unavailable for your account.'}</Text>
       </View>
     );
   }
@@ -216,10 +190,10 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
     }
   };
 
-  const scrollViewRef = React.useRef<ScrollView>(null);
 
   return (
-    <ScrollView ref={scrollViewRef} style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView scrollEnabled={!interacting} style={styles.container} contentContainerStyle={styles.content}>
+      {storageError ? <Text accessibilityRole="alert" style={{ color: colors.error }}>{storageError}</Text> : null}
       <StandardCard style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerMeta}>
@@ -388,52 +362,10 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>3D Preview</Text>
-        <Text style={styles.sectionDescription}>
-          V2 body with costume pieces. Drag to rotate, pinch to zoom.
-        </Text>
-        
-        {/* Costume Controls */}
-        <OutfitControls
-          enabledPieces={enabledPieces}
-          pieceColors={pieceColors}
-          pieceStyles={pieceStyles}
-          togglePiece={togglePiece}
-          setColor={setColor}
-          setStyle={setStyle}
-          wearFull={wearFull}
-          removeAll={removeAll}
-          targetColorSwatches={[]}
-        />
-        
-        <View 
-          style={styles.previewContainer}
-          onTouchStart={() => {
-            scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
-          }}
-          onTouchEnd={() => {
-            scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
-          }}
-        >
-          <CostumeViewer
-            bodyType={bodyType}
-            enabledPieces={enabledPieces}
-            pieceColors={pieceColors}
-            pieceStyles={pieceStyles}
-          />
-        </View>
-
-        {/* FE-3D Milestone 1c: the only place the body type is chosen. Deliberately
-            inside the 3D Preview and not in onboarding/profile, and deliberately not
-            framed as a gender or identity question. Selecting here persists and
-            becomes the default for every later character/variant preview. */}
-        <View style={styles.bodyTypeSection}>
-          <BodyTypeSelector
-            value={bodyType}
-            onChange={setBodyType}
-            onCommit={(next) => { void updateBodyType(next); }}
-          />
-        </View>
-
+        <OwnedOutfitPanel accountId={user?.email} projectId={projectId}
+          items={inventory.items} inventoryLoaded={inventory.isLoaded} offline={inventory.isOffline}
+          initialBody={user?.base_body_selection} extractedOutfit={project.extracted_outfit ?? variant?.extracted_outfit}
+          onInteractionChange={setInteracting} />
       </View>
 
       <View style={styles.section}>
