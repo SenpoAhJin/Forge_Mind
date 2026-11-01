@@ -1,0 +1,44 @@
+﻿powershell.exe : (node:416) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Docu
+ments/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStor
+e.ts is not specified and it doesn't parse as CommonJS.
+At line:2 char:406
++ ... ) { $output = & powershell -NoProfile -Command $check[1] 2>&1; $resul ...
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:416) [MOD...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED 
+COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[outfitStore] Failed to save outfit: Error: Storage full
+    at Object.setItem (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosFo
+rge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:73)
+    at saveOutfit (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_
+System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts:159:19)
+    at TestContext.<anonymous> (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTE
+NTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ five data-defined slots; no accessory/belt is supported (4.0184ms)
+✔ new outfit and wear-full with empty inventory remain bare (0.9482ms)
+✔ white shirt, black pants, boots and silver wig all wear together (1.3512ms)
+✔ red wig replaces silver wig in exactly one slot (0.5291ms)
+✔ tapping same item removes only its slot (0.3051ms)
+✔ wear-full preserves assigned items/colors; toggles and colors stay editable (0.6049ms)
+✔ remove-all leaves no visible piece (0.5891ms)
+✔ names, silver, palette IDs and arbitrary hex colors normalize consistently (0.2498ms)
+✔ account/project keys differ; body switch uses the same wardrobe key (0.8179ms)
+✔ restart restores worn IDs, hidden flags, colors and styles only for the account/project (1.1232ms)
+✔ old unscoped data is not silently adopted by a new account (0.4076ms)
+✔ deleted/transferred items are no longer shown (0.3948ms)
+✔ read/write failures propagate; corrupt data is not overwritten (0.9571ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 25.5294

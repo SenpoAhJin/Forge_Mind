@@ -1,0 +1,22 @@
+﻿ForgeMind finish1 — Phase 0 results
+Sunday, November 1, 2026, 08:12 PHT (Asia/Manila).
+RAN: brief 9 PASS; review-store 5 PASS; wearing-store and wearing-state PASS;
+extractor schema/vocabulary 11 PASS. Raw output: phase0-{suite}.txt.
+RAN FAILED: npm.cmd run test:pure: 60 passed, 1 failed.
+Failing assertion: the shipped category list has 8 entries (prompt expected 9).
+No test or implementation was modified to hide this existing failure.
+RAN FAILED: node node_modules/typescript/bin/tsc --noEmit: exit 2, 23 TS errors.
+Count matches the provided baseline. No source or compiler configuration changed
+in Phase 0, so baseline/delivery source diagnostics are the same run (23).
+Application is NOT build-clean. No second post-edit typecheck was needed because
+Phase 0 edits only documentation and terminal evidence.
+Initial npm/npx .ps1 invocation failed under PowerShell execution policy; direct
+node and npm.cmd reruns completed. No execution policy changed.
+Browser, exports, service runtime and phone: NOT RUN. No URL/port used.
+Target-look browser suite and integrated demo regressions: NOT RUN.
+Phases 1–6 NOT RUN / NOT BUILT. Stopping at Phase 0 boundary under the request's
+context/time rule. Remaining work is the complete shared logic, compare/saved
+looks/undo, planning screens, commands, project-attached variants, and integrated
+three-run exported-web verification with phone instructions.
+Git transcript files record actual output. Exact paths only were staged;
+pre-existing diagnostics, deleted tool, screenshots and bundles were excluded.

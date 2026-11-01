@@ -1,5 +1,13 @@
 # ForgeMind — Plain-Language Changelog
 
+## Sunday, November 1, 2026, 08:09 PHT — finish1 preflight
+
+Audited existing project, confirmed review, wearing and preview implementations on
+task/finish1. No feature code changed. Phase 0 evidence and test verdicts are in
+docs/evidence/finish1/. Planning and wearing phases 1–6 remain unfinished; browser
+and real-phone acceptance were not run.
+
+
 ## Sunday, November 1, 2026, 06:00 PHT — Local reference extraction
 
 Saved briefs can enter local analysis, review six proposed components, retain AI

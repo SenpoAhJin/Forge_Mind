@@ -1,0 +1,89 @@
+﻿
+> forgemind-mobile@1.0.0 test:pure
+> tsc -p src/utils/__tests__/tsconfig.pure.json && node src/utils/__tests__/run-pure-logic-tests.mjs
+
+
+--- logisticsRules.checkCompletion / getMissingFields ---
+PASS  complete entry reports no missing fields
+PASS  complete entry isComplete is true
+PASS  whitespace-only arrival_date counts as missing
+PASS  whitespace-only stage_time_preference counts as missing (performer)
+PASS  plate_number not required when parking_needs is none
+PASS  plate_number required when parking_needs is valet
+PASS  entourage_size 0 counts as ANSWERED (not missing)
+PASS  entourage_size null counts as missing
+PASS  entourage_size 0 leaves the entry complete
+PASS  stage_time_preference not required for non-performers
+
+--- logisticsRules.getUrgency boundaries (today = 2026-09-24) ---
+PASS  +1 day  -> critical
+PASS  +3 days -> urgent
+PASS  +7 days -> reminder
+PASS  +8 days -> on_track
+PASS  +30 days -> on_track
+PASS  past deadline while incomplete -> critical with reason "Past deadline"
+PASS  today (0 days) -> critical
+PASS  complete entry ignores the deadline entirely
+PASS  incomplete entry used above really is incomplete
+
+--- offerRules.getAllowedOfferTypes ---
+PASS  physical goods category allows purchase + trade
+PASS  Commissions & Crafting Services allows commission only
+PASS  Photography Services allows commission only
+PASS  isOfferTypeAllowed rejects purchase on a commission category
+PASS  isOfferTypeAllowed accepts commission on a commission category
+
+--- listingScreener.screenListing ---
+PASS  "gun" in title is blocked
+PASS  "fire arm" (spaced) in description is blocked
+PASS  "firearm" is blocked
+PASS  mixed case "Real GUn" is blocked (case-insensitive)
+PASS  a normal wig listing passes
+FAIL  the shipped category list has 8 entries (the prompt expected 9)
+        expected 8
+        actual   7
+PASS  unknown category is blocked before the keyword check
+PASS  a blocked listing does not reveal which term tripped it
+
+--- formatCurrency.formatPHP ---
+PASS  0 -> ₱0.00
+PASS  1000 -> ₱1,000.00
+PASS  1234567 -> ₱1,234,567.00
+PASS  99.5 -> ₱99.50
+PASS  negative renders as ₱-50.00 (known sign-order defect, report only)
+PASS  every positive output is ₱ then grouped digits then 2 decimals
+PASS  ₱ is U+20B1, not a bare dollar sign
+
+--- dateHelpers (UTC+8 handling at 03:00) ---
+PASS  daysBetween is a plain calendar diff
+PASS  daysBetween is negative when reversed
+PASS  daysBetween same day is 0
+PASS  at 19:00Z the UTC slice is still the previous calendar day
+PASS  at +08:00 the same instant is already the next calendar day
+PASS  the two disagree, which is the bug to avoid
+PASS  getTodayLocal() does NOT use the UTC slice
+PASS  toLocalDateString-style local day is used, not toISOString
+PASS  isDateInPast is date-only, no clock time
+PASS  isDateTodayOrFuture rejects a past date
+PASS  formatCountdown past -> "Past"
+PASS  formatCountdown 0 days -> "Today"
+
+--- CommitmentLogContext diff: a no-op edit writes nothing ---
+PASS  addLogEntry is declared exactly once in the context
+PASS  addLogEntry maps the caller diff 1:1 and never adds a synthetic row
+PASS  LogisticsContext.tsx: guards on changes.length === 0 before logging
+PASS  LogisticsContext.tsx: returns success without logging when there are no changes
+PASS  LogisticsContext.tsx: declares changes as an empty array and fills it by comparison
+PASS  EventsContext.tsx: guards on changes.length === 0 before logging
+PASS  EventsContext.tsx: returns success without logging when there are no changes
+PASS  EventsContext.tsx: declares changes as an empty array and fills it by comparison
+PASS  one log row is produced per changed field
+PASS  the caller diffs each tracked field explicitly
+
+================================
+passed: 60
+failed: 1
+
+failing assertions:
+  - the shipped category list has 8 entries (the prompt expected 9)
+================================

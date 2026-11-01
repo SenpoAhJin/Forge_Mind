@@ -1,0 +1,71 @@
+ForgeMind finish1 — Phase 0 audit
+Started Sunday, November 1, 2026, 08:09 PHT (Asia/Manila).
+Start: task/target-look, a75f4e7 (Record Target Look acceptance and real-photo testing limits).
+Created task/finish1. No feature code changed. AI repository not touched.
+
+OBSERVED IN SOURCE (not browser verification)
+Variants — PARTIAL: src/types/projects.ts has variant_id and wear_variant_id;
+src/data/variantSpecifications.ts and src/utils/variantColors.ts supply catalog
+specifications. src/components/OwnedOutfitPanel.tsx lists confirmed reference
+briefs and calls ProjectsContext.setReferenceBrief. That list is account-wide,
+not a named set of reviews attached to one project. Preserve existing catalogs;
+do not invent another catalog for the requested review variants.
+Saved looks — ABSENT in the current shared wearing path. src/hooks/useOutfit.ts
+and src/utils/outfitStore.ts persist the current outfit, not named snapshots.
+Undo — ABSENT in that path; no ten-step worn-state history.
+Typed command input — ABSENT in the shared wearing path.
+Compare — ABSENT in the shared wearing path. targetLook.ts already generates
+transient target descriptors; reuse those rather than inventory records.
+Task plan — PARTIAL: src/types/projects.ts Task, src/contexts/ProjectsContext.tsx,
+and src/screens/cosplayer/ProjectDashboardScreen.tsx provide stored manual tasks
+and status controls. No confirmed-component sourcing/lead-time generator found.
+Budget/expenses — PARTIAL: same project context and dashboard provide existing
+BudgetLineItem planned_amount and actual_amount. Reuse these records; requested
+local material prices, estimate warning, validated expense workflow and cheaper
+alternatives are not implemented there.
+Shopping terms — PARTIAL: target cards in OwnedOutfitPanel already navigate to
+Marketplace. No requested deterministic phrase/spec/range shopping cards.
+Plan summary — PARTIAL: ProjectDashboardScreen displays project, tasks, budget,
+readiness and the shared wearing preview. No requested clipboard plan summary.
+Readiness — EXISTS WITH DIFFERENT FORMULA: src/utils/readiness.ts weights task
+completion 40%, fixture item matches 30%, budget health 30%. It imports global
+matchComponents. The requested per-confirmed-component average is not present.
+
+About 3D — EXISTS: src/screens/cosplayer/About3DPreviewScreen.tsx imports shown
+and not-shown lists from src/constants/slots.ts / src/data/costumePieces.json.
+Includes Blindfold, Ear cuff, Prop accessory, Belt, simple-shapes explanation,
+exact required wearing footnote, and the checklist/budget sentence. No addition
+needed. Runtime navigation/rendering NOT RUN in this phase.
+
+REUSE AND RISKS FOR LATER PHASES
+Confirmed source: src/types/referenceExtraction.ts ReferenceReview.components;
+ComponentValue.plan already uses own/buy/make. Review storage is account/brief
+scoped in src/utils/referenceReviews.ts, instantiated by
+src/services/ReferenceExtractionService.ts. Do not create another review model.
+Current worn state: useOutfit/outfitStore and OwnedOutfitPanel; five owned slots,
+target display ghosts, colors and shape styles already exist.
+ProjectsContext prevents writes following a failed read via loadedKey. Mutations
+update visible state before its asynchronous save effect finishes; later Save
+project/task/expense confirmations must await a persisted result and handle
+failure instead of assuming a synchronous context mutation means saved.
+ReferenceExtractionService currently requires a configured local HTTP analysis
+service. Offline integrated demo must explicitly use declared fixture analysis
+or existing manual entry. Real-image accuracy is outside scope.
+
+RAN TESTS: raw terminal output in phase0-*.txt beside this audit.
+Brief, reference review, outfit store, outfit state and extractor passed.
+Initial npm/npx PowerShell launcher attempts failed due to execution policy;
+reruns use npm.cmd and node node_modules/typescript/bin/tsc. No policy changed.
+See PHASE0_RESULTS.txt for final typecheck and pure-suite verdicts.
+
+Browser tests: NOT RUN. No browser URL or port used in Phase 0.
+Phone: NOT RUN. For subsequent manual acceptance, launch Expo Go on a physical
+phone against this app, sign in to a test account, open the same project and
+repeat outfit replacement/removal/recolor, body/angle/drag/pinch, restart and
+second-account isolation; then test compare/saved looks/undo, each plan/budget/
+shopping/summary screen, command confirm/cancel and variant switching once built.
+Compilation/export alone must never be reported as a phone runtime pass.
+
+Phases 1–6: NOT RUN / NOT BUILT in this delivery. Stop at Phase 0 boundary;
+no partial feature phase has been introduced. Integrated demo, three consecutive
+runs, offline browser behavior and all new acceptance scenarios remain undone.
