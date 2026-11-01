@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { BaseBodySelection } from '../constants/bodyType';
 import type { OwnedAttire } from '../types/owned-attire';
+import { recordWornChange, saveNamedLook, switchLook, undoLook } from '../utils/savedLooks';
 import {
   type OutfitState, type OutfitScope, getStorageKey, loadOutfit, saveOutfit,
   togglePiece, setPieceColor, setPieceStyle, applyItem, wearFullCostume,
@@ -62,10 +63,13 @@ export function useOutfit(bodyType: BaseBodySelection, projectId?: string, accou
     } finally { if (queues.get(key) === operation) queues.delete(key); }
   }, [key, scope, inventory]);
 
-  const transform = (change: (outfit: OutfitState) => OutfitState) => update(outfit => ({ outfit: change(outfit), value: undefined }));
+  const transform = (change: (outfit: OutfitState) => OutfitState) => update(outfit => ({ outfit: recordWornChange(outfit, change(outfit)), value: undefined }));
   const outfit = state.key === key && state.outfit ? reconcileInventory(state.outfit, inventory) : null;
   return {
     outfit,
+    saveLook: (name: string) => update(outfit => ({ outfit: saveNamedLook(outfit, name, `look-${Date.now()}`), value: undefined })),
+    switchLook: (id: string) => update(outfit => ({ outfit: reconcileInventory(switchLook(outfit, id), inventory), value: undefined })),
+    undo: () => update(outfit => ({ outfit: reconcileInventory(undoLook(outfit), inventory), value: undefined })),
     isLoading: !!key && (loadingKey === key || state.key !== key) && errorState?.key !== key,
     error: errorState?.key === key ? errorState.message : null,
     togglePiece: (slot: string, on: boolean) => transform(outfit => togglePiece(outfit, slot, on)),
@@ -75,7 +79,7 @@ export function useOutfit(bodyType: BaseBodySelection, projectId?: string, accou
       if (!inventory.some(owned => owned.attire_id === item.attire_id)) throw new Error('This item is no longer in your inventory.');
       const result = applyItem(outfit, item.attire_id, getSlotForItem(item) ?? item.auto_categorized_type, item.auto_categorized_color,
         item.original_input_text || `${item.auto_categorized_color} ${item.auto_categorized_type}`);
-      return { outfit: result.outfit, value: result.message };
+      return { outfit: recordWornChange(outfit, result.outfit), value: result.message };
     }),
     wearFull: () => transform(outfit => wearFullCostume(outfit, inventory)),
     removeAll: () => transform(removeAllPieces),

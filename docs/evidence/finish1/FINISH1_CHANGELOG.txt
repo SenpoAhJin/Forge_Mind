@@ -13,3 +13,10 @@ Task/BudgetLineItem types; replaced all weighted readiness call sites.
 Baseline category test reproduced at a75f4e7 and remains FAILED (7 versus 8).
 No platform branch changed. See PHASE1_REPORT.txt for evidence and limitations.
 
+
+Sunday, November 1, 2026, 08:35 PHT — Phase 2 compare and saved looks
+Added one-piece hypothetical A/B preview, named owned looks and 20-step Undo
+through existing outfit storage; failed saves do not publish or show success.
+31 unit/regression tests and all six exported-web browser scenarios passed
+at http://127.0.0.1:8096. TypeScript 23 entering/23 after. Phone NOT RUN.
+No platform branch changed. See PHASE2_REPORT.txt and HANDOFF.txt.

@@ -1,0 +1,18 @@
+Launching Chrome
+Chrome launched
+Page created
+Page configured
+Opening exported app http://127.0.0.1:8096
+App loaded; opening project
+compare-preview-only: RAN PASS
+save-two-switch-undo-remove-all: RAN PASS
+Opening exported app http://127.0.0.1:8096
+App loaded; opening project
+restart: RAN PASS
+Opening exported app http://127.0.0.1:8096
+App loaded; opening project
+account-isolation: RAN PASS
+forced-failed-look-save: RAN PASS
+Opening exported app http://127.0.0.1:8096
+App loaded; opening project
+deleted-inventory-slot: RAN PASS

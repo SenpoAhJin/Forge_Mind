@@ -1,0 +1,85 @@
+ForgeMind finish1 — Phase 2 verification and delivery
+Sunday, November 1, 2026, 08:35 PHT (Asia/Manila).
+
+BUILT
+Saved named looks and a bounded 20-change undo history extend the existing
+account/project OutfitState and its single storage key. No second inventory
+or worn-state repository. Save look, switch and undo await the existing queued
+outfit write before broadcasting state or showing success. Failed writes show
+an error and leave the previous visible/persisted state. No-op changes do not
+consume undo history. Existing wear, toggle, color, style, full costume and
+remove-all changes feed the same history. Saved looks retain owned IDs; removed
+inventory items reconcile to empty slots with a notice, including after reload.
+
+Compare uses the existing viewer with an A/B toggle. A counts only worn owned
+IDs. B adds exactly one chosen missing target slot, with an explicit hypothetical
+label. Use Look B keeps transient preview only. Inventory/project storage and
+worn outfit remain byte-for-byte unchanged. Keep Look A shows owned pieces only.
+One viewer was chosen to reuse its camera and avoid extra WebGL contexts; a
+separate two-canvas instability experiment was NOT RUN.
+
+RAN PASS
+Unit/reducer and existing outfit store/state suites: 31 tests, 0 failures.
+TypeScript baseline entering phase: 23 (phase1-typecheck-after.txt).
+TypeScript after implementation: 23 (phase2-typecheck-after.txt), NOT build-clean.
+The baseline is carried from the immediately preceding phase; no separate
+pre-edit Phase 2 compiler run was performed.
+Expo web export: exit 0 (phase2-web-export.txt).
+Exported application URL: http://127.0.0.1:8096, in its normal PhoneFrame.
+Final browser scenarios (phase2-web-results.json / phase2-web-terminal.txt):
+1. compare-preview-only — PASS; 1/5=20% vs 2/5=40%; 127 red head pixels for
+   the hypothetical wig; unchanged inventory, project and worn storage.
+2. save-two-switch-undo-remove-all — PASS.
+3. restart — PASS, fresh JS providers with browser storage retained.
+4. account-isolation — PASS A -> B -> A using declared cached identities.
+5. forced-failed-look-save — PASS; visible error, no Look saved message,
+   unchanged previous stored state; recovery via Retry loading outfit.
+6. deleted-inventory-slot — PASS, notice and empty wig slot without crash.
+No unhandled page errors. One console error is the deliberately injected write
+failure. Final screenshots: phase2-compare(-3d).png, phase2-saved-looks.png,
+phase2-failed-save.png, phase2-deleted-inventory.png.
+
+OBSERVED
+Inspected phase2-compare-3d.png: body and white owned top, translucent red target
+wig at the head. Inspected phase2-failed-save.png: visible Forced look save
+failure error, disabled actions and retry button, with named looks retained.
+The earlier Phase 1 change is also rendered: fixture readiness is 20% in the
+project list and dashboard because one of five confirmed components is Own it.
+
+TEST CONDITIONS AND EARLY FAILURES
+Declared cached account/inventory plus confirmed-review fixtures were used;
+no image analysis service was invoked. Requests outside localhost:8096 were
+blocked. This does not verify live authentication or server inventory ownership.
+First browser attempt FAILED on selectors for title-case primary button labels;
+the existing Button uppercases these labels. Case-insensitive exact-label
+selectors plus explicit scrolling fixed the test harness; no acceptance
+assertions were removed. Initial failure JSON retained separately. Early local
+failure screenshots/DOM are not the final verdict. Sandbox/launch diagnostics
+and interrupted runs produced no pass claims.
+Initial new unit fixture assumed empty-outfit Top defaults to white; its real
+default is blue. Fixture now explicitly sets white, keeping the white snapshot
+assertions. Port 8092 was occupied; server now uses 8096 and the existing process
+on 8092 was not stopped. Terminal logs have trailing whitespace trimmed for
+Git formatting checks; their diagnostic/test content is unchanged.
+
+NOT RUN / REMAINING
+Real phone and Expo Go runtime: NOT RUN. Voice was not built. Phases 3–6 remain
+NOT BUILT/NOT RUN; no integrated three-run demo claim. Baseline category test
+remains FAILED at original a75f4e7 (7 entries, test expects 8); see Phase 1.
+No Phase 2 native export was run. No platform branches added or changed.
+
+EXACT PHONE MANUAL CHECKS AFTER DELIVERY
+Run Expo on task/finish1 with npm.cmd start. Open the Expo Go QR on a physical
+phone on the same LAN. Use a test account with at least a top and two wigs in
+its inventory and an existing project with a confirmed reference. Wear the top,
+save look Con day; wear a different wig and save Red wig look. Switch looks,
+Undo, Remove all, Undo, then restart Expo Go and check both names and outfit.
+Switch to a second test account: first account looks/outfit must be absent;
+switch back and verify restoration. Delete an inventory item used in a saved
+look, reopen the project and switch to that look: notice + empty slot expected.
+Choose one missing target slot under Compare: verify A/B counts and hypothetical
+label, Keep A/Use B, and that inventory and worn records remain unchanged.
+Force an AsyncStorage outfit-key write failure in a development test build:
+Save current look must show an error, no success, and retain the prior outfit;
+restore storage and Retry loading outfit. Verify drag, pinch and Male/Female
+on that device. These instructions are NOT evidence that a phone was tested.

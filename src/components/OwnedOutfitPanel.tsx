@@ -7,7 +7,8 @@ import { targetLook } from '../utils/targetLook';
 import type { ReferenceReview } from '../types/referenceExtraction';
 import { useProjects } from '../contexts/ProjectsContext';
 import { planningBriefs } from '../services/PlanningBriefService';
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { compareLooks } from '../utils/savedLooks';
 import { BodyTypeSelector } from './BodyTypeSelector';
 import CostumeViewer from './CostumeViewer';
 import { OutfitControls } from './OutfitControls';
@@ -51,6 +52,9 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
   const [savedReview, setSavedReview] = useState<ReferenceReview | null>(null);
   const [reviewError, setReviewError] = useState('');
   const [targetOn, setTargetOn] = useState(true);
+  const [compareSlot, setCompareSlot] = useState<string | null>(null);
+  const [compareView, setCompareView] = useState<'a' | 'b'>('a');
+  const [lookName, setLookName] = useState('');
   useFocusEffect(useCallback(() => {
     let active = true;
     setSavedReview(null); setReviewError('');
@@ -78,7 +82,8 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
   const enabled = useMemo(() => new Set(Object.entries(pieces).filter(([, p]) => p.on && !!p.itemId).map(([id]) => id)), [wearing.outfit]);
   const colors = useMemo(() => new Map(Object.entries(pieces).map(([id, p]) => [id, p.color])), [wearing.outfit]);
   const stylesBySlot = useMemo(() => new Map(Object.entries(pieces).map(([id, p]) => [id, p.style ?? {}])), [wearing.outfit]);
-  const ghosts = useMemo(() => new Set(targetOn ? targetPieces.filter(p => !enabled.has(p.id)).map(p => p.id) : []), [targetOn, targetPieces, enabled]);
+  const ghosts = useMemo(() => new Set(compareSlot ? compareView === 'b' && !enabled.has(compareSlot) ? [compareSlot] : [] : targetOn ? targetPieces.filter(p => !enabled.has(p.id)).map(p => p.id) : []), [compareSlot, compareView, targetOn, targetPieces, enabled]);
+  const comparison = wearing.outfit ? compareLooks(wearing.outfit, new Set(items.map(item => item.attire_id)), compareSlot ?? undefined) : null;
   const displayEnabled = useMemo(() => new Set([...enabled, ...ghosts]), [enabled, ghosts]);
   const displayColors = useMemo(() => new Map([...colors, ...targetPieces.filter(p => ghosts.has(p.id)).map(p => [p.id, p.color] as [string, string])]), [colors, targetPieces, ghosts]);
   const displayStyles = useMemo(() => new Map([...stylesBySlot, ...targetPieces.filter(p => ghosts.has(p.id)).map(p => [p.id, p.style] as [string, Record<string, string>])]), [stylesBySlot, targetPieces, ghosts]);
@@ -136,6 +141,30 @@ function OwnedOutfitContent({ accountId, projectId, items, inventoryLoaded, offl
       {projectState.storageError ? <Text accessibilityRole="alert" style={{ color: c.error }}>{projectState.storageError}</Text> : null}
     </View> : null}
     <Text style={{ color: c.textSecondary }}>Drag to rotate. Pinch to zoom.</Text>
+    {review?.confirmed ? <View style={styles.group}>
+      <Text style={[styles.heading, { color: c.text }]}>Compare looks</Text>
+      <Text style={{ color: c.textSecondary }}>Look A is owned items worn now. Look B adds one hypothetical target piece. A/B uses one 3D viewer.</Text>
+      {targetPieces.filter(piece => !enabled.has(piece.id)).map(piece => <Button key={piece.id} title={`Compare missing ${piece.label}`} variant="secondary" onPress={() => { setCompareSlot(piece.id); setCompareView('b'); }} />)}
+      {compareSlot && comparison ? <>
+        <Text testID="compare-a" style={{ color: c.text }}>Look A: {comparison.a.count} of 5 slots · {comparison.a.percent}%</Text>
+        <Text testID="compare-b" style={{ color: c.text }}>Look B: {comparison.b.count} of 5 slots · {comparison.b.percent}% · Hypothetical {targetPieces.find(piece => piece.id === compareSlot)?.label}</Text>
+        <Button title="Show Look A" onPress={() => setCompareView('a')} />
+        <Button title="Show Look B" onPress={() => setCompareView('b')} />
+        <Button title="Use Look B" onPress={() => { setCompareView('b'); setMessage('Hypothetical preview kept. Inventory, worn outfit, budget and readiness are unchanged.'); }} />
+        <Button title="Keep Look A" variant="secondary" onPress={() => { setCompareSlot(null); setTargetOn(false); }} />
+      </> : null}
+    </View> : null}
+    <View style={styles.group}>
+      <Text style={[styles.heading, { color: c.text }]}>Saved looks</Text>
+      <Text style={{ color: c.textSecondary }}>Saved per project.</Text>
+      <TextInput accessibilityLabel="Look name" value={lookName} onChangeText={setLookName} placeholder="Con day look" style={{ color: c.text, borderWidth: 1, borderColor: c.border, padding: spacing.sm }} />
+      <Button title="Save current look" disabled={disabled} onPress={() => { void run(() => wearing.saveLook(lookName), 'Look saved.'); }} />
+      {(wearing.outfit?.savedLooks ?? []).map(look => <View key={look.id}>
+        <Button title={`Switch to ${look.name}`} disabled={disabled} variant="secondary" onPress={() => { void run(() => wearing.switchLook(look.id), `Switched to ${look.name}.`); }} />
+        {Object.values(look.pieces).some(piece => piece.itemId && !items.some(item => item.attire_id === piece.itemId)) ? <Text style={{ color: c.textSecondary }}>An item in {look.name} was deleted from inventory. Its slot will be empty.</Text> : null}
+      </View>)}
+      <Button title="Undo" disabled={disabled || !wearing.outfit?.history?.length} onPress={() => { void run(wearing.undo, 'Outfit change undone.'); }} />
+    </View>
     {wearing.isLoading || !inventoryLoaded ? <ActivityIndicator color={c.primary} /> : null}
     {wearing.error || actionError ? <>
       <Text accessibilityRole="alert" style={{ color: c.error }}>{wearing.error || actionError}</Text>

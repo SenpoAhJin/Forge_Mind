@@ -1,0 +1,35 @@
+{
+  "console": [
+    "[outfitStore] Failed to save outfit: Error: Forced look save failure"
+  ],
+  "errors": [],
+  "results": [
+    {
+      "name": "compare-preview-only",
+      "status": "RAN PASS"
+    },
+    {
+      "name": "save-two-switch-undo-remove-all",
+      "status": "RAN PASS"
+    },
+    {
+      "name": "restart",
+      "status": "RAN PASS"
+    },
+    {
+      "name": "account-isolation",
+      "status": "RAN PASS"
+    },
+    {
+      "name": "forced-failed-look-save",
+      "status": "RAN PASS"
+    },
+    {
+      "name": "deleted-inventory-slot",
+      "status": "RAN PASS"
+    }
+  ],
+  "url": "http://127.0.0.1:8096",
+  "fixture": "Declared cached account/inventory and confirmed review fixtures; no analysis service; external HTTP blocked.",
+  "hypotheticalRedWigHeadPixels": 127
+}

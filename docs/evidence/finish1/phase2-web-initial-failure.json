@@ -1,0 +1,13 @@
+{
+  "console": [],
+  "errors": [],
+  "results": [
+    {
+      "name": "compare-preview-only",
+      "status": "RAN FAILED",
+      "error": "TimeoutError: Timed out after waiting 20000ms\n    at file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/puppeteer/common/util.js:222:19\n    at file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1944:31\n    at OperatorSubscriber2._this._next (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1001:9)\n    at Subscriber2.next (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:704:12)\n    at AsyncAction2.<anonymous> (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:2288:20)\n    at AsyncAction2._execute (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1368:12)\n    at AsyncAction2.execute (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1357:22)\n    at AsyncScheduler2.flush (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1435:26)\n    at listOnTimeout (node:internal/timers:635:17)\n    at process.processTimers (node:internal/timers:571:7)"
+    }
+  ],
+  "url": "http://127.0.0.1:8096",
+  "fixture": "Declared cached account/inventory and confirmed review fixtures; no analysis service; external HTTP blocked."
+}

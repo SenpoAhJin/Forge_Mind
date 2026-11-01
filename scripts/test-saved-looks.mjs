@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { compareLooks, recordWornChange, saveNamedLook, switchLook, undoLook } from '../src/utils/savedLooks.ts';
+import { createEmptyOutfit, loadOutfit, saveOutfit, reconcileInventory, removeAllPieces, setPieceColor } from '../src/utils/outfitStore.ts';
+const scope = { type: 'project', accountId: 'a', projectId: 'p' };
+const memory = () => ({ values: new Map(), async getItem(k) { return this.values.get(k) ?? null; }, async setItem(k,v) { this.values.set(k,v); } });
+const worn = () => { const o = createEmptyOutfit(); o.pieces.top = { ...o.pieces.top, on: true, itemId: 'shirt', color: '#FFFFFF' }; return o; };
+test('compare counts owned worn slots only and at most one hypothetical slot; no mutation', () => {
+  const outfit = worn(), before = JSON.stringify(outfit);
+  assert.deepEqual(compareLooks(outfit, new Set(['shirt']), 'wig'), { a: { count: 1, percent: 20 }, b: { count: 2, percent: 40 } });
+  assert.equal(compareLooks(outfit, new Set(['shirt']), 'top').b.count, 1);
+  assert.equal(compareLooks(outfit, new Set(), 'wig').a.count, 0);
+  assert.equal(compareLooks(outfit, new Set(), 'belt').b.count, 0);
+  assert.equal(compareLooks(outfit, new Set()).b.count, 0);
+  assert.equal(JSON.stringify(outfit), before);
+});
+test('save two names, switch, remove all, undo; snapshots do not alias current state', () => {
+  let outfit = saveNamedLook(worn(), ' First ', '1');
+  outfit = recordWornChange(outfit, setPieceColor(outfit, 'top', '#000000'));
+  outfit = saveNamedLook(outfit, 'Second', '2');
+  outfit = switchLook(outfit, '1');
+  assert.equal(outfit.pieces.top.color, '#FFFFFF');
+  outfit = recordWornChange(outfit, removeAllPieces(outfit));
+  assert.equal(outfit.pieces.top.on, false);
+  outfit = undoLook(outfit); assert.equal(outfit.pieces.top.on, true);
+  outfit = undoLook(outfit); assert.equal(outfit.pieces.top.color, '#000000');
+  assert.equal(outfit.savedLooks[0].name, 'First');
+  assert.equal(outfit.savedLooks[0].pieces.top.color, '#FFFFFF');
+  assert.throws(() => saveNamedLook(outfit, 'first', '3'), /different/);
+  assert.throws(() => saveNamedLook(outfit, ' ', '3'), /name/);
+  assert.throws(() => switchLook(outfit, 'missing'), /not found/);
+  assert.throws(() => undoLook(createEmptyOutfit()), /No changes/);
+});
+test('history retains at least 10 changes, bounded to 20; no-op does not create history', () => {
+  let outfit = worn();
+  for (let i = 0; i < 25; i++) outfit = recordWornChange(outfit, setPieceColor(outfit, 'top', i % 2 ? '#FFFFFF' : '#000000'));
+  assert.equal(outfit.history.length, 20);
+  outfit = recordWornChange(outfit, outfit); assert.equal(outfit.history.length, 20);
+  for (let i = 0; i < 10; i++) outfit = undoLook(outfit);
+  assert.equal(outfit.history.length, 10);
+});
+test('looks/history survive restart, isolate account and project, handle deleted inventory IDs', async () => {
+  const storage = memory();
+  const saved = recordWornChange(saveNamedLook(worn(), 'Con day', '1'), removeAllPieces(saveNamedLook(worn(), 'Con day', '1')));
+  await saveOutfit(storage, scope, saved);
+  const loaded = await loadOutfit(storage, scope);
+  assert.deepEqual(loaded, saved);
+  assert.equal((await loadOutfit(storage, { ...scope, accountId: 'b' })).savedLooks, undefined);
+  assert.equal((await loadOutfit(storage, { ...scope, projectId: 'other' })).savedLooks, undefined);
+  const deleted = reconcileInventory(switchLook(loaded, '1'), []);
+  assert.equal(deleted.pieces.top.on, false); assert.equal(deleted.pieces.top.itemId, undefined);
+  assert.equal(deleted.savedLooks[0].pieces.top.itemId, 'shirt');
+});
+test('forced failed look save keeps previous persisted outfit; unreadable looks rejected', async () => {
+  const storage = memory(); await saveOutfit(storage, scope, worn());
+  const before = await loadOutfit(storage, scope);
+  storage.setItem = async () => { throw new Error('Forced save failure'); };
+  await assert.rejects(saveOutfit(storage, scope, saveNamedLook(before, 'Con', '1')), /Forced save failure/);
+  assert.deepEqual(await loadOutfit(storage, scope), before);
+  const key = [...storage.values.keys()][0];
+  storage.values.set(key, JSON.stringify({ ...before, savedLooks: [{ id: 'bad', name: 'Bad', pieces: { top: { on: true, color: 'nonsense' } } }] }));
+  await assert.rejects(loadOutfit(storage, scope), /could not be read/);
+});

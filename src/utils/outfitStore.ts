@@ -10,6 +10,7 @@ import colorNames from '../data/colorNames.json' with { type: 'json' };
 import costumeStyles from '../data/costumeStyles.json' with { type: 'json' };
 import palette from '../data/outfitPalette.json' with { type: 'json' };
 import type { OwnedAttire } from '../types/owned-attire';
+import type { SavedLook, LookPieces } from './savedLooks';
 
 // Storage adapter interface for dependency injection
 export interface StorageAdapter {
@@ -20,6 +21,8 @@ export interface StorageAdapter {
 
 // Outfit state structure (version 2)
 export interface OutfitState {
+  savedLooks?: SavedLook[];
+  history?: LookPieces[];
   version: number;
   pieces: {
     [slot: string]: {
@@ -142,6 +145,14 @@ export async function loadOutfit(
     }
     outfit.pieces[slot] = { ...outfit.pieces[slot], ...p, on: p.on && !!p.itemId };
   }
+  const validPieces = (pieces: LookPieces) => pieces && typeof pieces === 'object' && !Array.isArray(pieces) &&
+    Object.entries(pieces).every(([slot, piece]) => getAvailableSlots().includes(slot) && piece && typeof piece.on === 'boolean' &&
+      !!getColorFromName(piece.color) && (piece.itemId === undefined || typeof piece.itemId === 'string'));
+  if (data.savedLooks !== undefined && (!Array.isArray(data.savedLooks) || data.savedLooks.some((look: SavedLook) =>
+    !look || typeof look.id !== 'string' || typeof look.name !== 'string' || !look.name.trim() || !validPieces(look.pieces)))) throw new Error('Saved looks could not be read. They have not been overwritten.');
+  if (data.history !== undefined && (!Array.isArray(data.history) || data.history.some((pieces: LookPieces) => !validPieces(pieces)))) throw new Error('Outfit history could not be read. It has not been overwritten.');
+  if (data.savedLooks) outfit.savedLooks = data.savedLooks;
+  if (data.history) outfit.history = data.history.slice(-20);
   return outfit;
 }
 

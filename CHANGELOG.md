@@ -1,5 +1,14 @@
 # ForgeMind — Plain-Language Changelog
 
+## Sunday, November 1, 2026, 08:35 PHT — Compare and saved looks
+
+The shared wearing panel compares the owned look with one hypothetical target
+piece, saves named looks per project, and undoes up to 20 outfit changes.
+Saves publish only after persistence; deleted owned items leave empty slots
+with a notice. 31 unit/regression tests and six exported-web scenarios passed
+at localhost:8096 using declared fixtures. TypeScript remains at 23 errors.
+Phone NOT RUN; phases 3–6 unfinished. Evidence: docs/evidence/finish1/.
+
 ## Sunday, November 1, 2026, 08:23 PHT — Component planning logic
 
 Added local task generation, price estimates, budget checks and shopping phrases.

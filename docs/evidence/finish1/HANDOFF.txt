@@ -1,0 +1,67 @@
+ForgeMind finish1 — handoff at completed Phase 2 boundary
+Sunday, November 1, 2026, 08:35 PHT. Context is running low; stop before Phase 3.
+Branch task/finish1. Phase 1 commit 30aa3c8 pushed; Phase 2 implementation is
+committed/pushed at delivery (use git log -3 for final SHA). No unfinished
+feature phase is in the tree. AI repository was not touched.
+
+Start by reading the user's original attached request and latest overrides.
+Remaining work is Phases 3, 4, 5, 6; do not restart Phase 0 or rebuild Phase 1/2.
+Overrides: readiness has ONE formula (already replaced); existing Task marked
+ generated and existing BudgetLineItem only; variants use existing catalog,
+variant_id/wear_variant_id, NOT extra reviews; every success awaits persisted
+write, with forced-write tests for project save, expense, task Done and looks;
+offline analysis uses declared fixtures or manual entry (state which).
+
+Reusable files added in Phase 1:
+componentPlanning.ts (generated Task records, manual preservation, countdown),
+componentBudget.ts (existing budget records, prices, expenses, overrun/alternatives),
+componentShopping.ts, readiness.ts (per-component mean and formula text).
+ProjectsContext.getReviewForProject hydrates existing confirmed review records.
+ReferenceReviewRepository.subscribe notifies after successful writes only.
+Current context mutations still use an optimistic asynchronous persistence effect!
+Phase 3 must provide awaited transactional project/task/budget writes before
+showing Save project/Add expense/Done success. Guard failed reads and account
+changes; avoid parallel auto-save overwriting a failed transactional write.
+reviewLoadError is exposed but later screens must visibly report it.
+Generate only generated records; preserve manual tasks and expense actual_amount.
+
+Phase 2:
+savedLooks.ts functions and OutfitState.savedLooks/history live in the same
+outfit key as current pieces. useOutfit queues writes and only publishes after
+success. Shared OwnedOutfitPanel renders compare and named looks on wearing
+routes. loadOutfit validates metadata and supports existing v3 records.
+Look B is transient, one ghost only. Unit/browser tests cover failures/isolation.
+
+Phase 5 must replace the account-wide confirmed-reference chooser introduced
+before this task with the requested catalog variant picker, preserving sourcing,
+worn state, looks and expenses. Reuse data/variantSpecifications.ts and
+utils/variantColors.ts. One variant: no chips/error. Do not invent outfits.
+
+Tests:
+node --import tsx --test scripts/test-component-planning.mjs => 11 PASS.
+node --test scripts/test-saved-looks.mjs tools/test_outfit_store.mjs tools/test_outfit_state.mjs => 31 PASS.
+TypeScript node node_modules/typescript/bin/tsc --noEmit => 23 existing errors.
+Full baseline category suite still FAILED, also reproduced in detached
+../finish1-baseline-worktree at a75f4e7. The test actually expects 8; table has 7.
+No evidence establishes a missing category, so neither assertion nor data changed.
+Temporary worktree retained with a node_modules junction to this repo's installed
+dependencies; git status there is clean. Do not recursively delete the junction.
+
+Web:
+EXPO_OFFLINE=1; node node_modules/expo/bin/cli export --platform web
+  --output-dir docs/evidence/finish1/web-bundle
+node tools/finish1-serve.mjs serves http://127.0.0.1:8096 (local session may remain).
+node tools/finish1-looks-web-test.mjs drives Chrome; requires approved external
+process access on this machine. Phase 2 six scenarios PASS; final results JSON
+and screenshot evidence under docs/evidence/finish1. Test accounts are fixtures,
+not live login. External HTTP blocked. Primary Button uppercases labels; use
+exact case-insensitive selectors. Scroll inside PhoneFrame before clicking.
+No phone runtime or integrated Phase 6 runs performed. Voice not built.
+
+Only CHANGELOG.md may be edited/created as Markdown. All new evidence .txt,
+.json and .png lives under docs/evidence/finish1. Stage exact paths. Never stage
+old diagnostics, wearing-evidence, symmetry files or bundle directories.
+Local git-phase*.txt files record real commit/push/status output and may be
+untracked until a later documentation commit. Preserve pre-existing tree entries.
+Commit/push after each remaining phase. Report TS counts per phase, failures,
+exact URL/port, fixtures vs analysis, phone NOT RUN and precise manual steps.
