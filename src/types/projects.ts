@@ -39,6 +39,10 @@ export interface Project {
 }
 
 export interface Task {
+  generated?: boolean;
+  component_id?: string;
+  task_type?: 'buy' | 'make' | 'style' | 'break-in';
+  due_date?: string | null;
   task_id: string;
   project_id: string;
   task_description: string;
@@ -56,6 +60,9 @@ export interface Task {
 export type BudgetCategory = 'material' | 'labor' | 'tool' | 'other';
 
 export interface BudgetLineItem {
+  generated?: boolean;
+  component_id?: string;
+  estimate_min?: number;
   budget_line_item_id: string;
   project_id: string;
   item_name: string;

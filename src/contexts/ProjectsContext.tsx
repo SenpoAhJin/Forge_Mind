@@ -11,6 +11,8 @@ import { ProjectMilestone } from '../types/milestones';
 import { projects as seedProjects, tasks as seedTasks, budgetItems as seedBudgetItems } from '../data';
 import { useEvents } from './EventsContext';
 import { useUser } from './UserContext';
+import { referenceReviews } from '../services/ReferenceExtractionService';
+import type { ReferenceReview } from '../types/referenceExtraction';
 
 interface NewProjectInput {
   extracted_outfit?: Project['extracted_outfit'];
@@ -32,6 +34,8 @@ interface NewBudgetInput {
 }
 
 interface ProjectsContextValue {
+  getReviewForProject: (projectId: string) => ReferenceReview | null;
+  reviewLoadError: string | null;
   isLoaded: boolean;
   storageError: string | null;
   projects: Project[];
@@ -65,6 +69,19 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
   const writes = useRef(Promise.resolve());
+  const [reviews, setReviews] = useState<{ key: string; values: Record<string, ReferenceReview | null> }>({ key: '', values: {} });
+  const [reviewRevision, setReviewRevision] = useState(0);
+  const [reviewLoadError, setReviewLoadError] = useState<string | null>(null);
+  useEffect(() => referenceReviews.subscribe(() => setReviewRevision(value => value + 1)), []);
+  useEffect(() => {
+    let active = true;
+    setReviewLoadError(null);
+    if (!storageKey || loadedKey !== storageKey || !user) return;
+    void Promise.all(projects.map(async project => [project.project_id, await referenceReviews.load(user.email, project.reference_brief_id ?? project.project_id)] as const))
+      .then(entries => { if (active) setReviews({ key: storageKey, values: Object.fromEntries(entries) }); })
+      .catch(error => { if (active) { setReviews({ key: storageKey, values: {} }); setReviewLoadError(`Could not load confirmed components. ${error.message}`); } });
+    return () => { active = false; };
+  }, [storageKey, loadedKey, projects, reviewRevision]);
   
   const { getEventById } = useEvents();
 
@@ -256,6 +273,12 @@ export const ProjectsProvider: React.FC<{ children: ReactNode }> = ({ children }
   return (
     <ProjectsContext.Provider
       value={{
+        getReviewForProject: projectId => {
+          const project = projects.find(value => value.project_id === projectId);
+          const review = reviews.key === storageKey ? reviews.values[projectId] : null;
+          return project && review?.briefId === (project.reference_brief_id ?? projectId) ? review : null;
+        },
+        reviewLoadError,
         isLoaded: !!storageKey && loadedKey === storageKey,
         storageError,
         projects: loadedKey === storageKey ? projects : [],

@@ -1,93 +1,26 @@
-/**
- * ForgeMind - Readiness Score Computation (Mock)
- * Deterministic derivation from Project + Tasks + Budget + matched components.
- * Formula (explicit, not a black box):
- *   taskCompletion = mean(task status score)   weight 40%
- *     - completed = 1.0, in-progress = 0.5, pending/skipped = 0
- *   itemMatch      = mean(match quality score) weight 30%
- *     - exact = 1.0, close = 0.5, loose = 0.25
- *   budgetHealth   = 1 - min(1, spent / stated_budget), or 1 when no budget   weight 30%
- *   readiness_score = clamp(taskCompletion*0.4 + itemMatch*0.3 + budgetHealth*0.3, 0, 1)
- * Real AI-driven readiness forecasting is a later backend phase.
- */
+﻿import type { Project, Task, BudgetLineItem, ProjectReadiness } from '../types/projects';
+import type { ReferenceReview } from '../types/referenceExtraction';
+import { confirmedComponents } from './componentPlanning';
 
-import { Project, Task, BudgetLineItem, ProjectReadiness, SkillLevel, MatchQuality } from '../types/projects';
-import { matchComponents } from '../data';
-
-const TASK_STATUS_SCORE: Record<Task['status'], number> = {
-  completed: 1.0,
-  'in-progress': 0.5,
-  pending: 0,
-  skipped: 0,
-};
-
-const MATCH_QUALITY_SCORE: Record<MatchQuality, number> = {
-  exact: 1.0,
-  close: 0.5,
-  loose: 0.25,
-};
-
-const SKILL_RANK: Record<SkillLevel, number> = {
-  beginner: 1,
-  intermediate: 2,
-  advanced: 3,
-  expert: 4,
-};
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
-const round2 = (value: number) => Math.round(value * 100) / 100;
-
+export const READINESS_FORMULA = 'Each Own it component scores 1. Each other component scores its Done tasks divided by all its tasks (0 if none). Average every component and round to a whole percent.';
 export interface ReadinessInputs {
   project: Project;
   projectTasks: Task[];
   projectBudget: BudgetLineItem[];
+  review?: ReferenceReview | null;
 }
-
-export const computeReadiness = ({ project, projectTasks, projectBudget }: ReadinessInputs): ProjectReadiness => {
-  const tasks = projectTasks.length > 0 ? projectTasks : [{ status: 'pending' as const }];
-  const taskCompletion =
-    tasks.reduce((sum, t) => sum + TASK_STATUS_SCORE[t.status], 0) / tasks.length;
-
-  const itemScores = matchComponents.length > 0
-    ? matchComponents.map((c) => MATCH_QUALITY_SCORE[c.match_quality])
-    : [0];
-  const itemMatch = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
-
-  const spent = projectBudget.reduce((sum, b) => sum + b.actual_amount, 0);
-  const planned = projectBudget.reduce((sum, b) => sum + b.planned_amount, 0);
-  const statedBudget = project.stated_budget ?? planned;
-  const budgetHealth = statedBudget > 0 ? 1 - Math.min(1, spent / statedBudget) : 1;
-
-  const readinessScore = round2(clamp(taskCompletion * 0.4 + itemMatch * 0.3 + budgetHealth * 0.3, 0, 1));
-
-  const matchedComponents = matchComponents
-    .filter((c) => c.match_quality === 'exact' || c.match_quality === 'close')
-    .map((c) => ({ component_id: c.component_id, attire_id: `owned-item-${c.component_id}`, match_quality: c.match_quality }));
-
-  const missingComponents = matchComponents
-    .filter((c) => c.match_quality === 'loose')
-    .map((c) => c.component_id);
-
-  const userSkillRank = SKILL_RANK[project.stated_skill_level];
-  const skillGapDetails = projectTasks
-    .filter((t) => (t.difficulty_rating ?? 1) > userSkillRank)
-    .flatMap((t) =>
-      (t.technique_tags ?? []).map((technique) => ({
-        technique,
-        component_id: t.task_id,
-        required_skill_level: project.stated_skill_level,
-      }))
-    );
-
-  return {
-    project_id: project.project_id,
-    readiness_score: readinessScore,
-    missing_components: missingComponents,
-    matched_components: matchedComponents,
-    budget_utilization: statedBudget > 0 ? round2((spent / statedBudget) * 100) : round2((spent / Math.max(1, planned)) * 100),
-    skill_gap_details: skillGapDetails,
-    calculation_timestamp: new Date().toISOString(),
-  };
-};
+/** Sole project readiness formula. No review means 0, never a fixture match. */
+export function computeReadiness({ project, projectTasks, projectBudget, review }: ReadinessInputs): ProjectReadiness {
+  const components = confirmedComponents(review);
+  const scores = components.map(component => {
+    const tasks = projectTasks.filter(task => task.project_id === project.project_id && task.component_id === component.id);
+    return { id: component.id, score: component.value.plan === 'own' ? 1 : tasks.length ? tasks.filter(task => task.status === 'completed').length / tasks.length : 0 };
+  });
+  const percent = scores.length ? Math.round(scores.reduce((sum, value) => sum + value.score, 0) / scores.length * 100) : 0;
+  const spent = projectBudget.filter(line => line.project_id === project.project_id).reduce((sum, line) => sum + line.actual_amount, 0);
+  return { project_id: project.project_id, readiness_score: percent / 100,
+    missing_components: scores.filter(value => value.score < 1).map(value => value.id),
+    matched_components: [], // Sourcing does not assert an owned inventory ID.
+    budget_utilization: project.stated_budget && project.stated_budget > 0 ? spent / project.stated_budget * 100 : 0,
+    skill_gap_details: [], calculation_timestamp: new Date().toISOString() };
+}

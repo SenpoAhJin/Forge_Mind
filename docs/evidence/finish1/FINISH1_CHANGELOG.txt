@@ -5,3 +5,11 @@ points, missing features and persistence risks in PHASE0_AUDIT.txt.
 Ran existing local suites and TypeScript; see PHASE0_RESULTS.txt and raw logs.
 No UI, model, platform branch, service or AI repository changed.
 Phases 1–6 remain unfinished. No browser or phone acceptance claimed.
+
+Sunday, November 1, 2026, 08:23 PHT — Phase 1 shared planning logic
+Added deterministic component/task/budget/shopping utilities using existing
+Task/BudgetLineItem types; replaced all weighted readiness call sites.
+11 new tests and 40 regressions passed; TypeScript 23 before/23 after.
+Baseline category test reproduced at a75f4e7 and remains FAILED (7 versus 8).
+No platform branch changed. See PHASE1_REPORT.txt for evidence and limitations.
+

@@ -16,7 +16,7 @@ import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
 import { useUser } from '../../contexts/UserContext';
 import { getCharacterById, getVariantById } from '../../data';
-import { computeReadiness } from '../../utils/readiness';
+import { computeReadiness, READINESS_FORMULA } from '../../utils/readiness';
 import { Project, Task, TaskStatus, BudgetCategory } from '../../types/projects';
 import { getTodayLocal } from '../../utils/dateHelpers';
 import { OwnedOutfitPanel } from '../../components/OwnedOutfitPanel';
@@ -78,7 +78,7 @@ const formatPeso = (value: number) => {
 };
 
 export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ projectId, onOpenMeetups }) => {
-  const { projects, isLoaded: projectsLoaded, storageError, getTasksForProject, getBudgetForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
+  const { projects, isLoaded: projectsLoaded, storageError, getTasksForProject, getBudgetForProject, getReviewForProject, getMilestonesForProject, addTask, setTaskStatus, addBudgetItem, setLinkedEvent, addMilestone, toggleMilestone } = useProjects();
   const { events, getEventById } = useEvents();
   const { user } = useUser();
   const inventory = useOwnedAttire();
@@ -138,7 +138,7 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
 
   const character = getCharacterById(project.character_id);
   const variant = getVariantById(project.variant_id);
-  const readiness = computeReadiness({ project, projectTasks, projectBudget });
+  const readiness = computeReadiness({ project, projectTasks, projectBudget, review: getReviewForProject(project.project_id) });
 
   const spent = projectBudget.reduce((sum, b) => sum + b.actual_amount, 0);
   const planned = projectBudget.reduce((sum, b) => sum + b.planned_amount, 0);
@@ -207,7 +207,7 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
         </View>
         <View style={styles.headerTags}>
           <Tag type="category" label={`Skill: ${project.stated_skill_level}`} />
-          <Tag type="status" label={readiness.matched_components.length > 0 ? 'Items matched' : 'No items matched'} />
+          <Tag type="status" label={getReviewForProject(projectId)?.confirmed ? 'Confirmed components' : 'No confirmed components'} />
         </View>
       </StandardCard>
 
@@ -349,14 +349,14 @@ export const ProjectDashboardScreen: React.FC<ProjectDashboardScreenProps> = ({ 
             Tasks: {completedCount}/{projectTasks.length} done ({projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0}%)
           </Text>
           <Text style={styles.breakdownRow}>
-            Owned-item match: {readiness.matched_components.length} matched, {readiness.missing_components.length} missing
+            Components still in progress: {readiness.missing_components.length}
           </Text>
           <Text style={styles.breakdownRow}>
             Budget: {Math.round(readiness.budget_utilization)}% utilized
           </Text>
         </View>
         <Text style={styles.timestamp}>
-          Calculated {new Date(readiness.calculation_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · mock formula, real AI readiness in a later phase
+          {READINESS_FORMULA}
         </Text>
       </StandardCard>
 

@@ -21,6 +21,7 @@
 
 import { Project, Task, BudgetLineItem } from '../types/projects';
 import { computeReadiness } from './readiness';
+import type { ReferenceReview } from '../types/referenceExtraction';
 
 /**
  * Minimum opted-in cosplayers before any aggregate is shown.
@@ -52,6 +53,7 @@ export interface EventReadinessAggregate {
 }
 
 export interface AggregateInputs {
+  getReviewForProject: (projectId: string) => ReferenceReview | null;
   eventId: string;
   projects: Project[];
   getTasksForProject: (projectId: string) => Task[];
@@ -63,6 +65,7 @@ export const computeEventReadinessAggregate = ({
   projects,
   getTasksForProject,
   getBudgetForProject,
+  getReviewForProject,
 }: AggregateInputs): EventReadinessAggregate => {
   // Step 1: narrow to opted-in projects linked to THIS event. Everything
   // downstream reads only this list, so non-opted-in data cannot leak in.
@@ -88,6 +91,7 @@ export const computeEventReadinessAggregate = ({
   const readinessList = optedIn.map((project) =>
     computeReadiness({
       project,
+      review: getReviewForProject(project.project_id),
       projectTasks: getTasksForProject(project.project_id),
       projectBudget: getBudgetForProject(project.project_id),
     })

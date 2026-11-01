@@ -1,5 +1,14 @@
 # ForgeMind — Plain-Language Changelog
 
+## Sunday, November 1, 2026, 08:23 PHT — Component planning logic
+
+Added local task generation, price estimates, budget checks and shopping phrases.
+Replaced the weighted project readiness formula with the confirmed-component
+average across dashboard, projects, shared itinerary and event aggregate.
+11 new tests and 40 regressions passed; TypeScript remains at 23 errors.
+The category test also fails at the original commit (7 entries versus expected 8).
+Evidence: docs/evidence/finish1/PHASE1_REPORT.txt. Browser/phone NOT RUN.
+
 ## Sunday, November 1, 2026, 08:09 PHT — finish1 preflight
 
 Audited existing project, confirmed review, wearing and preview implementations on

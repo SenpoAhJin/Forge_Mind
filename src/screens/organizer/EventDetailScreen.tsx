@@ -27,7 +27,7 @@ type Props = NativeStackScreenProps<EventsStackParamList, 'EventDetail'>;
 export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const { user } = useUser();
   const { getEventById, confirmEvent, cancelEvent } = useEvents();
-  const { projects, getTasksForProject, getBudgetForProject } = useProjects();
+  const { projects, getTasksForProject, getBudgetForProject, getReviewForProject } = useProjects();
   const { getLogForEntity } = useCommitmentLog();
   
   const eventId = route.params.eventId;
@@ -53,9 +53,9 @@ export const EventDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         eventId,
         projects,
         getTasksForProject,
-        getBudgetForProject,
+        getBudgetForProject, getReviewForProject,
       }),
-    [eventId, projects, getTasksForProject, getBudgetForProject]
+    [eventId, projects, getTasksForProject, getBudgetForProject, getReviewForProject]
   );
   const showGroupReadiness = isHeadOrganizer && event?.status === 'confirmed';
   const readinessPct = readiness.average_readiness !== null

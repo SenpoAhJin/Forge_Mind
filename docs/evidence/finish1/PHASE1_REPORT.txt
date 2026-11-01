@@ -1,0 +1,69 @@
+﻿ForgeMind finish1 — Phase 1
+Sunday, November 1, 2026, 08:23 PHT (Asia/Manila).
+
+BEFORE PHASE 1 — RAN FAILED at original a75f4e7
+Temporary detached worktree: ../finish1-baseline-worktree.
+Same command: npm.cmd run test:pure. Shared installed dependencies through a
+node_modules junction; source is the checked-out original commit, not copied
+modified files. git status --short there was empty.
+Test: src/utils/__tests__/run-pure-logic-tests.mjs:240.
+Label says 8 versus expected 9; actual assertion expects 8, actual table has 7.
+Output: 60 passed, 1 failed. prephase1-baseline-pure.txt retains real output.
+Pre-existing failure remains FAILED. Test NOT weakened. No defensible missing
+marketplace category is specified; category table not changed speculatively.
+
+BUILT
+componentPlanning.ts: existing own/buy/make source labels; Bottom label;
+fixed task lead times and difficulty by skill; Manila countdown with explicit
+past-target text; generation returns existing Task objects marked generated.
+Stable task IDs preserve Done status. Manual and other-project tasks survive.
+Owned wigs/shoes still receive styling/break-in tasks, but Own it always scores 1.
+componentBudget.ts: fixed slot ranges and material factors, explicit fallback
+for unknown material, Own it zero, existing BudgetLineItem estimates and expense
+validation, spent, maximum-estimate/spent budget test, culprit and conservative
+fixed fabric-gloves alternative (approximate saving 300 pesos). Remaining
+overrun is stated. Upper bound is used as the conservative estimate total;
+lower bound is also exposed. No network or live prices.
+componentShopping.ts: palette/closed-style phrase and spec, no owned entries.
+readiness.ts: replaced weighted fixture formula with per-confirmed-component
+average; whole-percent rounding. No confirmed review / empty review gives 0.
+
+ALL OLD FORMULA CALL SITES
+src/screens/cosplayer/ProjectDashboardScreen.tsx
+src/screens/cosplayer/ProjectsScreen.tsx
+src/screens/shared/ShareableCardScreen.tsx
+src/utils/readinessAggregate.ts -> src/screens/organizer/EventDetailScreen.tsx
+All now receive the same repository-backed confirmed review via ProjectsContext.
+Removed unused import in organizer/GroupMeetupScreen.tsx (it never called it).
+No old readiness unit tests existed in scripts or src/utils/__tests__; added
+formula and aggregate tests rather than retaining weighted-formula assertions.
+GroupMeetup's separate mock participant data and unused garmentMatcher slot
+coverage are not consumers of the former weighted formula. They are legacy
+fixtures/helpers, not this project's new readiness computation.
+ProjectsContext hydrates reviews without duplicating persisted review data;
+reference repository notifies subscribers only after successful save. Old
+reference data cannot be returned after project reference ID changes.
+Dashboard formula copy and old fixture-match badge corrected. These are the
+only UI label adjustments; no new Phase 1 screen was built.
+
+RAN PASS
+node --import tsx --test scripts/test-component-planning.mjs: 11 tests, 0 failures.
+Covers no components, all owned, past target, zero/unset budget, no expenses,
+no unowned culprit, unknown material, task regeneration/manual preservation,
+completion, calendar dates, closed vocabularies and aggregate privacy.
+Initial sandbox tsx launch failed before tests (uv_os_get_passwd ENOMEM).
+Authorized outside-sandbox run exposed a test-fixture error: the first Buy task
+was Bottom due to sort order, but the test intended Wig. Corrected selector to
+component_id=wig, preserving expected readiness 50%; rerun passed all 11.
+Existing brief/review/wearing-store/state regression: 40 tests, 0 failures.
+TypeScript BEFORE 23 errors; AFTER 23 errors; NOT build-clean.
+Raw outputs: phase1-typecheck-before/after.txt, phase1-unit-tests.txt,
+phase1-regression.txt. Baseline category suite remains FAILED as above.
+
+NOT RUN
+Browser, phone, exports, service runtime, offline integrated demo. No browser
+URL/port used in this pure-logic phase. Tests use declared in-memory confirmed
+component fixtures; no image analysis service was invoked.
+Persisting generated tasks/estimates and awaited project mutations belong to
+Phase 3. No new plan, budget, inventory or review model was added.
+No platform branches added/changed. AI repository untouched.

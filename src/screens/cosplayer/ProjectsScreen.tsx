@@ -58,7 +58,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
 }) => {
   const { user } = useUser();
   const { selection } = useSelection();
-  const { projects, getTasksForProject, getBudgetForProject } = useProjects();
+  const { projects, getTasksForProject, getBudgetForProject, getReviewForProject } = useProjects();
   const { events } = useEvents();
   const { meetups } = useMeetups();
   const today = getTodayLocal();
@@ -82,7 +82,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({
 
   const readinessFor = (project: Project) =>
     computeReadiness({
-      project,
+      project, review: getReviewForProject(project.project_id),
       projectTasks: getTasksForProject(project.project_id),
       projectBudget: getBudgetForProject(project.project_id),
     });

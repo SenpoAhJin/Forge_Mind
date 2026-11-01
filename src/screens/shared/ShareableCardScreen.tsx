@@ -24,7 +24,7 @@ type CardType = 'profile' | 'itinerary';
 
 export const ShareableCardScreen: React.FC = () => {
   const { user } = useUser();
-  const { projects, getTasksForProject, getBudgetForProject } = useProjects();
+  const { projects, getTasksForProject, getBudgetForProject, getReviewForProject } = useProjects();
   const { events } = useEvents();
   
   const [selectedCard, setSelectedCard] = useState<CardType>('profile');
@@ -53,7 +53,7 @@ export const ShareableCardScreen: React.FC = () => {
     .map(p => {
       const event = events.find(e => e.id === p.linked_event_id);
       const readiness = computeReadiness({
-        project: p,
+        project: p, review: getReviewForProject(p.project_id),
         projectTasks: getTasksForProject(p.project_id),
         projectBudget: getBudgetForProject(p.project_id),
       });

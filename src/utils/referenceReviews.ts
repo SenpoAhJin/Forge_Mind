@@ -55,6 +55,8 @@ export function validateReview(review: ReferenceReview, briefId: string): void {
 }
 interface Storage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> }
 export class ReferenceReviewRepository {
+  private listeners = new Set<() => void>();
+  subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
   private writes = new Map<string, Promise<unknown>>();
   private storage: Storage;
   constructor(storage: Storage) { this.storage = storage; }
@@ -74,6 +76,7 @@ export class ReferenceReviewRepository {
     const write = (this.writes.get(key) ?? Promise.resolve()).catch(() => undefined).then(async () => {
       await this.load(account, review.briefId); // Never replace unreadable data.
       await this.storage.setItem(key, snapshot);
+      this.listeners.forEach(listener => listener());
     });
     this.writes.set(key, write);
     return write.finally(() => { if (this.writes.get(key) === write) this.writes.delete(key); });

@@ -13,7 +13,6 @@ import { colors, typography, spacing, borderRadius } from '../../theme';
 import { useUser } from '../../contexts/UserContext';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useEvents } from '../../contexts/EventsContext';
-import { computeReadiness } from '../../utils/readiness';
 import { daysBetween } from '../../utils/dateHelpers';
 
 // Mock participant data (will come from backend in Phase 3)

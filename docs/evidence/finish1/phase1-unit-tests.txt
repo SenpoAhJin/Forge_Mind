@@ -1,0 +1,19 @@
+﻿✔ existing sourcing values and Bottom label; confirmed review only (1.6999ms)
+✔ fixed price ranges, owned zero, known and unknown materials (0.2732ms)
+✔ generated tasks use existing Task fields, stable IDs, lead times, difficulty and due ordering (12.3569ms)
+✔ regeneration preserves manual tasks, other projects and user-controlled completion (0.744ms)
+✔ countdown uses Manila calendar date; past, today, leap dates, missing and invalid dates (1.0307ms)
+✔ single readiness formula: average components, owned=1, task fraction, no tasks=0, rounded (0.7189ms)
+✔ budget estimates include accessories and owned zero, preserve manual budget/expenses on regeneration (0.5867ms)
+✔ budget edges: zero, unset, empty/all owned, spent greater than estimate, alternatives remaining (0.2824ms)
+✔ expense validation rejects empty names, zero, negatives, NaN, infinity; uses existing actual_amount (0.314ms)
+✔ shopping phrases use closed vocabulary, exclude owned, unknown material is explicit, Bottom label (0.7436ms)
+✔ event aggregate uses same component formula and preserves opt-in privacy threshold (0.65ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 248.8456

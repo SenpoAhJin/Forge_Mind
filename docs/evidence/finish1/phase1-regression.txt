@@ -1,0 +1,78 @@
+﻿(node:23768) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/planningBriefs.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ budget accepts zero and centavos and rejects partial or invalid numbers (1.8236ms)
+✔ brief requires all five inputs and a real date that has not passed (6.7192ms)
+✔ brief and reference survive reopening; records are isolated by account (4.309ms)
+✔ updating a brief preserves identity and creation date without duplicates (2.5174ms)
+✔ concurrent saves do not overwrite each other (16.6202ms)
+✔ corrupt or unknown saved data fails visibly and is not overwritten (1.0381ms)
+✔ failed storage writes report failure and allow a subsequent retry (0.629ms)
+✔ expired briefs remain readable but need a new target date before saving (0.4634ms)
+✔ references use separate bounded entries and a failed list commit preserves the old brief (1.0608ms)
+(node:21400) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/referenceReviews.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ confirmed components survive restart and remain isolated by account and brief (3.2413ms)
+✔ edits retain immutable AI values and every prior user value (2.466ms)
+✔ failed writes preserve previous data; corrupt data cannot be silently replaced (2.977ms)
+✔ only confirmed values become targets; plans never assign owned item IDs (0.6971ms)
+✔ deletion retains original component in audit history and removes its targets (0.5582ms)
+(node:5812) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[outfitStore] Failed to save outfit: Error: Storage full
+    at Object.setItem (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:73)
+    at saveOutfit (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts:159:19)
+    at TestContext.<anonymous> (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ five data-defined slots; no accessory/belt is supported (3.6035ms)
+✔ new outfit and wear-full with empty inventory remain bare (0.8159ms)
+✔ white shirt, black pants, boots and silver wig all wear together (0.9348ms)
+✔ red wig replaces silver wig in exactly one slot (0.4214ms)
+✔ tapping same item removes only its slot (0.3657ms)
+✔ wear-full preserves assigned items/colors; toggles and colors stay editable (1.3219ms)
+✔ remove-all leaves no visible piece (0.4486ms)
+✔ names, silver, palette IDs and arbitrary hex colors normalize consistently (0.2675ms)
+✔ account/project keys differ; body switch uses the same wardrobe key (0.8698ms)
+✔ restart restores worn IDs, hidden flags, colors and styles only for the account/project (1.3881ms)
+✔ old unscoped data is not silently adopted by a new account (0.4258ms)
+✔ deleted/transferred items are no longer shown (0.5564ms)
+✔ read/write failures propagate; corrupt data is not overwritten (1.3735ms)
+(node:23684) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Alord\OneDrive\Documents\School\MOR\Concept\ACCEPTED COSPLAY CONTENTS\CosForge_System - Copy\forgemind-mobile\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[outfitStore] Failed to save outfit: Error: Storage full
+    at Object.setItem (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:73)
+    at saveOutfit (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/src/utils/outfitStore.ts:159:19)
+    at TestContext.<anonymous> (file:///C:/Users/Alord/OneDrive/Documents/School/MOR/Concept/ACCEPTED%20COSPLAY%20CONTENTS/CosForge_System%20-%20Copy/forgemind-mobile/tools/test_outfit_store.mjs:102:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ five data-defined slots; no accessory/belt is supported (2.0161ms)
+✔ new outfit and wear-full with empty inventory remain bare (0.673ms)
+✔ white shirt, black pants, boots and silver wig all wear together (1.1402ms)
+✔ red wig replaces silver wig in exactly one slot (0.5659ms)
+✔ tapping same item removes only its slot (0.339ms)
+✔ wear-full preserves assigned items/colors; toggles and colors stay editable (0.4728ms)
+✔ remove-all leaves no visible piece (0.3886ms)
+✔ names, silver, palette IDs and arbitrary hex colors normalize consistently (0.3311ms)
+✔ account/project keys differ; body switch uses the same wardrobe key (0.6571ms)
+✔ restart restores worn IDs, hidden flags, colors and styles only for the account/project (0.7866ms)
+✔ old unscoped data is not silently adopted by a new account (0.295ms)
+✔ deleted/transferred items are no longer shown (0.3516ms)
+✔ read/write failures propagate; corrupt data is not overwritten (0.9298ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 260.9315
